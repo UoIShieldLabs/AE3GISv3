@@ -1,0 +1,520 @@
+/* ── CSS Variables / Cyberpunk Palette ─────────────────────────── */
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #0d0d14;
+  --bg-panel: #111119;
+  --bg-node: #14141e;
+  --bg-node-hover: #1a1a28;
+
+  --neon-green: #00ff9f;
+  --neon-cyan: #00d4ff;
+  --neon-magenta: #ff00ff;
+  --neon-amber: #ffaa00;
+  --neon-red: #ff3344;
+  --neon-blue: #4466ff;
+
+  --text-primary: #d0d0d8;
+  --text-secondary: #808090;
+  --text-dim: #505060;
+
+  --border-color: #1e1e2e;
+  --border-glow: rgba(0, 255, 159, 0.3);
+
+  --font-mono: 'Share Tech Mono', 'Fira Code', 'Consolas', monospace;
+  --font-display: 'Orbitron', sans-serif;
+  --font-ui: 'Rajdhani', sans-serif;
+
+  --glow-green: 0 0 10px rgba(0, 255, 159, 0.4), 0 0 20px rgba(0, 255, 159, 0.2);
+  --glow-cyan: 0 0 10px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.2);
+  --glow-magenta: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(255, 0, 255, 0.2);
+}
+
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-green);
+}
+
+/* ── App Layout ───────────────────────────────────────────────── */
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.topology-canvas {
+  flex: 1;
+  position: relative;
+}
+
+/* ── Header / Title Bar ───────────────────────────────────────── */
+.header-bar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--neon-green);
+  text-shadow: var(--glow-green);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.header-stats {
+  display: flex;
+  gap: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.header-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-stat .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--neon-green);
+  box-shadow: var(--glow-green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.header-download-btn {
+  background: transparent;
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background 0.2s, box-shadow 0.2s;
+  margin-left: 8px;
+}
+
+.header-download-btn:hover {
+  background: rgba(0, 255, 159, 0.1);
+  box-shadow: var(--glow-green);
+}
+
+/* ── Breadcrumb ───────────────────────────────────────────────── */
+.breadcrumb-bar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  z-index: 100;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.breadcrumb-item {
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.breadcrumb-item:hover {
+  color: var(--neon-green);
+  background: rgba(0, 255, 159, 0.08);
+}
+
+.breadcrumb-item.active {
+  color: var(--neon-cyan);
+}
+
+.breadcrumb-separator {
+  color: var(--text-dim);
+  user-select: none;
+}
+
+/* ── Node Info Panel ──────────────────────────────────────────── */
+.info-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 340px;
+  height: 100%;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-color);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.info-panel.open {
+  transform: translateX(0);
+}
+
+.info-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-panel-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--neon-cyan);
+  text-shadow: var(--glow-cyan);
+  letter-spacing: 1px;
+}
+
+.info-panel-close {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.info-panel-close:hover {
+  color: var(--neon-red);
+  border-color: var(--neon-red);
+}
+
+.info-panel-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.info-field {
+  margin-bottom: 16px;
+}
+
+.info-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.info-value.status-running {
+  color: var(--neon-green);
+}
+
+.info-value.status-stopped {
+  color: var(--neon-red);
+}
+
+.info-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid;
+}
+
+.info-panel-actions {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-terminal {
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(0, 255, 159, 0.08);
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.2s ease;
+}
+
+.btn-terminal:hover {
+  background: rgba(0, 255, 159, 0.15);
+  box-shadow: var(--glow-green);
+}
+
+/* ── Terminal Overlay ─────────────────────────────────────────── */
+.terminal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.terminal-window {
+  width: 720px;
+  height: 480px;
+  background: #0c0c0c;
+  border: 1px solid var(--neon-green);
+  border-radius: 6px;
+  box-shadow: 0 0 40px rgba(0, 255, 159, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-titlebar {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-titlebar-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--neon-green);
+}
+
+.terminal-titlebar-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  font-family: var(--font-mono);
+}
+
+.terminal-titlebar-close:hover {
+  color: var(--neon-red);
+}
+
+.terminal-body {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--neon-green);
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-output {
+  flex: 1;
+  padding: 12px 12px 8px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-line {
+  margin-bottom: 2px;
+}
+
+.terminal-prompt {
+  color: var(--neon-cyan);
+}
+
+.terminal-input-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px 10px;
+  border-top: 1px solid rgba(0, 255, 159, 0.12);
+  gap: 6px;
+}
+
+.terminal-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--neon-green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  caret-color: var(--neon-green);
+}
+
+.terminal-input::placeholder {
+  color: var(--text-dim);
+}
+
+.terminal-input:disabled {
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background: var(--neon-green);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+/* ── Scale Label ──────────────────────────────────────────────── */
+.scale-label {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 50;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: rgba(10, 10, 15, 0.9);
+}
+
+/* ── React Flow Overrides ─────────────────────────────────────── */
+.react-flow__background {
+  background: var(--bg-primary) !important;
+}
+
+.react-flow__controls {
+  bottom: 20px !important;
+  right: 20px !important;
+  left: auto !important;
+}
+
+.react-flow__controls-button {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-color) !important;
+  fill: var(--text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-node-hover) !important;
+  fill: var(--neon-green) !important;
+}
+
+.react-flow__minimap {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+}
+
+.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.6; }
+}
+
+/* ── Scanline Effect (subtle) ─────────────────────────────────── */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}

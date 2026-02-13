@@ -1,0 +1,63 @@
+.toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+}
+
+.toolbar-btn {
+  padding: 6px 14px;
+  background: rgba(10, 10, 15, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+.toolbar-btn:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.toolbar-btn.primary {
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+  background: rgba(0, 255, 159, 0.06);
+}
+
+.toolbar-btn.primary:hover {
+  background: rgba(0, 255, 159, 0.12);
+  box-shadow: 0 0 10px rgba(0, 255, 159, 0.2);
+}
+
+.toolbar-layout-group {
+  display: flex;
+  gap: 0;
+}
+
+.toolbar-layout-group .layout-btn {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.toolbar-layout-group .layout-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.toolbar-layout-group .layout-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-right-width: 1px;
+}
+
+.toolbar-layout-group .layout-btn.active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: rgba(0, 212, 255, 0.1);
+}
