@@ -136,14 +136,15 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
     master_fd = -1
     try:
         topo = db.get(Topology, topology_id)
+        await websocket.accept()
         if not topo:
-            await websocket.close(code=4004, reason="Topology not found")
+            await websocket.send_text("Error: Topology not found\r\n")
+            await websocket.close(code=4004)
             return
 
         topo_name = topo.data.get("name") or "ae3gis-topology"
         docker_name = f"clab-{topo_name}-{container_id}"
 
-        await websocket.accept()
         await websocket.send_text(f"Connecting to {docker_name}...\r\n")
 
         # Allocate a PTY pair — pass the slave end to the subprocess so that
@@ -151,7 +152,7 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
         master_fd, slave_fd = pty.openpty()
         try:
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec", "-it", docker_name, "/bin/sh",
+                "sudo", "docker", "exec", "-it", docker_name, "/bin/sh",
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
@@ -208,6 +209,11 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
                 await read_task
             with contextlib.suppress(asyncio.CancelledError):
                 await write_task
+
+        # Send a clean close so the browser gets onclose instead of onerror
+        with contextlib.suppress(Exception):
+            await websocket.send_text("\r\n[session ended]\r\n")
+            await websocket.close()
 
     except WebSocketDisconnect:
         pass
