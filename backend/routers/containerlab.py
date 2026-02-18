@@ -3,6 +3,7 @@ import contextlib
 import logging
 import os
 import pty
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
@@ -226,3 +227,51 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(proc.wait(), timeout=2.0)
         db.close()
+
+
+@router.get("/{topology_id}/exec/{container_id}/precheck")
+async def exec_precheck(topology_id: str, container_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Validate docker exec prerequisites and return a reason code for UI diagnostics."""
+    topo = _get_topo(topology_id, db)
+    topo_name = _topo_name(topo)
+    docker_name = f"clab-{topo_name}-{container_id}"
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "sudo", "-n", "docker", "inspect", docker_name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except Exception as exc:
+        return {
+            "reason": "docker_inspect_failed",
+            "detail": str(exc),
+            "docker_name": docker_name,
+        }
+
+    _stdout, stderr = await proc.communicate()
+    detail = (stderr or b"").decode(errors="replace").strip()
+    detail_l = detail.lower()
+
+    if proc.returncode == 0:
+        return {"reason": "ok", "docker_name": docker_name}
+
+    if "permission denied" in detail_l or "password is required" in detail_l:
+        return {
+            "reason": "docker_permission_denied",
+            "detail": detail or "docker permission denied",
+            "docker_name": docker_name,
+        }
+
+    if "no such object" in detail_l or "no such container" in detail_l:
+        return {
+            "reason": "container_not_found",
+            "detail": detail or "container not found",
+            "docker_name": docker_name,
+        }
+
+    return {
+        "reason": "docker_inspect_failed",
+        "detail": detail or f"docker inspect failed with return code {proc.returncode}",
+        "docker_name": docker_name,
+    }

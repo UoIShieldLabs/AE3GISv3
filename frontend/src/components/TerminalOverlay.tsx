@@ -69,33 +69,75 @@ export function TerminalOverlay({
       return;
     }
 
+    let closed = false;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/topologies/ws/${backendId}/exec/${container.id}`;
-
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
     setConnStatus('connecting');
     setLines([]);
+    const encodedContainerId = encodeURIComponent(container.id);
+    const precheckUrl = `/api/topologies/${backendId}/exec/${encodedContainerId}/precheck`;
+    const wsUrl = `${protocol}//${window.location.host}/api/topologies/ws/${backendId}/exec/${encodedContainerId}`;
 
-    ws.onopen = () => setConnStatus('connecting');
+    appendText(`[diag] precheck URL: ${precheckUrl}\r\n`);
 
-    ws.onmessage = (ev: MessageEvent<string>) => {
-      setConnStatus((prev) => (prev === 'connecting' ? 'connected' : prev));
-      appendText(ev.data as string);
+    const run = async () => {
+      try {
+        const res = await fetch(precheckUrl);
+        if (closed) return;
+        if (!res.ok) {
+          setConnStatus('error');
+          appendText(`[diag] Precheck request failed: HTTP ${res.status}\r\n`);
+          return;
+        }
+
+        const precheck = await res.json() as { reason?: string; detail?: string; docker_name?: string };
+        if (closed) return;
+
+        if (precheck.reason !== 'ok') {
+          setConnStatus('error');
+          appendText(`[diag] Precheck failed: ${precheck.reason ?? 'unknown'}\r\n`);
+          if (precheck.detail) appendText(`[diag] detail: ${precheck.detail}\r\n`);
+          if (precheck.docker_name) appendText(`[diag] docker name: ${precheck.docker_name}\r\n`);
+          return;
+        }
+
+        appendText('[diag] Precheck passed: ok\r\n');
+        if (precheck.docker_name) appendText(`[diag] docker name: ${precheck.docker_name}\r\n`);
+        appendText(`[diag] WS URL: ${wsUrl}\r\n`);
+
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => setConnStatus('connecting');
+
+        ws.onmessage = (ev: MessageEvent<string>) => {
+          setConnStatus((prev) => (prev === 'connecting' ? 'connected' : prev));
+          appendText(ev.data as string);
+        };
+
+        ws.onclose = (ev: CloseEvent) => {
+          setConnStatus('disconnected');
+          const reason = ev.reason || '(none)';
+          appendText(`\r\n[connection closed] code=${ev.code} reason=${reason} clean=${ev.wasClean}`);
+        };
+
+        ws.onerror = () => {
+          setConnStatus('error');
+          appendText('\r\n[websocket error]');
+        };
+      } catch (err) {
+        if (closed) return;
+        const detail = err instanceof Error ? err.message : String(err);
+        setConnStatus('error');
+        appendText(`[diag] Precheck error: ${detail}\r\n`);
+      }
     };
 
-    ws.onclose = () => {
-      setConnStatus('disconnected');
-      appendText('\r\n[connection closed]');
-    };
-
-    ws.onerror = () => {
-      setConnStatus('error');
-      appendText('\r\n[websocket error]');
-    };
+    void run();
 
     return () => {
-      ws.close();
+      closed = true;
+      const ws = wsRef.current;
+      if (ws) ws.close();
       wsRef.current = null;
     };
   }, [backendId, container.id, deployStatus, appendText]);
