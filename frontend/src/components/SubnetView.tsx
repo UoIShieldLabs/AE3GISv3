@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { SubnetCloudNode } from './nodes/SubnetCloudNode';
+import { RouterNode } from './nodes/RouterNode';
 import { NeonEdge, NeonEdgeDirect } from './edges/NeonEdge';
 import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
 import { Toolbar } from './Toolbar';
@@ -24,7 +25,7 @@ import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode 
 import { generateId } from '../utils/idGenerator';
 import type { Site, Subnet } from '../data/sampleTopology';
 
-const nodeTypes = { subnetCloud: SubnetCloudNode };
+const nodeTypes = { subnetCloud: SubnetCloudNode, routerNode: RouterNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 
 interface SubnetViewProps {
@@ -58,6 +59,7 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
     const layoutChanged = layoutMode !== prevLayoutMode.current;
     prevLayoutMode.current = layoutMode;
 
+    // Only subnet clouds participate in the auto-layout algorithm
     const layoutNodes = site.subnets.map(s => ({ id: s.id, width: 200, height: 120 }));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
 
@@ -81,47 +83,100 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
     }
 
     setNodes((currentNodes) => {
-      return site.subnets.map((subnet) => {
-        // If layout didn't change, try to preserve existing position
+      const newNodes: Node[] = [];
+
+      for (const subnet of site.subnets) {
+        // Subnet cloud node
+        let cloudPos: { x: number; y: number };
         if (!layoutChanged) {
-          const existingNode = currentNodes.find(n => n.id === subnet.id);
-          if (existingNode) {
-            return {
-              ...existingNode,
-              data: { ...existingNode.data, label: subnet.name, cidr: subnet.cidr, containerCount: subnet.containers.length, onDrillDown: handleDrillDown },
-            };
-          }
+          const existing = currentNodes.find(n => n.id === subnet.id);
+          cloudPos = existing?.position ?? computedPositions.get(subnet.id) ?? { x: 400, y: 300 };
+        } else {
+          cloudPos = computedPositions.get(subnet.id) ?? { x: 400, y: 300 };
         }
 
-        // Otherwise use computed layout position
-        const pos = computedPositions.get(subnet.id) || { x: 400, y: 300 };
-        return {
+        // Container count excludes the auto-infra (router/switch) so the badge
+        // only reflects user-added devices.
+        const userContainerCount = subnet.containers.filter(
+          c => c.type !== 'router' && c.type !== 'firewall' && c.type !== 'switch'
+        ).length;
+
+        newNodes.push({
           id: subnet.id,
           type: 'subnetCloud',
-          position: pos,
+          position: cloudPos,
           data: {
             label: subnet.name,
             cidr: subnet.cidr,
-            containerCount: subnet.containers.length,
+            containerCount: userContainerCount,
             onDrillDown: handleDrillDown,
           },
-        };
-      });
+        });
+
+        // Gateway router node — positioned below-right of the subnet cloud
+        const gateway = subnet.containers.find(
+          c => c.type === 'router' || c.type === 'firewall'
+        );
+        if (gateway) {
+          const routerDefaultPos = { x: cloudPos.x + 130, y: cloudPos.y + 140 };
+          let routerPos = routerDefaultPos;
+          if (!layoutChanged) {
+            const existingRouter = currentNodes.find(n => n.id === gateway.id);
+            if (existingRouter) routerPos = existingRouter.position;
+          }
+          newNodes.push({
+            id: gateway.id,
+            type: 'routerNode',
+            position: routerPos,
+            draggable: true,
+            connectable: false,
+            data: { label: gateway.name, ip: gateway.ip, type: gateway.type },
+          });
+        }
+      }
+
+      return newNodes;
     });
   }, [site.subnets, site.subnetConnections, layoutMode, handleDrillDown, setNodes]);
 
-  // Sync edges
+  // Sync edges: internal subnet→router edges (dashed) + WAN router→router edges
   useEffect(() => {
-    setEdges(
-      site.subnetConnections.map((conn, i) => ({
-        id: `subnet-edge-${i}`,
-        source: conn.from,
-        target: conn.to,
-        type: layoutMode === 'circle' ? 'neonDirect' : 'neon',
-        data: { color: '#00d4ff' },
-      }))
-    );
-  }, [site.subnetConnections, layoutMode, setEdges]);
+    const newEdges: Edge[] = [];
+    const edgeType = layoutMode === 'circle' ? 'neonDirect' : 'neon';
+
+    // Internal edge: subnet cloud → its gateway router
+    for (const subnet of site.subnets) {
+      const gateway = subnet.containers.find(
+        c => c.type === 'router' || c.type === 'firewall'
+      );
+      if (gateway) {
+        newEdges.push({
+          id: `internal-${subnet.id}`,
+          source: subnet.id,
+          target: gateway.id,
+          type: 'neonDirect',
+          data: { color: 'rgba(0,212,255,0.25)' },
+          style: { strokeDasharray: '5 4' },
+          animated: false,
+        });
+      }
+    }
+
+    // WAN edges: router-to-router (use fromContainer/toContainer when set)
+    site.subnetConnections.forEach((conn, i) => {
+      const source = conn.fromContainer ?? conn.from;
+      const target = conn.toContainer ?? conn.to;
+      newEdges.push({
+        id: `wan-edge-${i}`,
+        source,
+        target,
+        type: edgeType,
+        data: { color: '#00d4ff', label: conn.label },
+      });
+    });
+
+    setEdges(newEdges);
+  }, [site.subnets, site.subnetConnections, layoutMode, setEdges]);
 
 
 

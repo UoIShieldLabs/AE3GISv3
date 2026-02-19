@@ -1,4 +1,6 @@
 import type { TopologyData, Site, Subnet, Container, Connection } from '../data/sampleTopology';
+import { generateId } from '../utils/idGenerator';
+import { getNextAvailableIp } from '../utils/validation';
 
 export type DeployStatus = 'idle' | 'deployed' | 'error' | 'deploying' | 'destroying';
 
@@ -69,7 +71,28 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
     // ── Subnets ──
     case 'ADD_SUBNET': {
       const site = draft.topology.sites.find(s => s.id === action.payload.siteId);
-      if (site) site.subnets.push(action.payload.subnet);
+      if (!site) break;
+
+      const { id, name, cidr } = action.payload.subnet;
+
+      // Auto-populate every new subnet with a gateway router (first IP)
+      // and a switch (second IP), wired together.
+      const routerIp = getNextAvailableIp(cidr, []) ?? '';
+      const switchIp = getNextAvailableIp(cidr, routerIp ? [routerIp] : []) ?? '';
+      const routerId = generateId();
+      const switchId = generateId();
+
+      site.subnets.push({
+        id,
+        name,
+        cidr,
+        gateway: routerIp,
+        containers: [
+          { id: routerId, name: `${name} Router`, type: 'router', ip: routerIp },
+          { id: switchId, name: `${name} Switch`, type: 'switch', ip: switchIp },
+        ],
+        connections: [{ from: switchId, to: routerId }],
+      });
       draft.dirty = true;
       break;
     }
@@ -128,10 +151,26 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
     }
 
     // ── Site Connections ──
-    case 'ADD_SITE_CONNECTION':
-      draft.topology.siteConnections.push(action.payload);
+    case 'ADD_SITE_CONNECTION': {
+      const conn = action.payload;
+      // Resolve fromContainer/toContainer to the gateway router of each site
+      const findSiteRouter = (siteId: string): string | undefined => {
+        const site = draft.topology.sites.find(s => s.id === siteId);
+        if (!site) return undefined;
+        for (const subnet of site.subnets) {
+          const r = subnet.containers.find(c => c.type === 'router' || c.type === 'firewall');
+          if (r) return r.id;
+        }
+        return undefined;
+      };
+      draft.topology.siteConnections.push({
+        ...conn,
+        fromContainer: conn.fromContainer ?? findSiteRouter(conn.from),
+        toContainer:   conn.toContainer   ?? findSiteRouter(conn.to),
+      });
       draft.dirty = true;
       break;
+    }
 
     case 'DELETE_SITE_CONNECTION':
       draft.topology.siteConnections = draft.topology.siteConnections.filter(
@@ -144,7 +183,55 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
     // ── Inter-Subnet Connections ──
     case 'ADD_INTER_SUBNET_CONNECTION': {
       const site = draft.topology.sites.find(s => s.id === action.payload.siteId);
-      if (site) site.subnetConnections.push(action.payload.connection);
+      if (!site) break;
+
+      const conn = action.payload.connection;
+      const fromSubnet = site.subnets.find(s => s.id === conn.from);
+      const toSubnet   = site.subnets.find(s => s.id === conn.to);
+      if (!fromSubnet || !toSubnet) break;
+
+      // Skip if this subnet pair already has a connection (either direction)
+      const alreadyConnected = site.subnetConnections.some(
+        c => (c.from === conn.from && c.to === conn.to) ||
+             (c.from === conn.to   && c.to === conn.from)
+      );
+      if (alreadyConnected) break;
+
+      // Find or auto-create a gateway router in a subnet. If created, also
+      // wires the first switch → router connection and sets subnet.gateway.
+      const ensureRouter = (subnet: typeof fromSubnet): string => {
+        const existing = subnet.containers.find(
+          c => c.type === 'router' || c.type === 'firewall'
+        );
+        if (existing) return existing.id;
+
+        const takenIps = subnet.containers.map(c => c.ip).filter(Boolean);
+        const routerIp = getNextAvailableIp(subnet.cidr, takenIps) ?? '';
+        const routerId = generateId();
+        subnet.containers.push({
+          id: routerId,
+          name: `${subnet.name} Router`,
+          type: 'router',
+          ip: routerIp,
+        } as Container);
+        subnet.gateway = routerIp;
+
+        // Auto-uplink the subnet's switch to the new router
+        const sw = subnet.containers.find(c => c.type === 'switch');
+        if (sw) subnet.connections.push({ from: sw.id, to: routerId });
+
+        return routerId;
+      };
+
+      const fromRouterId = ensureRouter(fromSubnet);
+      const toRouterId   = ensureRouter(toSubnet);
+
+      site.subnetConnections.push({
+        from: conn.from,
+        to:   conn.to,
+        fromContainer: fromRouterId,
+        toContainer:   toRouterId,
+      });
       draft.dirty = true;
       break;
     }

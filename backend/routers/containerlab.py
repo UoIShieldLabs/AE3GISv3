@@ -54,20 +54,31 @@ def generate(topology_id: str, db: Session = Depends(get_db)):
 async def deploy(topology_id: str, db: Session = Depends(get_db)):
     topo = _get_topo(topology_id, db)
 
-    # Always regenerate YAML from current topology data
-    yaml_str = clab_generator.generate_clab_yaml(topo.data)
-    clab_manager.write_yaml(topology_id, yaml_str)
-    topo.clab_yaml = yaml_str
-
     try:
+        # Always regenerate YAML from current topology data
+        yaml_str = clab_generator.generate_clab_yaml(topo.data)
+        log.info("Generated YAML for %s (%d bytes)", topology_id, len(yaml_str))
+
+        yaml_path = clab_manager.write_yaml(topology_id, yaml_str)
+
+        # Verify what was written to disk matches what was generated
+        written = yaml_path.read_text()
+        if written != yaml_str:
+            log.error("YAML write verification FAILED for %s", topology_id)
+            raise RuntimeError("YAML written to disk does not match generated content")
+        log.info("YAML write verified OK for %s", topology_id)
+
+        topo.clab_yaml = yaml_str
+
         output = await clab_manager.deploy(topology_id)
         topo.status = "deployed"
         db.commit()
         return {"status": "deployed", "output": output}
-    except (FileNotFoundError, RuntimeError) as e:
+    except Exception as e:
+        log.exception("Deploy failed for %s: %s: %s", topology_id, type(e).__name__, e)
         topo.status = "error"
         db.commit()
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
 
 
 # ── Destroy ─────────────────────────────────────────────────────────

@@ -47,7 +47,9 @@ async def deploy(topology_id: str) -> str:
         "-t", str(path),
         "--reconfigure",
     ])
+    log.info("containerlab deploy stdout:\n%s", stdout)
     if rc != 0:
+        log.error("containerlab deploy stderr:\n%s", stderr)
         raise RuntimeError(f"containerlab deploy failed:\n{stderr}")
     return stdout
 
