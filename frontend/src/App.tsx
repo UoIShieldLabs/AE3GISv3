@@ -13,6 +13,7 @@ import { TerminalOverlay } from './components/TerminalOverlay';
 import { ControlBar } from './components/ControlBar';
 import { TopologyBrowser } from './components/TopologyBrowser';
 import * as api from './api/client';
+import { deploymentName } from './utils/deploymentName';
 
 type ViewScale = 'geographic' | 'subnet' | 'lan';
 
@@ -202,7 +203,7 @@ function App() {
       setSelectedContainer(null);
       // If deployed, connect WebSocket
       if (record.status === 'deployed') {
-        const topoName = record.data.name || 'ae3gis-topology';
+        const topoName = deploymentName(record.id, record.data.name);
         connectWebSocket(record.id, topoName);
       } else {
         disconnectWebSocket();
@@ -223,11 +224,13 @@ function App() {
         await api.updateTopology(backendId, backendName ?? undefined, topology);
         dispatch({ type: 'MARK_CLEAN' });
       }
+      // Ensure the generated YAML reflects latest backend generator logic.
+      await api.generateTopology(backendId);
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'deploying' });
       await api.deployTopology(backendId);
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'deployed' });
       // Connect WebSocket for live status
-      const topoName = topology.name || 'ae3gis-topology';
+      const topoName = deploymentName(backendId, topology.name);
       connectWebSocket(backendId, topoName);
     } catch (err) {
       console.error('Deploy failed:', err);
@@ -386,7 +389,7 @@ function App() {
             container={terminalContainer}
             backendId={backendId}
             deployStatus={deployStatus}
-            topoName={topology.name || 'ae3gis-topology'}
+            topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
             onClose={() => setTerminalContainer(null)}
           />
         )}

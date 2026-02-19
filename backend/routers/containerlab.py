@@ -29,7 +29,7 @@ def _get_topo(topology_id: str, db: Session) -> Topology:
 
 def _topo_name(topo: Topology) -> str:
     """Return the clab topology name (used for inspect)."""
-    return topo.data.get("name") or "ae3gis-topology"
+    return clab_manager.deployment_name(topo.id, topo.data)
 
 
 # ── Generate ────────────────────────────────────────────────────────
@@ -38,7 +38,8 @@ def _topo_name(topo: Topology) -> str:
 @router.post("/{topology_id}/generate")
 def generate(topology_id: str, db: Session = Depends(get_db)):
     topo = _get_topo(topology_id, db)
-    yaml_str = clab_generator.generate_clab_yaml(topo.data)
+    topo_data = {**topo.data, "name": _topo_name(topo)}
+    yaml_str = clab_generator.generate_clab_yaml(topo_data)
     clab_manager.write_yaml(topology_id, yaml_str)
 
     topo.clab_yaml = yaml_str
@@ -56,7 +57,8 @@ async def deploy(topology_id: str, db: Session = Depends(get_db)):
 
     try:
         # Always regenerate YAML from current topology data
-        yaml_str = clab_generator.generate_clab_yaml(topo.data)
+        topo_data = {**topo.data, "name": _topo_name(topo)}
+        yaml_str = clab_generator.generate_clab_yaml(topo_data)
         log.info("Generated YAML for %s (%d bytes)", topology_id, len(yaml_str))
 
         yaml_path = clab_manager.write_yaml(topology_id, yaml_str)
@@ -154,7 +156,7 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
             await websocket.close(code=4004)
             return
 
-        topo_name = topo.data.get("name") or "ae3gis-topology"
+        topo_name = _topo_name(topo)
         docker_name = f"clab-{topo_name}-{container_id}"
 
         await websocket.send_text(f"Connecting to {docker_name}...\r\n")

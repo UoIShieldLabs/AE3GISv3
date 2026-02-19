@@ -17,6 +17,38 @@ def _yaml_path(topology_id: str) -> Path:
     return CLAB_WORKDIR / f"{topology_id}.clab.yml"
 
 
+def deployment_name(topology_id: str, topology_data: dict | None = None) -> str:
+    """Return a deterministic, unique containerlab topology name per record."""
+    base = (topology_data or {}).get("name") or "ae3gis-topology"
+    base = str(base).strip() or "ae3gis-topology"
+    return f"{base}-{topology_id[:8]}"
+
+
+def management_network_name(topology_id: str) -> str:
+    """Return a deterministic management network name per topology."""
+    return f"ae3gis-mgmt-{topology_id[:8]}"
+
+
+def management_ipv4_subnet(topology_id: str) -> str:
+    """Return a deterministic management IPv4 subnet per topology.
+
+    Uses 172.16.0.0/12 space with /24s to avoid clashing with containerlab's
+    default 172.20.20.0/24 and to keep per-topology isolation.
+    """
+    n = int(topology_id[:4], 16)
+    second_octet = 16 + ((n >> 8) % 16)  # 16..31
+    third_octet = n & 0xFF
+    return f"172.{second_octet}.{third_octet}.0/24"
+
+
+def management_ipv6_subnet(topology_id: str) -> str:
+    """Return a deterministic management IPv6 subnet per topology (/64)."""
+    n = int(topology_id[:4], 16)
+    second_octet = 16 + ((n >> 8) % 16)  # keep aligned with IPv4 octet
+    third_octet = n & 0xFF
+    return f"3fff:172:{second_octet}:{third_octet}::/64"
+
+
 def write_yaml(topology_id: str, yaml_content: str) -> Path:
     """Write the clab YAML to the workdir and return the file path."""
     path = _yaml_path(topology_id)
@@ -45,6 +77,9 @@ async def deploy(topology_id: str) -> str:
     rc, stdout, stderr = await _run([
         "sudo", "containerlab", "deploy",
         "-t", str(path),
+        "--network", management_network_name(topology_id),
+        "--ipv4-subnet", management_ipv4_subnet(topology_id),
+        "--ipv6-subnet", management_ipv6_subnet(topology_id),
         "--reconfigure",
     ])
     log.info("containerlab deploy stdout:\n%s", stdout)

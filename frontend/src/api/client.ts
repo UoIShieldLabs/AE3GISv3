@@ -85,6 +85,10 @@ export function deployTopology(id: string): Promise<{ status: string; output: st
   return request(`${BASE}/${id}/deploy`, { method: 'POST' });
 }
 
+export function generateTopology(id: string): Promise<{ yaml: string }> {
+  return request(`${BASE}/${id}/generate`, { method: 'POST' });
+}
+
 export function destroyTopology(id: string): Promise<{ status: string; output: string }> {
   return request(`${BASE}/${id}/destroy`, { method: 'POST' });
 }

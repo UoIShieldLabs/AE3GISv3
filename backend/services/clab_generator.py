@@ -288,14 +288,19 @@ def generate_clab_yaml(topology: dict) -> str:
                 exec_cmds: list[str] = []
 
                 if ctype in _SWITCH_TYPES:
-                    # Open vSwitch: create bridge and add all ports.
+                    # Use Linux bridge for switch nodes.
+                    # This avoids host kernel dependency on the openvswitch module
+                    # and provides reliable L2 forwarding for our lab topologies.
                     if ifaces:
-                        exec_cmds.append("ovs-vsctl add-br br0")
+                        exec_cmds.append(
+                            "sh -lc 'ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge'"
+                        )
                         for iface in ifaces:
-                            exec_cmds.append(f"ovs-vsctl add-port br0 {iface}")
+                            exec_cmds.append(f"ip link set {iface} up || true")
+                            exec_cmds.append(f"ip link set {iface} master br0")
                         exec_cmds.append("ip link set br0 up")
                         if ip:
-                            exec_cmds.append(f"ip addr add {ip}/{pfx} dev br0")
+                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev br0")
 
                 elif ctype in _ROUTER_TYPES:
                     # FRR router: enable forwarding, assign IPs on all interfaces,

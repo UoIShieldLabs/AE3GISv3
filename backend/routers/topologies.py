@@ -55,7 +55,7 @@ def delete_topology(topology_id: str, db: Session = Depends(get_db)):
     topo = db.get(Topology, topology_id)
     if not topo:
         raise HTTPException(404, "Topology not found")
-    topo_name = topo.data.get("name") or "ae3gis-topology"
+    topo_name = clab_manager.deployment_name(topology_id, topo.data)
     db.delete(topo)
     db.commit()
     # Remove YAML file and clab working directory
