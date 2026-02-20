@@ -105,3 +105,19 @@ class TopologySummary(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class FirewallRule(BaseModel):
+    source: str
+    destination: str
+    protocol: Literal["any", "tcp", "udp", "icmp"]
+    port: str
+    action: Literal["accept", "drop"]
+
+
+class FirewallRulesUpdate(BaseModel):
+    rules: list[FirewallRule]
+
+
+class FirewallRulesResponse(BaseModel):
+    rules: list[FirewallRule]

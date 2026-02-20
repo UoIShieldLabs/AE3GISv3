@@ -29,6 +29,14 @@ export interface ClabContainer {
   'network-namespace'?: string;
 }
 
+export interface FirewallRuleRecord {
+  source: string;
+  destination: string;
+  protocol: 'any' | 'tcp' | 'udp' | 'icmp';
+  port: string;
+  action: 'accept' | 'drop';
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 const BASE = '/api/topologies';
@@ -97,4 +105,22 @@ export function getTopologyStatus(
   id: string,
 ): Promise<{ status: string; containers: ClabContainer[] }> {
   return request(`${BASE}/${id}/status`);
+}
+
+export function getFirewallRules(
+  topologyId: string,
+  containerId: string,
+): Promise<{ rules: FirewallRuleRecord[] }> {
+  return request(`${BASE}/${topologyId}/firewall/${containerId}`);
+}
+
+export function putFirewallRules(
+  topologyId: string,
+  containerId: string,
+  rules: FirewallRuleRecord[],
+): Promise<{ rules: FirewallRuleRecord[] }> {
+  return request(`${BASE}/${topologyId}/firewall/${containerId}`, {
+    method: 'PUT',
+    ...json({ rules }),
+  });
 }

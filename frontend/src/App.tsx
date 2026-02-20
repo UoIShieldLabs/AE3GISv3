@@ -12,6 +12,8 @@ import { NodeInfoPanel } from './components/NodeInfoPanel';
 import { TerminalOverlay } from './components/TerminalOverlay';
 import { ControlBar } from './components/ControlBar';
 import { TopologyBrowser } from './components/TopologyBrowser';
+import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
+import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
 import { deploymentName } from './utils/deploymentName';
 
@@ -43,6 +45,11 @@ function App() {
 
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [terminalContainer, setTerminalContainer] = useState<Container | null>(null);
+  const [routerActionContainer, setRouterActionContainer] = useState<Container | null>(null);
+  const [firewallContainer, setFirewallContainer] = useState<Container | null>(null);
+  const [firewallRulesByContainer, setFirewallRulesByContainer] = useState<Record<string, FirewallRule[]>>({});
+  const [firewallBusy, setFirewallBusy] = useState(false);
+  const [firewallError, setFirewallError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -304,6 +311,64 @@ function App() {
     }
   }, [effectiveNav.scale, currentSite, currentSubnet]);
 
+  const toUiRule = useCallback((rule: api.FirewallRuleRecord, index: number): FirewallRule => ({
+    id: `rule-${index}-${rule.source}-${rule.destination}-${rule.protocol}-${rule.port}-${rule.action}`,
+    source: rule.source,
+    destination: rule.destination,
+    protocol: rule.protocol,
+    port: rule.port,
+    action: rule.action,
+  }), []);
+
+  const loadFirewallRules = useCallback(async () => {
+    if (!firewallContainer || !backendId) return;
+    setFirewallError(null);
+    setFirewallBusy(true);
+    try {
+      const res = await api.getFirewallRules(backendId, firewallContainer.id);
+      const uiRules = res.rules.map((r, i) => toUiRule(r, i));
+      setFirewallRulesByContainer((prev) => ({ ...prev, [firewallContainer.id]: uiRules }));
+    } catch (err) {
+      setFirewallError(err instanceof Error ? err.message : 'Failed to load firewall rules');
+    } finally {
+      setFirewallBusy(false);
+    }
+  }, [firewallContainer, backendId, toUiRule]);
+
+  const applyFirewallRules = useCallback(async (rules: FirewallRule[]) => {
+    if (!firewallContainer || !backendId) {
+      setFirewallError('Save and deploy the topology first.');
+      return;
+    }
+    setFirewallError(null);
+    setFirewallBusy(true);
+    try {
+      const payload: api.FirewallRuleRecord[] = rules.map((r) => ({
+        source: r.source,
+        destination: r.destination,
+        protocol: r.protocol,
+        port: r.port,
+        action: r.action,
+      }));
+      const res = await api.putFirewallRules(backendId, firewallContainer.id, payload);
+      const uiRules = res.rules.map((r, i) => toUiRule(r, i));
+      setFirewallRulesByContainer((prev) => ({ ...prev, [firewallContainer.id]: uiRules }));
+    } catch (err) {
+      setFirewallError(err instanceof Error ? err.message : 'Failed to apply firewall rules');
+    } finally {
+      setFirewallBusy(false);
+    }
+  }, [firewallContainer, backendId, toUiRule]);
+
+  useEffect(() => {
+    if (!firewallContainer) return;
+    if (!backendId) {
+      setFirewallError('Save and deploy the topology first.');
+      return;
+    }
+    void loadFirewallRules();
+  }, [firewallContainer, backendId, loadFirewallRules]);
+
   // ── Render ────────────────────────────────────────────────────
 
   return (
@@ -359,6 +424,7 @@ function App() {
               <SubnetView
                 site={currentSite}
                 onSelectSubnet={goToSubnet}
+                onOpenRouterTerminal={setRouterActionContainer}
               />
             )}
           </ReactFlowProvider>
@@ -393,6 +459,39 @@ function App() {
             onClose={() => setTerminalContainer(null)}
           />
         )}
+
+        {/* Router action chooser */}
+        <RouterActionDialog
+          open={!!routerActionContainer}
+          container={routerActionContainer}
+          onClose={() => setRouterActionContainer(null)}
+          onOpenTerminal={() => {
+            if (!routerActionContainer) return;
+            setTerminalContainer(routerActionContainer);
+            setRouterActionContainer(null);
+          }}
+          onOpenFirewallRules={() => {
+            if (!routerActionContainer) return;
+            setFirewallContainer(routerActionContainer);
+            setRouterActionContainer(null);
+            setFirewallError(null);
+          }}
+        />
+
+        {/* Firewall rules manager */}
+        <FirewallRulesDialog
+          open={!!firewallContainer}
+          container={firewallContainer}
+          rules={firewallContainer ? (firewallRulesByContainer[firewallContainer.id] ?? []) : []}
+          onClose={() => {
+            setFirewallContainer(null);
+            setFirewallError(null);
+          }}
+          onChangeRules={applyFirewallRules}
+          onRefresh={loadFirewallRules}
+          busy={firewallBusy}
+          error={firewallError}
+        />
 
         {/* Topology browser dialog */}
         <TopologyBrowser

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Topology
+from schemas import FirewallRulesResponse, FirewallRulesUpdate
 from services import clab_generator, clab_manager
 
 log = logging.getLogger(__name__)
@@ -30,6 +31,16 @@ def _get_topo(topology_id: str, db: Session) -> Topology:
 def _topo_name(topo: Topology) -> str:
     """Return the clab topology name (used for inspect)."""
     return clab_manager.deployment_name(topo.id, topo.data)
+
+
+def _find_container(topo: Topology, container_id: str) -> dict[str, Any] | None:
+    data = topo.data or {}
+    for site in data.get("sites", []):
+        for subnet in site.get("subnets", []):
+            for container in subnet.get("containers", []):
+                if container.get("id") == container_id:
+                    return container
+    return None
 
 
 # ── Generate ────────────────────────────────────────────────────────
@@ -288,3 +299,48 @@ async def exec_precheck(topology_id: str, container_id: str, db: Session = Depen
         "detail": detail or f"docker inspect failed with return code {proc.returncode}",
         "docker_name": docker_name,
     }
+
+
+@router.get("/{topology_id}/firewall/{container_id}", response_model=FirewallRulesResponse)
+async def get_firewall_rules(topology_id: str, container_id: str, db: Session = Depends(get_db)):
+    topo = _get_topo(topology_id, db)
+    container = _find_container(topo, container_id)
+    if not container:
+        raise HTTPException(404, "Container not found")
+    if container.get("type") not in {"router", "firewall"}:
+        raise HTTPException(400, "Firewall rules are only supported on router/firewall containers")
+    if topo.status != "deployed":
+        raise HTTPException(409, "Topology is not deployed")
+
+    try:
+        rules = await clab_manager.get_firewall_rules(_topo_name(topo), container_id)
+        return {"rules": rules}
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc))
+
+
+@router.put("/{topology_id}/firewall/{container_id}", response_model=FirewallRulesResponse)
+async def put_firewall_rules(
+    topology_id: str,
+    container_id: str,
+    body: FirewallRulesUpdate,
+    db: Session = Depends(get_db),
+):
+    topo = _get_topo(topology_id, db)
+    container = _find_container(topo, container_id)
+    if not container:
+        raise HTTPException(404, "Container not found")
+    if container.get("type") not in {"router", "firewall"}:
+        raise HTTPException(400, "Firewall rules are only supported on router/firewall containers")
+    if topo.status != "deployed":
+        raise HTTPException(409, "Topology is not deployed")
+
+    try:
+        rules = await clab_manager.apply_firewall_rules(
+            _topo_name(topo),
+            container_id,
+            [r.model_dump() for r in body.rules],
+        )
+        return {"rules": rules}
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc))

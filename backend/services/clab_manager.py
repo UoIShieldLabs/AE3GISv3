@@ -11,6 +11,7 @@ from pathlib import Path
 from config import CLAB_WORKDIR
 
 log = logging.getLogger(__name__)
+_FW_CHAIN = "AE3GIS-FW"
 
 
 def _yaml_path(topology_id: str) -> Path:
@@ -29,24 +30,32 @@ def management_network_name(topology_id: str) -> str:
     return f"ae3gis-mgmt-{topology_id[:8]}"
 
 
-def management_ipv4_subnet(topology_id: str) -> str:
+def _mgmt_seed(topology_id: str) -> int:
+    # Use up to 32 bits of topology id for better spread.
+    return int(topology_id[:8], 16)
+
+
+def management_ipv4_subnet(topology_id: str, attempt: int = 0) -> str:
     """Return a deterministic management IPv4 subnet per topology.
 
-    Uses 172.16.0.0/12 space with /24s to avoid clashing with containerlab's
-    default 172.20.20.0/24 and to keep per-topology isolation.
+    Uses 100.64.0.0/10 with /24s. This avoids Docker's default bridge
+    network (172.17.0.0/16), which was causing frequent overlaps.
     """
-    n = int(topology_id[:4], 16)
-    second_octet = 16 + ((n >> 8) % 16)  # 16..31
-    third_octet = n & 0xFF
-    return f"172.{second_octet}.{third_octet}.0/24"
+    # 100.64.0.0/10 -> second octet 64..127 and third octet 0..255
+    total_slots = 64 * 256
+    slot = (_mgmt_seed(topology_id) + (attempt * 9973)) % total_slots
+    second_octet = 64 + (slot // 256)  # 64..127
+    third_octet = slot % 256
+    return f"100.{second_octet}.{third_octet}.0/24"
 
 
-def management_ipv6_subnet(topology_id: str) -> str:
+def management_ipv6_subnet(topology_id: str, attempt: int = 0) -> str:
     """Return a deterministic management IPv6 subnet per topology (/64)."""
-    n = int(topology_id[:4], 16)
-    second_octet = 16 + ((n >> 8) % 16)  # keep aligned with IPv4 octet
-    third_octet = n & 0xFF
-    return f"3fff:172:{second_octet}:{third_octet}::/64"
+    total_slots = 64 * 256
+    slot = (_mgmt_seed(topology_id) + (attempt * 9973)) % total_slots
+    second_octet = 64 + (slot // 256)
+    third_octet = slot % 256
+    return f"3fff:100:{second_octet}:{third_octet}::/64"
 
 
 def write_yaml(topology_id: str, yaml_content: str) -> Path:
@@ -68,6 +77,77 @@ async def _run(cmd: list[str]) -> tuple[int, str, str]:
     return proc.returncode, stdout.decode(), stderr.decode()
 
 
+async def _docker_exec(docker_name: str, args: list[str]) -> tuple[int, str, str]:
+    return await _run(["sudo", "docker", "exec", docker_name, *args])
+
+
+async def _detect_iptables_bin(docker_name: str) -> str:
+    rc, stdout, stderr = await _docker_exec(
+        docker_name,
+        ["sh", "-lc", "command -v iptables >/dev/null 2>&1 && echo iptables || (command -v iptables-nft >/dev/null 2>&1 && echo iptables-nft)"],
+    )
+    if rc != 0:
+        raise RuntimeError(f"failed to detect iptables binary: {stderr.strip()}")
+    ipt = stdout.strip()
+    if ipt not in {"iptables", "iptables-nft"}:
+        raise RuntimeError("iptables not found in container")
+    return ipt
+
+
+def _docker_name(topology_name: str, container_id: str) -> str:
+    return f"clab-{topology_name}-{container_id}"
+
+
+def _parse_chain_rules(output: str) -> list[dict[str, str]]:
+    rules: list[dict[str, str]] = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line.startswith(f"-A {_FW_CHAIN} "):
+            continue
+        parts = line.split()
+        rule = {
+            "source": "any",
+            "destination": "any",
+            "protocol": "any",
+            "port": "-",
+            "action": "accept",
+        }
+        i = 0
+        while i < len(parts):
+            tok = parts[i]
+            nxt = parts[i + 1] if i + 1 < len(parts) else ""
+            if tok == "-s" and nxt:
+                rule["source"] = nxt
+                i += 2
+                continue
+            if tok == "-d" and nxt:
+                rule["destination"] = nxt
+                i += 2
+                continue
+            if tok == "-p" and nxt:
+                rule["protocol"] = nxt.lower()
+                i += 2
+                continue
+            if tok == "--dport" and nxt:
+                rule["port"] = nxt
+                i += 2
+                continue
+            if tok == "-j" and nxt:
+                rule["action"] = nxt.lower()
+                i += 2
+                continue
+            i += 1
+
+        if rule["protocol"] not in {"any", "tcp", "udp", "icmp"}:
+            rule["protocol"] = "any"
+        if rule["action"] not in {"accept", "drop"}:
+            rule["action"] = "accept"
+        if rule["protocol"] in {"any", "icmp"}:
+            rule["port"] = "-"
+        rules.append(rule)
+    return rules
+
+
 async def deploy(topology_id: str) -> str:
     """Deploy a topology. Returns containerlab stdout."""
     path = _yaml_path(topology_id)
@@ -75,42 +155,117 @@ async def deploy(topology_id: str) -> str:
         raise FileNotFoundError(f"YAML not found: {path}")
 
     mgmt_net = management_network_name(topology_id)
-    deploy_cmd = [
-        "sudo", "containerlab", "deploy",
-        "-t", str(path),
-        "--network", mgmt_net,
-        "--ipv4-subnet", management_ipv4_subnet(topology_id),
-        "--ipv6-subnet", management_ipv6_subnet(topology_id),
-        "--reconfigure",
-    ]
+    last_stderr = ""
 
-    rc, stdout, stderr = await _run(deploy_cmd)
-    log.info("containerlab deploy stdout:\n%s", stdout)
-    if rc == 0:
-        return stdout
-
-    # Self-heal stale docker network metadata that references a missing bridge
-    # device (e.g., `Failed to lookup link "br-xxxx": Link not found`).
-    stale_bridge_error = "Failed to lookup link \"br-" in stderr and "Link not found" in stderr
-    if stale_bridge_error:
-        log.warning(
-            "Detected stale docker bridge state for management network %s. "
-            "Removing network and retrying deploy once.",
-            mgmt_net,
-        )
-        rm_rc, rm_stdout, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
-        log.info("docker network rm stdout:\n%s", rm_stdout)
-        if rm_rc != 0:
-            # Network may not exist or may have active endpoints.
-            log.warning("docker network rm stderr:\n%s", rm_stderr)
+    for attempt in range(4):
+        ipv4_subnet = management_ipv4_subnet(topology_id, attempt)
+        ipv6_subnet = management_ipv6_subnet(topology_id, attempt)
+        deploy_cmd = [
+            "sudo", "containerlab", "deploy",
+            "-t", str(path),
+            "--network", mgmt_net,
+            "--ipv4-subnet", ipv4_subnet,
+            "--ipv6-subnet", ipv6_subnet,
+            "--reconfigure",
+        ]
 
         rc, stdout, stderr = await _run(deploy_cmd)
-        log.info("containerlab deploy retry stdout:\n%s", stdout)
+        log.info("containerlab deploy stdout:\n%s", stdout)
         if rc == 0:
             return stdout
 
-    log.error("containerlab deploy stderr:\n%s", stderr)
-    raise RuntimeError(f"containerlab deploy failed:\n{stderr}")
+        last_stderr = stderr
+        overlap_error = "overlap" in stderr.lower() and "subnet" in stderr.lower()
+        stale_bridge_error = "Failed to lookup link \"br-" in stderr and "Link not found" in stderr
+
+        # Self-heal stale docker network metadata that references a missing
+        # bridge device (e.g., `Failed to lookup link "br-xxxx": Link not found`).
+        if stale_bridge_error:
+            log.warning(
+                "Detected stale docker bridge state for management network %s. "
+                "Removing network and retrying deploy.",
+                mgmt_net,
+            )
+            rm_rc, rm_stdout, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
+            log.info("docker network rm stdout:\n%s", rm_stdout)
+            if rm_rc != 0:
+                log.warning("docker network rm stderr:\n%s", rm_stderr)
+            continue
+
+        if overlap_error and attempt < 3:
+            log.warning(
+                "Management subnet overlap for topology %s using %s/%s. "
+                "Retrying with a different deterministic subnet.",
+                topology_id,
+                ipv4_subnet,
+                ipv6_subnet,
+            )
+            continue
+
+        break
+
+    log.error("containerlab deploy stderr:\n%s", last_stderr)
+    raise RuntimeError(f"containerlab deploy failed:\n{last_stderr}")
+
+
+async def get_firewall_rules(topology_name: str, container_id: str) -> list[dict[str, str]]:
+    """Read managed firewall rules from the AE3GIS chain inside a container."""
+    docker_name = _docker_name(topology_name, container_id)
+    ipt = await _detect_iptables_bin(docker_name)
+
+    rc, stdout, stderr = await _docker_exec(docker_name, [ipt, "-S", _FW_CHAIN])
+    if rc != 0:
+        err = stderr.lower()
+        if "no chain/target/match" in err:
+            return []
+        raise RuntimeError(stderr.strip() or "failed to read firewall rules")
+    return _parse_chain_rules(stdout)
+
+
+async def apply_firewall_rules(
+    topology_name: str,
+    container_id: str,
+    rules: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Replace managed firewall rules in AE3GIS chain inside a container."""
+    docker_name = _docker_name(topology_name, container_id)
+    ipt = await _detect_iptables_bin(docker_name)
+
+    # Ensure chain exists.
+    await _docker_exec(docker_name, ["sh", "-lc", f"{ipt} -N {_FW_CHAIN} 2>/dev/null || true"])
+    # Ensure FORWARD jumps to our chain (top priority).
+    await _docker_exec(
+        docker_name,
+        ["sh", "-lc", f"{ipt} -C FORWARD -j {_FW_CHAIN} >/dev/null 2>&1 || {ipt} -I FORWARD 1 -j {_FW_CHAIN}"],
+    )
+    # Clear existing managed rules.
+    rc, _stdout, stderr = await _docker_exec(docker_name, [ipt, "-F", _FW_CHAIN])
+    if rc != 0:
+        raise RuntimeError(stderr.strip() or "failed to flush firewall chain")
+
+    for rule in rules:
+        args = [ipt, "-A", _FW_CHAIN]
+        source = (rule.get("source") or "").strip()
+        destination = (rule.get("destination") or "").strip()
+        protocol = (rule.get("protocol") or "any").strip().lower()
+        port = (rule.get("port") or "-").strip()
+        action = (rule.get("action") or "accept").strip().upper()
+
+        if source and source.lower() != "any":
+            args += ["-s", source]
+        if destination and destination.lower() != "any":
+            args += ["-d", destination]
+        if protocol != "any":
+            args += ["-p", protocol]
+        if protocol in {"tcp", "udp"} and port and port != "-":
+            args += ["--dport", port]
+        args += ["-j", action]
+
+        rc, _stdout, stderr = await _docker_exec(docker_name, args)
+        if rc != 0:
+            raise RuntimeError(stderr.strip() or "failed to apply firewall rule")
+
+    return await get_firewall_rules(topology_name, container_id)
 
 
 async def destroy(topology_id: str) -> str:

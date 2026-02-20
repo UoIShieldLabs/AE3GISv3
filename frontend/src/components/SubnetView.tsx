@@ -23,17 +23,19 @@ import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
-import type { Site, Subnet } from '../data/sampleTopology';
+import type { Site, Subnet, Container } from '../data/sampleTopology';
 
 const nodeTypes = { subnetCloud: SubnetCloudNode, routerNode: RouterNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
+const ROUTER_OFFSET = { x: 55, y: 150 }; // place router centered below subnet cloud
 
 interface SubnetViewProps {
   site: Site;
   onSelectSubnet: (subnetId: string) => void;
+  onOpenRouterTerminal: (container: Container) => void;
 }
 
-export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
+export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal }: SubnetViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -113,12 +115,15 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
           },
         });
 
-        // Gateway router node — positioned below-right of the subnet cloud
+        // Gateway router node — positioned below the subnet cloud
         const gateway = subnet.containers.find(
           c => c.type === 'router' || c.type === 'firewall'
         );
         if (gateway) {
-          const routerDefaultPos = { x: cloudPos.x + 130, y: cloudPos.y + 140 };
+          const routerDefaultPos = {
+            x: cloudPos.x + ROUTER_OFFSET.x,
+            y: cloudPos.y + ROUTER_OFFSET.y,
+          };
           let routerPos = routerDefaultPos;
           if (!layoutChanged) {
             const existingRouter = currentNodes.find(n => n.id === gateway.id);
@@ -207,6 +212,18 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
       ],
     });
   }, [site.subnets]);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    for (const subnet of site.subnets) {
+      const gateway = subnet.containers.find(
+        c => c.type === 'router' || c.type === 'firewall'
+      );
+      if (gateway?.id === node.id) {
+        onOpenRouterTerminal(gateway);
+        return;
+      }
+    }
+  }, [site.subnets, onOpenRouterTerminal]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
@@ -300,6 +317,56 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
   }, [dispatch, site.id]);
 
   // Persist drag positions - local state only via useNodesState
+  const onNodeDrag = useCallback((_: React.MouseEvent, node: Node) => {
+    const subnetByRouter = new Map<string, string>();
+    const routerBySubnet = new Map<string, string>();
+
+    for (const subnet of site.subnets) {
+      const gateway = subnet.containers.find(
+        c => c.type === 'router' || c.type === 'firewall'
+      );
+      if (gateway) {
+        subnetByRouter.set(gateway.id, subnet.id);
+        routerBySubnet.set(subnet.id, gateway.id);
+      }
+    }
+
+    // Dragging subnet cloud moves its router with a fixed offset.
+    if (routerBySubnet.has(node.id)) {
+      const routerId = routerBySubnet.get(node.id)!;
+      setNodes((nds) => nds.map((n) => {
+        if (n.id === routerId) {
+          return {
+            ...n,
+            position: {
+              x: node.position.x + ROUTER_OFFSET.x,
+              y: node.position.y + ROUTER_OFFSET.y,
+            },
+          };
+        }
+        return n;
+      }));
+      return;
+    }
+
+    // Dragging router moves its subnet cloud with the inverse offset.
+    if (subnetByRouter.has(node.id)) {
+      const subnetId = subnetByRouter.get(node.id)!;
+      setNodes((nds) => nds.map((n) => {
+        if (n.id === subnetId) {
+          return {
+            ...n,
+            position: {
+              x: node.position.x - ROUTER_OFFSET.x,
+              y: node.position.y - ROUTER_OFFSET.y,
+            },
+          };
+        }
+        return n;
+      }));
+    }
+  }, [site.subnets, setNodes]);
+
   const onNodeDragStop = useCallback((_: React.MouseEvent, _node: Node) => {
     // setPosOverrides(prev => new Map(prev).set(node.id, node.position));
   }, []);
@@ -336,10 +403,35 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
       }
     }
 
-    setNodes(nds => nds.map(n => ({
-      ...n,
-      position: computedPositions.get(n.id) || { x: 400, y: 300 }
-    })));
+    const routerBySubnet = new Map<string, string>();
+    for (const subnet of site.subnets) {
+      const gateway = subnet.containers.find(
+        c => c.type === 'router' || c.type === 'firewall'
+      );
+      if (gateway) routerBySubnet.set(subnet.id, gateway.id);
+    }
+
+    setNodes((nds) => nds.map((n) => {
+      const cloudPos = computedPositions.get(n.id);
+      if (cloudPos) {
+        return { ...n, position: cloudPos };
+      }
+
+      for (const [subnetId, routerId] of routerBySubnet.entries()) {
+        if (n.id === routerId) {
+          const base = computedPositions.get(subnetId) || { x: 400, y: 300 };
+          return {
+            ...n,
+            position: {
+              x: base.x + ROUTER_OFFSET.x,
+              y: base.y + ROUTER_OFFSET.y,
+            },
+          };
+        }
+      }
+
+      return n;
+    }));
 
     setTimeout(() => fitView({ padding: 0.4 }), 50);
   }, [fitView, site.subnets, site.subnetConnections, layoutMode, setNodes]);
@@ -367,6 +459,8 @@ export function SubnetView({ site, onSelectSubnet }: SubnetViewProps) {
         onEdgesChange={onEdgesChange}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onNodeClick={onNodeClick}
+        onNodeDrag={onNodeDrag}
         onEdgeContextMenu={onEdgeContextMenu}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}

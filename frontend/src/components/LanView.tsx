@@ -64,6 +64,21 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
     [onSelectContainer]
   );
 
+  const visibleContainers = useMemo(
+    () => subnet.containers.filter(c => c.type !== 'router' && c.type !== 'firewall'),
+    [subnet.containers]
+  );
+  const visibleContainerIds = useMemo(
+    () => new Set(visibleContainers.map(c => c.id)),
+    [visibleContainers]
+  );
+  const visibleConnections = useMemo(
+    () => subnet.connections.filter(
+      conn => visibleContainerIds.has(conn.from) && visibleContainerIds.has(conn.to)
+    ),
+    [subnet.connections, visibleContainerIds]
+  );
+
   // Sync nodes with subnet data and layout
   const prevLayoutMode = useRef(layoutMode);
 
@@ -71,28 +86,28 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
     const layoutChanged = layoutMode !== prevLayoutMode.current;
     prevLayoutMode.current = layoutMode;
 
-    const layoutNodes = subnet.containers.map(c => ({ id: c.id, width: 110, height: 100 }));
+    const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
 
     if (layoutNodes.length > 0) {
       if (layoutMode === 'circle') {
         computedPositions = computeCircleLayout(
           layoutNodes,
-          subnet.connections.map(c => ({ source: c.from, target: c.to })),
+          visibleConnections.map(c => ({ source: c.from, target: c.to })),
         );
       } else if (layoutMode === 'grid') {
         computedPositions = computeGridLayout(layoutNodes);
       } else {
         computedPositions = computeLayout(
           layoutNodes,
-          subnet.connections.map(c => ({ source: c.from, target: c.to })),
+          visibleConnections.map(c => ({ source: c.from, target: c.to })),
           { direction: 'TB', nodeSpacing: 80, rankSpacing: 100 }
         );
       }
     }
 
     setNodes((currentNodes) => {
-      return subnet.containers.map((container) => {
+      return visibleContainers.map((container) => {
         // If layout didn't change, try to preserve existing position
         if (!layoutChanged) {
           const existingNode = currentNodes.find(n => n.id === container.id);
@@ -117,13 +132,13 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
         };
       });
     });
-  }, [subnet, layoutMode, handleSelect, setNodes]);
+  }, [visibleContainers, visibleConnections, layoutMode, handleSelect, setNodes]);
 
   // Sync edges
   useEffect(() => {
     setEdges(
-      subnet.connections.map((conn, i) => {
-        const sourceContainer = subnet.containers.find(
+      visibleConnections.map((conn, i) => {
+        const sourceContainer = visibleContainers.find(
           (c) => c.id === conn.from
         );
         const color = sourceContainer
@@ -138,7 +153,7 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
         };
       })
     );
-  }, [subnet.connections, subnet.containers, layoutMode, setEdges]);
+  }, [visibleConnections, visibleContainers, layoutMode, setEdges]);
 
 
 
@@ -159,7 +174,7 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
 
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
-    const container = subnet.containers.find(c => c.id === node.id);
+    const container = visibleContainers.find(c => c.id === node.id);
     if (!container) return;
     setCtxMenu({
       x: event.clientX,
@@ -169,12 +184,12 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
         { label: 'Delete Container', onClick: () => setDeleteConfirm({ containerId: container.id, name: container.name }), danger: true },
       ],
     });
-  }, [subnet.containers]);
+  }, [visibleContainers]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
     const idx = Number(edge.id.replace('lan-edge-', ''));
-    const conn = subnet.connections[idx];
+    const conn = visibleConnections[idx];
     if (!conn) return;
     setCtxMenu({
       x: event.clientX,
@@ -190,7 +205,7 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
         },
       ],
     });
-  }, [subnet.connections, subnet.id, siteId, dispatch]);
+  }, [visibleConnections, subnet.id, siteId, dispatch]);
 
   // CRUD handlers
   const handleAddContainer = useCallback((data: {
@@ -320,19 +335,19 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
     // The current Toolbar passes onAutoLayout.
     // Let's implement it to reset positions to the current layoutMode's computed positions.
 
-    const layoutNodes = subnet.containers.map(c => ({ id: c.id, width: 110, height: 100 }));
+    const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
     if (layoutMode === 'circle') {
       computedPositions = computeCircleLayout(
         layoutNodes,
-        subnet.connections.map(c => ({ source: c.from, target: c.to })),
+        visibleConnections.map(c => ({ source: c.from, target: c.to })),
       );
     } else if (layoutMode === 'grid') {
       computedPositions = computeGridLayout(layoutNodes);
     } else {
       computedPositions = computeLayout(
         layoutNodes,
-        subnet.connections.map(c => ({ source: c.from, target: c.to })),
+        visibleConnections.map(c => ({ source: c.from, target: c.to })),
         { direction: 'TB', nodeSpacing: 80, rankSpacing: 100 }
       );
     }
@@ -343,7 +358,7 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
     })));
 
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [fitView, subnet, layoutMode, setNodes]);
+  }, [fitView, visibleContainers, visibleConnections, layoutMode, setNodes]);
 
   const takenIps = useMemo(
     () => subnet.containers.map(c => c.ip),
@@ -351,8 +366,8 @@ export function LanView({ subnet, siteId, onSelectContainer }: LanViewProps) {
   );
 
   const connectionNodes = useMemo(
-    () => subnet.containers.map(c => ({ id: c.id, name: c.name })),
-    [subnet.containers]
+    () => visibleContainers.map(c => ({ id: c.id, name: c.name })),
+    [visibleContainers]
   );
 
   return (

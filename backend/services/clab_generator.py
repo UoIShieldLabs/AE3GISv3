@@ -311,6 +311,11 @@ def generate_clab_yaml(topology: dict) -> str:
                                 f"ip addr replace {ip}/{pfx} dev br0 >/dev/null 2>&1 || "
                                 f"ip addr replace {ip}/{pfx} dev {first_iface} >/dev/null 2>&1 || true'"
                             )
+                    # Switch management traffic still needs a default route for
+                    # cross-subnet reachability, same as host endpoints.
+                    gateway = info.get("gateway", "")
+                    if gateway:
+                        exec_cmds.append(f"ip route replace default via {gateway}")
 
                 elif ctype in _ROUTER_TYPES:
                     # FRR router: enable forwarding, assign IPs on all interfaces,

@@ -46,7 +46,7 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
   return (
     <div
       style={{
-        cursor: 'default',
+        cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
