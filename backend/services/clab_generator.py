@@ -294,17 +294,20 @@ def generate_clab_yaml(topology: dict) -> str:
                     # remain reachable on vanilla installs.
                     if ifaces:
                         first_iface = ifaces[0]
-                        for iface in ifaces:
-                            exec_cmds.append(f"ip link set {iface} up || true")
+                        iface_list = " ".join(ifaces)
                         exec_cmds.append(
-                            "sh -lc 'ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge || true'"
+                            "sh -lc '"
+                            f"for i in {iface_list}; do ip link set \"$i\" up >/dev/null 2>&1 || true; done; "
+                            "ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge || true; "
+                            f"for i in {iface_list}; do ip link set \"$i\" master br0 >/dev/null 2>&1 || true; done; "
+                            "ip link set br0 up >/dev/null 2>&1 || true'"
                         )
-                        for iface in ifaces:
-                            exec_cmds.append(f"ip link set {iface} master br0 || true")
-                        exec_cmds.append("ip link set br0 up || true")
                         if ip:
-                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev br0 || true")
-                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev {first_iface} || true")
+                            exec_cmds.append(
+                                "sh -lc '"
+                                f"ip addr replace {ip}/{pfx} dev br0 >/dev/null 2>&1 || "
+                                f"ip addr replace {ip}/{pfx} dev {first_iface} >/dev/null 2>&1 || true'"
+                            )
 
                 elif ctype in _ROUTER_TYPES:
                     # FRR router: enable forwarding, assign IPs on all interfaces,
