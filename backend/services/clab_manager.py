@@ -74,19 +74,43 @@ async def deploy(topology_id: str) -> str:
     if not path.exists():
         raise FileNotFoundError(f"YAML not found: {path}")
 
-    rc, stdout, stderr = await _run([
+    mgmt_net = management_network_name(topology_id)
+    deploy_cmd = [
         "sudo", "containerlab", "deploy",
         "-t", str(path),
-        "--network", management_network_name(topology_id),
+        "--network", mgmt_net,
         "--ipv4-subnet", management_ipv4_subnet(topology_id),
         "--ipv6-subnet", management_ipv6_subnet(topology_id),
         "--reconfigure",
-    ])
+    ]
+
+    rc, stdout, stderr = await _run(deploy_cmd)
     log.info("containerlab deploy stdout:\n%s", stdout)
-    if rc != 0:
-        log.error("containerlab deploy stderr:\n%s", stderr)
-        raise RuntimeError(f"containerlab deploy failed:\n{stderr}")
-    return stdout
+    if rc == 0:
+        return stdout
+
+    # Self-heal stale docker network metadata that references a missing bridge
+    # device (e.g., `Failed to lookup link "br-xxxx": Link not found`).
+    stale_bridge_error = "Failed to lookup link \"br-" in stderr and "Link not found" in stderr
+    if stale_bridge_error:
+        log.warning(
+            "Detected stale docker bridge state for management network %s. "
+            "Removing network and retrying deploy once.",
+            mgmt_net,
+        )
+        rm_rc, rm_stdout, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
+        log.info("docker network rm stdout:\n%s", rm_stdout)
+        if rm_rc != 0:
+            # Network may not exist or may have active endpoints.
+            log.warning("docker network rm stderr:\n%s", rm_stderr)
+
+        rc, stdout, stderr = await _run(deploy_cmd)
+        log.info("containerlab deploy retry stdout:\n%s", stdout)
+        if rc == 0:
+            return stdout
+
+    log.error("containerlab deploy stderr:\n%s", stderr)
+    raise RuntimeError(f"containerlab deploy failed:\n{stderr}")
 
 
 async def destroy(topology_id: str) -> str:
