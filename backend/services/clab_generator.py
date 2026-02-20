@@ -7,7 +7,10 @@ from collections import defaultdict
 import yaml
 
 _IMAGE_ROUTER = "frrouting/frr:latest"
-_IMAGE_SWITCH = "tollan/openvswitch-xp:v0.1"
+# Use a plain Linux image for switch containers. The previous OVS image
+# attempts to load host kernel modules on startup, which breaks on vanilla
+# installs where openvswitch is not present.
+_IMAGE_SWITCH = "alpine:latest"
 _IMAGE_HOST   = "alpine:latest"
 
 _ROUTER_TYPES = frozenset({"router", "firewall"})
