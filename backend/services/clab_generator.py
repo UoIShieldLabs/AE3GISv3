@@ -289,18 +289,22 @@ def generate_clab_yaml(topology: dict) -> str:
 
                 if ctype in _SWITCH_TYPES:
                     # Use Linux bridge for switch nodes.
-                    # This avoids host kernel dependency on the openvswitch module
-                    # and provides reliable L2 forwarding for our lab topologies.
+                    # If bridge creation/config fails on a host, fall back to
+                    # placing the switch IP on the first data interface so nodes
+                    # remain reachable on vanilla installs.
                     if ifaces:
-                        exec_cmds.append(
-                            "sh -lc 'ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge'"
-                        )
+                        first_iface = ifaces[0]
                         for iface in ifaces:
                             exec_cmds.append(f"ip link set {iface} up || true")
-                            exec_cmds.append(f"ip link set {iface} master br0")
-                        exec_cmds.append("ip link set br0 up")
+                        exec_cmds.append(
+                            "sh -lc 'ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge || true'"
+                        )
+                        for iface in ifaces:
+                            exec_cmds.append(f"ip link set {iface} master br0 || true")
+                        exec_cmds.append("ip link set br0 up || true")
                         if ip:
-                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev br0")
+                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev br0 || true")
+                            exec_cmds.append(f"ip addr replace {ip}/{pfx} dev {first_iface} || true")
 
                 elif ctype in _ROUTER_TYPES:
                     # FRR router: enable forwarding, assign IPs on all interfaces,
