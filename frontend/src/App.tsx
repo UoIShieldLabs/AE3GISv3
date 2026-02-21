@@ -42,8 +42,30 @@ function App() {
   });
 
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
-  const [terminalContainer, setTerminalContainer] = useState<Container | null>(null);
+  const [terminalSessions, setTerminalSessions] = useState<Container[]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+
+  const openTerminal = useCallback((container: Container) => {
+    setTerminalSessions(prev => {
+      if (prev.find(c => c.id === container.id)) {
+        setActiveTerminalId(container.id);
+        return prev;
+      }
+      setActiveTerminalId(container.id);
+      return [...prev, container];
+    });
+  }, []);
+
+  const closeTerminal = useCallback((containerId: string) => {
+    setTerminalSessions(prev => {
+      const next = prev.filter(c => c.id !== containerId);
+      setActiveTerminalId(curr =>
+        curr === containerId ? (next.length > 0 ? next[next.length - 1].id : null) : curr
+      );
+      return next;
+    });
+  }, []);
   const [busy, setBusy] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -370,7 +392,7 @@ function App() {
                   subnet={currentSubnet}
                   siteId={currentSite.id}
                   onSelectContainer={setSelectedContainer}
-                  onOpenTerminal={setTerminalContainer}
+                  onOpenTerminal={openTerminal}
                   onDeselect={() => setSelectedContainer(null)}
                 />
               )}
@@ -380,20 +402,22 @@ function App() {
             <NodeInfoPanel
               container={activeContainer}
               onClose={() => setSelectedContainer(null)}
-              onOpenTerminal={(c) => setTerminalContainer(c)}
+              onOpenTerminal={openTerminal}
               siteId={effectiveNav.siteId}
               subnetId={effectiveNav.subnetId}
             />
           </div>
 
           {/* Terminal panel */}
-          {terminalContainer && (
+          {terminalSessions.length > 0 && activeTerminalId && (
             <TerminalOverlay
-              container={terminalContainer}
+              sessions={terminalSessions}
+              activeId={activeTerminalId}
+              onActivate={setActiveTerminalId}
+              onClose={closeTerminal}
               backendId={backendId}
               deployStatus={deployStatus}
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
-              onClose={() => setTerminalContainer(null)}
             />
           )}
         </div>

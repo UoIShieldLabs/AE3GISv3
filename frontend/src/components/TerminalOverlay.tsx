@@ -2,12 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Container } from '../data/sampleTopology';
 
-interface TerminalOverlayProps {
-  container: Container;
+export interface TerminalOverlayProps {
+  sessions: Container[];
+  activeId: string;
+  onActivate: (id: string) => void;
+  onClose: (id: string) => void;
   backendId: string | null;
   deployStatus: string;
   topoName: string;
-  onClose: () => void;
 }
 
 type ConnStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -19,13 +21,17 @@ const STATUS_COLOR: Record<ConnStatus, string> = {
   error: '#ff3344',
 };
 
-export function TerminalOverlay({
-  container,
-  backendId,
-  deployStatus,
-  topoName,
-  onClose,
-}: TerminalOverlayProps) {
+// ── Single terminal session (WS + I/O) ────────────────────────────
+
+interface TerminalSessionProps {
+  container: Container;
+  backendId: string | null;
+  deployStatus: string;
+  topoName: string;
+  active: boolean;
+}
+
+function TerminalSession({ container, backendId, deployStatus, active }: TerminalSessionProps) {
   const [lines, setLines] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [connStatus, setConnStatus] = useState<ConnStatus>('connecting');
@@ -37,12 +43,11 @@ export function TerminalOverlay({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const appendText = useCallback((rawText: string) => {
-    // Strip ANSI escape codes emitted by the PTY, then normalise line endings
     const text = rawText
-      .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '') // CSI sequences  (e.g. colours, cursor)
-      .replace(/\x1b[^[]/g, '')                   // other ESC sequences
-      .replace(/\r\n/g, '\n')                      // CRLF → LF
-      .replace(/\r/g, '\n');                       // bare CR → LF
+      .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
+      .replace(/\x1b[^[]/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
 
     setLines((prev) => {
       const parts = text.split('\n');
@@ -143,20 +148,19 @@ export function TerminalOverlay({
   }, [backendId, container.id, deployStatus, appendText]);
 
   useEffect(() => {
-    if (outputRef.current) {
+    if (active && outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [lines]);
+  }, [lines, active]);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (active) inputRef.current?.focus();
+  }, [active]);
 
   const sendInput = useCallback(() => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(input + '\n');
-    // Don't echo locally — the PTY echoes input back through the server
     if (input.trim()) {
       setHistory((prev) => [input, ...prev.slice(0, 99)]);
     }
@@ -196,49 +200,106 @@ export function TerminalOverlay({
   const isConnected = connStatus === 'connected';
 
   return (
-    <div className="terminal-panel">
-      <div className="terminal-titlebar">
-        <span className="terminal-titlebar-text">
-          <span style={{ color: STATUS_COLOR[connStatus], marginRight: '8px' }}>●</span>
-          {container.name} — {container.ip}
-        </span>
-        <button className="terminal-titlebar-close" onClick={onClose}>
-          ×
-        </button>
+    <div
+      className="terminal-body"
+      style={{ display: active ? 'flex' : 'none', padding: 0, flexDirection: 'column' }}
+    >
+      <div ref={outputRef} className="terminal-output">
+        {lines.map((line, i) => (
+          <div key={i} className="terminal-line">
+            {line || '\u00a0'}
+          </div>
+        ))}
       </div>
 
-      <div className="terminal-body" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-        <div ref={outputRef} className="terminal-output">
-          {lines.map((line, i) => (
-            <div key={i} className="terminal-line">
-              {line || '\u00a0'}
+      <div className="terminal-input-row">
+        <span className="terminal-prompt" style={{ color: STATUS_COLOR[connStatus] }}>{'$ '}</span>
+        <input
+          ref={inputRef}
+          className="terminal-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={!isConnected}
+          placeholder={
+            connStatus === 'connecting'
+              ? 'connecting...'
+              : connStatus !== 'connected'
+              ? 'not connected'
+              : ''
+          }
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Tab bar + multi-session panel ─────────────────────────────────
+
+export function TerminalOverlay({
+  sessions,
+  activeId,
+  onActivate,
+  onClose,
+  backendId,
+  deployStatus,
+  topoName,
+}: TerminalOverlayProps) {
+  const [minimized, setMinimized] = useState(false);
+
+  const handleTabClick = (id: string) => {
+    if (id === activeId && !minimized) {
+      setMinimized(true);
+    } else {
+      onActivate(id);
+      setMinimized(false);
+    }
+  };
+
+  return (
+    <div className={`terminal-panel${minimized ? ' terminal-panel--minimized' : ''}`}>
+      <div className="terminal-tabbar">
+        <div className="terminal-tabs">
+          {sessions.map((c) => (
+            <div
+              key={c.id}
+              className={`terminal-tab${c.id === activeId && !minimized ? ' terminal-tab--active' : ''}`}
+              onClick={() => handleTabClick(c.id)}
+            >
+              <span className="terminal-tab-label">{c.name}</span>
+              <button
+                className="terminal-tab-close"
+                onClick={(e) => { e.stopPropagation(); onClose(c.id); }}
+                title="Close"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
-
-        <div className="terminal-input-row">
-          <span className="terminal-prompt">{'$ '}</span>
-          <input
-            ref={inputRef}
-            className="terminal-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={!isConnected}
-            placeholder={
-              connStatus === 'connecting'
-                ? 'connecting...'
-                : connStatus !== 'connected'
-                ? 'not connected'
-                : ''
-            }
-            spellCheck={false}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-          />
-        </div>
+        <button
+          className="terminal-tabbar-minimize"
+          onClick={() => setMinimized(m => !m)}
+          title={minimized ? 'Restore' : 'Minimize'}
+        >
+          {minimized ? '▲' : '▼'}
+        </button>
       </div>
+
+      {sessions.map((c) => (
+        <TerminalSession
+          key={c.id}
+          container={c}
+          backendId={backendId}
+          deployStatus={deployStatus}
+          topoName={topoName}
+          active={c.id === activeId && !minimized}
+        />
+      ))}
     </div>
   );
 }
