@@ -141,15 +141,16 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
           <div key={k} style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             marginBottom: '4px',
             fontFamily: "var(--font-mono)",
             fontSize: '12px',
             color: 'var(--text-primary)',
+            minWidth: 0,
           }}>
-            <span style={{ color: 'var(--neon-cyan)' }}>{k}</span>
-            <span style={{ color: 'var(--text-dim)' }}>=</span>
-            <span>{v}</span>
+            <span style={{ color: 'var(--neon-cyan)', flexShrink: 0 }}>{k}</span>
+            <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>=</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
             <button
               type="button"
               onClick={() => removeMetaEntry(k)}
@@ -161,19 +162,21 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
                 fontFamily: "var(--font-mono)",
                 fontSize: '12px',
                 padding: '0 4px',
+                flexShrink: 0,
               }}
             >
               x
             </button>
           </div>
         ))}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
           <input
             value={metaKey}
             onChange={(e) => setMetaKey(e.target.value)}
             placeholder="key"
             style={{
-              flex: 1,
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '6px 8px',
               background: 'var(--bg-primary)',
               border: '1px solid var(--border-color)',
@@ -189,7 +192,8 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             onChange={(e) => setMetaValue(e.target.value)}
             placeholder="value"
             style={{
-              flex: 1,
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '6px 8px',
               background: 'var(--bg-primary)',
               border: '1px solid var(--border-color)',
@@ -204,6 +208,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             type="button"
             onClick={addMetaEntry}
             style={{
+              width: '100%',
               padding: '6px 10px',
               background: 'rgba(0, 212, 255, 0.08)',
               border: '1px solid var(--neon-cyan)',
@@ -214,7 +219,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               cursor: 'pointer',
             }}
           >
-            +
+            + Add
           </button>
         </div>
       </div>

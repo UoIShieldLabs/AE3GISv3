@@ -6,6 +6,7 @@ import type { ContainerType, Container } from '../../data/sampleTopology';
 export type DeviceNodeData = {
   container: Container;
   onSelect: (container: Container) => void;
+  onOpenTerminal: (container: Container) => void;
 };
 
 export type DeviceNodeType = Node<DeviceNodeData, 'device'>;
@@ -110,7 +111,7 @@ function DeviceIcon({ type }: { type: ContainerType }) {
 }
 
 export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNodeType>) {
-  const { container, onSelect } = data;
+  const { container, onSelect, onOpenTerminal } = data;
   const color = typeColors[container.type];
   const typeLabel = typeLabels[container.type];
 
@@ -130,6 +131,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
         minWidth: '90px',
       }}
       onClick={() => onSelect(container)}
+      onDoubleClick={(e) => { e.stopPropagation(); onOpenTerminal(container); }}
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.borderColor = `${color}88`;

@@ -73,8 +73,8 @@ export const SiteNode = memo(function SiteNode({ data, id }: NodeProps<SiteNodeT
   return (
     <div
       style={containerStyle}
-      onDoubleClick={() => data.onDrillDown(id)}
-      title="Double-click to drill down"
+      onClick={() => data.onDrillDown(id)}
+      title="Click to drill down"
     >
       <Handle type="target" position={Position.Top} style={{ background: '#00ff9f', width: 6, height: 6, border: 'none', opacity: 0.5 }} />
       <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>

@@ -42,8 +42,30 @@ function App() {
   });
 
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
-  const [terminalContainer, setTerminalContainer] = useState<Container | null>(null);
+  const [terminalSessions, setTerminalSessions] = useState<Container[]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+
+  const openTerminal = useCallback((container: Container) => {
+    setTerminalSessions(prev => {
+      if (prev.find(c => c.id === container.id)) {
+        setActiveTerminalId(container.id);
+        return prev;
+      }
+      setActiveTerminalId(container.id);
+      return [...prev, container];
+    });
+  }, []);
+
+  const closeTerminal = useCallback((containerId: string) => {
+    setTerminalSessions(prev => {
+      const next = prev.filter(c => c.id !== containerId);
+      setActiveTerminalId(curr =>
+        curr === containerId ? (next.length > 0 ? next[next.length - 1].id : null) : curr
+      );
+      return next;
+    });
+  }, []);
   const [busy, setBusy] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -345,54 +367,60 @@ function App() {
 
         {/* Main canvas */}
         <div className="topology-canvas">
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'geographic' && (
-              <GeographicView
-                topology={topology}
-                onSelectSite={goToSite}
-              />
-            )}
-          </ReactFlowProvider>
+          <div className="canvas-main">
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'geographic' && (
+                <GeographicView
+                  topology={topology}
+                  onSelectSite={goToSite}
+                />
+              )}
+            </ReactFlowProvider>
 
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'subnet' && currentSite && (
-              <SubnetView
-                site={currentSite}
-                onSelectSubnet={goToSubnet}
-              />
-            )}
-          </ReactFlowProvider>
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'subnet' && currentSite && (
+                <SubnetView
+                  site={currentSite}
+                  onSelectSubnet={goToSubnet}
+                />
+              )}
+            </ReactFlowProvider>
 
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
-              <LanView
-                subnet={currentSubnet}
-                siteId={currentSite.id}
-                onSelectContainer={setSelectedContainer}
-              />
-            )}
-          </ReactFlowProvider>
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
+                <LanView
+                  subnet={currentSubnet}
+                  siteId={currentSite.id}
+                  onSelectContainer={setSelectedContainer}
+                  onOpenTerminal={openTerminal}
+                  onDeselect={() => setSelectedContainer(null)}
+                />
+              )}
+            </ReactFlowProvider>
 
-          {/* Info panel */}
-          <NodeInfoPanel
-            container={activeContainer}
-            onClose={() => setSelectedContainer(null)}
-            onOpenTerminal={(c) => setTerminalContainer(c)}
-            siteId={effectiveNav.siteId}
-            subnetId={effectiveNav.subnetId}
-          />
+            {/* Info panel */}
+            <NodeInfoPanel
+              container={activeContainer}
+              onClose={() => setSelectedContainer(null)}
+              onOpenTerminal={openTerminal}
+              siteId={effectiveNav.siteId}
+              subnetId={effectiveNav.subnetId}
+            />
+          </div>
+
+          {/* Terminal panel */}
+          {terminalSessions.length > 0 && activeTerminalId && (
+            <TerminalOverlay
+              sessions={terminalSessions}
+              activeId={activeTerminalId}
+              onActivate={setActiveTerminalId}
+              onClose={closeTerminal}
+              backendId={backendId}
+              deployStatus={deployStatus}
+              topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
+            />
+          )}
         </div>
-
-        {/* Terminal overlay */}
-        {terminalContainer && (
-          <TerminalOverlay
-            container={terminalContainer}
-            backendId={backendId}
-            deployStatus={deployStatus}
-            topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
-            onClose={() => setTerminalContainer(null)}
-          />
-        )}
 
         {/* Topology browser dialog */}
         <TopologyBrowser
