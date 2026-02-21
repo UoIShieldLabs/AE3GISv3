@@ -71,8 +71,8 @@ export const SubnetCloudNode = memo(function SubnetCloudNode({ data, id }: NodeP
   return (
     <div
       style={containerStyle}
-      onDoubleClick={() => data.onDrillDown(id)}
-      title="Double-click to drill down"
+      onClick={() => data.onDrillDown(id)}
+      title="Click to drill down"
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.background = 'rgba(0, 212, 255, 0.08)';

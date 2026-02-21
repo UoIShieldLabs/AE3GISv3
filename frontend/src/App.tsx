@@ -345,54 +345,58 @@ function App() {
 
         {/* Main canvas */}
         <div className="topology-canvas">
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'geographic' && (
-              <GeographicView
-                topology={topology}
-                onSelectSite={goToSite}
-              />
-            )}
-          </ReactFlowProvider>
+          <div className="canvas-main">
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'geographic' && (
+                <GeographicView
+                  topology={topology}
+                  onSelectSite={goToSite}
+                />
+              )}
+            </ReactFlowProvider>
 
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'subnet' && currentSite && (
-              <SubnetView
-                site={currentSite}
-                onSelectSubnet={goToSubnet}
-              />
-            )}
-          </ReactFlowProvider>
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'subnet' && currentSite && (
+                <SubnetView
+                  site={currentSite}
+                  onSelectSubnet={goToSubnet}
+                />
+              )}
+            </ReactFlowProvider>
 
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
-              <LanView
-                subnet={currentSubnet}
-                siteId={currentSite.id}
-                onSelectContainer={setSelectedContainer}
-              />
-            )}
-          </ReactFlowProvider>
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
+                <LanView
+                  subnet={currentSubnet}
+                  siteId={currentSite.id}
+                  onSelectContainer={setSelectedContainer}
+                  onOpenTerminal={setTerminalContainer}
+                  onDeselect={() => setSelectedContainer(null)}
+                />
+              )}
+            </ReactFlowProvider>
 
-          {/* Info panel */}
-          <NodeInfoPanel
-            container={activeContainer}
-            onClose={() => setSelectedContainer(null)}
-            onOpenTerminal={(c) => setTerminalContainer(c)}
-            siteId={effectiveNav.siteId}
-            subnetId={effectiveNav.subnetId}
-          />
+            {/* Info panel */}
+            <NodeInfoPanel
+              container={activeContainer}
+              onClose={() => setSelectedContainer(null)}
+              onOpenTerminal={(c) => setTerminalContainer(c)}
+              siteId={effectiveNav.siteId}
+              subnetId={effectiveNav.subnetId}
+            />
+          </div>
+
+          {/* Terminal panel */}
+          {terminalContainer && (
+            <TerminalOverlay
+              container={terminalContainer}
+              backendId={backendId}
+              deployStatus={deployStatus}
+              topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
+              onClose={() => setTerminalContainer(null)}
+            />
+          )}
         </div>
-
-        {/* Terminal overlay */}
-        {terminalContainer && (
-          <TerminalOverlay
-            container={terminalContainer}
-            backendId={backendId}
-            deployStatus={deployStatus}
-            topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
-            onClose={() => setTerminalContainer(null)}
-          />
-        )}
 
         {/* Topology browser dialog */}
         <TopologyBrowser

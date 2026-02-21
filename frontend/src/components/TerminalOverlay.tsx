@@ -194,56 +194,49 @@ export function TerminalOverlay({
   );
 
   const isConnected = connStatus === 'connected';
-  const dockerName = `clab-${topoName || 'ae3gis-topology'}-${container.id}`;
 
   return (
-    <div className="terminal-overlay" onClick={onClose}>
-      <div
-        className="terminal-window"
-        onClick={(e) => e.stopPropagation()}
-        style={{ height: '520px' }}
-      >
-        <div className="terminal-titlebar">
-          <span className="terminal-titlebar-text">
-            <span style={{ color: STATUS_COLOR[connStatus], marginRight: '8px' }}>●</span>
-            {dockerName} — {container.ip}
-          </span>
-          <button className="terminal-titlebar-close" onClick={onClose}>
-            ×
-          </button>
+    <div className="terminal-panel">
+      <div className="terminal-titlebar">
+        <span className="terminal-titlebar-text">
+          <span style={{ color: STATUS_COLOR[connStatus], marginRight: '8px' }}>●</span>
+          {container.name} — {container.ip}
+        </span>
+        <button className="terminal-titlebar-close" onClick={onClose}>
+          ×
+        </button>
+      </div>
+
+      <div className="terminal-body" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
+        <div ref={outputRef} className="terminal-output">
+          {lines.map((line, i) => (
+            <div key={i} className="terminal-line">
+              {line || '\u00a0'}
+            </div>
+          ))}
         </div>
 
-        <div className="terminal-body" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-          <div ref={outputRef} className="terminal-output">
-            {lines.map((line, i) => (
-              <div key={i} className="terminal-line">
-                {line || '\u00a0'}
-              </div>
-            ))}
-          </div>
-
-          <div className="terminal-input-row">
-            <span className="terminal-prompt">{'$ '}</span>
-            <input
-              ref={inputRef}
-              className="terminal-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={!isConnected}
-              placeholder={
-                connStatus === 'connecting'
-                  ? 'connecting...'
-                  : connStatus !== 'connected'
-                  ? 'not connected'
-                  : ''
-              }
-              spellCheck={false}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-            />
-          </div>
+        <div className="terminal-input-row">
+          <span className="terminal-prompt">{'$ '}</span>
+          <input
+            ref={inputRef}
+            className="terminal-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={!isConnected}
+            placeholder={
+              connStatus === 'connecting'
+                ? 'connecting...'
+                : connStatus !== 'connected'
+                ? 'not connected'
+                : ''
+            }
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+          />
         </div>
       </div>
     </div>
