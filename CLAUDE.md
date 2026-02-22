@@ -46,6 +46,7 @@ Double-clicking a node drills down to the next level. Breadcrumb provides back n
 ### View Component Pattern
 
 All three views (`GeographicView`, `SubnetView`, `LanView`) follow the same structure:
+
 1. ReactFlow `useNodesState`/`useEdgesState` for canvas state
 2. `useEffect` hooks to sync nodes/edges with topology data
 3. Context menu handlers for right-click CRUD
