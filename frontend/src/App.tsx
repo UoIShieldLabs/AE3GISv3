@@ -4,6 +4,7 @@ import { useImmerReducer } from 'use-immer';
 import { sampleTopology, type Container } from './data/sampleTopology';
 import { topologyReducer, type TopologyState } from './store/topologyReducer';
 import { TopologyDispatchContext } from './store/TopologyContext';
+import { AuthContext, type AuthState } from './store/AuthContext';
 import { GeographicView } from './components/GeographicView';
 import { SubnetView } from './components/SubnetView';
 import { LanView } from './components/LanView';
@@ -12,6 +13,8 @@ import { NodeInfoPanel } from './components/NodeInfoPanel';
 import { TerminalOverlay } from './components/TerminalOverlay';
 import { ControlBar } from './components/ControlBar';
 import { TopologyBrowser } from './components/TopologyBrowser';
+import { LoginScreen } from './components/LoginScreen';
+import { ClassroomPanel } from './components/ClassroomPanel';
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
@@ -34,8 +37,11 @@ const initialState: TopologyState = {
 };
 
 function App() {
+  const [auth, setAuth] = useState<AuthState | null>(null);
   const [state, dispatch] = useImmerReducer(topologyReducer, initialState);
   const { topology, backendId, backendName, deployStatus, dirty } = state;
+
+  const readOnly = auth?.role === 'student';
 
   const [nav, setNav] = useState<NavigationState>({
     scale: 'geographic',
@@ -51,6 +57,7 @@ function App() {
   const [firewallBusy, setFirewallBusy] = useState(false);
   const [firewallError, setFirewallError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [classroomOpen, setClassroomOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -121,9 +128,8 @@ function App() {
       wsRef.current = null;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/topologies/ws/${topoId}/status`;
-    const ws = new WebSocket(wsUrl);
+    const wsUrlStr = api.wsUrl(`/api/topologies/ws/${topoId}/status`);
+    const ws = new WebSocket(wsUrlStr);
 
     ws.onmessage = (event) => {
       try {
@@ -282,6 +288,27 @@ function App() {
     URL.revokeObjectURL(url);
   }, [topology]);
 
+  // ── Auth handlers ──────────────────────────────────────────────
+
+  const handleLogin = useCallback((authState: AuthState) => {
+    setAuth(authState);
+    api.setAuthToken(authState.token);
+    // If student, auto-load their assigned topology
+    if (authState.role === 'student' && authState.assignedTopologyId) {
+      void handleLoad(authState.assignedTopologyId);
+    }
+  }, [handleLoad]);
+
+  const handleLogout = useCallback(() => {
+    setAuth(null);
+    api.setAuthToken(null);
+    disconnectWebSocket();
+    dispatch({ type: 'LOAD_TOPOLOGY', payload: { sites: [], siteConnections: [] } });
+    dispatch({ type: 'CLEAR_BACKEND' });
+    setNav({ scale: 'geographic', siteId: null, subnetId: null });
+    setSelectedContainer(null);
+  }, [dispatch, disconnectWebSocket]);
+
   // ── Breadcrumbs ───────────────────────────────────────────────
 
   const breadcrumbItems = useMemo(() => {
@@ -369,139 +396,172 @@ function App() {
     void loadFirewallRules();
   }, [firewallContainer, backendId, loadFirewallRules]);
 
+  // ── Login gate ─────────────────────────────────────────────────
+
+  if (!auth) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <TopologyDispatchContext.Provider value={dispatch}>
-      <div className="app-container">
-        {/* Scanline overlay for CRT effect */}
-        <div className="scanline-overlay" />
+    <AuthContext.Provider value={auth}>
+      <TopologyDispatchContext.Provider value={dispatch}>
+        <div className="app-container">
+          {/* Scanline overlay for CRT effect */}
+          <div className="scanline-overlay" />
 
-        {/* Header */}
-        <header className="header-bar">
-          <div className="header-title">AE3GIS</div>
-          <div className="header-stats">
-            <div className="header-stat">
-              <span className="dot" />
-              <span>{topology.sites.length} sites</span>
+          {/* Header */}
+          <header className="header-bar">
+            <div className="header-title">AE3GIS</div>
+            <div className="header-stats">
+              <div className="header-stat">
+                <span className="dot" />
+                <span>{topology.sites.length} sites</span>
+              </div>
+              <div className="header-stat">
+                <span className="dot" />
+                <span>{totalContainers} containers</span>
+              </div>
             </div>
-            <div className="header-stat">
-              <span className="dot" />
-              <span>{totalContainers} containers</span>
-            </div>
+            <ControlBar
+              backendId={backendId}
+              backendName={backendName}
+              deployStatus={deployStatus}
+              dirty={dirty}
+              onNew={handleNew}
+              onSave={handleSave}
+              onLoad={() => setBrowserOpen(true)}
+              onDeploy={handleDeploy}
+              onDestroy={handleDestroy}
+              onExport={handleExport}
+              onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
+              isBusy={busy}
+              readOnly={readOnly}
+            />
+            <button
+              className="control-btn"
+              onClick={handleLogout}
+              style={{ marginLeft: 8 }}
+              title="Logout"
+            >
+              Logout
+            </button>
+          </header>
+
+          {/* Breadcrumb navigation */}
+          <Breadcrumb items={breadcrumbItems} current={currentLabel} />
+
+          {/* Main canvas */}
+          <div className="topology-canvas">
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'geographic' && (
+                <GeographicView
+                  topology={topology}
+                  onSelectSite={goToSite}
+                  readOnly={readOnly}
+                />
+              )}
+            </ReactFlowProvider>
+
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'subnet' && currentSite && (
+                <SubnetView
+                  site={currentSite}
+                  onSelectSubnet={goToSubnet}
+                  onOpenRouterTerminal={setRouterActionContainer}
+                  readOnly={readOnly}
+                />
+              )}
+            </ReactFlowProvider>
+
+            <ReactFlowProvider>
+              {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
+                <LanView
+                  subnet={currentSubnet}
+                  siteId={currentSite.id}
+                  onSelectContainer={setSelectedContainer}
+                  readOnly={readOnly}
+                />
+              )}
+            </ReactFlowProvider>
+
+            {/* Info panel */}
+            <NodeInfoPanel
+              container={activeContainer}
+              onClose={() => setSelectedContainer(null)}
+              onOpenTerminal={(c) => setTerminalContainer(c)}
+              siteId={effectiveNav.siteId}
+              subnetId={effectiveNav.subnetId}
+              readOnly={readOnly}
+            />
           </div>
-          <ControlBar
-            backendId={backendId}
-            backendName={backendName}
-            deployStatus={deployStatus}
-            dirty={dirty}
-            onNew={handleNew}
-            onSave={handleSave}
-            onLoad={() => setBrowserOpen(true)}
-            onDeploy={handleDeploy}
-            onDestroy={handleDestroy}
-            onExport={handleExport}
-            isBusy={busy}
+
+          {/* Terminal overlay */}
+          {terminalContainer && (
+            <TerminalOverlay
+              container={terminalContainer}
+              backendId={backendId}
+              deployStatus={deployStatus}
+              topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
+              onClose={() => setTerminalContainer(null)}
+            />
+          )}
+
+          {/* Router action chooser */}
+          <RouterActionDialog
+            open={!!routerActionContainer}
+            container={routerActionContainer}
+            onClose={() => setRouterActionContainer(null)}
+            onOpenTerminal={() => {
+              if (!routerActionContainer) return;
+              setTerminalContainer(routerActionContainer);
+              setRouterActionContainer(null);
+            }}
+            onOpenFirewallRules={() => {
+              if (!routerActionContainer) return;
+              setFirewallContainer(routerActionContainer);
+              setRouterActionContainer(null);
+              setFirewallError(null);
+            }}
           />
-        </header>
 
-        {/* Breadcrumb navigation */}
-        <Breadcrumb items={breadcrumbItems} current={currentLabel} />
-
-        {/* Main canvas */}
-        <div className="topology-canvas">
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'geographic' && (
-              <GeographicView
-                topology={topology}
-                onSelectSite={goToSite}
-              />
-            )}
-          </ReactFlowProvider>
-
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'subnet' && currentSite && (
-              <SubnetView
-                site={currentSite}
-                onSelectSubnet={goToSubnet}
-                onOpenRouterTerminal={setRouterActionContainer}
-              />
-            )}
-          </ReactFlowProvider>
-
-          <ReactFlowProvider>
-            {effectiveNav.scale === 'lan' && currentSubnet && currentSite && (
-              <LanView
-                subnet={currentSubnet}
-                siteId={currentSite.id}
-                onSelectContainer={setSelectedContainer}
-              />
-            )}
-          </ReactFlowProvider>
-
-          {/* Info panel */}
-          <NodeInfoPanel
-            container={activeContainer}
-            onClose={() => setSelectedContainer(null)}
-            onOpenTerminal={(c) => setTerminalContainer(c)}
-            siteId={effectiveNav.siteId}
-            subnetId={effectiveNav.subnetId}
+          {/* Firewall rules manager */}
+          <FirewallRulesDialog
+            open={!!firewallContainer}
+            container={firewallContainer}
+            rules={firewallContainer ? (firewallRulesByContainer[firewallContainer.id] ?? []) : []}
+            onClose={() => {
+              setFirewallContainer(null);
+              setFirewallError(null);
+            }}
+            onChangeRules={applyFirewallRules}
+            onRefresh={loadFirewallRules}
+            busy={firewallBusy}
+            error={firewallError}
+            readOnly={readOnly}
           />
+
+          {/* Topology browser dialog */}
+          {!readOnly && (
+            <TopologyBrowser
+              open={browserOpen}
+              onClose={() => setBrowserOpen(false)}
+              onLoad={handleLoad}
+              currentId={backendId}
+            />
+          )}
+
+          {/* Classroom panel (instructor only) */}
+          {!readOnly && (
+            <ClassroomPanel
+              open={classroomOpen}
+              onClose={() => setClassroomOpen(false)}
+            />
+          )}
         </div>
-
-        {/* Terminal overlay */}
-        {terminalContainer && (
-          <TerminalOverlay
-            container={terminalContainer}
-            backendId={backendId}
-            deployStatus={deployStatus}
-            topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
-            onClose={() => setTerminalContainer(null)}
-          />
-        )}
-
-        {/* Router action chooser */}
-        <RouterActionDialog
-          open={!!routerActionContainer}
-          container={routerActionContainer}
-          onClose={() => setRouterActionContainer(null)}
-          onOpenTerminal={() => {
-            if (!routerActionContainer) return;
-            setTerminalContainer(routerActionContainer);
-            setRouterActionContainer(null);
-          }}
-          onOpenFirewallRules={() => {
-            if (!routerActionContainer) return;
-            setFirewallContainer(routerActionContainer);
-            setRouterActionContainer(null);
-            setFirewallError(null);
-          }}
-        />
-
-        {/* Firewall rules manager */}
-        <FirewallRulesDialog
-          open={!!firewallContainer}
-          container={firewallContainer}
-          rules={firewallContainer ? (firewallRulesByContainer[firewallContainer.id] ?? []) : []}
-          onClose={() => {
-            setFirewallContainer(null);
-            setFirewallError(null);
-          }}
-          onChangeRules={applyFirewallRules}
-          onRefresh={loadFirewallRules}
-          busy={firewallBusy}
-          error={firewallError}
-        />
-
-        {/* Topology browser dialog */}
-        <TopologyBrowser
-          open={browserOpen}
-          onClose={() => setBrowserOpen(false)}
-          onLoad={handleLoad}
-          currentId={backendId}
-        />
-      </div>
-    </TopologyDispatchContext.Provider>
+      </TopologyDispatchContext.Provider>
+    </AuthContext.Provider>
   );
 }
 

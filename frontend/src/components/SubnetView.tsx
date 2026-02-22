@@ -33,9 +33,10 @@ interface SubnetViewProps {
   site: Site;
   onSelectSubnet: (subnetId: string) => void;
   onOpenRouterTerminal: (container: Container) => void;
+  readOnly?: boolean;
 }
 
-export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal }: SubnetViewProps) {
+export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnly }: SubnetViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -453,17 +454,17 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal }: Subne
         minZoom={0.3}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={true}
-        nodesConnectable={true}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onPaneContextMenu={onPaneContextMenu}
-        onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={readOnly ? undefined : onPaneContextMenu}
+        onNodeContextMenu={readOnly ? undefined : onNodeContextMenu}
         onNodeClick={onNodeClick}
-        onNodeDrag={onNodeDrag}
-        onEdgeContextMenu={onEdgeContextMenu}
-        onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
+        onNodeDrag={readOnly ? undefined : onNodeDrag}
+        onEdgeContextMenu={readOnly ? undefined : onEdgeContextMenu}
+        onConnect={readOnly ? undefined : onConnect}
+        onNodeDragStop={readOnly ? undefined : onNodeDragStop}
         connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 1.5, opacity: 0.6 }}
       >
         <Background
@@ -480,6 +481,7 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal }: Subne
         onAutoLayout={handleAutoLayout}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        readOnly={readOnly}
       />
 
       <div className="scale-label">Subnet Overview — {site.name}</div>
@@ -493,35 +495,39 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal }: Subne
         />
       )}
 
-      <SubnetDialog
-        open={subnetDialog.open}
-        onClose={() => setSubnetDialog({ open: false })}
-        onSubmit={subnetDialog.initial ? handleEditSubnet : handleAddSubnet}
-        initial={subnetDialog.initial}
-      />
+      {!readOnly && (
+        <>
+          <SubnetDialog
+            open={subnetDialog.open}
+            onClose={() => setSubnetDialog({ open: false })}
+            onSubmit={subnetDialog.initial ? handleEditSubnet : handleAddSubnet}
+            initial={subnetDialog.initial}
+          />
 
-      <ConnectionDialog
-        open={connDialog}
-        onClose={() => setConnDialog(false)}
-        onSubmit={handleAddConnection}
-        availableNodes={connectionNodes}
-      />
+          <ConnectionDialog
+            open={connDialog}
+            onClose={() => setConnDialog(false)}
+            onSubmit={handleAddConnection}
+            availableNodes={connectionNodes}
+          />
 
-      <BulkConnectionDialog
-        open={bulkConnDialog}
-        onClose={() => setBulkConnDialog(false)}
-        onSubmit={handleBulkConnections}
-        availableNodes={connectionNodes}
-        existingConnections={site.subnetConnections}
-      />
+          <BulkConnectionDialog
+            open={bulkConnDialog}
+            onClose={() => setBulkConnDialog(false)}
+            onSubmit={handleBulkConnections}
+            availableNodes={connectionNodes}
+            existingConnections={site.subnetConnections}
+          />
 
-      <ConfirmDialog
-        open={!!deleteConfirm}
-        title="Delete Subnet"
-        message={`Delete "${deleteConfirm?.name}"? All containers within will be removed.`}
-        onConfirm={handleDeleteSubnet}
-        onCancel={() => setDeleteConfirm(null)}
-      />
+          <ConfirmDialog
+            open={!!deleteConfirm}
+            title="Delete Subnet"
+            message={`Delete "${deleteConfirm?.name}"? All containers within will be removed.`}
+            onConfirm={handleDeleteSubnet}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        </>
+      )}
     </div>
   );
 }

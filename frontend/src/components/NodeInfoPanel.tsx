@@ -10,6 +10,7 @@ interface NodeInfoPanelProps {
   onOpenTerminal: (container: Container) => void;
   siteId: string | null;
   subnetId: string | null;
+  readOnly?: boolean;
 }
 
 const typeDisplayNames: Record<string, string> = {
@@ -28,6 +29,7 @@ export function NodeInfoPanel({
   onOpenTerminal,
   siteId,
   subnetId,
+  readOnly,
 }: NodeInfoPanelProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const [editOpen, setEditOpen] = useState(false);
@@ -142,60 +144,66 @@ export function NodeInfoPanel({
             >
               Open Terminal
             </button>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button
-                onClick={() => setEditOpen(true)}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'rgba(0, 212, 255, 0.08)',
-                  border: '1px solid var(--neon-cyan)',
-                  color: 'var(--neon-cyan)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  borderRadius: '4px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setDeleteOpen(true)}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'rgba(255, 51, 68, 0.08)',
-                  border: '1px solid var(--neon-red)',
-                  color: 'var(--neon-red)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  borderRadius: '4px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-              >
-                Delete
-              </button>
-            </div>
+            {!readOnly && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  onClick={() => setEditOpen(true)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    background: 'rgba(0, 212, 255, 0.08)',
+                    border: '1px solid var(--neon-cyan)',
+                    color: 'var(--neon-cyan)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDeleteOpen(true)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    background: 'rgba(255, 51, 68, 0.08)',
+                    border: '1px solid var(--neon-red)',
+                    color: 'var(--neon-red)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
 
-          <ContainerDialog
-            open={editOpen}
-            onClose={() => setEditOpen(false)}
-            onSubmit={handleEdit}
-            initial={container}
-          />
+          {!readOnly && (
+            <>
+              <ContainerDialog
+                open={editOpen}
+                onClose={() => setEditOpen(false)}
+                onSubmit={handleEdit}
+                initial={container}
+              />
 
-          <ConfirmDialog
-            open={deleteOpen}
-            title="Delete Container"
-            message={`Delete "${container.name}"? All connections will be removed.`}
-            onConfirm={handleDelete}
-            onCancel={() => setDeleteOpen(false)}
-          />
+              <ConfirmDialog
+                open={deleteOpen}
+                title="Delete Container"
+                message={`Delete "${container.name}"? All connections will be removed.`}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteOpen(false)}
+              />
+            </>
+          )}
         </>
       )}
     </div>

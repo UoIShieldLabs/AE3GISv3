@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Container } from '../data/sampleTopology';
+import { wsUrl as buildWsUrl, getAuthToken } from '../api/client';
 
 interface TerminalOverlayProps {
   container: Container;
@@ -70,18 +71,20 @@ export function TerminalOverlay({
     }
 
     let closed = false;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     setConnStatus('connecting');
     setLines([]);
     const encodedContainerId = encodeURIComponent(container.id);
     const precheckUrl = `/api/topologies/${backendId}/exec/${encodedContainerId}/precheck`;
-    const wsUrl = `${protocol}//${window.location.host}/api/topologies/ws/${backendId}/exec/${encodedContainerId}`;
+    const wsUrlStr = buildWsUrl(`/api/topologies/ws/${backendId}/exec/${encodedContainerId}`);
 
     appendText(`[diag] precheck URL: ${precheckUrl}\r\n`);
 
     const run = async () => {
       try {
-        const res = await fetch(precheckUrl);
+        const headers: Record<string, string> = {};
+        const token = getAuthToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(precheckUrl, { headers });
         if (closed) return;
         if (!res.ok) {
           setConnStatus('error');
@@ -102,9 +105,9 @@ export function TerminalOverlay({
 
         appendText('[diag] Precheck passed: ok\r\n');
         if (precheck.docker_name) appendText(`[diag] docker name: ${precheck.docker_name}\r\n`);
-        appendText(`[diag] WS URL: ${wsUrl}\r\n`);
+        appendText(`[diag] WS URL: ${wsUrlStr}\r\n`);
 
-        const ws = new WebSocket(wsUrl);
+        const ws = new WebSocket(wsUrlStr);
         wsRef.current = ws;
 
         ws.onopen = () => setConnStatus('connecting');

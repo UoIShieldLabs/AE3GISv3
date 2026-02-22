@@ -37,12 +37,51 @@ export interface FirewallRuleRecord {
   action: 'accept' | 'drop';
 }
 
+// ── Auth token ────────────────────────────────────────────────────
+
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return _authToken;
+}
+
+/**
+ * Build a WebSocket URL with the auth token appended as a query parameter.
+ * Browsers cannot set custom headers on WebSocket connections.
+ */
+export function wsUrl(path: string): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const base = `${protocol}//${window.location.host}${path}`;
+  return _authToken ? `${base}?token=${encodeURIComponent(_authToken)}` : base;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 const BASE = '/api/topologies';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const headers: Record<string, string> = {};
+  if (_authToken) {
+    headers['Authorization'] = `Bearer ${_authToken}`;
+  }
+
+  // Merge caller-provided headers (e.g. Content-Type from json())
+  const initHeaders = init?.headers;
+  if (initHeaders) {
+    if (initHeaders instanceof Headers) {
+      initHeaders.forEach((v, k) => { headers[k] = v; });
+    } else if (Array.isArray(initHeaders)) {
+      for (const [k, v] of initHeaders) headers[k] = v;
+    } else {
+      Object.assign(headers, initHeaders);
+    }
+  }
+
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${text}`);
@@ -123,4 +162,74 @@ export function putFirewallRules(
     method: 'PUT',
     ...json({ rules }),
   });
+}
+
+// ── Classroom ─────────────────────────────────────────────────────
+
+export interface ClassSessionRecord {
+  id: string;
+  name: string;
+  template_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentSlotRecord {
+  id: string;
+  session_id: string;
+  topology_id: string;
+  join_code: string;
+  label: string | null;
+  created_at: string;
+}
+
+const CLASSROOM = '/api/classroom';
+
+export function studentLogin(
+  joinCode: string,
+): Promise<{ role: string; token: string; topology_id: string | null }> {
+  return request(`${CLASSROOM}/login`, {
+    method: 'POST',
+    ...json({ join_code: joinCode }),
+  });
+}
+
+export function listSessions(): Promise<ClassSessionRecord[]> {
+  return request<ClassSessionRecord[]>(`${CLASSROOM}/sessions`);
+}
+
+export function createSession(
+  name: string,
+  templateId: string,
+): Promise<ClassSessionRecord> {
+  return request<ClassSessionRecord>(`${CLASSROOM}/sessions`, {
+    method: 'POST',
+    ...json({ name, template_id: templateId }),
+  });
+}
+
+export function deleteSession(id: string): Promise<void> {
+  return request<void>(`${CLASSROOM}/sessions/${id}`, { method: 'DELETE' });
+}
+
+export function instantiateSession(
+  sessionId: string,
+  count: number,
+  labelPrefix: string = 'Student',
+): Promise<StudentSlotRecord[]> {
+  return request<StudentSlotRecord[]>(
+    `${CLASSROOM}/sessions/${sessionId}/instantiate`,
+    { method: 'POST', ...json({ count, label_prefix: labelPrefix }) },
+  );
+}
+
+export function listSlots(sessionId: string): Promise<StudentSlotRecord[]> {
+  return request<StudentSlotRecord[]>(`${CLASSROOM}/sessions/${sessionId}/slots`);
+}
+
+export function deleteSlot(sessionId: string, slotId: string): Promise<void> {
+  return request<void>(
+    `${CLASSROOM}/sessions/${sessionId}/slots/${slotId}`,
+    { method: 'DELETE' },
+  );
 }

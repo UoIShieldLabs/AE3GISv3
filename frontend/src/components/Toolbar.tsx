@@ -8,6 +8,7 @@ interface ToolbarProps {
   onBulkAdd?: () => void;
   layoutMode?: LayoutMode;
   onLayoutModeChange?: (mode: LayoutMode) => void;
+  readOnly?: boolean;
 }
 
 const layoutModes: { value: LayoutMode; label: string }[] = [
@@ -16,16 +17,20 @@ const layoutModes: { value: LayoutMode; label: string }[] = [
   { value: 'grid', label: 'Grid' },
 ];
 
-export function Toolbar({ onAdd, addLabel, onAutoLayout, onBulkAdd, layoutMode, onLayoutModeChange }: ToolbarProps) {
+export function Toolbar({ onAdd, addLabel, onAutoLayout, onBulkAdd, layoutMode, onLayoutModeChange, readOnly }: ToolbarProps) {
   return (
     <div className="toolbar">
-      <button className="toolbar-btn primary" onClick={onAdd}>
-        + {addLabel}
-      </button>
-      {onBulkAdd && (
-        <button className="toolbar-btn" onClick={onBulkAdd}>
-          + Bulk Add
-        </button>
+      {!readOnly && (
+        <>
+          <button className="toolbar-btn primary" onClick={onAdd}>
+            + {addLabel}
+          </button>
+          {onBulkAdd && (
+            <button className="toolbar-btn" onClick={onBulkAdd}>
+              + Bulk Add
+            </button>
+          )}
+        </>
       )}
       {layoutMode && onLayoutModeChange ? (
         <div className="toolbar-layout-group">

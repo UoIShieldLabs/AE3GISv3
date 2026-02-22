@@ -31,9 +31,10 @@ const edgeTypes = { neonStraight: NeonEdgeStraight };
 interface GeographicViewProps {
   topology: TopologyData;
   onSelectSite: (siteId: string) => void;
+  readOnly?: boolean;
 }
 
-export function GeographicView({ topology, onSelectSite }: GeographicViewProps) {
+export function GeographicView({ topology, onSelectSite, readOnly }: GeographicViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -242,15 +243,15 @@ export function GeographicView({ topology, onSelectSite }: GeographicViewProps) 
         minZoom={0.3}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={true}
-        nodesConnectable={true}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onPaneContextMenu={onPaneContextMenu}
-        onNodeContextMenu={onNodeContextMenu}
-        onEdgeContextMenu={onEdgeContextMenu}
-        onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
+        onPaneContextMenu={readOnly ? undefined : onPaneContextMenu}
+        onNodeContextMenu={readOnly ? undefined : onNodeContextMenu}
+        onEdgeContextMenu={readOnly ? undefined : onEdgeContextMenu}
+        onConnect={readOnly ? undefined : onConnect}
+        onNodeDragStop={readOnly ? undefined : onNodeDragStop}
         connectionLineStyle={{ stroke: '#00ff9f', strokeWidth: 1.5, opacity: 0.6 }}
       >
         <Background
@@ -273,6 +274,7 @@ export function GeographicView({ topology, onSelectSite }: GeographicViewProps) 
         onAdd={() => setSiteDialog({ open: true })}
         addLabel="Site"
         onAutoLayout={handleAutoLayout}
+        readOnly={readOnly}
       />
 
       <div className="scale-label">Geographic Overview</div>
@@ -286,35 +288,39 @@ export function GeographicView({ topology, onSelectSite }: GeographicViewProps) 
         />
       )}
 
-      <SiteDialog
-        open={siteDialog.open}
-        onClose={() => setSiteDialog({ open: false })}
-        onSubmit={siteDialog.initial ? handleEditSite : handleAddSite}
-        initial={siteDialog.initial}
-      />
+      {!readOnly && (
+        <>
+          <SiteDialog
+            open={siteDialog.open}
+            onClose={() => setSiteDialog({ open: false })}
+            onSubmit={siteDialog.initial ? handleEditSite : handleAddSite}
+            initial={siteDialog.initial}
+          />
 
-      <ConnectionDialog
-        open={connDialog}
-        onClose={() => setConnDialog(false)}
-        onSubmit={handleAddConnection}
-        availableNodes={connectionNodes}
-      />
+          <ConnectionDialog
+            open={connDialog}
+            onClose={() => setConnDialog(false)}
+            onSubmit={handleAddConnection}
+            availableNodes={connectionNodes}
+          />
 
-      <BulkConnectionDialog
-        open={bulkConnDialog}
-        onClose={() => setBulkConnDialog(false)}
-        onSubmit={handleBulkConnections}
-        availableNodes={connectionNodes}
-        existingConnections={topology.siteConnections}
-      />
+          <BulkConnectionDialog
+            open={bulkConnDialog}
+            onClose={() => setBulkConnDialog(false)}
+            onSubmit={handleBulkConnections}
+            availableNodes={connectionNodes}
+            existingConnections={topology.siteConnections}
+          />
 
-      <ConfirmDialog
-        open={!!deleteConfirm}
-        title="Delete Site"
-        message={`Delete "${deleteConfirm?.name}"? All subnets and containers within will be removed.`}
-        onConfirm={handleDeleteSite}
-        onCancel={() => setDeleteConfirm(null)}
-      />
+          <ConfirmDialog
+            open={!!deleteConfirm}
+            title="Delete Site"
+            message={`Delete "${deleteConfirm?.name}"? All subnets and containers within will be removed.`}
+            onConfirm={handleDeleteSite}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -22,6 +22,7 @@ interface FirewallRulesDialogProps {
   onRefresh?: () => void | Promise<void>;
   busy?: boolean;
   error?: string | null;
+  readOnly?: boolean;
 }
 
 function nextRuleId(): string {
@@ -37,6 +38,7 @@ export function FirewallRulesDialog({
   onRefresh,
   busy = false,
   error = null,
+  readOnly = false,
 }: FirewallRulesDialogProps) {
   const [source, setSource] = useState('');
   const [destination, setDestination] = useState('');
@@ -80,107 +82,109 @@ export function FirewallRulesDialog({
   return (
     <Dialog title="Firewall Rules" open={open} onClose={onClose} width={820}>
       {container && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '18px' }}>
-          <div style={{ borderRight: '1px solid var(--border-color)', paddingRight: '18px' }}>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                marginBottom: '14px',
-              }}
-            >
-              Target: {container.name} ({container.ip})
-            </div>
-
-            <FormField label="Source" value={source} onChange={setSource} placeholder="e.g. 10.0.1.0/24 or any" />
-            <FormField label="Destination" value={destination} onChange={setDestination} placeholder="e.g. 10.0.2.10/32" />
-            <SelectField
-              label="Protocol"
-              value={protocol}
-              onChange={(v) => setProtocol(v as 'any' | 'tcp' | 'udp' | 'icmp')}
-              options={[
-                { value: 'tcp', label: 'TCP' },
-                { value: 'udp', label: 'UDP' },
-                { value: 'icmp', label: 'ICMP' },
-                { value: 'any', label: 'ANY' },
-              ]}
-            />
-            <FormField
-              label="Port"
-              value={port}
-              onChange={setPort}
-              placeholder={protocol === 'any' || protocol === 'icmp' ? 'Not used for this protocol' : 'e.g. 443'}
-              error={portError || undefined}
-            />
-            <SelectField
-              label="Action"
-              value={action}
-              onChange={(v) => setAction(v as 'accept' | 'drop')}
-              options={[
-                { value: 'accept', label: 'ACCEPT' },
-                { value: 'drop', label: 'DROP' },
-              ]}
-            />
-
-            <button
-              onClick={addRule}
-              disabled={!canAdd || busy}
-              style={{
-                width: '100%',
-                marginTop: '4px',
-                padding: '11px',
-                background: canAdd && !busy ? 'rgba(0,255,159,0.08)' : 'rgba(80,80,96,0.15)',
-                border: canAdd && !busy ? '1px solid var(--neon-green)' : '1px solid var(--border-color)',
-                color: canAdd && !busy ? 'var(--neon-green)' : 'var(--text-dim)',
-                borderRadius: '4px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '12px',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                cursor: canAdd && !busy ? 'pointer' : 'not-allowed',
-              }}
-            >
-              {busy ? 'Applying...' : 'Add Rule'}
-            </button>
-
-            {onRefresh && (
-              <button
-                onClick={() => void onRefresh()}
-                disabled={busy}
-                style={{
-                  width: '100%',
-                  marginTop: '8px',
-                  padding: '9px',
-                  background: 'rgba(0, 212, 255, 0.08)',
-                  border: '1px solid var(--neon-cyan)',
-                  color: 'var(--neon-cyan)',
-                  borderRadius: '4px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  cursor: busy ? 'not-allowed' : 'pointer',
-                  opacity: busy ? 0.6 : 1,
-                }}
-              >
-                Refresh Running Rules
-              </button>
-            )}
-
-            {error && (
+        <div style={{ display: 'grid', gridTemplateColumns: readOnly ? '1fr' : '1fr 1.2fr', gap: '18px' }}>
+          {!readOnly && (
+            <div style={{ borderRight: '1px solid var(--border-color)', paddingRight: '18px' }}>
               <div
                 style={{
-                  marginTop: '10px',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '11px',
-                  color: 'var(--neon-red)',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '14px',
                 }}
               >
-                {error}
+                Target: {container.name} ({container.ip})
               </div>
-            )}
-          </div>
+
+              <FormField label="Source" value={source} onChange={setSource} placeholder="e.g. 10.0.1.0/24 or any" />
+              <FormField label="Destination" value={destination} onChange={setDestination} placeholder="e.g. 10.0.2.10/32" />
+              <SelectField
+                label="Protocol"
+                value={protocol}
+                onChange={(v) => setProtocol(v as 'any' | 'tcp' | 'udp' | 'icmp')}
+                options={[
+                  { value: 'tcp', label: 'TCP' },
+                  { value: 'udp', label: 'UDP' },
+                  { value: 'icmp', label: 'ICMP' },
+                  { value: 'any', label: 'ANY' },
+                ]}
+              />
+              <FormField
+                label="Port"
+                value={port}
+                onChange={setPort}
+                placeholder={protocol === 'any' || protocol === 'icmp' ? 'Not used for this protocol' : 'e.g. 443'}
+                error={portError || undefined}
+              />
+              <SelectField
+                label="Action"
+                value={action}
+                onChange={(v) => setAction(v as 'accept' | 'drop')}
+                options={[
+                  { value: 'accept', label: 'ACCEPT' },
+                  { value: 'drop', label: 'DROP' },
+                ]}
+              />
+
+              <button
+                onClick={addRule}
+                disabled={!canAdd || busy}
+                style={{
+                  width: '100%',
+                  marginTop: '4px',
+                  padding: '11px',
+                  background: canAdd && !busy ? 'rgba(0,255,159,0.08)' : 'rgba(80,80,96,0.15)',
+                  border: canAdd && !busy ? '1px solid var(--neon-green)' : '1px solid var(--border-color)',
+                  color: canAdd && !busy ? 'var(--neon-green)' : 'var(--text-dim)',
+                  borderRadius: '4px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '12px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  cursor: canAdd && !busy ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {busy ? 'Applying...' : 'Add Rule'}
+              </button>
+
+              {onRefresh && (
+                <button
+                  onClick={() => void onRefresh()}
+                  disabled={busy}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '9px',
+                    background: 'rgba(0, 212, 255, 0.08)',
+                    border: '1px solid var(--neon-cyan)',
+                    color: 'var(--neon-cyan)',
+                    borderRadius: '4px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    opacity: busy ? 0.6 : 1,
+                  }}
+                >
+                  Refresh Running Rules
+                </button>
+              )}
+
+              {error && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    color: 'var(--neon-red)',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <div
@@ -226,25 +230,27 @@ export function FirewallRulesDialog({
                       >
                         {rule.action.toUpperCase()}
                       </div>
-                      <button
-                        onClick={() => deleteRule(rule.id)}
-                        disabled={busy}
-                        style={{
-                          background: 'transparent',
-                          border: '1px solid var(--border-color)',
-                          color: 'var(--text-secondary)',
-                          borderRadius: '3px',
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '10px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '1px',
-                          padding: '5px 7px',
-                          cursor: busy ? 'not-allowed' : 'pointer',
-                          opacity: busy ? 0.6 : 1,
-                        }}
-                      >
-                        Delete
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => deleteRule(rule.id)}
+                          disabled={busy}
+                          style={{
+                            background: 'transparent',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--text-secondary)',
+                            borderRadius: '3px',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '10px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            padding: '5px 7px',
+                            cursor: busy ? 'not-allowed' : 'pointer',
+                            opacity: busy ? 0.6 : 1,
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

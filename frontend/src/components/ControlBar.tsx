@@ -15,7 +15,9 @@ interface ControlBarProps {
   onDeploy: () => void;
   onDestroy: () => void;
   onExport: () => void;
+  onClassroom?: () => void;
   isBusy: boolean;
+  readOnly?: boolean;
 }
 
 const statusLabels: Record<DeployStatus, string> = {
@@ -37,7 +39,9 @@ export function ControlBar({
   onDeploy,
   onDestroy,
   onExport,
+  onClassroom,
   isBusy,
+  readOnly,
 }: ControlBarProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -67,50 +71,65 @@ export function ControlBar({
           <span>{statusLabels[deployStatus]}</span>
         </div>
 
-        <button
-          className="control-btn"
-          onClick={onNew}
-          disabled={isBusy || isTransitioning}
-          title="Create a new empty topology"
-        >
-          New
-        </button>
+        {!readOnly && (
+          <>
+            <button
+              className="control-btn"
+              onClick={onNew}
+              disabled={isBusy || isTransitioning}
+              title="Create a new empty topology"
+            >
+              New
+            </button>
 
-        <button
-          className="control-btn btn-save"
-          onClick={handleSaveClick}
-          disabled={isBusy || isTransitioning}
-          title={backendId ? `Save to "${backendName}"` : 'Save as new topology'}
-        >
-          {dirty ? 'Save*' : 'Save'}
-        </button>
+            <button
+              className="control-btn btn-save"
+              onClick={handleSaveClick}
+              disabled={isBusy || isTransitioning}
+              title={backendId ? `Save to "${backendName}"` : 'Save as new topology'}
+            >
+              {dirty ? 'Save*' : 'Save'}
+            </button>
 
-        <button
-          className="control-btn"
-          onClick={onLoad}
-          disabled={isBusy || isTransitioning}
-          title="Load a saved topology"
-        >
-          Load
-        </button>
+            <button
+              className="control-btn"
+              onClick={onLoad}
+              disabled={isBusy || isTransitioning}
+              title="Load a saved topology"
+            >
+              Load
+            </button>
 
-        <button
-          className="control-btn btn-deploy"
-          onClick={onDeploy}
-          disabled={isBusy || !backendId || deployStatus !== 'idle'}
-          title={!backendId ? 'Save first to deploy' : 'Deploy to ContainerLab'}
-        >
-          Deploy
-        </button>
+            <button
+              className="control-btn btn-deploy"
+              onClick={onDeploy}
+              disabled={isBusy || !backendId || deployStatus !== 'idle'}
+              title={!backendId ? 'Save first to deploy' : 'Deploy to ContainerLab'}
+            >
+              Deploy
+            </button>
 
-        <button
-          className="control-btn btn-destroy"
-          onClick={onDestroy}
-          disabled={isBusy || (deployStatus !== 'deployed' && deployStatus !== 'error')}
-          title="Destroy running network"
-        >
-          Destroy
-        </button>
+            <button
+              className="control-btn btn-destroy"
+              onClick={onDestroy}
+              disabled={isBusy || (deployStatus !== 'deployed' && deployStatus !== 'error')}
+              title="Destroy running network"
+            >
+              Destroy
+            </button>
+
+            {onClassroom && (
+              <button
+                className="control-btn btn-classroom"
+                onClick={onClassroom}
+                disabled={isBusy}
+                title="Manage classroom sessions"
+              >
+                Classroom
+              </button>
+            )}
+          </>
+        )}
 
         <button
           className="control-btn btn-export"
