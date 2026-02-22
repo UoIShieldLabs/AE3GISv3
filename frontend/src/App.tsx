@@ -50,7 +50,8 @@ function App() {
   });
 
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
-  const [terminalContainer, setTerminalContainer] = useState<Container | null>(null);
+  const [terminalSessions, setTerminalSessions] = useState<Container[]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
   const [routerActionContainer, setRouterActionContainer] = useState<Container | null>(null);
   const [firewallContainer, setFirewallContainer] = useState<Container | null>(null);
   const [firewallRulesByContainer, setFirewallRulesByContainer] = useState<Record<string, FirewallRule[]>>({});
@@ -58,6 +59,27 @@ function App() {
   const [firewallError, setFirewallError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
+
+  const openTerminal = useCallback((container: Container) => {
+    setTerminalSessions(prev => {
+      if (prev.find(c => c.id === container.id)) {
+        setActiveTerminalId(container.id);
+        return prev;
+      }
+      setActiveTerminalId(container.id);
+      return [...prev, container];
+    });
+  }, []);
+
+  const closeTerminal = useCallback((containerId: string) => {
+    setTerminalSessions(prev => {
+      const next = prev.filter(c => c.id !== containerId);
+      setActiveTerminalId(curr =>
+        curr === containerId ? (next.length > 0 ? next[next.length - 1].id : null) : curr
+      );
+      return next;
+    });
+  }, []);
   const [busy, setBusy] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -481,6 +503,8 @@ function App() {
                   subnet={currentSubnet}
                   siteId={currentSite.id}
                   onSelectContainer={setSelectedContainer}
+                  onOpenTerminal={openTerminal}
+                  onDeselect={() => setSelectedContainer(null)}
                   readOnly={readOnly}
                 />
               )}
@@ -490,21 +514,23 @@ function App() {
             <NodeInfoPanel
               container={activeContainer}
               onClose={() => setSelectedContainer(null)}
-              onOpenTerminal={(c) => setTerminalContainer(c)}
+              onOpenTerminal={openTerminal}
               siteId={effectiveNav.siteId}
               subnetId={effectiveNav.subnetId}
               readOnly={readOnly}
             />
           </div>
 
-          {/* Terminal overlay */}
-          {terminalContainer && (
+          {/* Terminal panel */}
+          {terminalSessions.length > 0 && activeTerminalId && (
             <TerminalOverlay
-              container={terminalContainer}
+              sessions={terminalSessions}
+              activeId={activeTerminalId}
+              onActivate={setActiveTerminalId}
+              onClose={closeTerminal}
               backendId={backendId}
               deployStatus={deployStatus}
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
-              onClose={() => setTerminalContainer(null)}
             />
           )}
 
@@ -515,7 +541,7 @@ function App() {
             onClose={() => setRouterActionContainer(null)}
             onOpenTerminal={() => {
               if (!routerActionContainer) return;
-              setTerminalContainer(routerActionContainer);
+              openTerminal(routerActionContainer);
               setRouterActionContainer(null);
             }}
             onOpenFirewallRules={() => {

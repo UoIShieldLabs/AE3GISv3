@@ -42,10 +42,12 @@ interface LanViewProps {
   subnet: Subnet;
   siteId: string;
   onSelectContainer: (container: Container) => void;
+  onOpenTerminal: (container: Container) => void;
+  onDeselect: () => void;
   readOnly?: boolean;
 }
 
-export function LanView({ subnet, siteId, onSelectContainer, readOnly }: LanViewProps) {
+export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -63,6 +65,11 @@ export function LanView({ subnet, siteId, onSelectContainer, readOnly }: LanView
   const handleSelect = useCallback(
     (container: Container) => onSelectContainer(container),
     [onSelectContainer]
+  );
+
+  const handleOpenTerminal = useCallback(
+    (container: Container) => onOpenTerminal(container),
+    [onOpenTerminal]
   );
 
   const visibleContainers = useMemo(
@@ -115,7 +122,7 @@ export function LanView({ subnet, siteId, onSelectContainer, readOnly }: LanView
           if (existingNode) {
             return {
               ...existingNode,
-              data: { ...existingNode.data, container, onSelect: handleSelect },
+              data: { ...existingNode.data, container, onSelect: handleSelect, onOpenTerminal: handleOpenTerminal },
             };
           }
         }
@@ -129,6 +136,7 @@ export function LanView({ subnet, siteId, onSelectContainer, readOnly }: LanView
           data: {
             container,
             onSelect: handleSelect,
+            onOpenTerminal: handleOpenTerminal,
           },
         };
       });
@@ -392,6 +400,7 @@ export function LanView({ subnet, siteId, onSelectContainer, readOnly }: LanView
         onEdgeContextMenu={readOnly ? undefined : onEdgeContextMenu}
         onConnect={readOnly ? undefined : onConnect}
         onNodeDragStop={readOnly ? undefined : onNodeDragStop}
+        onPaneClick={onDeselect}
         connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 1.5, opacity: 0.6 }}
       >
         <Background
