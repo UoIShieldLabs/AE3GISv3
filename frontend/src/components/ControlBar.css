@@ -1,0 +1,175 @@
+.control-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-bar-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 8px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: rgba(10, 10, 15, 0.6);
+}
+
+.control-bar-status .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.control-bar-status.status-idle .status-dot {
+  background: var(--text-dim);
+}
+.control-bar-status.status-idle {
+  color: var(--text-dim);
+}
+
+.control-bar-status.status-deployed .status-dot {
+  background: var(--neon-green);
+  box-shadow: var(--glow-green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.control-bar-status.status-deployed {
+  color: var(--neon-green);
+  border-color: rgba(0, 255, 159, 0.3);
+}
+
+.control-bar-status.status-deploying .status-dot,
+.control-bar-status.status-destroying .status-dot {
+  background: var(--neon-amber);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+  animation: pulse-dot 0.8s ease-in-out infinite;
+}
+.control-bar-status.status-deploying,
+.control-bar-status.status-destroying {
+  color: var(--neon-amber);
+  border-color: rgba(255, 170, 0, 0.3);
+}
+
+.control-bar-status.status-error .status-dot {
+  background: var(--neon-red);
+  box-shadow: 0 0 10px rgba(255, 51, 68, 0.4);
+}
+.control-bar-status.status-error {
+  color: var(--neon-red);
+  border-color: rgba(255, 51, 68, 0.3);
+}
+
+.control-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.control-btn:hover:not(:disabled) {
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.control-btn.btn-save {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+.control-btn.btn-save:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.12);
+  box-shadow: var(--glow-cyan);
+}
+
+.control-btn.btn-deploy {
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+}
+.control-btn.btn-deploy:hover:not(:disabled) {
+  background: rgba(0, 255, 159, 0.12);
+  box-shadow: var(--glow-green);
+}
+
+.control-btn.btn-destroy {
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+}
+.control-btn.btn-destroy:hover:not(:disabled) {
+  background: rgba(255, 51, 68, 0.12);
+  box-shadow: 0 0 10px rgba(255, 51, 68, 0.3);
+}
+
+.control-btn.btn-classroom {
+  border-color: #ff00ff;
+  color: #ff00ff;
+}
+.control-btn.btn-classroom:hover:not(:disabled) {
+  background: rgba(255, 0, 255, 0.12);
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+}
+
+.control-btn.btn-export {
+  border-color: var(--border-color);
+  color: var(--text-dim);
+}
+.control-btn.btn-export:hover:not(:disabled) {
+  color: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+/* Save dialog inline */
+.save-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.save-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.save-dialog-actions button {
+  padding: 8px 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.save-dialog-actions .btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.save-dialog-actions .btn-confirm {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.save-dialog-actions .btn-confirm:hover {
+  background: rgba(0, 212, 255, 0.2);
+  box-shadow: var(--glow-cyan);
+}
