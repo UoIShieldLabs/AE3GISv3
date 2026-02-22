@@ -253,6 +253,9 @@ export function TerminalOverlay({
   topoName,
 }: TerminalOverlayProps) {
   const [minimized, setMinimized] = useState(false);
+  const [height, setHeight] = useState(300);
+  const dragging = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const handleTabClick = (id: string) => {
     if (id === activeId && !minimized) {
@@ -263,8 +266,42 @@ export function TerminalOverlay({
     }
   };
 
+  // Drag-to-resize from the top edge
+  const onDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    const startY = e.clientY;
+    const startH = height;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = startY - ev.clientY;
+      const newH = Math.max(120, Math.min(window.innerHeight * 0.85, startH + delta));
+      setHeight(newH);
+    };
+
+    const onUp = () => {
+      dragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [height]);
+
   return (
-    <div className={`terminal-panel${minimized ? ' terminal-panel--minimized' : ''}`}>
+    <div
+      ref={panelRef}
+      className={`terminal-panel${minimized ? ' terminal-panel--minimized' : ''}`}
+      style={minimized ? undefined : { height }}
+    >
+      {/* Drag handle */}
+      <div className="terminal-resize-handle" onMouseDown={onDragStart} />
       <div className="terminal-tabbar">
         <div className="terminal-tabs">
           {sessions.map((c) => (

@@ -76,6 +76,7 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
 }
 
 .canvas-main {
@@ -320,21 +321,43 @@ html, body, #root {
 /* ── Terminal Panel ───────────────────────────────────────────── */
 .terminal-panel {
   flex-shrink: 0;
-  height: 33%;
-  min-height: 220px;
   background: #0c0c0c;
   border-top: 2px solid var(--neon-green);
   box-shadow: 0 -4px 30px rgba(0, 255, 159, 0.12);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeIn 0.2s ease;
 }
 
 .terminal-panel--minimized {
-  height: 33px;
+  height: 33px !important;
   min-height: 0;
+}
+
+.terminal-resize-handle {
+  height: 5px;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  background: transparent;
+  position: relative;
+}
+
+.terminal-resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-color);
+  transition: background 0.15s;
+}
+
+.terminal-resize-handle:hover::after {
+  background: var(--neon-green);
 }
 
 .terminal-tabbar {
