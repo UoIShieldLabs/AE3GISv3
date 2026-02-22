@@ -5,11 +5,18 @@ import os
 import pty
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
+from auth import (
+    AuthIdentity,
+    require_any_auth,
+    require_instructor,
+    validate_student_topology,
+)
+from config import INSTRUCTOR_TOKEN
 from database import get_db
-from models import Topology
+from models import StudentSlot, Topology
 from schemas import FirewallRulesResponse, FirewallRulesUpdate
 from services import clab_generator, clab_manager
 
@@ -43,11 +50,25 @@ def _find_container(topo: Topology, container_id: str) -> dict[str, Any] | None:
     return None
 
 
+def _validate_ws_token(token: str | None, topology_id: str, db: Session) -> bool:
+    """Validate a WebSocket token (query param) for the given topology."""
+    if not token:
+        return False
+    if token == INSTRUCTOR_TOKEN:
+        return True
+    slot = db.query(StudentSlot).filter(StudentSlot.join_code == token).first()
+    return slot is not None and slot.topology_id == topology_id
+
+
 # ── Generate ────────────────────────────────────────────────────────
 
 
 @router.post("/{topology_id}/generate")
-def generate(topology_id: str, db: Session = Depends(get_db)):
+def generate(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
     topo = _get_topo(topology_id, db)
     topo_data = {**topo.data, "name": _topo_name(topo)}
     yaml_str = clab_generator.generate_clab_yaml(topo_data)
@@ -63,7 +84,11 @@ def generate(topology_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{topology_id}/deploy")
-async def deploy(topology_id: str, db: Session = Depends(get_db)):
+async def deploy(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
     topo = _get_topo(topology_id, db)
 
     try:
@@ -98,7 +123,11 @@ async def deploy(topology_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{topology_id}/destroy")
-async def destroy(topology_id: str, db: Session = Depends(get_db)):
+async def destroy(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
     topo = _get_topo(topology_id, db)
 
     try:
@@ -116,7 +145,12 @@ async def destroy(topology_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{topology_id}/status")
-async def status(topology_id: str, db: Session = Depends(get_db)):
+async def status(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    validate_student_topology(identity, topology_id)
     topo = _get_topo(topology_id, db)
     containers = await clab_manager.inspect(_topo_name(topo))
     return {"status": topo.status, "containers": containers}
@@ -126,9 +160,17 @@ async def status(topology_id: str, db: Session = Depends(get_db)):
 
 
 @router.websocket("/ws/{topology_id}/status")
-async def status_stream(websocket: WebSocket, topology_id: str):
+async def status_stream(
+    websocket: WebSocket,
+    topology_id: str,
+    token: str | None = Query(default=None),
+):
     db = next(get_db())
     try:
+        if not _validate_ws_token(token, topology_id, db):
+            await websocket.close(code=4003, reason="Forbidden")
+            return
+
         topo = db.get(Topology, topology_id)
         if not topo:
             await websocket.close(code=4004, reason="Topology not found")
@@ -154,12 +196,21 @@ async def status_stream(websocket: WebSocket, topology_id: str):
 
 
 @router.websocket("/ws/{topology_id}/exec/{container_id}")
-async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: str):
+async def exec_terminal(
+    websocket: WebSocket,
+    topology_id: str,
+    container_id: str,
+    token: str | None = Query(default=None),
+):
     """Attach an interactive /bin/sh session inside a deployed container via PTY."""
     db = next(get_db())
     proc = None
     master_fd = -1
     try:
+        if not _validate_ws_token(token, topology_id, db):
+            await websocket.close(code=4003, reason="Forbidden")
+            return
+
         topo = db.get(Topology, topology_id)
         await websocket.accept()
         if not topo:
@@ -254,8 +305,14 @@ async def exec_terminal(websocket: WebSocket, topology_id: str, container_id: st
 
 
 @router.get("/{topology_id}/exec/{container_id}/precheck")
-async def exec_precheck(topology_id: str, container_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def exec_precheck(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+) -> dict[str, Any]:
     """Validate docker exec prerequisites and return a reason code for UI diagnostics."""
+    validate_student_topology(identity, topology_id)
     topo = _get_topo(topology_id, db)
     topo_name = _topo_name(topo)
     docker_name = f"clab-{topo_name}-{container_id}"
@@ -302,7 +359,13 @@ async def exec_precheck(topology_id: str, container_id: str, db: Session = Depen
 
 
 @router.get("/{topology_id}/firewall/{container_id}", response_model=FirewallRulesResponse)
-async def get_firewall_rules(topology_id: str, container_id: str, db: Session = Depends(get_db)):
+async def get_firewall_rules(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    validate_student_topology(identity, topology_id)
     topo = _get_topo(topology_id, db)
     container = _find_container(topo, container_id)
     if not container:
@@ -325,6 +388,7 @@ async def put_firewall_rules(
     container_id: str,
     body: FirewallRulesUpdate,
     db: Session = Depends(get_db),
+    _=Depends(require_instructor),
 ):
     topo = _get_topo(topology_id, db)
     container = _find_container(topo, container_id)

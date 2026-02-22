@@ -121,3 +121,47 @@ class FirewallRulesUpdate(BaseModel):
 
 class FirewallRulesResponse(BaseModel):
     rules: list[FirewallRule]
+
+
+# ── Auth / Classroom ──────────────────────────────────────────────
+
+
+class StudentLoginRequest(BaseModel):
+    join_code: str
+
+
+class TokenResponse(BaseModel):
+    role: Literal["instructor", "student"]
+    token: str
+    topology_id: str | None = None
+
+
+class ClassSessionCreate(BaseModel):
+    name: str
+    template_id: str
+
+
+class ClassSessionRecord(BaseModel):
+    id: str
+    name: str
+    template_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StudentSlotRecord(BaseModel):
+    id: str
+    session_id: str
+    topology_id: str
+    join_code: str
+    label: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class InstantiateRequest(BaseModel):
+    count: int = Field(ge=1, le=200)
+    label_prefix: str = "Student"

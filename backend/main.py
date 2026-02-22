@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import models  # noqa: F401 — ensures ORM metadata is registered before create_all
 from database import Base, engine
-from routers import containerlab, topologies
+from routers import classroom, containerlab, topologies
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -19,6 +20,7 @@ app.add_middleware(
 
 app.include_router(topologies.router)
 app.include_router(containerlab.router)
+app.include_router(classroom.router)
 
 
 @app.get("/api/health")
