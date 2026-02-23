@@ -43,6 +43,8 @@ function App() {
 
   const readOnly = auth?.role === 'student';
 
+  const [loadVersion, setLoadVersion] = useState(0);
+
   const [nav, setNav] = useState<NavigationState>({
     scale: 'geographic',
     siteId: null,
@@ -236,6 +238,7 @@ function App() {
       // Reset navigation
       setNav({ scale: 'geographic', siteId: null, subnetId: null });
       setSelectedContainer(null);
+      setLoadVersion(v => v + 1);
       // If deployed, connect WebSocket
       if (record.status === 'deployed') {
         const topoName = deploymentName(record.id, record.data.name);
@@ -482,6 +485,7 @@ function App() {
                   topology={topology}
                   onSelectSite={goToSite}
                   readOnly={readOnly}
+                  autoLayoutTrigger={loadVersion}
                 />
               )}
             </ReactFlowProvider>
