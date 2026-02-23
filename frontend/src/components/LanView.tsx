@@ -105,10 +105,21 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
 
   // Sync nodes with subnet data and layout
   const prevLayoutMode = useRef(layoutMode);
+  const prevContainerIdsRef = useRef<Set<string>>(new Set());
+  const prevConnectionCountRef = useRef<number>(0);
 
   useEffect(() => {
     const layoutChanged = layoutMode !== prevLayoutMode.current;
     prevLayoutMode.current = layoutMode;
+
+    // Detect if any new containers were added
+    const currentContainerIds = new Set(visibleContainers.map(c => c.id));
+    const hasNewContainer = visibleContainers.some(c => !prevContainerIdsRef.current.has(c.id));
+    prevContainerIdsRef.current = currentContainerIds;
+
+    // Detect if connections changed
+    const hasConnectionChange = visibleConnections.length !== prevConnectionCountRef.current;
+    prevConnectionCountRef.current = visibleConnections.length;
 
     const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
@@ -134,8 +145,8 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
 
     setNodes((currentNodes) => {
       return visibleContainers.map((container) => {
-        // If layout didn't change, try to preserve existing position
-        if (!layoutChanged) {
+        // If layout didn't change, no new containers, and no connection changes, preserve existing positions
+        if (!layoutChanged && !hasNewContainer && !hasConnectionChange) {
           const existingNode = currentNodes.find(n => n.id === container.id);
           if (existingNode) {
             return {
@@ -159,7 +170,11 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
         };
       });
     });
-  }, [visibleContainers, visibleConnections, layoutMode, handleSelect, setNodes]);
+
+    if (layoutChanged || hasNewContainer || hasConnectionChange) {
+      setTimeout(() => fitView({ padding: 0.3 }), 50);
+    }
+  }, [visibleContainers, visibleConnections, layoutMode, handleSelect, setNodes, fitView]);
 
   // Sync edges
   useEffect(() => {
@@ -459,6 +474,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
             initial={containerDialog.initial}
             subnetCidr={subnet.cidr}
             takenIps={takenIps}
+            existingNames={subnet.containers.map(c => c.name)}
           />
 
           <BulkContainerDialog
@@ -467,6 +483,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
             onSubmit={handleBulkAdd}
             subnetCidr={subnet.cidr}
             takenIps={takenIps}
+            existingNames={subnet.containers.map(c => c.name)}
           />
 
           <ConnectionDialog

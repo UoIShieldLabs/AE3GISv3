@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -32,9 +32,10 @@ interface GeographicViewProps {
   topology: TopologyData;
   onSelectSite: (siteId: string) => void;
   readOnly?: boolean;
+  autoLayoutTrigger?: number;
 }
 
-export function GeographicView({ topology, onSelectSite, readOnly }: GeographicViewProps) {
+export function GeographicView({ topology, onSelectSite, readOnly, autoLayoutTrigger }: GeographicViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -225,6 +226,15 @@ export function GeographicView({ topology, onSelectSite, readOnly }: GeographicV
     }
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [topology.sites, topology.siteConnections, dispatch, fitView]);
+
+  // Run auto-layout automatically when a topology is loaded
+  const prevTriggerRef = useRef(0);
+  useEffect(() => {
+    if (autoLayoutTrigger && autoLayoutTrigger !== prevTriggerRef.current) {
+      prevTriggerRef.current = autoLayoutTrigger;
+      handleAutoLayout();
+    }
+  }, [autoLayoutTrigger, handleAutoLayout]);
 
   const connectionNodes = useMemo(
     () => topology.sites.map(s => ({ id: s.id, name: s.name })),
