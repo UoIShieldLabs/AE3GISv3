@@ -1,0 +1,224 @@
+{
+  "name": "Automated Enterprise",
+  "sites": [
+    {
+      "id": "ac3b2170-e628-415c-9ab4-3eb809cea804",
+      "name": "Headquarters",
+      "location": "New York",
+      "position": {
+        "x": 100.0,
+        "y": 100.0
+      },
+      "subnets": [
+        {
+          "id": "ef2c0d1d-d922-425a-aae9-275468c9ee80",
+          "name": "HQ-LAN",
+          "cidr": "10.0.0.0/24",
+          "gateway": null,
+          "containers": [
+            {
+              "id": "e2cb82fa-5d32-41ad-ad98-f09de66923ce",
+              "name": "hq-core-router",
+              "type": "router",
+              "ip": "10.0.0.1",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "e6188deb-508a-40e6-842f-df8b8e8ca56b",
+              "name": "hq-core-switch",
+              "type": "switch",
+              "ip": "10.0.0.2",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "c7d8265d-f193-4081-931a-dd09e59d8d65",
+              "name": "hq-workstation-1",
+              "type": "workstation",
+              "ip": "10.0.0.10",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "8adee577-fb50-4c70-b3df-a9a2fa52716f",
+              "name": "hq-workstation-2",
+              "type": "workstation",
+              "ip": "10.0.0.11",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            }
+          ],
+          "connections": [
+            {
+              "from": "c7d8265d-f193-4081-931a-dd09e59d8d65",
+              "to": "e6188deb-508a-40e6-842f-df8b8e8ca56b",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "c7d8265d-f193-4081-931a-dd09e59d8d65",
+              "toContainer": "e6188deb-508a-40e6-842f-df8b8e8ca56b"
+            },
+            {
+              "from": "8adee577-fb50-4c70-b3df-a9a2fa52716f",
+              "to": "e6188deb-508a-40e6-842f-df8b8e8ca56b",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "8adee577-fb50-4c70-b3df-a9a2fa52716f",
+              "toContainer": "e6188deb-508a-40e6-842f-df8b8e8ca56b"
+            },
+            {
+              "from": "e6188deb-508a-40e6-842f-df8b8e8ca56b",
+              "to": "e2cb82fa-5d32-41ad-ad98-f09de66923ce",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "e6188deb-508a-40e6-842f-df8b8e8ca56b",
+              "toContainer": "e2cb82fa-5d32-41ad-ad98-f09de66923ce"
+            }
+          ]
+        },
+        {
+          "id": "9f2bac49-0922-4edd-88c4-bffbd737e47e",
+          "name": "HQ-DMZ",
+          "cidr": "10.0.1.0/24",
+          "gateway": null,
+          "containers": [
+            {
+              "id": "0e5ae7b9-f5db-42b3-9f74-5f09ee769043",
+              "name": "hq-firewall",
+              "type": "firewall",
+              "ip": "10.0.1.1",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "aa2c35fc-2046-4cb0-924c-506bbcc84147",
+              "name": "hq-web-server",
+              "type": "web-server",
+              "ip": "10.0.1.80",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "2dd8322b-c4a4-4189-bbc7-1b09b1e2c6fb",
+              "name": "hq-file-server",
+              "type": "file-server",
+              "ip": "10.0.1.250",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            }
+          ],
+          "connections": [
+            {
+              "from": "aa2c35fc-2046-4cb0-924c-506bbcc84147",
+              "to": "0e5ae7b9-f5db-42b3-9f74-5f09ee769043",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "aa2c35fc-2046-4cb0-924c-506bbcc84147",
+              "toContainer": "0e5ae7b9-f5db-42b3-9f74-5f09ee769043"
+            },
+            {
+              "from": "2dd8322b-c4a4-4189-bbc7-1b09b1e2c6fb",
+              "to": "0e5ae7b9-f5db-42b3-9f74-5f09ee769043",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "2dd8322b-c4a4-4189-bbc7-1b09b1e2c6fb",
+              "toContainer": "0e5ae7b9-f5db-42b3-9f74-5f09ee769043"
+            }
+          ]
+        }
+      ],
+      "subnetConnections": [
+        {
+          "from": "ef2c0d1d-d922-425a-aae9-275468c9ee80",
+          "to": "9f2bac49-0922-4edd-88c4-bffbd737e47e",
+          "label": "Internal Link",
+          "fromInterface": null,
+          "toInterface": null,
+          "fromContainer": null,
+          "toContainer": null
+        }
+      ]
+    },
+    {
+      "id": "6b288d21-3d67-442c-8d78-4352269e8324",
+      "name": "Branch Office",
+      "location": "London",
+      "position": {
+        "x": 800.0,
+        "y": 100.0
+      },
+      "subnets": [
+        {
+          "id": "a775ce83-b5c7-4921-bf8c-a3db86a303d5",
+          "name": "Branch-LAN",
+          "cidr": "10.1.0.0/24",
+          "gateway": null,
+          "containers": [
+            {
+              "id": "77a6477c-fc85-44ae-9b2e-df659bab9f13",
+              "name": "br-router",
+              "type": "router",
+              "ip": "10.1.0.1",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "4ceb608b-bbbf-46de-8132-ac6a0db26f8d",
+              "name": "br-plc-controller",
+              "type": "plc",
+              "ip": "10.1.0.50",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            }
+          ],
+          "connections": [
+            {
+              "from": "4ceb608b-bbbf-46de-8132-ac6a0db26f8d",
+              "to": "77a6477c-fc85-44ae-9b2e-df659bab9f13",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "4ceb608b-bbbf-46de-8132-ac6a0db26f8d",
+              "toContainer": "77a6477c-fc85-44ae-9b2e-df659bab9f13"
+            }
+          ]
+        }
+      ],
+      "subnetConnections": []
+    }
+  ],
+  "siteConnections": [
+    {
+      "from": "ac3b2170-e628-415c-9ab4-3eb809cea804",
+      "to": "6b288d21-3d67-442c-8d78-4352269e8324",
+      "label": "WAN IPSEC",
+      "fromInterface": null,
+      "toInterface": null,
+      "fromContainer": null,
+      "toContainer": null
+    }
+  ]
+}
