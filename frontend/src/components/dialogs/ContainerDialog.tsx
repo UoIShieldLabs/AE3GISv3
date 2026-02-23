@@ -133,7 +133,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         return (
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '13px',
             color: avail === 0 ? 'var(--neon-red)' : 'var(--text-dim)',
             marginTop: '-8px',
             marginBottom: '12px',
@@ -150,7 +150,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         <label style={{
           display: 'block',
           fontFamily: "var(--font-mono)",
-          fontSize: '10px',
+          fontSize: '12px',
           color: 'var(--text-dim)',
           textTransform: 'uppercase',
           letterSpacing: '1px',
@@ -165,7 +165,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             gap: '6px',
             marginBottom: '4px',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             color: 'var(--text-primary)',
             minWidth: 0,
           }}>
@@ -181,7 +181,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
                 color: 'var(--neon-red)',
                 cursor: 'pointer',
                 fontFamily: "var(--font-mono)",
-                fontSize: '12px',
+                fontSize: '13px',
                 padding: '0 4px',
                 flexShrink: 0,
               }}
@@ -204,7 +204,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               outline: 'none',
             }}
           />
@@ -221,7 +221,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               outline: 'none',
             }}
           />
@@ -236,7 +236,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--neon-cyan)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               cursor: 'pointer',
             }}
           >
@@ -256,7 +256,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -271,7 +271,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--neon-green)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >

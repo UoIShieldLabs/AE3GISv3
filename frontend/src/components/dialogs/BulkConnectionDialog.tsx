@@ -217,7 +217,7 @@ function BulkConnectionDialogInner({
     borderRadius: '3px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font-mono)',
-    fontSize: '11px',
+    fontSize: '13px',
     outline: 'none',
     width: '100%',
     appearance: 'none' as const,
@@ -240,7 +240,7 @@ function BulkConnectionDialogInner({
       }}>
         <div style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: '10px',
+          fontSize: '12px',
           color: 'var(--neon-cyan)',
           textTransform: 'uppercase',
           letterSpacing: '1px',
@@ -267,7 +267,7 @@ function BulkConnectionDialogInner({
                 borderRadius: '4px',
                 color: mode === m.key ? 'var(--neon-cyan)' : 'var(--text-dim)',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '13px',
                 cursor: 'pointer',
               }}
             >
@@ -282,7 +282,7 @@ function BulkConnectionDialogInner({
             border: '1px solid var(--border-color)',
             borderRadius: '4px',
             fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             color: 'var(--text-secondary)',
           }}>
             Connects every node to every other node.
@@ -291,7 +291,7 @@ function BulkConnectionDialogInner({
               {availableNodes.length} nodes → {meshPreview} new connection{meshPreview !== 1 ? 's' : ''}
             </span>
             {meshPreview === 0 && availableNodes.length > 1 && (
-              <span style={{ color: 'var(--text-dim)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
+              <span style={{ color: 'var(--text-dim)', fontSize: '12px', display: 'block', marginTop: '4px' }}>
                 (all pairs already connected)
               </span>
             )}
@@ -302,7 +302,7 @@ function BulkConnectionDialogInner({
             <div style={{ marginBottom: '10px' }}>
               <div style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '13px',
                 color: 'var(--text-dim)',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
@@ -330,7 +330,7 @@ function BulkConnectionDialogInner({
               border: '1px solid var(--border-color)',
               borderRadius: '4px',
               fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
+              fontSize: '13px',
               color: 'var(--text-secondary)',
               marginBottom: '4px',
             }}>
@@ -345,7 +345,7 @@ function BulkConnectionDialogInner({
             <details style={{ marginTop: '6px' }}>
               <summary style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '13px',
                 color: 'var(--text-dim)',
                 cursor: 'pointer',
                 textTransform: 'uppercase',
@@ -373,7 +373,7 @@ function BulkConnectionDialogInner({
                         gap: '8px',
                         padding: '3px 6px',
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '11px',
+                        fontSize: '13px',
                         color: alreadyExists ? 'var(--text-dim)' : isExcluded ? 'var(--text-dim)' : 'var(--text-primary)',
                         cursor: alreadyExists ? 'default' : 'pointer',
                         opacity: alreadyExists ? 0.4 : isExcluded ? 0.6 : 1,
@@ -389,7 +389,7 @@ function BulkConnectionDialogInner({
                       />
                       {n.name}
                       {alreadyExists && (
-                        <span style={{ fontSize: '9px', color: 'var(--text-dim)', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: 'auto' }}>
                           exists
                         </span>
                       )}
@@ -404,7 +404,7 @@ function BulkConnectionDialogInner({
             {/* Chain builder */}
             <div style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
+              fontSize: '13px',
               color: 'var(--text-dim)',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -417,7 +417,7 @@ function BulkConnectionDialogInner({
               {chainIds.length > 0 && (
                 <button type="button" onClick={clearChain} style={{
                   background: 'none', border: 'none', color: 'var(--neon-red)',
-                  fontFamily: 'var(--font-mono)', fontSize: '9px', cursor: 'pointer', textTransform: 'uppercase',
+                  fontFamily: 'var(--font-mono)', fontSize: '11px', cursor: 'pointer', textTransform: 'uppercase',
                 }}>Clear</button>
               )}
             </div>
@@ -437,7 +437,7 @@ function BulkConnectionDialogInner({
                 {chainIds.map((id, idx) => (
                   <span key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {idx > 0 && (
-                      <span style={{ color: 'var(--neon-cyan)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                      <span style={{ color: 'var(--neon-cyan)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
                         →
                       </span>
                     )}
@@ -448,7 +448,7 @@ function BulkConnectionDialogInner({
                         border: '1px solid rgba(0, 212, 255, 0.3)',
                         borderRadius: '3px',
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '10px',
+                        fontSize: '13px',
                         color: 'var(--neon-cyan)',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -461,7 +461,7 @@ function BulkConnectionDialogInner({
                         onClick={() => removeFromChain(idx)}
                         style={{
                           background: 'none', border: 'none', color: 'var(--neon-red)',
-                          cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px',
+                          cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '13px',
                           padding: 0, lineHeight: 1,
                         }}
                       >
@@ -476,7 +476,7 @@ function BulkConnectionDialogInner({
             {/* Available nodes to add to chain */}
             <div style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
+              fontSize: '13px',
               color: 'var(--text-dim)',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -505,7 +505,7 @@ function BulkConnectionDialogInner({
                     border: '1px solid var(--border-color)',
                     borderRadius: '3px',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '10px',
+                    fontSize: '13px',
                     color: 'var(--text-secondary)',
                     cursor: 'pointer',
                   }}
@@ -515,7 +515,7 @@ function BulkConnectionDialogInner({
               )) : (
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '10px',
+                  fontSize: '13px',
                   color: 'var(--text-dim)',
                   padding: '4px',
                 }}>
@@ -539,7 +539,7 @@ function BulkConnectionDialogInner({
             borderRadius: '4px',
             color: currentPreview > 0 ? 'var(--neon-cyan)' : 'var(--text-dim)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             cursor: currentPreview > 0 ? 'pointer' : 'default',
             opacity: currentPreview > 0 ? 1 : 0.5,
           }}
@@ -551,7 +551,7 @@ function BulkConnectionDialogInner({
       {/* Entries table */}
       <div style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: '10px',
+        fontSize: '13px',
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
@@ -565,14 +565,14 @@ function BulkConnectionDialogInner({
           {entries.length > 0 && (
             <button type="button" onClick={clearAll} style={{
               background: 'none', border: 'none', color: 'var(--neon-red)',
-              fontFamily: 'var(--font-mono)', fontSize: '10px', cursor: 'pointer', textTransform: 'uppercase',
+              fontFamily: 'var(--font-mono)', fontSize: '12px', cursor: 'pointer', textTransform: 'uppercase',
             }}>
               Clear all
             </button>
           )}
           <button type="button" onClick={handleAddRow} style={{
             background: 'none', border: 'none', color: 'var(--neon-cyan)',
-            fontFamily: 'var(--font-mono)', fontSize: '10px', cursor: 'pointer', textTransform: 'uppercase',
+            fontFamily: 'var(--font-mono)', fontSize: '12px', cursor: 'pointer', textTransform: 'uppercase',
           }}>
             + Add row
           </button>
@@ -595,7 +595,7 @@ function BulkConnectionDialogInner({
             background: 'rgba(0, 212, 255, 0.05)',
             borderBottom: '1px solid var(--border-color)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             color: 'var(--text-dim)',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -637,7 +637,7 @@ function BulkConnectionDialogInner({
                   textAlign: 'center',
                   color: 'var(--neon-cyan)',
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
+                  fontSize: '13px',
                 }}>
                   →
                 </span>
@@ -655,7 +655,7 @@ function BulkConnectionDialogInner({
                   onClick={() => removeEntry(entry.key)}
                   style={{
                     background: 'none', border: 'none', color: 'var(--neon-red)',
-                    cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
+                    cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '13px',
                     padding: '0', lineHeight: 1,
                   }}
                 >
@@ -670,7 +670,7 @@ function BulkConnectionDialogInner({
           padding: '24px',
           textAlign: 'center',
           fontFamily: 'var(--font-mono)',
-          fontSize: '11px',
+          fontSize: '13px',
           color: 'var(--text-dim)',
           border: '1px dashed var(--border-color)',
           borderRadius: '4px',
@@ -691,7 +691,7 @@ function BulkConnectionDialogInner({
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -708,7 +708,7 @@ function BulkConnectionDialogInner({
             borderRadius: '4px',
             color: validCount > 0 ? 'var(--neon-cyan)' : 'var(--text-dim)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: validCount > 0 ? 'pointer' : 'default',
             opacity: validCount > 0 ? 1 : 0.5,
           }}

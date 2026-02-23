@@ -40,7 +40,7 @@ function ConnectionDialogInner({ onClose, onSubmit, availableNodes }: Omit<Conne
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -55,7 +55,7 @@ function ConnectionDialogInner({ onClose, onSubmit, availableNodes }: Omit<Conne
             borderRadius: '4px',
             color: 'var(--neon-green)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >

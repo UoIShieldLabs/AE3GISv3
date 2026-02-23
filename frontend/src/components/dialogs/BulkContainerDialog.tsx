@@ -154,7 +154,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
     borderRadius: '3px',
     color: 'var(--text-primary)',
     fontFamily: 'var(--font-mono)',
-    fontSize: '11px',
+    fontSize: '13px',
     outline: 'none',
     width: '100%',
   };
@@ -183,7 +183,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
         }}>
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '13px',
             color: 'var(--neon-green)',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -192,7 +192,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
           </div>
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '13px',
             color: 'var(--text-dim)',
             textAlign: 'right',
           }}>
@@ -212,7 +212,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
           <FormField label="Count" value={count} onChange={v => { setCount(v); setGenError(''); }} placeholder="1–500" type="number" />
         </div>
         {genError && (
-          <div style={{ color: 'var(--neon-red)', fontFamily: 'var(--font-mono)', fontSize: '11px', marginTop: '6px' }}>
+          <div style={{ color: 'var(--neon-red)', fontFamily: 'var(--font-mono)', fontSize: '13px', marginTop: '6px' }}>
             {genError}
           </div>
         )}
@@ -228,7 +228,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
             borderRadius: '4px',
             color: availableCount > 0 ? 'var(--neon-green)' : 'var(--text-dim)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             cursor: availableCount > 0 ? 'pointer' : 'default',
             opacity: availableCount > 0 ? 1 : 0.5,
           }}
@@ -240,7 +240,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
       {/* Entries table */}
       <div style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: '10px',
+        fontSize: '12px',
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
@@ -260,7 +260,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
                 border: 'none',
                 color: 'var(--neon-red)',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '13px',
                 cursor: 'pointer',
                 textTransform: 'uppercase',
               }}
@@ -276,7 +276,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
               border: 'none',
               color: 'var(--neon-cyan)',
               fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
+              fontSize: '13px',
               cursor: 'pointer',
               textTransform: 'uppercase',
             }}
@@ -302,7 +302,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
             background: 'rgba(0, 212, 255, 0.05)',
             borderBottom: '1px solid var(--border-color)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             color: 'var(--text-dim)',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -365,7 +365,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
                   color: 'var(--neon-red)',
                   cursor: 'pointer',
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '12px',
+                  fontSize: '13px',
                   padding: '0',
                   lineHeight: 1,
                 }}
@@ -380,7 +380,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
           padding: '24px',
           textAlign: 'center',
           fontFamily: 'var(--font-mono)',
-          fontSize: '11px',
+          fontSize: '13px',
           color: 'var(--text-dim)',
           border: '1px dashed var(--border-color)',
           borderRadius: '4px',
@@ -401,7 +401,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -418,7 +418,7 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
             borderRadius: '4px',
             color: validCount > 0 ? 'var(--neon-green)' : 'var(--text-dim)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: validCount > 0 ? 'pointer' : 'default',
             opacity: validCount > 0 ? 1 : 0.5,
           }}
