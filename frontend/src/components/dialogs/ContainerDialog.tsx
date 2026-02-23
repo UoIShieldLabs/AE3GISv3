@@ -31,6 +31,7 @@ interface ContainerDialogProps {
     image: string;
     status: 'running' | 'stopped' | 'paused';
     metadata: Record<string, string>;
+    persistencePaths: string[];
   }) => void;
   initial?: Container;
   subnetCidr?: string;
@@ -49,6 +50,9 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
   const [metaKey, setMetaKey] = useState('');
   const [metaValue, setMetaValue] = useState('');
   const [metadata, setMetadata] = useState<Record<string, string>>(initial?.metadata ? { ...initial.metadata } : {});
+  const [persistencePathInput, setPersistencePathInput] = useState('');
+  const [persistencePaths, setPersistencePaths] = useState<string[]>(initial?.persistencePaths ? [...initial.persistencePaths] : []);
+  const [persistencePathError, setPersistencePathError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +78,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
       image: image.trim(),
       status,
       metadata,
+      persistencePaths,
     });
     onClose();
   };
@@ -92,6 +97,26 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
       delete next[key];
       return next;
     });
+  };
+
+  const addPersistencePath = () => {
+    const rawPath = persistencePathInput.trim();
+    if (!rawPath) return;
+    if (!rawPath.startsWith('/')) {
+      setPersistencePathError('Path must be absolute (start with /)');
+      return;
+    }
+    if (persistencePaths.includes(rawPath)) {
+      setPersistencePathError('Path already added');
+      return;
+    }
+    setPersistencePathError('');
+    setPersistencePaths(prev => [...prev, rawPath]);
+    setPersistencePathInput('');
+  };
+
+  const removePersistencePath = (path: string) => {
+    setPersistencePaths(prev => prev.filter(p => p !== path));
   };
 
   return (
@@ -220,6 +245,108 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             }}
           >
             + Add
+          </button>
+        </div>
+      </div>
+
+      {/* Persistence Paths */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{
+          display: 'block',
+          fontFamily: "var(--font-mono)",
+          fontSize: '10px',
+          color: 'var(--text-dim)',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          marginBottom: '6px',
+        }}>
+          Persistent Paths
+        </label>
+        <div style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: '11px',
+          color: 'var(--text-dim)',
+          marginBottom: '8px',
+        }}>
+          Absolute in-container directories to keep across destroy/deploy.
+        </div>
+        {persistencePaths.map((path) => (
+          <div key={path} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '4px',
+            fontFamily: "var(--font-mono)",
+            fontSize: '12px',
+            color: 'var(--text-primary)',
+          }}>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {path}
+            </span>
+            <button
+              type="button"
+              onClick={() => removePersistencePath(path)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--neon-red)',
+                cursor: 'pointer',
+                fontFamily: "var(--font-mono)",
+                fontSize: '12px',
+                padding: '0 4px',
+                flexShrink: 0,
+              }}
+            >
+              x
+            </button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+          <input
+            value={persistencePathInput}
+            onChange={(e) => {
+              setPersistencePathInput(e.target.value);
+              setPersistencePathError('');
+            }}
+            placeholder="/var/lib/app"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '6px 8px',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontFamily: "var(--font-mono)",
+              fontSize: '12px',
+              outline: 'none',
+            }}
+          />
+          {persistencePathError && (
+            <div style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: '11px',
+              color: 'var(--neon-red)',
+            }}>
+              {persistencePathError}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={addPersistencePath}
+            style={{
+              width: '100%',
+              padding: '6px 10px',
+              background: 'rgba(0, 255, 159, 0.08)',
+              border: '1px solid var(--neon-green)',
+              borderRadius: '4px',
+              color: 'var(--neon-green)',
+              fontFamily: "var(--font-mono)",
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            + Add Path
           </button>
         </div>
       </div>

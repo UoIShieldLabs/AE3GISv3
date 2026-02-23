@@ -38,6 +38,7 @@ export function NodeInfoPanel({
   const handleEdit = (data: {
     name: string; type: ContainerType; ip: string; image: string;
     status: 'running' | 'stopped' | 'paused'; metadata: Record<string, string>;
+    persistencePaths: string[];
   }) => {
     if (!container || !siteId || !subnetId) return;
     dispatch({
@@ -53,6 +54,7 @@ export function NodeInfoPanel({
           image: data.image || undefined,
           status: data.status,
           metadata: Object.keys(data.metadata).length > 0 ? data.metadata : undefined,
+          persistencePaths: data.persistencePaths.length > 0 ? data.persistencePaths : undefined,
         },
       },
     });
@@ -131,6 +133,26 @@ export function NodeInfoPanel({
                   <div className="info-field" key={key}>
                     <div className="info-label">{key}</div>
                     <div className="info-value">{value}</div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {container.persistencePaths && container.persistencePaths.length > 0 && (
+              <>
+                <div
+                  style={{
+                    height: '1px',
+                    background: '#1e1e2e',
+                    margin: '16px 0',
+                  }}
+                />
+                <div className="info-field">
+                  <div className="info-label">Persistence Paths</div>
+                </div>
+                {container.persistencePaths.map((path) => (
+                  <div className="info-field" key={path}>
+                    <div className="info-value">{path}</div>
                   </div>
                 ))}
               </>
