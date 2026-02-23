@@ -11,11 +11,14 @@ This directory contains a complete Python API to programmatically generate and i
 
 ## Installation
 
-The generator relies on the `pydantic` package for strict typing. 
-If you wish to use the `.push_to_backend` functionality, you must also have `requests` installed.
+The generator relies on the `pydantic` package for strict typing, and the `requests` library to use the `.push_to_backend` functionality. Both are included in the backend's `requirements.txt`.
+
+Assuming you are using the same Python virtual environment as the backend:
 
 ```bash
-pip install pydantic requests
+# From the project root
+source backend/.venv/bin/activate
+pip install -r backend/requirements.txt
 ```
 
 ## Basic Usage
