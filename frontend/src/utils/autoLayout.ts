@@ -45,16 +45,92 @@ export function computeLayout(
 
   dagre.layout(g);
 
-  const positions = new Map<string, { x: number; y: number }>();
+  // Use dagre for y-positions (rank/layer assignment) only.
+  // Compute x-positions with a subtree-width algorithm so children are always
+  // placed in input-array order (first-added = leftmost) and each parent is
+  // perfectly centered over its children.
+  const yMap = new Map<string, { y: number; height: number }>();
   for (const nodeId of g.nodes()) {
     const n = g.node(nodeId);
-    if (n) {
-      positions.set(nodeId, {
-        x: n.x - n.width / 2,
-        y: n.y - n.height / 2,
-      });
+    if (n) yMap.set(nodeId, { y: n.y, height: n.height });
+  }
+
+  const inputOrder = new Map(nodes.map((n, i) => [n.id, i]));
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  // Build parent→children adjacency, children sorted by input order
+  const childrenOf = new Map<string, string[]>(nodes.map(n => [n.id, []]));
+  const hasParent = new Set<string>();
+  for (const edge of edges) {
+    childrenOf.get(edge.source)?.push(edge.target);
+    hasParent.add(edge.target);
+  }
+  for (const list of childrenOf.values()) {
+    list.sort((a, b) => (inputOrder.get(a) ?? 0) - (inputOrder.get(b) ?? 0));
+  }
+
+  // Roots: nodes with no incoming edge in the layout graph
+  const roots = nodes
+    .filter(n => !hasParent.has(n.id))
+    .sort((a, b) => (inputOrder.get(a.id) ?? 0) - (inputOrder.get(b.id) ?? 0));
+
+  // Compute subtree widths bottom-up.
+  // A node's subtree width = max(its own slot, sum of children subtree widths).
+  const subtreeWidths = new Map<string, number>();
+  function getSubtreeWidth(id: string): number {
+    if (subtreeWidths.has(id)) return subtreeWidths.get(id)!;
+    const nw = (nodeMap.get(id)?.width ?? 110) + nodeSpacing;
+    const kids = childrenOf.get(id) ?? [];
+    const w = kids.length === 0 ? nw : Math.max(nw, kids.reduce((s, c) => s + getSubtreeWidth(c), 0));
+    subtreeWidths.set(id, w);
+    return w;
+  }
+  for (const node of nodes) getSubtreeWidth(node.id);
+
+  // Assign x-positions top-down.
+  // Each node is placed at the center of its subtree slot.
+  // Its children are packed side-by-side and centered under it.
+  const xCenter = new Map<string, number>();
+  function assignX(id: string, leftBound: number): void {
+    if (xCenter.has(id)) return;
+    const sw = subtreeWidths.get(id) ?? 0;
+    xCenter.set(id, leftBound + sw / 2);
+
+    const kids = childrenOf.get(id) ?? [];
+    if (kids.length === 0) return;
+
+    const totalKidWidth = kids.reduce((s, c) => s + (subtreeWidths.get(c) ?? 0), 0);
+    let kidLeft = leftBound + sw / 2 - totalKidWidth / 2;
+    for (const kid of kids) {
+      assignX(kid, kidLeft);
+      kidLeft += subtreeWidths.get(kid) ?? 0;
     }
   }
+
+  const margin = 50;
+  let cursor = margin;
+  for (const root of roots) {
+    assignX(root.id, cursor);
+    cursor += subtreeWidths.get(root.id) ?? 0;
+  }
+  // Handle any nodes not reachable from roots (e.g. isolated nodes)
+  for (const node of nodes) {
+    if (!xCenter.has(node.id)) {
+      xCenter.set(node.id, cursor + (node.width + nodeSpacing) / 2);
+      cursor += node.width + nodeSpacing;
+    }
+  }
+
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const node of nodes) {
+    const cx = xCenter.get(node.id) ?? 0;
+    const yd = yMap.get(node.id);
+    positions.set(node.id, {
+      x: cx - node.width / 2,
+      y: yd ? yd.y - yd.height / 2 : 0,
+    });
+  }
+
   return positions;
 }
 

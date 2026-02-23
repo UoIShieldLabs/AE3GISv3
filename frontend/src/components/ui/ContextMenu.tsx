@@ -24,8 +24,8 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
         onClose();
       }
     };
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
+    document.addEventListener('mousedown', handle, true);
+    return () => document.removeEventListener('mousedown', handle, true);
   }, [onClose]);
 
   useEffect(() => {

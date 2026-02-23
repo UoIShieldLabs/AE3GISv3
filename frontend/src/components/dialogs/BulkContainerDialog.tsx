@@ -15,6 +15,8 @@ const typeOptions = [
   { value: 'workstation', label: 'Workstation' },
 ];
 
+const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
+
 interface BulkEntry {
   key: number;
   name: string;
@@ -28,13 +30,15 @@ interface BulkContainerDialogProps {
   onSubmit: (entries: { name: string; type: ContainerType; ip: string }[]) => void;
   subnetCidr: string;
   takenIps: string[];
+  existingNames?: string[];
 }
 
 let nextKey = 0;
 
-function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps }: Omit<BulkContainerDialogProps, 'open'>) {
+function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, existingNames = [] }: Omit<BulkContainerDialogProps, 'open'>) {
   // Generator fields
-  const [prefix, setPrefix] = useState('Container');
+  const [prefix, setPrefix] = useState(typeLabel['workstation']);
+  const [prefixIsAuto, setPrefixIsAuto] = useState(true);
   const [genType, setGenType] = useState<ContainerType>('workstation');
   const [count, setCount] = useState('5');
   const [genError, setGenError] = useState('');
@@ -69,9 +73,19 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps }: O
     } else {
       setGenError('');
     }
+    // Find the highest existing number for this prefix across existing containers
+    // and any entries already queued in this dialog, so numbering continues correctly.
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escaped}\\s*(\\d+)$`, 'i');
+    let max = 0;
+    for (const name of [...existingNames, ...entries.map(e => e.name)]) {
+      const match = name.trim().match(pattern);
+      if (match) max = Math.max(max, parseInt(match[1], 10));
+    }
+
     const generated: BulkEntry[] = ips.map((ip, i) => ({
       key: nextKey++,
-      name: `${prefix} ${i + 1}`,
+      name: `${prefix} ${max + i + 1}`,
       type: genType,
       ip,
     }));
@@ -189,8 +203,12 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps }: O
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <FormField label="Name prefix" value={prefix} onChange={setPrefix} placeholder="e.g. Server" />
-          <SelectField label="Type" value={genType} onChange={v => setGenType(v as ContainerType)} options={typeOptions} />
+          <FormField label="Name prefix" value={prefix} onChange={v => { setPrefix(v); setPrefixIsAuto(false); }} placeholder="e.g. Server" />
+          <SelectField label="Type" value={genType} onChange={v => {
+            const t = v as ContainerType;
+            setGenType(t);
+            if (prefixIsAuto) setPrefix(typeLabel[t]);
+          }} options={typeOptions} />
           <FormField label="Count" value={count} onChange={v => { setCount(v); setGenError(''); }} placeholder="1–500" type="number" />
         </div>
         {genError && (
@@ -412,10 +430,10 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps }: O
   );
 }
 
-export function BulkContainerDialog({ open, onClose, onSubmit, subnetCidr, takenIps }: BulkContainerDialogProps) {
+export function BulkContainerDialog({ open, onClose, onSubmit, subnetCidr, takenIps, existingNames }: BulkContainerDialogProps) {
   return (
     <Dialog title="Bulk Add Containers" open={open} onClose={onClose} width={620}>
-      {open && <BulkContainerDialogInner onClose={onClose} onSubmit={onSubmit} subnetCidr={subnetCidr} takenIps={takenIps} />}
+      {open && <BulkContainerDialogInner onClose={onClose} onSubmit={onSubmit} subnetCidr={subnetCidr} takenIps={takenIps} existingNames={existingNames} />}
     </Dialog>
   );
 }
