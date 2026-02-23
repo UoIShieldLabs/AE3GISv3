@@ -61,7 +61,7 @@ export function computeLayout(
 export function computeCircleLayout(
   nodes: LayoutNode[],
   edges: LayoutEdge[] = [],
-  options: { radius?: number } = {}
+  options: { radius?: number; nodePriority?: Map<string, number> } = {}
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
   const n = nodes.length;
@@ -71,28 +71,39 @@ export function computeCircleLayout(
     return positions;
   }
 
-  // Count connections per node
-  const degree = new Map<string, number>();
-  for (const nd of nodes) degree.set(nd.id, 0);
-  for (const e of edges) {
-    degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
-    degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
+  let ring: LayoutNode[];
+  let center: LayoutNode[];
+
+  if (options.nodePriority) {
+    // Priority-based: sort ascending (lower number = first = top of ring), all on ring
+    ring = [...nodes].sort(
+      (a, b) => (options.nodePriority!.get(a.id) ?? 99) - (options.nodePriority!.get(b.id) ?? 99)
+    );
+    center = [];
+  } else {
+    // Count connections per node
+    const degree = new Map<string, number>();
+    for (const nd of nodes) degree.set(nd.id, 0);
+    for (const e of edges) {
+      degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
+      degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
+    }
+
+    // Sort: most connected first
+    const sorted = [...nodes].sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
+
+    // Place top hub nodes at center, rest on the ring
+    const avgDegree = edges.length > 0
+      ? [...degree.values()].reduce((s, d) => s + d, 0) / n
+      : 0;
+    const centerNodes = sorted.filter(nd => (degree.get(nd.id) ?? 0) > avgDegree);
+    const ringNodes = sorted.filter(nd => (degree.get(nd.id) ?? 0) <= avgDegree);
+
+    // If all nodes have equal degree (or no edges), put them all on the ring
+    const hasCenter = centerNodes.length > 0 && ringNodes.length > 0;
+    ring = hasCenter ? ringNodes : sorted;
+    center = hasCenter ? centerNodes : [];
   }
-
-  // Sort: most connected first
-  const sorted = [...nodes].sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0));
-
-  // Place top hub nodes at center, rest on the ring
-  const avgDegree = edges.length > 0
-    ? [...degree.values()].reduce((s, d) => s + d, 0) / n
-    : 0;
-  const centerNodes = sorted.filter(nd => (degree.get(nd.id) ?? 0) > avgDegree);
-  const ringNodes = sorted.filter(nd => (degree.get(nd.id) ?? 0) <= avgDegree);
-
-  // If all nodes have equal degree (or no edges), put them all on the ring
-  const hasCenter = centerNodes.length > 0 && ringNodes.length > 0;
-  const ring = hasCenter ? ringNodes : sorted;
-  const center = hasCenter ? centerNodes : [];
 
   const ringCount = ring.length;
   const avgSize = nodes.reduce((s, nd) => s + Math.max(nd.width, nd.height), 0) / n;

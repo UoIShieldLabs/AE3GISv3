@@ -310,7 +310,7 @@ export function TerminalOverlay({
               className={`terminal-tab${c.id === activeId && !minimized ? ' terminal-tab--active' : ''}`}
               onClick={() => handleTabClick(c.id)}
             >
-              <span className="terminal-tab-label">{c.name}</span>
+              <span className="terminal-tab-label">{c.name}{c.ip ? ` — ${c.ip}` : ''}</span>
               <button
                 className="terminal-tab-close"
                 onClick={(e) => { e.stopPropagation(); onClose(c.id); }}

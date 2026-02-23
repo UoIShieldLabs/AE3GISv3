@@ -28,6 +28,10 @@ import type { Subnet, Container, ContainerType } from '../data/sampleTopology';
 const nodeTypes = { device: DeviceNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 
+// Layout hierarchy: lower number = higher rank (router → switch → everything else)
+const TYPE_RANK: Partial<Record<string, number>> = { router: 0, switch: 1 };
+const getTypeRank = (type: string) => TYPE_RANK[type] ?? 2;
+
 const typeColors: Record<ContainerType, string> = {
   'router': '#ff00ff',
   'firewall': '#ff3344',
@@ -73,7 +77,8 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
   );
 
   const visibleContainers = useMemo(
-    () => subnet.containers.filter(c => c.type !== 'router' && c.type !== 'firewall'),
+    () => [...subnet.containers.filter(c => c.type !== 'firewall')]
+      .sort((a, b) => getTypeRank(a.type) - getTypeRank(b.type)),
     [subnet.containers]
   );
   const visibleContainerIds = useMemo(
@@ -86,6 +91,17 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     ),
     [subnet.connections, visibleContainerIds]
   );
+  // Edges oriented to flow router→switch→devices for hierarchy-aware layouts
+  const hierarchyEdges = useMemo(() => {
+    const idToRank = new Map(subnet.containers.map(c => [c.id, getTypeRank(c.type)]));
+    return visibleConnections.map(c => {
+      const fromRank = idToRank.get(c.from) ?? 2;
+      const toRank = idToRank.get(c.to) ?? 2;
+      return fromRank <= toRank
+        ? { source: c.from, target: c.to }
+        : { source: c.to, target: c.from };
+    });
+  }, [visibleConnections, subnet.containers]);
 
   // Sync nodes with subnet data and layout
   const prevLayoutMode = useRef(layoutMode);
@@ -98,17 +114,19 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
 
     if (layoutNodes.length > 0) {
+      const nodePriority = new Map(visibleContainers.map(c => [c.id, getTypeRank(c.type)]));
       if (layoutMode === 'circle') {
         computedPositions = computeCircleLayout(
           layoutNodes,
-          visibleConnections.map(c => ({ source: c.from, target: c.to })),
+          hierarchyEdges,
+          { nodePriority },
         );
       } else if (layoutMode === 'grid') {
         computedPositions = computeGridLayout(layoutNodes);
       } else {
         computedPositions = computeLayout(
           layoutNodes,
-          visibleConnections.map(c => ({ source: c.from, target: c.to })),
+          hierarchyEdges,
           { direction: 'TB', nodeSpacing: 80, rankSpacing: 100 }
         );
       }
@@ -146,23 +164,19 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
   // Sync edges
   useEffect(() => {
     setEdges(
-      visibleConnections.map((conn, i) => {
-        const sourceContainer = visibleContainers.find(
-          (c) => c.id === conn.from
-        );
-        const color = sourceContainer
-          ? typeColors[sourceContainer.type]
-          : '#00ff9f';
+      hierarchyEdges.map((edge, i) => {
+        const sourceContainer = visibleContainers.find(c => c.id === edge.source);
+        const color = sourceContainer ? typeColors[sourceContainer.type] : '#00ff9f';
         return {
           id: `lan-edge-${i}`,
-          source: conn.from,
-          target: conn.to,
+          source: edge.source,
+          target: edge.target,
           type: layoutMode === 'circle' ? 'neonDirect' : 'neon',
           data: { color },
         };
       })
     );
-  }, [visibleConnections, visibleContainers, layoutMode, setEdges]);
+  }, [hierarchyEdges, visibleContainers, layoutMode, setEdges]);
 
 
 
@@ -345,18 +359,20 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     // Let's implement it to reset positions to the current layoutMode's computed positions.
 
     const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
+    const nodePriority = new Map(visibleContainers.map(c => [c.id, getTypeRank(c.type)]));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
     if (layoutMode === 'circle') {
       computedPositions = computeCircleLayout(
         layoutNodes,
-        visibleConnections.map(c => ({ source: c.from, target: c.to })),
+        hierarchyEdges,
+        { nodePriority },
       );
     } else if (layoutMode === 'grid') {
       computedPositions = computeGridLayout(layoutNodes);
     } else {
       computedPositions = computeLayout(
         layoutNodes,
-        visibleConnections.map(c => ({ source: c.from, target: c.to })),
+        hierarchyEdges,
         { direction: 'TB', nodeSpacing: 80, rankSpacing: 100 }
       );
     }
@@ -367,7 +383,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     })));
 
     setTimeout(() => fitView({ padding: 0.3 }), 50);
-  }, [fitView, visibleContainers, visibleConnections, layoutMode, setNodes]);
+  }, [fitView, visibleContainers, hierarchyEdges, layoutMode, setNodes]);
 
   const takenIps = useMemo(
     () => subnet.containers.map(c => c.ip),
