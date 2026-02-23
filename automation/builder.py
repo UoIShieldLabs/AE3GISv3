@@ -193,3 +193,39 @@ class TopologyBuilder:
         """Save the built topology JSON to a file."""
         with open(filepath, "w") as f:
             f.write(self.to_json(indent=indent))
+
+    def push_to_backend(self, url: str = "http://localhost:8000", token: str = "ae3gis-secret-token") -> dict:
+        """
+        Push the built topology directly to the AE3GISv2 backend API.
+        
+        Requires the `requests` library. If you don't have it installed (`pip install requests`),
+        this method will raise an ImportError.
+        
+        Args:
+            url: The base URL of the backend (e.g. http://localhost:8000)
+            token: The instructor token used for authorization
+            
+        Returns:
+            dict: The JSON response from the server containing the created TopologyRecord.
+        """
+        try:
+            import requests
+        except ImportError:
+            raise ImportError(
+                "The 'requests' library is required to push to the backend. "
+                "Install it with: pip install requests"
+            )
+
+        api_endpoint = f"{url.rstrip('/')}/api/topologies"
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # The CreateTopology schema expects: { name: str, data: TopologyData }
+        payload = {
+            "name": self.topology.name or "Automated Topology",
+            "data": self.to_dict()
+        }
+        
+        response = requests.post(api_endpoint, json=payload, headers=headers)
+        response.raise_for_status()
+        
+        return response.json()

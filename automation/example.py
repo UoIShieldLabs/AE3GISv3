@@ -75,6 +75,17 @@ def main():
     builder.save(str(output_path))
     print(f"✅ Successfully wrote topology to {output_path}")
 
+    # 7. (Optional) Push directly to the AE3GISv2 Backend
+    # You MUST have the 'requests' library installed: pip install requests
+    #
+    # try:
+    #     response = builder.push_to_backend(
+    #         url="http://localhost:8000",
+    #         token="test"  # Default dev token in backend/config.py
+    #     )
+    #     print(f"✅ Successfully pushed to backend! ID: {response['id']}")
+    # except Exception as e:
+    #     print(f"❌ Failed to push to backend: {e}")
 
 if __name__ == "__main__":
     main()
