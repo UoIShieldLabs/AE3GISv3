@@ -16,7 +16,7 @@ export function SelectField({ label, value, onChange, options }: SelectFieldProp
       <label style={{
         display: 'block',
         fontFamily: "var(--font-mono)",
-        fontSize: '10px',
+        fontSize: '15px',
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
@@ -29,13 +29,13 @@ export function SelectField({ label, value, onChange, options }: SelectFieldProp
         onChange={(e) => onChange(e.target.value)}
         style={{
           width: '100%',
-          padding: '8px 12px',
+          padding: '12px 14px',
           background: 'var(--bg-primary)',
           border: '1px solid var(--border-color)',
           borderRadius: '4px',
           color: 'var(--text-primary)',
           fontFamily: "var(--font-mono)",
-          fontSize: '13px',
+          fontSize: '17px',
           outline: 'none',
           cursor: 'pointer',
           transition: 'border-color 0.2s ease',

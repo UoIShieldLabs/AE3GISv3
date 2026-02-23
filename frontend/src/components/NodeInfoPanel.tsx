@@ -150,12 +150,12 @@ export function NodeInfoPanel({
                   onClick={() => setEditOpen(true)}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '12px 18px',
                     background: 'rgba(0, 212, 255, 0.08)',
                     border: '1px solid var(--neon-cyan)',
                     color: 'var(--neon-cyan)',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
+                    fontSize: '16px',
                     cursor: 'pointer',
                     borderRadius: '4px',
                     textTransform: 'uppercase',
@@ -168,12 +168,12 @@ export function NodeInfoPanel({
                   onClick={() => setDeleteOpen(true)}
                   style={{
                     flex: 1,
-                    padding: '8px 12px',
+                    padding: '12px 18px',
                     background: 'rgba(255, 51, 68, 0.08)',
                     border: '1px solid var(--neon-red)',
                     color: 'var(--neon-red)',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
+                    fontSize: '16px',
                     cursor: 'pointer',
                     borderRadius: '4px',
                     textTransform: 'uppercase',
