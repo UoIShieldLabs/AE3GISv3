@@ -343,7 +343,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
   }, [dispatch, siteId, subnet.id]);
 
   // Persist drag positions - local state only via useNodesState
-  const onNodeDragStop = useCallback((_: React.MouseEvent, _node: Node) => {
+  const onNodeDragStop = useCallback(() => {
     // Optionally we could save this to a ref if we wanted to persist across re-layouts manually,
     // but standard behavior is fine.
   }, []);

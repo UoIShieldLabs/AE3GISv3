@@ -69,6 +69,7 @@ Frontend proxies `/api/*` and WebSocket paths to backend at `http://localhost:80
 **Services:**
 
 - `services/clab_generator.py` — Converts frontend topology JSON → ContainerLab YAML (see below)
+- `services/clab_importer.py` — Parses an existing `.clab.yml` file into `TopologyData`. Infers container types from image/exec commands; groups nodes by CIDR into subnets and by the clab `group` field into sites (falls back to a single "Imported Site" if no groups are set). Used by `POST /api/topologies/import`.
 - `services/clab_manager.py` — ContainerLab lifecycle management (deploys via `sudo containerlab deploy/destroy`). Self-heals stale Docker bridge metadata: detects "Failed to lookup link" error, removes the stale network, and retries.
 
 **Database:** SQLite (`ae3gis.db`) with SQLAlchemy ORM. Topology data stored as a JSON column. Status lifecycle: `idle` → `deployed` → `idle`.

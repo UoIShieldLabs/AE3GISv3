@@ -368,7 +368,7 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
     }
   }, [site.subnets, setNodes]);
 
-  const onNodeDragStop = useCallback((_: React.MouseEvent, _node: Node) => {
+  const onNodeDragStop = useCallback(() => {
     // setPosOverrides(prev => new Map(prev).set(node.id, node.position));
   }, []);
 

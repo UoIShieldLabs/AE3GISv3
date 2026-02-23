@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from auth import (
@@ -12,6 +12,7 @@ from database import get_db
 from models import Topology
 from schemas import TopologyCreate, TopologyRecord, TopologySummary, TopologyUpdate
 from services import clab_manager
+from services.clab_importer import parse_clab
 
 router = APIRouter(prefix="/api/topologies", tags=["topologies"])
 
@@ -37,6 +38,25 @@ def create_topology(
         name=body.name,
         data=body.data.model_dump(by_alias=True),
     )
+    db.add(topo)
+    db.commit()
+    db.refresh(topo)
+    return topo
+
+
+@router.post("/import", response_model=TopologyRecord, status_code=201)
+async def import_topology(
+    name: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
+    content = (await file.read()).decode('utf-8')
+    try:
+        topo_data = parse_clab(content)
+    except Exception as e:
+        raise HTTPException(400, f"Failed to parse clab file: {e}")
+    topo = Topology(name=name, data=topo_data)
     db.add(topo)
     db.commit()
     db.refresh(topo)
