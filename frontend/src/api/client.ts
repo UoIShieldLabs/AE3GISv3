@@ -126,6 +126,20 @@ export function deleteTopology(id: string): Promise<void> {
   return request<void>(`${BASE}/${id}`, { method: 'DELETE' });
 }
 
+export async function importTopology(name: string, file: File): Promise<TopologySummary> {
+  const form = new FormData();
+  form.append('name', name);
+  form.append('file', file);
+  const headers: Record<string, string> = {};
+  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  const res = await fetch(`${BASE}/import`, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
 // ── ContainerLab ───────────────────────────────────────────────────
 
 export function deployTopology(id: string): Promise<{ status: string; output: string }> {

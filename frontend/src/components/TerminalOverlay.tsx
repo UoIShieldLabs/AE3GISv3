@@ -45,7 +45,9 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
 
   const appendText = useCallback((rawText: string) => {
     const text = rawText
+      // eslint-disable-next-line no-control-regex
       .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
+      // eslint-disable-next-line no-control-regex
       .replace(/\x1b[^[]/g, '')
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n');
@@ -70,6 +72,7 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
 
   useEffect(() => {
     if (!backendId || deployStatus !== 'deployed') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConnStatus('error');
       setLines(['Topology is not deployed. Deploy it first to open a terminal.']);
       return;

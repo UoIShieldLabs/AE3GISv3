@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from './ui/Dialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
+import { ImportClabDialog } from './dialogs/ImportClabDialog';
 import { listTopologies, deleteTopology, type TopologySummary } from '../api/client';
 import './TopologyBrowser.css';
 
@@ -25,14 +26,15 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
   const [topologies, setTopologies] = useState<TopologySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TopologySummary | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    void listTopologies()
+      .then((topos) => { setLoading(false); setTopologies(topos); })
+      .catch(() => { setLoading(false); setTopologies([]); });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    listTopologies()
-      .then(setTopologies)
-      .catch(() => setTopologies([]))
-      .finally(() => setLoading(false));
   }, [open]);
 
   const handleDelete = async () => {
@@ -51,9 +53,34 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
     onClose();
   };
 
+  const handleImported = (topo: TopologySummary) => {
+    setTopologies((prev) => [topo, ...prev]);
+    setImportOpen(false);
+  };
+
   return (
     <>
       <Dialog title="Load Topology" open={open} onClose={onClose} width={520}>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setImportOpen(true)}
+            style={{
+              padding: '5px 12px',
+              background: 'rgba(0, 212, 255, 0.06)',
+              border: '1px solid rgba(0, 212, 255, 0.4)',
+              borderRadius: '4px',
+              color: 'var(--neon-cyan)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Import .clab
+          </button>
+        </div>
+
         {loading ? (
           <div className="topology-browser-loading">Loading...</div>
         ) : topologies.length === 0 ? (
@@ -96,6 +123,12 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
         message={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ImportClabDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={handleImported}
       />
     </>
   );
