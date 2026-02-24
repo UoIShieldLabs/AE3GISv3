@@ -51,11 +51,11 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
         flexDirection: 'column',
         alignItems: 'center',
         gap: '3px',
-        padding: '8px 10px',
+        padding: '10px 14px',
         background: '#14141e',
         border: `1px solid ${c}44`,
         borderRadius: '6px',
-        minWidth: '90px',
+        minWidth: '100px',
         boxShadow: `0 0 10px ${c}11`,
       }}
     >
@@ -87,7 +87,7 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",
-        fontSize: '10px',
+        fontSize: '15px',
         color: c,
         letterSpacing: '1px',
         opacity: 0.8,
@@ -97,11 +97,11 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
 
       <div style={{
         fontFamily: "'Rajdhani', sans-serif",
-        fontSize: '11px',
+        fontSize: '16px',
         fontWeight: 600,
         color: '#d0d0d8',
         textAlign: 'center',
-        maxWidth: '100px',
+        maxWidth: '110px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -111,7 +111,7 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",
-        fontSize: '9px',
+        fontSize: '12px',
         color: '#505060',
       }}>
         {data.ip}

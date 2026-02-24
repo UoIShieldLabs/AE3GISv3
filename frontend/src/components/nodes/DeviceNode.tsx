@@ -122,13 +122,13 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '4px',
-        padding: '10px 12px',
+        gap: '5px',
+        padding: '14px 18px',
         background: '#14141e',
         border: `1px solid ${color}33`,
         borderRadius: '6px',
         transition: 'all 0.2s ease',
-        minWidth: '90px',
+        minWidth: '115px',
       }}
       onClick={() => onSelect(container)}
       onDoubleClick={(e) => { e.stopPropagation(); onOpenTerminal(container); }}
@@ -151,7 +151,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",
-        fontSize: '10px',
+        fontSize: '14px',
         color: color,
         letterSpacing: '1px',
         opacity: 0.8,
@@ -161,11 +161,11 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
 
       <div style={{
         fontFamily: "'Rajdhani', sans-serif",
-        fontSize: '11px',
+        fontSize: '16px',
         fontWeight: 600,
         color: '#d0d0d8',
         textAlign: 'center',
-        maxWidth: '100px',
+        maxWidth: '120px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -175,7 +175,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",
-        fontSize: '9px',
+        fontSize: '14px',
         color: '#505060',
       }}>
         {container.ip}
@@ -183,8 +183,8 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
 
       {container.status && (
         <div style={{
-          width: '6px',
-          height: '6px',
+          width: '9px',
+          height: '9px',
           borderRadius: '50%',
           background: container.status === 'running' ? '#00ff9f' : '#ff3344',
           boxShadow: container.status === 'running'

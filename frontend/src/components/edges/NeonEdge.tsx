@@ -44,7 +44,7 @@ export function NeonEdge(props: EdgeProps) {
             startOffset="50%"
             textAnchor="middle"
             style={{
-              fontSize: '10px',
+              fontSize: '12px',
               fill: '#808090',
               fontFamily: "'Share Tech Mono', monospace",
             }}
@@ -89,7 +89,7 @@ export function NeonEdgeDirect(props: EdgeProps) {
             startOffset="50%"
             textAnchor="middle"
             style={{
-              fontSize: '10px',
+              fontSize: '12px',
               fill: '#808090',
               fontFamily: "'Share Tech Mono', monospace",
             }}

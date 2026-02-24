@@ -40,7 +40,7 @@ const rowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  padding: '10px 12px',
+  padding: '12px 16px',
   border: '1px solid var(--border-color)',
   borderRadius: '4px',
   background: 'rgba(20,20,30,0.5)',
@@ -48,12 +48,12 @@ const rowStyle: React.CSSProperties = {
 };
 
 const btnSmall = (color: string, bg: string): React.CSSProperties => ({
-  padding: '5px 10px',
+  padding: '10px 18px',
   background: bg,
   border: `1px solid ${color}`,
   color,
   fontFamily: 'var(--font-mono)',
-  fontSize: '10px',
+  fontSize: '15px',
   textTransform: 'uppercase',
   letterSpacing: '1px',
   borderRadius: '4px',
@@ -69,7 +69,7 @@ const btnAmber = btnSmall('#ffaa00', 'rgba(255,170,0,0.08)');
 const sectionHeader: React.CSSProperties = {
   fontFamily: 'var(--font-display)',
   color: 'var(--neon-cyan)',
-  fontSize: '12px',
+  fontSize: '17px',
   letterSpacing: '1px',
   textTransform: 'uppercase',
   marginBottom: '12px',
@@ -78,7 +78,7 @@ const sectionHeader: React.CSSProperties = {
 
 const monoSmall: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  fontSize: '11px',
+  fontSize: '16px',
   color: 'var(--text-secondary)',
 };
 
@@ -316,7 +316,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
 
   return (
     <>
-      <Dialog title="Classroom" open={open} onClose={onClose} width={760}>
+      <Dialog title="Classroom" open={open} onClose={onClose} width={900}>
         {loading ? (
           <div style={{ ...monoSmall, padding: '20px', textAlign: 'center' }}>Loading...</div>
         ) : activeSession ? (
@@ -332,7 +332,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
             <div style={{
               fontFamily: 'var(--font-display)',
               color: 'var(--neon-cyan)',
-              fontSize: '16px',
+              fontSize: '22px',
               letterSpacing: '2px',
               textTransform: 'uppercase',
               marginBottom: '4px',
@@ -418,7 +418,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontFamily: 'var(--font-mono)',
-                          fontSize: '12px',
+                          fontSize: '17px',
                           color: 'var(--text-primary)',
                           marginBottom: '2px',
                         }}>
@@ -426,7 +426,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
                         </div>
                         <div style={{
                           fontFamily: 'var(--font-mono)',
-                          fontSize: '11px',
+                          fontSize: '16px',
                           color: 'var(--text-dim)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -437,7 +437,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
                       </div>
                       <span style={{
                         fontFamily: 'var(--font-mono)',
-                        fontSize: '10px',
+                        fontSize: '15px',
                         textTransform: 'uppercase',
                         letterSpacing: '1px',
                         color: statusColor(status),
@@ -504,7 +504,7 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontFamily: 'var(--font-mono)',
-                      fontSize: '12px',
+                      fontSize: '15px',
                       color: 'var(--text-primary)',
                       marginBottom: '2px',
                     }}>

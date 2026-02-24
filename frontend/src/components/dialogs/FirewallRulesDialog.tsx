@@ -88,7 +88,7 @@ export function FirewallRulesDialog({
               <div
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
+                  fontSize: '13px',
                   color: 'var(--text-secondary)',
                   marginBottom: '14px',
                 }}
@@ -160,7 +160,7 @@ export function FirewallRulesDialog({
                     color: 'var(--neon-cyan)',
                     borderRadius: '4px',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
+                    fontSize: '13px',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',
                     cursor: busy ? 'not-allowed' : 'pointer',
@@ -176,7 +176,7 @@ export function FirewallRulesDialog({
                   style={{
                     marginTop: '10px',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
+                    fontSize: '13px',
                     color: 'var(--neon-red)',
                   }}
                 >
@@ -217,14 +217,14 @@ export function FirewallRulesDialog({
                     }}
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto auto auto', gap: '8px', alignItems: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{rule.source}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-secondary)' }}>{rule.destination}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--neon-cyan)' }}>{rule.protocol.toUpperCase()}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-primary)' }}>{rule.port}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-secondary)' }}>{rule.source}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-secondary)' }}>{rule.destination}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--neon-cyan)' }}>{rule.protocol.toUpperCase()}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-primary)' }}>{rule.port}</div>
                       <div
                         style={{
                           fontFamily: 'var(--font-mono)',
-                          fontSize: '11px',
+                          fontSize: '13px',
                           color: rule.action === 'accept' ? 'var(--neon-green)' : 'var(--neon-red)',
                         }}
                       >
@@ -240,7 +240,7 @@ export function FirewallRulesDialog({
                             color: 'var(--text-secondary)',
                             borderRadius: '3px',
                             fontFamily: 'var(--font-mono)',
-                            fontSize: '10px',
+                            fontSize: '12px',
                             textTransform: 'uppercase',
                             letterSpacing: '1px',
                             padding: '5px 7px',

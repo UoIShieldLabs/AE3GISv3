@@ -183,7 +183,11 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
         }}>
           <div style={{
             fontFamily: 'var(--font-mono)',
+<<<<<<< HEAD
             fontSize: '13px',
+=======
+            fontSize: '12px',
+>>>>>>> feature/classroom-mode
             color: 'var(--neon-green)',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -192,7 +196,11 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
           </div>
           <div style={{
             fontFamily: 'var(--font-mono)',
+<<<<<<< HEAD
             fontSize: '13px',
+=======
+            fontSize: '12px',
+>>>>>>> feature/classroom-mode
             color: 'var(--text-dim)',
             textAlign: 'right',
           }}>
@@ -260,7 +268,11 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
                 border: 'none',
                 color: 'var(--neon-red)',
                 fontFamily: 'var(--font-mono)',
+<<<<<<< HEAD
                 fontSize: '13px',
+=======
+                fontSize: '12px',
+>>>>>>> feature/classroom-mode
                 cursor: 'pointer',
                 textTransform: 'uppercase',
               }}
@@ -276,7 +288,11 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
               border: 'none',
               color: 'var(--neon-cyan)',
               fontFamily: 'var(--font-mono)',
+<<<<<<< HEAD
               fontSize: '13px',
+=======
+              fontSize: '12px',
+>>>>>>> feature/classroom-mode
               cursor: 'pointer',
               textTransform: 'uppercase',
             }}

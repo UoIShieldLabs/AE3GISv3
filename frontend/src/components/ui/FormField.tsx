@@ -13,7 +13,11 @@ export function FormField({ label, value, onChange, placeholder, error, type = '
       <label style={{
         display: 'block',
         fontFamily: "var(--font-mono)",
+<<<<<<< HEAD
         fontSize: '12px',
+=======
+        fontSize: '15px',
+>>>>>>> feature/classroom-mode
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
@@ -28,13 +32,17 @@ export function FormField({ label, value, onChange, placeholder, error, type = '
         placeholder={placeholder}
         style={{
           width: '100%',
-          padding: '8px 12px',
+          padding: '12px 14px',
           background: 'var(--bg-primary)',
           border: `1px solid ${error ? 'var(--neon-red)' : 'var(--border-color)'}`,
           borderRadius: '4px',
           color: 'var(--text-primary)',
           fontFamily: "var(--font-mono)",
+<<<<<<< HEAD
           fontSize: '14px',
+=======
+          fontSize: '17px',
+>>>>>>> feature/classroom-mode
           outline: 'none',
           transition: 'border-color 0.2s ease',
         }}
@@ -48,7 +56,11 @@ export function FormField({ label, value, onChange, placeholder, error, type = '
       {error && (
         <div style={{
           fontFamily: "var(--font-mono)",
+<<<<<<< HEAD
           fontSize: '12px',
+=======
+          fontSize: '15px',
+>>>>>>> feature/classroom-mode
           color: 'var(--neon-red)',
           marginTop: '4px',
         }}>
