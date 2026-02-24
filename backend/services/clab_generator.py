@@ -11,12 +11,13 @@ import yaml
 
 from config import CLAB_WORKDIR
 
-_IMAGE_ROUTER = "frrouting/frr:latest"
+_IMAGE_ROUTER     = "frrouting/frr:latest"
 # Use a plain Linux image for switch containers. The previous OVS image
 # attempts to load host kernel modules on startup, which breaks on vanilla
 # installs where openvswitch is not present.
-_IMAGE_SWITCH = "alpine:latest"
-_IMAGE_HOST   = "alpine:latest"
+_IMAGE_SWITCH     = "alpine:latest"
+_IMAGE_HOST       = "alpine:latest"
+_IMAGE_WEB_SERVER = "httpd:alpine"
 
 _ROUTER_TYPES = frozenset({"router", "firewall"})
 _SWITCH_TYPES = frozenset({"switch"})
@@ -28,6 +29,8 @@ def image_for_container_type(ctype: str) -> str:
         return _IMAGE_ROUTER
     if ctype in _SWITCH_TYPES:
         return _IMAGE_SWITCH
+    if ctype == "web-server":
+        return _IMAGE_WEB_SERVER
     return _IMAGE_HOST
 
 
