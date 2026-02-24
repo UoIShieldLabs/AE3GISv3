@@ -1,0 +1,57 @@
+{
+  "name": "Automated Enterprise",
+  "sites": [
+    {
+      "id": "d913eefd-f268-4959-a6ac-9c982f0fba4c",
+      "name": "Headquarters",
+      "location": "New York",
+      "position": {
+        "x": 100.0,
+        "y": 100.0
+      },
+      "subnets": [
+        {
+          "id": "5d52e4d6-e419-4a4d-9a21-9beba4c15704",
+          "name": "HQ-DMZ",
+          "cidr": "10.0.1.0/24",
+          "gateway": null,
+          "containers": [
+            {
+              "id": "bbed2adb-2bb9-4d55-9e93-b8a07ab0591b",
+              "name": "dmz-router",
+              "type": "router",
+              "ip": "10.0.1.1",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            },
+            {
+              "id": "558b4f79-3396-4c69-a097-7cfef846de08",
+              "name": "web-01",
+              "type": "web-server",
+              "ip": "10.0.1.10",
+              "kind": null,
+              "image": null,
+              "status": null,
+              "metadata": null
+            }
+          ],
+          "connections": [
+            {
+              "from": "558b4f79-3396-4c69-a097-7cfef846de08",
+              "to": "bbed2adb-2bb9-4d55-9e93-b8a07ab0591b",
+              "label": null,
+              "fromInterface": null,
+              "toInterface": null,
+              "fromContainer": "558b4f79-3396-4c69-a097-7cfef846de08",
+              "toContainer": "bbed2adb-2bb9-4d55-9e93-b8a07ab0591b"
+            }
+          ]
+        }
+      ],
+      "subnetConnections": []
+    }
+  ],
+  "siteConnections": []
+}

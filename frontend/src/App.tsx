@@ -502,6 +502,7 @@ function App() {
                 <LanView
                   subnet={currentSubnet}
                   siteId={currentSite.id}
+                  topologyId={backendId}
                   onSelectContainer={setSelectedContainer}
                   onOpenTerminal={openTerminal}
                   onDeselect={() => setSelectedContainer(null)}
@@ -517,6 +518,7 @@ function App() {
               onOpenTerminal={openTerminal}
               siteId={effectiveNav.siteId}
               subnetId={effectiveNav.subnetId}
+              topologyId={backendId}
               readOnly={readOnly}
             />
           </div>

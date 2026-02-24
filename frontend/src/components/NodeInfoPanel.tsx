@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react';
 import type { Container, ContainerType } from '../data/sampleTopology';
 import { TopologyDispatchContext } from '../store/TopologyContext';
+import { AuthContext } from '../store/AuthContext';
 import { ContainerDialog } from './dialogs/ContainerDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 
@@ -10,6 +11,7 @@ interface NodeInfoPanelProps {
   onOpenTerminal: (container: Container) => void;
   siteId: string | null;
   subnetId: string | null;
+  topologyId: string | null;
   readOnly?: boolean;
 }
 
@@ -29,9 +31,11 @@ export function NodeInfoPanel({
   onOpenTerminal,
   siteId,
   subnetId,
+  topologyId,
   readOnly,
 }: NodeInfoPanelProps) {
   const dispatch = useContext(TopologyDispatchContext);
+  const auth = useContext(AuthContext);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -144,6 +148,18 @@ export function NodeInfoPanel({
             >
               Open Terminal
             </button>
+            {['web-server', 'plc'].includes(container.type) && auth?.token && topologyId && (
+              <button
+                className="btn-terminal"
+                style={{ marginTop: '8px', background: 'rgba(0, 255, 159, 0.1)', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
+                onClick={() => {
+                  const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+                  window.open(url, '_blank');
+                }}
+              >
+                🌐 Open Web UI
+              </button>
+            )}
             {!readOnly && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <button

@@ -21,6 +21,7 @@ import { ConnectionDialog } from './dialogs/ConnectionDialog';
 import { BulkConnectionDialog } from './dialogs/BulkConnectionDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
+import { AuthContext } from '../store/AuthContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
 import type { Subnet, Container, ContainerType } from '../data/sampleTopology';
@@ -48,12 +49,14 @@ interface LanViewProps {
   onSelectContainer: (container: Container) => void;
   onOpenTerminal: (container: Container) => void;
   onDeselect: () => void;
+  topologyId: string | null;
   readOnly?: boolean;
 }
 
-export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
+export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
+  const auth = useContext(AuthContext);
 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
   const [containerDialog, setContainerDialog] = useState<{ open: boolean; initial?: Container }>({ open: false });
@@ -199,15 +202,34 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     event.preventDefault();
     const container = visibleContainers.find(c => c.id === node.id);
     if (!container) return;
+
+    const items: ContextMenuItem[] = [];
+
+    // Allow Web UI access for appropriate types
+    const webUiTypes = ['web-server', 'plc'];
+    if (webUiTypes.includes(container.type) && auth?.token && topologyId) {
+      items.push({
+        label: '🌐 Open Web UI',
+        onClick: () => {
+          const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+          window.open(url, '_blank');
+        },
+      });
+    }
+
+    if (!readOnly) {
+      items.push(
+        { label: 'Edit Container', onClick: () => setContainerDialog({ open: true, initial: container }) },
+        { label: 'Delete Container', onClick: () => setDeleteConfirm({ containerId: container.id, name: container.name }), danger: true }
+      );
+    }
+
     setCtxMenu({
       x: event.clientX,
       y: event.clientY,
-      items: [
-        { label: 'Edit Container', onClick: () => setContainerDialog({ open: true, initial: container }) },
-        { label: 'Delete Container', onClick: () => setDeleteConfirm({ containerId: container.id, name: container.name }), danger: true },
-      ],
+      items
     });
-  }, [visibleContainers]);
+  }, [visibleContainers, readOnly, siteId, auth?.token]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
