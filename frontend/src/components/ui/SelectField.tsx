@@ -16,11 +16,7 @@ export function SelectField({ label, value, onChange, options }: SelectFieldProp
       <label style={{
         display: 'block',
         fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-        fontSize: '12px',
-=======
         fontSize: '15px',
->>>>>>> feature/classroom-mode
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',
@@ -39,11 +35,7 @@ export function SelectField({ label, value, onChange, options }: SelectFieldProp
           borderRadius: '4px',
           color: 'var(--text-primary)',
           fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-          fontSize: '14px',
-=======
           fontSize: '17px',
->>>>>>> feature/classroom-mode
           outline: 'none',
           cursor: 'pointer',
           transition: 'border-color 0.2s ease',

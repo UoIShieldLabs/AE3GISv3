@@ -133,11 +133,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         return (
           <div style={{
             fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-            fontSize: '13px',
-=======
             fontSize: '15px',
->>>>>>> feature/classroom-mode
             color: avail === 0 ? 'var(--neon-red)' : 'var(--text-dim)',
             marginTop: '-8px',
             marginBottom: '12px',
@@ -154,11 +150,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         <label style={{
           display: 'block',
           fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-          fontSize: '12px',
-=======
           fontSize: '13px',
->>>>>>> feature/classroom-mode
           color: 'var(--text-dim)',
           textTransform: 'uppercase',
           letterSpacing: '1px',
@@ -173,11 +165,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             gap: '6px',
             marginBottom: '4px',
             fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-            fontSize: '13px',
-=======
             fontSize: '15px',
->>>>>>> feature/classroom-mode
             color: 'var(--text-primary)',
             minWidth: 0,
           }}>
@@ -193,11 +181,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
                 color: 'var(--neon-red)',
                 cursor: 'pointer',
                 fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-                fontSize: '13px',
-=======
                 fontSize: '15px',
->>>>>>> feature/classroom-mode
                 padding: '0 4px',
                 flexShrink: 0,
               }}
@@ -220,11 +204,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-              fontSize: '13px',
-=======
               fontSize: '15px',
->>>>>>> feature/classroom-mode
               outline: 'none',
             }}
           />
@@ -241,11 +221,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-              fontSize: '13px',
-=======
               fontSize: '15px',
->>>>>>> feature/classroom-mode
               outline: 'none',
             }}
           />
@@ -260,11 +236,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--neon-cyan)',
               fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-              fontSize: '13px',
-=======
               fontSize: '15px',
->>>>>>> feature/classroom-mode
               cursor: 'pointer',
             }}
           >
@@ -284,11 +256,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-            fontSize: '13px',
-=======
             fontSize: '15px',
->>>>>>> feature/classroom-mode
             cursor: 'pointer',
           }}
         >
@@ -303,11 +271,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--neon-green)',
             fontFamily: "var(--font-mono)",
-<<<<<<< HEAD
-            fontSize: '13px',
-=======
             fontSize: '15px',
->>>>>>> feature/classroom-mode
             cursor: 'pointer',
           }}
         >

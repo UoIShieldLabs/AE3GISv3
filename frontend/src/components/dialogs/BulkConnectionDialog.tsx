@@ -267,11 +267,7 @@ function BulkConnectionDialogInner({
                 borderRadius: '4px',
                 color: mode === m.key ? 'var(--neon-cyan)' : 'var(--text-dim)',
                 fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                fontSize: '13px',
-=======
                 fontSize: '12px',
->>>>>>> feature/classroom-mode
                 cursor: 'pointer',
               }}
             >
@@ -306,11 +302,7 @@ function BulkConnectionDialogInner({
             <div style={{ marginBottom: '10px' }}>
               <div style={{
                 fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                fontSize: '13px',
-=======
                 fontSize: '12px',
->>>>>>> feature/classroom-mode
                 color: 'var(--text-dim)',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
@@ -353,11 +345,7 @@ function BulkConnectionDialogInner({
             <details style={{ marginTop: '6px' }}>
               <summary style={{
                 fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                fontSize: '13px',
-=======
                 fontSize: '12px',
->>>>>>> feature/classroom-mode
                 color: 'var(--text-dim)',
                 cursor: 'pointer',
                 textTransform: 'uppercase',
@@ -416,11 +404,7 @@ function BulkConnectionDialogInner({
             {/* Chain builder */}
             <div style={{
               fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-              fontSize: '13px',
-=======
               fontSize: '12px',
->>>>>>> feature/classroom-mode
               color: 'var(--text-dim)',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -464,11 +448,7 @@ function BulkConnectionDialogInner({
                         border: '1px solid rgba(0, 212, 255, 0.3)',
                         borderRadius: '3px',
                         fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                        fontSize: '13px',
-=======
                         fontSize: '12px',
->>>>>>> feature/classroom-mode
                         color: 'var(--neon-cyan)',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -481,11 +461,7 @@ function BulkConnectionDialogInner({
                         onClick={() => removeFromChain(idx)}
                         style={{
                           background: 'none', border: 'none', color: 'var(--neon-red)',
-<<<<<<< HEAD
-                          cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '13px',
-=======
                           cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '12px',
->>>>>>> feature/classroom-mode
                           padding: 0, lineHeight: 1,
                         }}
                       >
@@ -500,11 +476,7 @@ function BulkConnectionDialogInner({
             {/* Available nodes to add to chain */}
             <div style={{
               fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-              fontSize: '13px',
-=======
               fontSize: '12px',
->>>>>>> feature/classroom-mode
               color: 'var(--text-dim)',
               textTransform: 'uppercase',
               letterSpacing: '1px',
@@ -533,11 +505,7 @@ function BulkConnectionDialogInner({
                     border: '1px solid var(--border-color)',
                     borderRadius: '3px',
                     fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                    fontSize: '13px',
-=======
                     fontSize: '12px',
->>>>>>> feature/classroom-mode
                     color: 'var(--text-secondary)',
                     cursor: 'pointer',
                   }}
@@ -547,11 +515,7 @@ function BulkConnectionDialogInner({
               )) : (
                 <span style={{
                   fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                  fontSize: '13px',
-=======
                   fontSize: '12px',
->>>>>>> feature/classroom-mode
                   color: 'var(--text-dim)',
                   padding: '4px',
                 }}>
@@ -587,11 +551,7 @@ function BulkConnectionDialogInner({
       {/* Entries table */}
       <div style={{
         fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-        fontSize: '13px',
-=======
         fontSize: '12px',
->>>>>>> feature/classroom-mode
         color: 'var(--text-dim)',
         textTransform: 'uppercase',
         letterSpacing: '1px',

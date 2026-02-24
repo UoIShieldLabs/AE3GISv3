@@ -171,11 +171,7 @@ export function NodeInfoPanel({
                     border: '1px solid var(--neon-cyan)',
                     color: 'var(--neon-cyan)',
                     fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                    fontSize: '13px',
-=======
                     fontSize: '16px',
->>>>>>> feature/classroom-mode
                     cursor: 'pointer',
                     borderRadius: '4px',
                     textTransform: 'uppercase',
@@ -193,11 +189,7 @@ export function NodeInfoPanel({
                     border: '1px solid var(--neon-red)',
                     color: 'var(--neon-red)',
                     fontFamily: 'var(--font-mono)',
-<<<<<<< HEAD
-                    fontSize: '13px',
-=======
                     fontSize: '16px',
->>>>>>> feature/classroom-mode
                     cursor: 'pointer',
                     borderRadius: '4px',
                     textTransform: 'uppercase',
