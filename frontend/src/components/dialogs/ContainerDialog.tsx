@@ -15,6 +15,8 @@ const typeOptions = [
   { value: 'workstation', label: 'Workstation' },
 ];
 
+const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
+
 const statusOptions = [
   { value: 'running', label: 'Running' },
   { value: 'stopped', label: 'Stopped' },
@@ -35,13 +37,28 @@ interface ContainerDialogProps {
   initial?: Container;
   subnetCidr?: string;
   takenIps?: string[];
+  existingNames?: string[];
 }
 
-function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps = [] }: Omit<ContainerDialogProps, 'open'>) {
-  const defaultIp = initial?.ip ?? (subnetCidr ? getNextAvailableIp(subnetCidr, takenIps) ?? '' : '');
+function getNextName(existingNames: string[], base: string): string {
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escaped}\\s*(\\d+)$`, 'i');
+  let max = 0;
+  for (const n of existingNames) {
+    const match = n.trim().match(pattern);
+    if (match) max = Math.max(max, parseInt(match[1], 10));
+  }
+  return `${base} ${max + 1}`;
+}
 
-  const [name, setName] = useState(initial?.name ?? '');
-  const [type, setType] = useState<ContainerType>(initial?.type ?? 'workstation');
+function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps = [], existingNames }: Omit<ContainerDialogProps, 'open'>) {
+  const defaultIp = initial?.ip ?? (subnetCidr ? getNextAvailableIp(subnetCidr, takenIps) ?? '' : '');
+  const initialType: ContainerType = initial?.type ?? 'workstation';
+  const defaultName = initial?.name ?? (existingNames ? getNextName(existingNames, typeLabel[initialType]) : '');
+
+  const [name, setName] = useState(defaultName);
+  const [nameIsAuto, setNameIsAuto] = useState(!initial);
+  const [type, setType] = useState<ContainerType>(initialType);
   const [ip, setIp] = useState(defaultIp);
   const [ipError, setIpError] = useState('');
   const [image, setImage] = useState(initial?.image ?? '');
@@ -96,8 +113,12 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
 
   return (
     <form onSubmit={handleSubmit}>
-      <FormField label="Name" value={name} onChange={setName} placeholder="e.g. Core Router" />
-      <SelectField label="Type" value={type} onChange={(v) => setType(v as ContainerType)} options={typeOptions} />
+      <FormField label="Name" value={name} onChange={(v) => { setName(v); setNameIsAuto(false); }} placeholder="e.g. Core Router" />
+      <SelectField label="Type" value={type} onChange={(v) => {
+        const t = v as ContainerType;
+        setType(t);
+        if (nameIsAuto && existingNames) setName(getNextName(existingNames, typeLabel[t]));
+      }} options={typeOptions} />
       <FormField
         label="IP Address"
         value={ip}
@@ -112,7 +133,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         return (
           <div style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '13px',
             color: avail === 0 ? 'var(--neon-red)' : 'var(--text-dim)',
             marginTop: '-8px',
             marginBottom: '12px',
@@ -129,7 +150,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
         <label style={{
           display: 'block',
           fontFamily: "var(--font-mono)",
-          fontSize: '10px',
+          fontSize: '12px',
           color: 'var(--text-dim)',
           textTransform: 'uppercase',
           letterSpacing: '1px',
@@ -144,7 +165,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             gap: '6px',
             marginBottom: '4px',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             color: 'var(--text-primary)',
             minWidth: 0,
           }}>
@@ -160,7 +181,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
                 color: 'var(--neon-red)',
                 cursor: 'pointer',
                 fontFamily: "var(--font-mono)",
-                fontSize: '12px',
+                fontSize: '13px',
                 padding: '0 4px',
                 flexShrink: 0,
               }}
@@ -183,7 +204,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               outline: 'none',
             }}
           />
@@ -200,7 +221,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--text-primary)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               outline: 'none',
             }}
           />
@@ -215,7 +236,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
               borderRadius: '4px',
               color: 'var(--neon-cyan)',
               fontFamily: "var(--font-mono)",
-              fontSize: '12px',
+              fontSize: '13px',
               cursor: 'pointer',
             }}
           >
@@ -235,7 +256,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--text-secondary)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -250,7 +271,7 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
             borderRadius: '4px',
             color: 'var(--neon-green)',
             fontFamily: "var(--font-mono)",
-            fontSize: '12px',
+            fontSize: '13px',
             cursor: 'pointer',
           }}
         >
@@ -261,10 +282,10 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
   );
 }
 
-export function ContainerDialog({ open, onClose, onSubmit, initial, subnetCidr, takenIps }: ContainerDialogProps) {
+export function ContainerDialog({ open, onClose, onSubmit, initial, subnetCidr, takenIps, existingNames }: ContainerDialogProps) {
   return (
     <Dialog title={initial ? 'Edit Container' : 'Add Container'} open={open} onClose={onClose} width={460}>
-      {open && <ContainerDialogInner onClose={onClose} onSubmit={onSubmit} initial={initial} subnetCidr={subnetCidr} takenIps={takenIps} />}
+      {open && <ContainerDialogInner onClose={onClose} onSubmit={onSubmit} initial={initial} subnetCidr={subnetCidr} takenIps={takenIps} existingNames={existingNames} />}
     </Dialog>
   );
 }
