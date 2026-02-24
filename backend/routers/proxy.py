@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
@@ -7,6 +10,8 @@ from auth import AuthIdentity, require_any_auth, validate_student_topology
 from database import get_db
 from models import Topology
 from services import clab_manager
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/proxy", tags=["proxy"])
 
@@ -49,27 +54,37 @@ async def proxy_web_ui(
         docker_name = f"clab-{topo_name}-{container_id}"
     finally:
         db.close() # Close DB connection prevent pool exhaustion during streaming
-    
-    
-    # 2. Look up the internal Docker IP of the target container
+
+
+    # 2. Look up the internal Docker IP of the target container via docker inspect.
+    #    We query Docker directly instead of going through `containerlab inspect`
+    #    because the latter requires sudo which may not be available to the backend.
     try:
-        containers = await clab_manager.inspect(topo_name)
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "inspect",
+            "--format", "{{.State.Running}}|{{range .NetworkSettings.Networks}}{{.IPAddress}}|{{end}}",
+            docker_name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
     except Exception as e:
-        raise HTTPException(500, f"Failed to inspect topology: {e}")
-        
-    target_container = next((c for c in containers if c["name"] == docker_name), None)
-    
-    if not target_container:
+        raise HTTPException(500, f"Failed to inspect container: {e}")
+
+    if proc.returncode != 0:
+        detail = stderr.decode(errors="replace").strip()
+        log.warning("docker inspect %s failed: %s", docker_name, detail)
         raise HTTPException(404, f"Container {container_id} not found in deployment")
-        
-    if target_container.get("state", "").lower() != "running":
+
+    parts = stdout.decode().strip().split("|")
+    is_running = parts[0].lower() == "true" if parts else False
+    # IPs are in parts[1:], filter out empty strings
+    ips = [p for p in parts[1:] if p]
+
+    if not is_running:
         raise HTTPException(409, f"Container {container_id} is not running")
 
-    # The inspect output provides IPv4Address like "172.20.20.2/24"
-    # We strip the CIDR suffix to get the raw IP.
-    raw_ip = target_container.get("ipv4_address", "")
-    target_ip = raw_ip.split("/")[0] if raw_ip else None
-    
+    target_ip = ips[0] if ips else None
     if not target_ip:
         raise HTTPException(502, f"Container {container_id} does not have a valid management IP")
 

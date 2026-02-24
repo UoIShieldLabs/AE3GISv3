@@ -227,14 +227,14 @@ export function GeographicView({ topology, onSelectSite, readOnly, autoLayoutTri
     setTimeout(() => fitView({ padding: 0.3 }), 50);
   }, [topology.sites, topology.siteConnections, dispatch, fitView]);
 
-  // Run auto-layout automatically when a topology is loaded
+  // Re-center the view when a topology is loaded (without overwriting saved positions)
   const prevTriggerRef = useRef(0);
   useEffect(() => {
     if (autoLayoutTrigger && autoLayoutTrigger !== prevTriggerRef.current) {
       prevTriggerRef.current = autoLayoutTrigger;
-      handleAutoLayout();
+      setTimeout(() => fitView({ padding: 0.3 }), 50);
     }
-  }, [autoLayoutTrigger, handleAutoLayout]);
+  }, [autoLayoutTrigger, fitView]);
 
   const connectionNodes = useMemo(
     () => topology.sites.map(s => ({ id: s.id, name: s.name })),
