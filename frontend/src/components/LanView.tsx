@@ -21,6 +21,7 @@ import { ConnectionDialog } from './dialogs/ConnectionDialog';
 import { BulkConnectionDialog } from './dialogs/BulkConnectionDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
+import { AuthContext } from '../store/AuthContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
 import type { Subnet, Container, ContainerType } from '../data/sampleTopology';
@@ -48,12 +49,14 @@ interface LanViewProps {
   onSelectContainer: (container: Container) => void;
   onOpenTerminal: (container: Container) => void;
   onDeselect: () => void;
+  topologyId: string | null;
   readOnly?: boolean;
 }
 
-export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
+export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
+  const auth = useContext(AuthContext);
 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
   const [containerDialog, setContainerDialog] = useState<{ open: boolean; initial?: Container }>({ open: false });
@@ -105,10 +108,21 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
 
   // Sync nodes with subnet data and layout
   const prevLayoutMode = useRef(layoutMode);
+  const prevContainerIdsRef = useRef<Set<string>>(new Set());
+  const prevConnectionCountRef = useRef<number>(0);
 
   useEffect(() => {
     const layoutChanged = layoutMode !== prevLayoutMode.current;
     prevLayoutMode.current = layoutMode;
+
+    // Detect if any new containers were added
+    const currentContainerIds = new Set(visibleContainers.map(c => c.id));
+    const hasNewContainer = visibleContainers.some(c => !prevContainerIdsRef.current.has(c.id));
+    prevContainerIdsRef.current = currentContainerIds;
+
+    // Detect if connections changed
+    const hasConnectionChange = visibleConnections.length !== prevConnectionCountRef.current;
+    prevConnectionCountRef.current = visibleConnections.length;
 
     const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
@@ -134,8 +148,8 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
 
     setNodes((currentNodes) => {
       return visibleContainers.map((container) => {
-        // If layout didn't change, try to preserve existing position
-        if (!layoutChanged) {
+        // If layout didn't change, no new containers, and no connection changes, preserve existing positions
+        if (!layoutChanged && !hasNewContainer && !hasConnectionChange) {
           const existingNode = currentNodes.find(n => n.id === container.id);
           if (existingNode) {
             return {
@@ -159,7 +173,11 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
         };
       });
     });
-  }, [visibleContainers, visibleConnections, layoutMode, handleSelect, setNodes]);
+
+    if (layoutChanged || hasNewContainer || hasConnectionChange) {
+      setTimeout(() => fitView({ padding: 0.3 }), 50);
+    }
+  }, [visibleContainers, visibleConnections, layoutMode, handleSelect, setNodes, fitView]);
 
   // Sync edges
   useEffect(() => {
@@ -199,15 +217,34 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
     event.preventDefault();
     const container = visibleContainers.find(c => c.id === node.id);
     if (!container) return;
+
+    const items: ContextMenuItem[] = [];
+
+    // Allow Web UI access for appropriate types
+    const webUiTypes = ['web-server', 'plc'];
+    if (webUiTypes.includes(container.type) && auth?.token && topologyId) {
+      items.push({
+        label: '🌐 Open Web UI',
+        onClick: () => {
+          const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+          window.open(url, '_blank');
+        },
+      });
+    }
+
+    if (!readOnly) {
+      items.push(
+        { label: 'Edit Container', onClick: () => setContainerDialog({ open: true, initial: container }) },
+        { label: 'Delete Container', onClick: () => setDeleteConfirm({ containerId: container.id, name: container.name }), danger: true }
+      );
+    }
+
     setCtxMenu({
       x: event.clientX,
       y: event.clientY,
-      items: [
-        { label: 'Edit Container', onClick: () => setContainerDialog({ open: true, initial: container }) },
-        { label: 'Delete Container', onClick: () => setDeleteConfirm({ containerId: container.id, name: container.name }), danger: true },
-      ],
+      items
     });
-  }, [visibleContainers]);
+  }, [visibleContainers, readOnly, siteId, auth?.token]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
@@ -463,6 +500,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
             initial={containerDialog.initial}
             subnetCidr={subnet.cidr}
             takenIps={takenIps}
+            existingNames={subnet.containers.map(c => c.name)}
           />
 
           <BulkContainerDialog
@@ -471,6 +509,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
             onSubmit={handleBulkAdd}
             subnetCidr={subnet.cidr}
             takenIps={takenIps}
+            existingNames={subnet.containers.map(c => c.name)}
           />
 
           <ConnectionDialog

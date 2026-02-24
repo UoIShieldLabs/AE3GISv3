@@ -45,7 +45,7 @@ const ringStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "'Orbitron', sans-serif",
-  fontSize: '11px',
+  fontSize: '16px',
   fontWeight: 700,
   color: '#d0d0d8',
   textAlign: 'center',
@@ -56,14 +56,14 @@ const labelStyle: React.CSSProperties = {
 
 const sublabelStyle: React.CSSProperties = {
   fontFamily: "'Share Tech Mono', monospace",
-  fontSize: '10px',
+  fontSize: '15px',
   color: '#808090',
   textAlign: 'center',
 };
 
 const statsStyle: React.CSSProperties = {
   fontFamily: "'Share Tech Mono', monospace",
-  fontSize: '9px',
+  fontSize: '12px',
   color: '#505060',
   display: 'flex',
   gap: '8px',

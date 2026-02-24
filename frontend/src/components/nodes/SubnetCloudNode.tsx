@@ -32,7 +32,7 @@ const cloudIconStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "'Orbitron', sans-serif",
-  fontSize: '12px',
+  fontSize: '15px',
   fontWeight: 700,
   color: '#00d4ff',
   textAlign: 'center',
@@ -42,13 +42,13 @@ const labelStyle: React.CSSProperties = {
 
 const cidrStyle: React.CSSProperties = {
   fontFamily: "'Share Tech Mono', monospace",
-  fontSize: '11px',
+  fontSize: '16px',
   color: '#808090',
 };
 
 const countStyle: React.CSSProperties = {
   fontFamily: "'Share Tech Mono', monospace",
-  fontSize: '10px',
+  fontSize: '15px',
   color: '#505060',
 };
 

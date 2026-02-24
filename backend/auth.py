@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from config import INSTRUCTOR_TOKEN
@@ -47,12 +47,17 @@ def require_instructor(
 
 
 def require_any_auth(
+    request: Request,
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> AuthIdentity:
     token = _parse_bearer(authorization)
+    
     if not token:
-        raise HTTPException(401, "Authorization header required")
+        token = request.query_params.get("token")
+
+    if not token:
+        raise HTTPException(401, "Authorization header or token query parameter required")
 
     if token == INSTRUCTOR_TOKEN:
         return InstructorIdentity()

@@ -350,6 +350,16 @@ async def destroy(topology_id: str) -> str:
     ])
     if rc != 0:
         raise RuntimeError(f"containerlab destroy failed:\n{stderr}")
+
+    # Remove the management Docker network so it doesn't linger.
+    mgmt_net = management_network_name(topology_id)
+    rm_rc, _, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
+    if rm_rc != 0:
+        # Not fatal — network may already be gone or still draining.
+        log.warning("Could not remove management network %s: %s", mgmt_net, rm_stderr.strip())
+    else:
+        log.info("Removed management network %s", mgmt_net)
+
     return stdout
 
 
