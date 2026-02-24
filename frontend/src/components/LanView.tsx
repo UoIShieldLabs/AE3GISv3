@@ -271,6 +271,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
   const handleAddContainer = useCallback((data: {
     name: string; type: ContainerType; ip: string; image: string;
     status: 'running' | 'stopped' | 'paused'; metadata: Record<string, string>;
+    persistencePaths: string[];
   }) => {
     dispatch({
       type: 'ADD_CONTAINER',
@@ -285,6 +286,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
           image: data.image || undefined,
           status: data.status,
           metadata: Object.keys(data.metadata).length > 0 ? data.metadata : undefined,
+          persistencePaths: data.persistencePaths.length > 0 ? data.persistencePaths : undefined,
         },
       },
     });
@@ -312,6 +314,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
   const handleEditContainer = useCallback((data: {
     name: string; type: ContainerType; ip: string; image: string;
     status: 'running' | 'stopped' | 'paused'; metadata: Record<string, string>;
+    persistencePaths: string[];
   }) => {
     if (!containerDialog.initial) return;
     dispatch({
@@ -327,6 +330,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
           image: data.image || undefined,
           status: data.status,
           metadata: Object.keys(data.metadata).length > 0 ? data.metadata : undefined,
+          persistencePaths: data.persistencePaths.length > 0 ? data.persistencePaths : undefined,
         },
       },
     });

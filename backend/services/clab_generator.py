@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import hashlib
+import posixpath
+from pathlib import Path
 
 import yaml
+
+from config import CLAB_WORKDIR
 
 _IMAGE_ROUTER = "frrouting/frr:latest"
 # Use a plain Linux image for switch containers. The previous OVS image
@@ -15,9 +20,10 @@ _IMAGE_HOST   = "alpine:latest"
 
 _ROUTER_TYPES = frozenset({"router", "firewall"})
 _SWITCH_TYPES = frozenset({"switch"})
+_PERSIST_ROOT = CLAB_WORKDIR / "persistent"
 
 
-def _image_for(ctype: str) -> str:
+def image_for_container_type(ctype: str) -> str:
     if ctype in _ROUTER_TYPES:
         return _IMAGE_ROUTER
     if ctype in _SWITCH_TYPES:
@@ -33,7 +39,23 @@ def _eth_index(iface: str) -> int:
         return 0
 
 
-def generate_clab_yaml(topology: dict) -> str:
+def normalize_persistence_path(path: str) -> str | None:
+    """Return a normalized absolute in-container path or None if invalid."""
+    raw = (path or "").strip()
+    if not raw:
+        return None
+    normalized = posixpath.normpath(raw)
+    if not normalized.startswith("/") or normalized == "/":
+        return None
+    return normalized
+
+
+def persistence_host_path(topology_id: str, container_id: str, container_path: str) -> Path:
+    digest = hashlib.sha1(container_path.encode("utf-8")).hexdigest()[:12]
+    return _PERSIST_ROOT / topology_id / container_id / digest
+
+
+def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
     """Accept the raw topology dict (as stored in the DB) and return clab YAML.
 
     The topology dict matches the frontend TopologyData shape:
@@ -343,7 +365,18 @@ def generate_clab_yaml(topology: dict) -> str:
                     if gateway:
                         exec_cmds.append(f"ip route replace default via {gateway}")
 
-                node_cfg: dict = {"kind": "linux", "image": _image_for(ctype)}
+                node_cfg: dict = {"kind": "linux", "image": image_for_container_type(ctype)}
+                if topology_id:
+                    binds: list[str] = []
+                    for raw_path in container.get("persistencePaths", []) or []:
+                        container_path = normalize_persistence_path(str(raw_path))
+                        if not container_path:
+                            continue
+                        host_path = persistence_host_path(topology_id, cid, container_path)
+                        host_path.mkdir(parents=True, exist_ok=True)
+                        binds.append(f"{host_path}:{container_path}")
+                    if binds:
+                        node_cfg["binds"] = binds
                 if exec_cmds:
                     node_cfg["exec"] = exec_cmds
                 nodes[cid] = node_cfg

@@ -5,13 +5,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import shlex
 import shutil
 from pathlib import Path
 
 from config import CLAB_WORKDIR
+from services import clab_generator
 
 log = logging.getLogger(__name__)
 _FW_CHAIN = "AE3GIS-FW"
+_PERSIST_META_ROOT = CLAB_WORKDIR / "persistent-meta"
 
 
 def _yaml_path(topology_id: str) -> Path:
@@ -79,6 +82,73 @@ async def _run(cmd: list[str]) -> tuple[int, str, str]:
 
 async def _docker_exec(docker_name: str, args: list[str]) -> tuple[int, str, str]:
     return await _run(["sudo", "docker", "exec", docker_name, *args])
+
+
+def _iter_containers(topology_data: dict) -> list[dict]:
+    containers: list[dict] = []
+    for site in topology_data.get("sites", []):
+        for subnet in site.get("subnets", []):
+            containers.extend(subnet.get("containers", []))
+    return containers
+
+
+async def _seed_persistence_from_image(image: str, container_path: str, host_path: Path) -> None:
+    """Populate host_path with initial contents from image:container_path."""
+    src = shlex.quote(container_path)
+    seed_cmd = (
+        f"if [ -d {src} ]; then "
+        f"cp -a {src}/. /ae3gis-seed/; "
+        f"elif [ -e {src} ]; then "
+        f"cp -a {src} /ae3gis-seed/; "
+        "else "
+        "exit 42; "
+        "fi"
+    )
+    rc, _stdout, stderr = await _run([
+        "sudo",
+        "docker",
+        "run",
+        "--rm",
+        "--entrypoint",
+        "sh",
+        "-v",
+        f"{host_path}:/ae3gis-seed",
+        image,
+        "-lc",
+        seed_cmd,
+    ])
+    if rc == 42:
+        log.warning("Seed source path %s does not exist in image %s; leaving %s empty", container_path, image, host_path)
+        return
+    if rc != 0:
+        raise RuntimeError(f"failed to seed {container_path} from {image}: {stderr.strip()}")
+
+
+async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> None:
+    """Ensure persistent bind paths exist and are initialized once from image defaults."""
+    for container in _iter_containers(topology_data):
+        container_id = (container.get("id") or "").strip()
+        if not container_id:
+            continue
+
+        container_type = (container.get("type") or "").strip()
+        image = clab_generator.image_for_container_type(container_type)
+        raw_paths = container.get("persistencePaths", []) or []
+        for raw_path in raw_paths:
+            container_path = clab_generator.normalize_persistence_path(str(raw_path))
+            if not container_path:
+                continue
+            host_path = clab_generator.persistence_host_path(topology_id, container_id, container_path)
+            host_path.mkdir(parents=True, exist_ok=True)
+
+            sentinel_dir = _PERSIST_META_ROOT / topology_id / container_id
+            sentinel_dir.mkdir(parents=True, exist_ok=True)
+            sentinel = sentinel_dir / f"{host_path.name}.seeded"
+            if sentinel.exists():
+                continue
+
+            await _seed_persistence_from_image(image, container_path, host_path)
+            sentinel.write_text("seeded\n")
 
 
 async def _detect_iptables_bin(docker_name: str) -> str:

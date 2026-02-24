@@ -29,6 +29,7 @@ class Container(BaseModel):
     image: str | None = None
     status: Literal["running", "stopped", "paused"] | None = None
     metadata: dict[str, str] | None = None
+    persistencePaths: list[str] | None = None
 
 
 class Connection(BaseModel):

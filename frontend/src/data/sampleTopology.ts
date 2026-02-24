@@ -18,6 +18,7 @@ export interface Container {
   image?: string;
   status?: 'running' | 'stopped' | 'paused';
   metadata?: Record<string, string>;
+  persistencePaths?: string[];
 }
 
 export interface Connection {
