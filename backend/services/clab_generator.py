@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 import hashlib
+import logging
 import posixpath
 from pathlib import Path
 
 import yaml
 
 from config import CLAB_WORKDIR
+
+log = logging.getLogger(__name__)
 
 _IMAGE_ROUTER = "frrouting/frr:latest"
 # Use a plain Linux image for switch containers. The previous OVS image
@@ -368,13 +371,18 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
                 node_cfg: dict = {"kind": "linux", "image": image_for_container_type(ctype)}
                 if topology_id:
                     binds: list[str] = []
-                    for raw_path in container.get("persistencePaths", []) or []:
+                    raw_persist = container.get("persistencePaths", []) or []
+                    if raw_persist:
+                        log.info("Container %s has persistencePaths: %s", cid, raw_persist)
+                    for raw_path in raw_persist:
                         container_path = normalize_persistence_path(str(raw_path))
                         if not container_path:
+                            log.warning("Container %s: persistence path %r rejected by normalize", cid, raw_path)
                             continue
                         host_path = persistence_host_path(topology_id, cid, container_path)
                         host_path.mkdir(parents=True, exist_ok=True)
                         binds.append(f"{host_path}:{container_path}")
+                        log.info("Container %s: bind %s -> %s", cid, host_path, container_path)
                     if binds:
                         node_cfg["binds"] = binds
                 if exec_cmds:

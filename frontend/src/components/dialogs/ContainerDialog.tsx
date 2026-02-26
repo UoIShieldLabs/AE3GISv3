@@ -123,12 +123,19 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
       setPersistencePathError('Path must be absolute (start with /)');
       return;
     }
-    if (persistencePaths.includes(rawPath)) {
+    // Normalize the same way the backend does (posixpath.normpath equivalent)
+    const parts = rawPath.split('/').filter(Boolean);
+    const normalized = '/' + parts.join('/');
+    if (normalized === '/') {
+      setPersistencePathError('Cannot persist the root directory');
+      return;
+    }
+    if (persistencePaths.includes(normalized)) {
       setPersistencePathError('Path already added');
       return;
     }
     setPersistencePathError('');
-    setPersistencePaths(prev => [...prev, rawPath]);
+    setPersistencePaths(prev => [...prev, normalized]);
     setPersistencePathInput('');
   };
 
