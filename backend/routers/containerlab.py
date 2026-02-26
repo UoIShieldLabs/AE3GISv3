@@ -108,7 +108,6 @@ async def deploy(
 
         topo.clab_yaml = yaml_str
 
-        await clab_manager.prepare_persistence_paths(topology_id, topo_data)
         output = await clab_manager.deploy(topology_id)
         topo.status = "deployed"
         db.commit()
