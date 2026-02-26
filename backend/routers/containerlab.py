@@ -71,7 +71,7 @@ def generate(
 ):
     topo = _get_topo(topology_id, db)
     topo_data = {**topo.data, "name": _topo_name(topo)}
-    yaml_str = clab_generator.generate_clab_yaml(topo_data)
+    yaml_str = clab_generator.generate_clab_yaml(topo_data, topology_id=topology_id)
     clab_manager.write_yaml(topology_id, yaml_str)
 
     topo.clab_yaml = yaml_str
@@ -94,7 +94,7 @@ async def deploy(
     try:
         # Always regenerate YAML from current topology data
         topo_data = {**topo.data, "name": _topo_name(topo)}
-        yaml_str = clab_generator.generate_clab_yaml(topo_data)
+        yaml_str = clab_generator.generate_clab_yaml(topo_data, topology_id=topology_id)
         log.info("Generated YAML for %s (%d bytes)", topology_id, len(yaml_str))
 
         yaml_path = clab_manager.write_yaml(topology_id, yaml_str)
