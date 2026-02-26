@@ -107,6 +107,7 @@ async def deploy(
         log.info("YAML write verified OK for %s", topology_id)
 
         topo.clab_yaml = yaml_str
+        await clab_manager.prepare_persistence_paths(topology_id, topo_data)
 
         output = await clab_manager.deploy(topology_id)
         topo.status = "deployed"
