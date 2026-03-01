@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { KeyboardEvent } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 import type { Container } from '../data/sampleTopology';
 import { wsUrl as buildWsUrl, getAuthToken } from '../api/client';
 
@@ -11,18 +13,11 @@ export interface TerminalOverlayProps {
   backendId: string | null;
   deployStatus: string;
   topoName: string;
+  minimized: boolean;
+  onMinimizedChange: (minimized: boolean) => void;
 }
 
-type ConnStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
-
-const STATUS_COLOR: Record<ConnStatus, string> = {
-  connecting: '#f0a500',
-  connected: '#00ff9f',
-  disconnected: '#808090',
-  error: '#ff3344',
-};
-
-// ── Single terminal session (WS + I/O) ────────────────────────────
+// ── Single terminal session (xterm.js + WebSocket PTY) ─────────────
 
 interface TerminalSessionProps {
   container: Container;
@@ -33,213 +28,160 @@ interface TerminalSessionProps {
 }
 
 function TerminalSession({ container, backendId, deployStatus, active }: TerminalSessionProps) {
-  const [lines, setLines] = useState<string[]>([]);
-  const [input, setInput] = useState('');
-  const [connStatus, setConnStatus] = useState<ConnStatus>('connecting');
-  const [history, setHistory] = useState<string[]>([]);
-  const [, setHistoryIdx] = useState(-1);
-
+  const termDivRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const appendText = useCallback((rawText: string) => {
-    const text = rawText
-      // eslint-disable-next-line no-control-regex
-      .replace(/\x1b\[[^a-zA-Z]*[a-zA-Z]/g, '')
-      // eslint-disable-next-line no-control-regex
-      .replace(/\x1b[^[]/g, '')
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n');
+  // Initialise xterm.js once on mount
+  useEffect(() => {
+    if (!termDivRef.current) return;
 
-    setLines((prev) => {
-      const parts = text.split('\n');
-      if (parts.length === 1) {
-        const next = [...prev];
-        if (next.length === 0) return [parts[0]];
-        next[next.length - 1] += parts[0];
-        return next;
-      }
-      const next = [...prev];
-      if (next.length === 0) next.push('');
-      next[next.length - 1] += parts[0];
-      for (let i = 1; i < parts.length; i++) {
-        next.push(parts[i]);
-      }
-      return next;
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: "'Share Tech Mono', 'Courier New', monospace",
+      theme: {
+        background: '#0c0c0c',
+        foreground: '#d0d0d8',
+        cursor: '#00ff9f',
+        selectionBackground: 'rgba(0, 255, 159, 0.3)',
+      },
+      scrollback: 5000,
     });
+
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(termDivRef.current);
+    try { fitAddon.fit(); } catch { /* ignore before layout */ }
+
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
+
+    // Auto-fit whenever the container div changes size (handles tab show/hide)
+    const observer = new ResizeObserver(() => {
+      try { fitAddon.fit(); } catch { /* ignore */ }
+    });
+    observer.observe(termDivRef.current);
+
+    return () => {
+      observer.disconnect();
+      term.dispose();
+      termRef.current = null;
+      fitAddonRef.current = null;
+    };
   }, []);
 
+  // Also fit on explicit active change (belt-and-suspenders for display:none transitions)
   useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => {
+      try { fitAddonRef.current?.fit(); } catch { /* ignore */ }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [active]);
+
+  // WebSocket connection — reconnects when backend/container/status changes
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+
     if (!backendId || deployStatus !== 'deployed') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setConnStatus('error');
-      setLines(['Topology is not deployed. Deploy it first to open a terminal.']);
+      term.writeln('\r\n\x1b[33mTopology is not deployed. Deploy it first to open a terminal.\x1b[0m');
       return;
     }
 
     let closed = false;
-    setConnStatus('connecting');
-    setLines([]);
-    const encodedContainerId = encodeURIComponent(container.id);
-    const precheckUrl = `/api/topologies/${backendId}/exec/${encodedContainerId}/precheck`;
-    const wsUrlStr = buildWsUrl(`/api/topologies/ws/${backendId}/exec/${encodedContainerId}`);
+    term.reset();
 
-    appendText(`[diag] precheck URL: ${precheckUrl}\r\n`);
+    const encodedId = encodeURIComponent(container.id);
+    const precheckUrl = `/api/topologies/${backendId}/exec/${encodedId}/precheck`;
+    const wsUrlStr = buildWsUrl(`/api/topologies/ws/${backendId}/exec/${encodedId}`);
 
     const run = async () => {
       try {
         const headers: Record<string, string> = {};
         const token = getAuthToken();
         if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const res = await fetch(precheckUrl, { headers });
         if (closed) return;
         if (!res.ok) {
-          setConnStatus('error');
-          appendText(`[diag] Precheck request failed: HTTP ${res.status}\r\n`);
+          term.writeln(`\r\n\x1b[31m[error] Precheck failed: HTTP ${res.status}\x1b[0m`);
           return;
         }
 
-        const precheck = await res.json() as { reason?: string; detail?: string; docker_name?: string };
+        const precheck = await res.json() as { reason?: string; detail?: string };
         if (closed) return;
-
         if (precheck.reason !== 'ok') {
-          setConnStatus('error');
-          appendText(`[diag] Precheck failed: ${precheck.reason ?? 'unknown'}\r\n`);
-          if (precheck.detail) appendText(`[diag] detail: ${precheck.detail}\r\n`);
-          if (precheck.docker_name) appendText(`[diag] docker name: ${precheck.docker_name}\r\n`);
+          term.writeln(`\r\n\x1b[31m[error] ${precheck.reason ?? 'unknown'}\x1b[0m`);
+          if (precheck.detail) term.writeln(`\x1b[31m[detail] ${precheck.detail}\x1b[0m`);
           return;
         }
-
-        appendText('[diag] Precheck passed: ok\r\n');
-        if (precheck.docker_name) appendText(`[diag] docker name: ${precheck.docker_name}\r\n`);
-        appendText(`[diag] WS URL: ${wsUrlStr}\r\n`);
 
         const ws = new WebSocket(wsUrlStr);
         wsRef.current = ws;
 
-        ws.onopen = () => setConnStatus('connecting');
+        ws.onopen = () => {
+          // Send current terminal dimensions so the PTY is sized correctly
+          if (termRef.current) {
+            const { cols, rows } = termRef.current;
+            ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+          }
+        };
 
         ws.onmessage = (ev: MessageEvent<string>) => {
-          setConnStatus((prev) => (prev === 'connecting' ? 'connected' : prev));
-          appendText(ev.data as string);
+          term.write(ev.data as string);
         };
 
         ws.onclose = (ev: CloseEvent) => {
-          setConnStatus('disconnected');
-          const reason = ev.reason || '(none)';
-          appendText(`\r\n[connection closed] code=${ev.code} reason=${reason} clean=${ev.wasClean}`);
+          if (!closed) term.writeln(`\r\n\x1b[90m[connection closed] code=${ev.code}\x1b[0m`);
         };
 
         ws.onerror = () => {
-          setConnStatus('error');
-          appendText('\r\n[websocket error]');
+          term.writeln('\r\n\x1b[31m[websocket error]\x1b[0m');
+        };
+
+        // Forward all keystrokes immediately — no line buffering
+        const onDataDisposable = term.onData((data) => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(data);
+        });
+
+        // Tell the backend whenever the terminal is resized
+        const onResizeDisposable = term.onResize(({ cols, rows }) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+          }
+        });
+
+        return () => {
+          onDataDisposable.dispose();
+          onResizeDisposable.dispose();
+          ws.close();
         };
       } catch (err) {
         if (closed) return;
-        const detail = err instanceof Error ? err.message : String(err);
-        setConnStatus('error');
-        appendText(`[diag] Precheck error: ${detail}\r\n`);
+        term.writeln(`\r\n\x1b[31m[error] ${err instanceof Error ? err.message : String(err)}\x1b[0m`);
       }
     };
 
-    void run();
+    let cleanup: (() => void) | undefined;
+    void run().then((c) => { if (!closed) cleanup = c; });
 
     return () => {
       closed = true;
-      const ws = wsRef.current;
-      if (ws) ws.close();
+      cleanup?.();
+      wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [backendId, container.id, deployStatus, appendText]);
-
-  useEffect(() => {
-    if (active && outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
-  }, [lines, active]);
-
-  useEffect(() => {
-    if (active) inputRef.current?.focus();
-  }, [active]);
-
-  const sendInput = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(input + '\n');
-    if (input.trim()) {
-      setHistory((prev) => [input, ...prev.slice(0, 99)]);
-    }
-    setHistoryIdx(-1);
-    setInput('');
-  }, [input]);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendInput();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setHistoryIdx((i) => {
-          const next = Math.min(i + 1, history.length - 1);
-          if (next >= 0) setInput(history[next]);
-          return next;
-        });
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setHistoryIdx((i) => {
-          const next = Math.max(i - 1, -1);
-          setInput(next >= 0 ? history[next] : '');
-          return next;
-        });
-      } else if (e.key === 'c' && e.ctrlKey) {
-        e.preventDefault();
-        const ws = wsRef.current;
-        if (ws?.readyState === WebSocket.OPEN) ws.send('\x03');
-        setInput('');
-      }
-    },
-    [sendInput, history],
-  );
-
-  const isConnected = connStatus === 'connected';
+  }, [backendId, container.id, deployStatus]);
 
   return (
     <div
       className="terminal-body"
-      style={{ display: active ? 'flex' : 'none', padding: 0, flexDirection: 'column' }}
+      style={{ display: active ? 'flex' : 'none', padding: '4px', overflow: 'hidden' }}
     >
-      <div ref={outputRef} className="terminal-output">
-        {lines.map((line, i) => (
-          <div key={i} className="terminal-line">
-            {line || '\u00a0'}
-          </div>
-        ))}
-      </div>
-
-      <div className="terminal-input-row">
-        <span className="terminal-prompt" style={{ color: STATUS_COLOR[connStatus] }}>{'$ '}</span>
-        <input
-          ref={inputRef}
-          className="terminal-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={!isConnected}
-          placeholder={
-            connStatus === 'connecting'
-              ? 'connecting...'
-              : connStatus !== 'connected'
-              ? 'not connected'
-              : ''
-          }
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-        />
-      </div>
+      <div ref={termDivRef} style={{ flex: 1, minHeight: 0 }} />
     </div>
   );
 }
@@ -254,18 +196,19 @@ export function TerminalOverlay({
   backendId,
   deployStatus,
   topoName,
+  minimized,
+  onMinimizedChange,
 }: TerminalOverlayProps) {
-  const [minimized, setMinimized] = useState(false);
   const [height, setHeight] = useState(300);
   const dragging = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const handleTabClick = (id: string) => {
     if (id === activeId && !minimized) {
-      setMinimized(true);
+      onMinimizedChange(true);
     } else {
       onActivate(id);
-      setMinimized(false);
+      onMinimizedChange(false);
     }
   };
 
@@ -326,7 +269,7 @@ export function TerminalOverlay({
         </div>
         <button
           className="terminal-tabbar-minimize"
-          onClick={() => setMinimized(m => !m)}
+          onClick={() => onMinimizedChange(!minimized)}
           title={minimized ? 'Restore' : 'Minimize'}
         >
           {minimized ? '▲' : '▼'}

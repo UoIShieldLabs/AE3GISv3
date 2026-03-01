@@ -54,6 +54,7 @@ function App() {
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [terminalSessions, setTerminalSessions] = useState<Container[]>([]);
   const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
+  const [terminalMinimized, setTerminalMinimized] = useState(false);
   const [routerActionContainer, setRouterActionContainer] = useState<Container | null>(null);
   const [firewallContainer, setFirewallContainer] = useState<Container | null>(null);
   const [firewallRulesByContainer, setFirewallRulesByContainer] = useState<Record<string, FirewallRule[]>>({});
@@ -71,6 +72,7 @@ function App() {
       setActiveTerminalId(container.id);
       return [...prev, container];
     });
+    setTerminalMinimized(false);
   }, []);
 
   const closeTerminal = useCallback((containerId: string) => {
@@ -537,6 +539,8 @@ function App() {
               backendId={backendId}
               deployStatus={deployStatus}
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
+              minimized={terminalMinimized}
+              onMinimizedChange={setTerminalMinimized}
             />
           )}
 
