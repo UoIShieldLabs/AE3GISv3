@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import './Dialog.css';
 
 interface DialogProps {
@@ -10,6 +10,8 @@ interface DialogProps {
 }
 
 export function Dialog({ title, open, onClose, children, width = 420 }: DialogProps) {
+  const mouseDownOnOverlay = useRef(false);
+
   useEffect(() => {
     if (!open) return;
     const handle = (e: KeyboardEvent) => {
@@ -22,7 +24,11 @@ export function Dialog({ title, open, onClose, children, width = 420 }: DialogPr
   if (!open) return null;
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
+    <div
+      className="dialog-overlay"
+      onMouseDown={(e) => { mouseDownOnOverlay.current = e.target === e.currentTarget; }}
+      onClick={() => { if (mouseDownOnOverlay.current) onClose(); }}
+    >
       <div
         className="dialog-panel"
         style={{ width }}

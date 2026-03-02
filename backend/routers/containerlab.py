@@ -1,8 +1,12 @@
 import asyncio
 import contextlib
+import fcntl
+import json
 import logging
 import os
 import pty
+import struct
+import termios
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -227,6 +231,8 @@ async def exec_terminal(
         # Allocate a PTY pair — pass the slave end to the subprocess so that
         # `docker exec -it` sees a real TTY on its stdin and doesn't error out.
         master_fd, slave_fd = pty.openpty()
+        # Set a sensible default terminal size (client will send a resize immediately)
+        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
         try:
             proc = await asyncio.create_subprocess_exec(
                 "sudo", "docker", "exec", "-it", docker_name, "/bin/sh",
@@ -268,6 +274,17 @@ async def exec_terminal(
             while True:
                 try:
                     message = await websocket.receive_text()
+                    # Check for resize control message before writing to PTY
+                    try:
+                        msg = json.loads(message)
+                        if msg.get('type') == 'resize':
+                            cols = max(1, int(msg.get('cols', 80)))
+                            rows = max(1, int(msg.get('rows', 24)))
+                            fcntl.ioctl(master_fd, termios.TIOCSWINSZ,
+                                        struct.pack('HHHH', rows, cols, 0, 0))
+                            continue
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        pass
                     os.write(master_fd, message.encode())
                 except WebSocketDisconnect:
                     break
