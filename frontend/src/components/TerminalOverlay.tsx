@@ -130,8 +130,20 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
           }
         };
 
-        ws.onmessage = (ev: MessageEvent<string>) => {
-          term.write(ev.data as string);
+        ws.onmessage = (ev: MessageEvent<string | ArrayBuffer | Blob>) => {
+          let text: string;
+          if (typeof ev.data === 'string') {
+            // filter out our heartbeat pings so they don't show up in the terminal
+            if (ev.data === '{"type":"ping"}') return;
+            text = ev.data;
+          } else if (ev.data instanceof ArrayBuffer) {
+            text = new TextDecoder().decode(ev.data);
+          } else {
+            // Blob case - convert asynchronously
+            ev.data.text().then((t) => term.write(t)).catch(() => {});
+            return;
+          }
+          term.write(text);
         };
 
         ws.onclose = (ev: CloseEvent) => {
