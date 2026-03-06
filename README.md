@@ -41,6 +41,58 @@ python -m uvicorn main:app --reload --port 8000
 
 The frontend proxies `/api/*` and WebSocket paths to the backend at `http://localhost:8000`.
 
+## Sudoers Configuration (Passwordless Operations)
+
+To allow the backend to run containerlab deployments and manage persistent data without requiring password prompts, you need to configure sudo access. This is essential for automated deployments and container lifecycle management.
+
+### Step 1: Add Sudoers Entry
+
+Run the following command to safely edit the sudoers file:
+
+```bash
+sudo visudo
+```
+
+### Step 2: Add Permission Lines
+
+Add these lines to the end of the sudoers file to allow passwordless execution of containerlab and file cleanup commands:
+
+```sudoers
+# Allow running containerlab commands without password
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /usr/bin/containerlab
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/rm
+
+# Alternatively, for more restrictive sudo (recommended for production):
+# Allow containerlab deploy/destroy only
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /usr/bin/containerlab deploy, /usr/bin/containerlab destroy
+
+# Allow rm only for persistence directory cleanup
+YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/rm -rf /home/ae3gis/AE3GISv2/backend/clab-workdir/persistent/*
+```
+
+**Replace `YOUR_USERNAME`** with your actual Linux username (or the user running the backend process).
+
+### Step 3: Verify Configuration
+
+To verify the sudoers configuration works, test these commands without entering a password:
+
+```bash
+# This should list containerlab help without asking for password
+sudo containerlab version
+
+# This should succeed without asking for password (creates an empty file then deletes it)
+touch /tmp/test_sudoers.txt && sudo rm /tmp/test_sudoers.txt
+```
+
+### Configuration Notes
+
+- **Security**: The restrictive configuration (second option) is better for production as it limits sudo access to specific commands only
+- **Path**: If you installed AE3GIS in a different location, update the path in the `rm` restriction accordingly
+- **User**: Make sure to replace `YOUR_USERNAME` with the actual user that runs the backend
+- **Verification**: After adding the configuration, the backend will:
+  - Run `sudo containerlab deploy/destroy` without password prompts
+  - Clean up persistent storage without password prompts
+
 ## Available Scripts
 
 ### Frontend
