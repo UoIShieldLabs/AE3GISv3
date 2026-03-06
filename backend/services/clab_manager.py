@@ -14,6 +14,7 @@ from services import clab_generator
 
 log = logging.getLogger(__name__)
 _FW_CHAIN = "AE3GIS-FW"
+_PERSIST_ROOT = CLAB_WORKDIR / "persistent"
 _PERSIST_META_ROOT = CLAB_WORKDIR / "persistent-meta"
 
 
@@ -92,6 +93,78 @@ def _iter_containers(topology_data: dict) -> list[dict]:
     return containers
 
 
+async def _remove_fs_path(path: Path) -> None:
+    if not path.exists():
+        return
+    cmd = ["sudo", "rm", "-rf", "--", str(path)] if path.is_dir() else ["sudo", "rm", "-f", "--", str(path)]
+    rc, _stdout, stderr = await _run(cmd)
+    if rc != 0:
+        raise RuntimeError(f"failed to remove path {path}: {stderr.strip()}")
+
+
+async def _prune_removed_persistence_paths(topology_id: str, topology_data: dict) -> None:
+    """Delete backend persistence dirs/sentinels no longer present in topology data."""
+    desired: dict[str, set[str]] = {}
+    for container in _iter_containers(topology_data):
+        container_id = (container.get("id") or "").strip()
+        if not container_id:
+            continue
+        keep: set[str] = set()
+        for raw_path in container.get("persistencePaths", []) or []:
+            container_path = clab_generator.normalize_persistence_path(str(raw_path))
+            if not container_path:
+                continue
+            host_path = clab_generator.persistence_host_path(topology_id, container_id, container_path)
+            keep.add(host_path.name)
+        desired[container_id] = keep
+
+    persist_topology_root = _PERSIST_ROOT / topology_id
+    meta_topology_root = _PERSIST_META_ROOT / topology_id
+
+    if persist_topology_root.exists():
+        for container_dir in persist_topology_root.iterdir():
+            if not container_dir.is_dir():
+                continue
+            container_id = container_dir.name
+            keep = desired.get(container_id, set())
+            sentinel_dir = meta_topology_root / container_id
+            for host_dir in container_dir.iterdir():
+                if host_dir.name in keep:
+                    continue
+                await _remove_fs_path(host_dir)
+                await _remove_fs_path(sentinel_dir / f"{host_dir.name}.seeded")
+                log.info(
+                    "Removed stale persistence path for %s/%s (%s)",
+                    topology_id,
+                    container_id,
+                    host_dir.name,
+                )
+            if not any(container_dir.iterdir()):
+                await _remove_fs_path(container_dir)
+            if sentinel_dir.exists() and not any(sentinel_dir.iterdir()):
+                await _remove_fs_path(sentinel_dir)
+
+    if meta_topology_root.exists():
+        for sentinel_dir in meta_topology_root.iterdir():
+            if not sentinel_dir.is_dir():
+                continue
+            container_id = sentinel_dir.name
+            keep = desired.get(container_id, set())
+            for sentinel in sentinel_dir.iterdir():
+                digest = sentinel.name[:-7] if sentinel.name.endswith(".seeded") else sentinel.name
+                if digest in keep:
+                    continue
+                await _remove_fs_path(sentinel)
+            if not any(sentinel_dir.iterdir()):
+                await _remove_fs_path(sentinel_dir)
+
+        if not any(meta_topology_root.iterdir()):
+            await _remove_fs_path(meta_topology_root)
+
+    if persist_topology_root.exists() and not any(persist_topology_root.iterdir()):
+        await _remove_fs_path(persist_topology_root)
+
+
 async def _seed_persistence_from_image(image: str, container_path: str, host_path: Path) -> None:
     """Populate host_path with initial contents from image:container_path."""
     src = shlex.quote(container_path)
@@ -126,6 +199,8 @@ async def _seed_persistence_from_image(image: str, container_path: str, host_pat
 
 async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> None:
     """Ensure persistent bind paths exist and are initialized once from image defaults."""
+    await _prune_removed_persistence_paths(topology_id, topology_data)
+
     for container in _iter_containers(topology_data):
         container_id = (container.get("id") or "").strip()
         if not container_id:
@@ -146,6 +221,11 @@ async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> No
             sentinel = sentinel_dir / f"{host_path.name}.seeded"
             if sentinel.exists():
                 continue
+
+            # If this path is being seeded as "new", clear any stale contents
+            # so re-adding persistence always starts from a vanilla image path.
+            for child in host_path.iterdir():
+                await _remove_fs_path(child)
 
             await _seed_persistence_from_image(image, container_path, host_path)
             sentinel.write_text("seeded\n")
