@@ -5,6 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: ['ae3gis.wilsonops.com'],
     proxy: {
       '/api/topologies/ws': {
         target: 'ws://localhost:8000',
@@ -12,7 +16,7 @@ export default defineConfig({
       },
       '/api': {
         target: 'http://localhost:8000',
-        timeout: 300000, // 5 min — deploy/destroy can be slow
+        timeout: 300000,
       },
     },
   },

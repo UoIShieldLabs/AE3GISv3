@@ -82,6 +82,44 @@ const monoSmall: React.CSSProperties = {
   color: 'var(--text-secondary)',
 };
 
+// ── Concurrency limiter for batch operations
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<PromiseSettledResult<void>>,
+): Promise<PromiseSettledResult<void>[]> {
+  const results: PromiseSettledResult<void>[] = [];
+  let activeCount = 0;
+  let nextIdx = 0;
+
+  return new Promise((resolve) => {
+    const processNext = async () => {
+      if (nextIdx >= items.length) {
+        if (activeCount === 0) resolve(results);
+        return;
+      }
+
+      const idx = nextIdx++;
+      activeCount++;
+
+      try {
+        const result = await fn(items[idx]);
+        results[idx] = result;
+      } catch (error) {
+        results[idx] = { status: 'rejected' as const, reason: error };
+      }
+
+      activeCount--;
+      processNext();
+    };
+
+    // Start up to `concurrency` workers
+    for (let i = 0; i < Math.min(concurrency, items.length); i++) {
+      processNext();
+    }
+  });
+}
+
 // ── Component ─────────────────────────────────────────────────────
 
 export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
@@ -239,31 +277,44 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
     setBatchBusy(true);
     setBatchProgress('');
     const topoIds = slots.map((s) => s.topology_id);
-    let done = 0;
-    for (const topoId of topoIds) {
-      const status = slotStatuses.get(topoId);
-      if (status === 'deployed') {
-        done++;
-        continue;
-      }
-      setBatchProgress(`Deploying ${done + 1} of ${topoIds.length}...`);
+    const toDeployIds = topoIds.filter((topoId) => slotStatuses.get(topoId) !== 'deployed');
+    const alreadyDeployed = topoIds.filter((topoId) => slotStatuses.get(topoId) === 'deployed').length;
+
+    if (toDeployIds.length === 0) {
+      setBatchProgress(`All ${topoIds.length} topologies already deployed`);
+      setBatchBusy(false);
+      return;
+    }
+
+    setBatchProgress(`Deploying ${toDeployIds.length} topologies (max 3 concurrent)...`);
+
+    // Deploy with concurrency limit of 3
+    const results = await runWithConcurrency(toDeployIds, 3, async (topoId) => {
       try {
         await deployTopology(topoId);
-        setSlotStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(topoId, 'deployed');
-          return next;
-        });
+        return { status: 'fulfilled' as const, value: undefined };
       } catch {
-        setSlotStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(topoId, 'error');
-          return next;
-        });
+        return { status: 'rejected' as const, reason: new Error('Deploy failed') };
       }
-      done++;
-    }
-    setBatchProgress(`Done — ${done} topologies processed`);
+    });
+
+    // Update statuses based on results
+    const updates = new Map<string, string>();
+    results.forEach((result, index) => {
+      const topoId = toDeployIds[index];
+      updates.set(topoId, result.status === 'fulfilled' ? 'deployed' : 'error');
+    });
+
+    setSlotStatuses((prev) => {
+      const next = new Map(prev);
+      updates.forEach((status, topoId) => {
+        next.set(topoId, status);
+      });
+      return next;
+    });
+
+    const deployed = results.filter((r) => r.status === 'fulfilled').length;
+    setBatchProgress(`Done — ${deployed + alreadyDeployed} of ${topoIds.length} topologies deployed`);
     setBatchBusy(false);
   };
 
@@ -273,31 +324,46 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
     setBatchBusy(true);
     setBatchProgress('');
     const topoIds = slots.map((s) => s.topology_id);
-    let done = 0;
-    for (const topoId of topoIds) {
-      const status = slotStatuses.get(topoId);
-      if (status === 'idle' || status === 'unknown') {
-        done++;
-        continue;
-      }
-      setBatchProgress(`Destroying ${done + 1} of ${topoIds.length}...`);
+    const toDestroyIds = topoIds.filter(
+      (topoId) => slotStatuses.get(topoId) !== 'idle' && slotStatuses.get(topoId) !== 'unknown',
+    );
+    const alreadyIdle = topoIds.filter((topoId) => slotStatuses.get(topoId) === 'idle' || slotStatuses.get(topoId) === 'unknown').length;
+
+    if (toDestroyIds.length === 0) {
+      setBatchProgress(`All ${topoIds.length} topologies already idle`);
+      setBatchBusy(false);
+      return;
+    }
+
+    setBatchProgress(`Destroying ${toDestroyIds.length} topologies (max 3 concurrent)...`);
+
+    // Destroy with concurrency limit of 3
+    const results = await runWithConcurrency(toDestroyIds, 3, async (topoId) => {
       try {
         await destroyTopology(topoId);
-        setSlotStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(topoId, 'idle');
-          return next;
-        });
+        return { status: 'fulfilled' as const, value: undefined };
       } catch {
-        setSlotStatuses((prev) => {
-          const next = new Map(prev);
-          next.set(topoId, 'error');
-          return next;
-        });
+        return { status: 'rejected' as const, reason: new Error('Destroy failed') };
       }
-      done++;
-    }
-    setBatchProgress(`Done — ${done} topologies processed`);
+    });
+
+    // Update statuses based on results
+    const updates = new Map<string, string>();
+    results.forEach((result, index) => {
+      const topoId = toDestroyIds[index];
+      updates.set(topoId, result.status === 'fulfilled' ? 'idle' : 'error');
+    });
+
+    setSlotStatuses((prev) => {
+      const next = new Map(prev);
+      updates.forEach((status, topoId) => {
+        next.set(topoId, status);
+      });
+      return next;
+    });
+
+    const destroyed = results.filter((r) => r.status === 'fulfilled').length;
+    setBatchProgress(`Done — ${destroyed + alreadyIdle} of ${topoIds.length} topologies idle`);
     setBatchBusy(false);
   };
 
