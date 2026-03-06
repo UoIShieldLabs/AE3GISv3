@@ -1,5 +1,10 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# ensure debug output is visible for troubleshooting
+logging.basicConfig(level=logging.DEBUG)
 
 import models  # noqa: F401 — ensures ORM metadata is registered before create_all
 from database import Base, engine

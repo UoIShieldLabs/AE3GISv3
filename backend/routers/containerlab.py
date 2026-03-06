@@ -212,6 +212,7 @@ async def exec_terminal(
     proc = None
     master_fd = -1
     try:
+        # minimal logging; token/topology errors are handled inline
         if not _validate_ws_token(token, topology_id, db):
             await websocket.close(code=4003, reason="Forbidden")
             return
@@ -227,6 +228,7 @@ async def exec_terminal(
         docker_name = f"clab-{topo_name}-{container_id}"
 
         await websocket.send_text(f"Connecting to {docker_name}...\r\n")
+        log.debug("exec_terminal: accepted websocket for %s/%s", topology_id, container_id)
 
         # Allocate a PTY pair — pass the slave end to the subprocess so that
         # `docker exec -it` sees a real TTY on its stdin and doesn't error out.
@@ -234,13 +236,14 @@ async def exec_terminal(
         # Set a sensible default terminal size (client will send a resize immediately)
         fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
         try:
-            proc = await asyncio.create_subprocess_exec(
+                proc = await asyncio.create_subprocess_exec(
                 "sudo", "docker", "exec", "-it", docker_name, "/bin/sh",
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
             )
         except Exception as exc:
+            log.exception("exec_terminal: subprocess launch failed")
             await websocket.send_text(f"Error starting exec: {exc}\r\n")
             await websocket.close()
             return
@@ -266,39 +269,61 @@ async def exec_terminal(
                 if not data:
                     break
                 try:
-                    await websocket.send_text(data.decode(errors="replace"))
-                except Exception:
+                    # Use send_bytes to avoid repeatedly decoding/encoding large output
+                    await websocket.send_bytes(data)
+                except Exception as e:
+                    log.exception("exec_terminal read loop send error:")
                     break
 
         async def _write_pty() -> None:
             while True:
                 try:
-                    message = await websocket.receive_text()
-                    # Check for resize control message before writing to PTY
+                    msg = await websocket.receive()
+                    # the dict may contain 'bytes' or 'text'; ignore other event types
+                    if msg.get('type') != 'websocket.receive':
+                        # connection closed or ping/pong; loop back
+                        if msg.get('type') in ("websocket.disconnect", "websocket.close"):
+                            break
+                        continue
+                    data = msg.get('bytes') if msg.get('bytes') is not None else msg.get('text', "")
+                    if isinstance(data, str):
+                        data = data.encode('utf-8')
+                    # handle resize messages sent as JSON
                     try:
-                        msg = json.loads(message)
-                        if msg.get('type') == 'resize':
-                            cols = max(1, int(msg.get('cols', 80)))
-                            rows = max(1, int(msg.get('rows', 24)))
+                        payload = json.loads(data.decode('utf-8', 'ignore'))
+                        if isinstance(payload, dict) and payload.get('type') == 'resize':
+                            cols = max(1, int(payload.get('cols', 80)))
+                            rows = max(1, int(payload.get('rows', 24)))
                             fcntl.ioctl(master_fd, termios.TIOCSWINSZ,
                                         struct.pack('HHHH', rows, cols, 0, 0))
                             continue
                     except (json.JSONDecodeError, TypeError, ValueError):
                         pass
-                    os.write(master_fd, message.encode())
+                    os.write(master_fd, data)
                 except WebSocketDisconnect:
                     break
                 except Exception:
+                    log.exception("exec_terminal write loop error:")
                     break
 
         read_task = asyncio.create_task(_read_pty())
         write_task = asyncio.create_task(_write_pty())
+        # heartbeat to keep intermediate proxies happy
+        async def _ping() -> None:
+            try:
+                while True:
+                    await asyncio.sleep(15)
+                    await websocket.send_json({"type": "ping"})
+            except Exception:
+                pass
+        ping_task = asyncio.create_task(_ping())
         try:
             await asyncio.wait([read_task, write_task], return_when=asyncio.FIRST_COMPLETED)
         finally:
             loop.remove_reader(master_fd)
             read_task.cancel()
             write_task.cancel()
+            ping_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await read_task
             with contextlib.suppress(asyncio.CancelledError):
