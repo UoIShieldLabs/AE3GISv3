@@ -82,6 +82,44 @@ const monoSmall: React.CSSProperties = {
   color: 'var(--text-secondary)',
 };
 
+// ── Concurrency limiter for batch operations
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<PromiseSettledResult<void>>,
+): Promise<PromiseSettledResult<void>[]> {
+  const results: PromiseSettledResult<void>[] = [];
+  let activeCount = 0;
+  let nextIdx = 0;
+
+  return new Promise((resolve) => {
+    const processNext = async () => {
+      if (nextIdx >= items.length) {
+        if (activeCount === 0) resolve(results);
+        return;
+      }
+
+      const idx = nextIdx++;
+      activeCount++;
+
+      try {
+        const result = await fn(items[idx]);
+        results[idx] = result;
+      } catch (error) {
+        results[idx] = { status: 'rejected' as const, reason: error };
+      }
+
+      activeCount--;
+      processNext();
+    };
+
+    // Start up to `concurrency` workers
+    for (let i = 0; i < Math.min(concurrency, items.length); i++) {
+      processNext();
+    }
+  });
+}
+
 // ── Component ─────────────────────────────────────────────────────
 
 export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
@@ -248,10 +286,17 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
       return;
     }
 
-    setBatchProgress(`Deploying ${toDeployIds.length} topologies`);
+    setBatchProgress(`Deploying ${toDeployIds.length} topologies (max 3 concurrent)...`);
 
-    // Deploy all topologies in parallel
-    const results = await Promise.allSettled(toDeployIds.map((topoId) => deployTopology(topoId)));
+    // Deploy with concurrency limit of 3
+    const results = await runWithConcurrency(toDeployIds, 3, async (topoId) => {
+      try {
+        await deployTopology(topoId);
+        return { status: 'fulfilled' as const, value: undefined };
+      } catch {
+        return { status: 'rejected' as const, reason: new Error('Deploy failed') };
+      }
+    });
 
     // Update statuses based on results
     const updates = new Map<string, string>();
@@ -290,10 +335,17 @@ export function ClassroomPanel({ open, onClose }: ClassroomPanelProps) {
       return;
     }
 
-    setBatchProgress(`Destroying ${toDestroyIds.length} topologies in parallel...`);
+    setBatchProgress(`Destroying ${toDestroyIds.length} topologies (max 3 concurrent)...`);
 
-    // Destroy all topologies in parallel
-    const results = await Promise.allSettled(toDestroyIds.map((topoId) => destroyTopology(topoId)));
+    // Destroy with concurrency limit of 3
+    const results = await runWithConcurrency(toDestroyIds, 3, async (topoId) => {
+      try {
+        await destroyTopology(topoId);
+        return { status: 'fulfilled' as const, value: undefined };
+      } catch {
+        return { status: 'rejected' as const, reason: new Error('Destroy failed') };
+      }
+    });
 
     // Update statuses based on results
     const updates = new Map<string, string>();
