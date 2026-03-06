@@ -12,6 +12,9 @@ import yaml
 
 from config import CLAB_WORKDIR
 
+# Path to scripts directory that will be mounted read-only into containers
+SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
+
 log = logging.getLogger(__name__)
 
 _IMAGE_ROUTER     = "frrouting/frr:latest"
@@ -26,6 +29,17 @@ _ROUTER_TYPES = frozenset({"router", "firewall"})
 _SWITCH_TYPES = frozenset({"switch"})
 _PERSIST_ROOT = CLAB_WORKDIR / "persistent"
 
+# Mapping of container types to script subdirectories
+_SCRIPT_TYPE_MAP = {
+    "workstation": "workstation",
+    "web-server": "server",
+    "file-server": "server",
+    "plc": "server",
+    "router": "router",
+    "firewall": "firewall",
+    "switch": "switch",
+}
+
 
 def image_for_container_type(ctype: str) -> str:
     if ctype in _ROUTER_TYPES:
@@ -35,6 +49,24 @@ def image_for_container_type(ctype: str) -> str:
     if ctype == "web-server":
         return _IMAGE_WEB_SERVER
     return _IMAGE_HOST
+
+
+def get_script_bind(ctype: str) -> str | None:
+    """Get the read-only bind mount for a container type's scripts.
+    
+    Returns a bind string like '/path/scripts/workstation:/scripts/workstation:ro'
+    or None if no scripts directory exists for this type.
+    """
+    script_dir = _SCRIPT_TYPE_MAP.get(ctype)
+    if not script_dir:
+        return None
+    
+    host_path = SCRIPTS_DIR / script_dir
+    if not host_path.exists():
+        log.warning("Script directory does not exist: %s", host_path)
+        return None
+    
+    return f"{host_path}:/scripts/{script_dir}:ro"
 
 
 def _eth_index(iface: str) -> int:
@@ -389,6 +421,14 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
                         log.info("Container %s: bind %s -> %s", cid, host_path, container_path)
                     if binds:
                         node_cfg["binds"] = binds
+                
+                # Add read-only script directory mount if available for this container type
+                script_bind = get_script_bind(ctype)
+                if script_bind:
+                    if "binds" not in node_cfg:
+                        node_cfg["binds"] = []
+                    node_cfg["binds"].append(script_bind)
+                    log.info("Container %s (%s): mounted scripts at %s", cid, ctype, script_bind.split(":")[1])
                 if exec_cmds:
                     node_cfg["exec"] = exec_cmds
                 nodes[cid] = node_cfg
