@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Dialog } from './ui/Dialog';
 import { FormField } from './ui/FormField';
 import { SelectField } from './ui/SelectField';
@@ -119,11 +119,14 @@ export function ScenarioPanel({
   const containersCtx = useMemo(() => allContainersWithContext(topology), [topology]);
 
   // Auto-save after scenario mutations (debounced to batch rapid changes)
+  // Use a ref so the timeout always calls the latest onSave (avoids stale closure)
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
   const autoSaveTimer = useMemo(() => ({ id: null as ReturnType<typeof setTimeout> | null }), []);
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimer.id) clearTimeout(autoSaveTimer.id);
-    autoSaveTimer.id = setTimeout(() => { onSave?.(); autoSaveTimer.id = null; }, 300);
-  }, [autoSaveTimer, onSave]);
+    autoSaveTimer.id = setTimeout(() => { onSaveRef.current?.(); autoSaveTimer.id = null; }, 300);
+  }, [autoSaveTimer]);
 
   // ── Available scripts from backend
   const [availableScripts, setAvailableScripts] = useState<AvailableScript[]>([]);

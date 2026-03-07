@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 import hashlib
 import logging
+import os
 import posixpath
 from pathlib import Path
 
@@ -12,8 +13,10 @@ import yaml
 
 from config import CLAB_WORKDIR
 
-# Path to scripts directory that will be mounted read-only into containers
-SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
+# Path to scripts directory ON THE HOST that ContainerLab will bind-mount
+# into clab containers.  Inside Docker the backend sees /app/scripts, but
+# clab runs on the host, so we need the real host path.
+SCRIPTS_DIR = Path(os.environ.get("AE3GIS_HOST_SCRIPTS_DIR", str(Path(__file__).parent.parent / "scripts")))
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +65,9 @@ def get_script_bind(ctype: str) -> str | None:
         return None
     
     host_path = SCRIPTS_DIR / script_dir
-    if not host_path.exists():
+    # When running inside Docker, SCRIPTS_DIR points to a host path that
+    # isn't visible from inside the container — skip the existence check.
+    if "AE3GIS_HOST_SCRIPTS_DIR" not in os.environ and not host_path.exists():
         log.warning("Script directory does not exist: %s", host_path)
         return None
     
