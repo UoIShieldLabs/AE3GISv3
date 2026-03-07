@@ -1,0 +1,30 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    extra_hosts:
+      - "backend:host-gateway"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent data
+      - ae3gis-db:/app/data
+      - ae3gis-clab:/app/clab-workdir
+      # Scripts directory (shared with clab containers)
+      - ./backend/scripts:/app/scripts
+    environment:
+      #- AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-changeme}
+      - AE3GIS_DB_PATH=/app/data/ae3gis.db
+    restart: unless-stopped
+    privileged: true
+
+volumes:
+  ae3gis-db:
+  ae3gis-clab:
