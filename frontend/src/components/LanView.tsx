@@ -458,6 +458,10 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
         onConnect={readOnly ? undefined : onConnect}
         onNodeDragStop={readOnly ? undefined : onNodeDragStop}
         onPaneClick={onDeselect}
+        onNodeDoubleClick={(_event, node) => {
+          const container = subnet.containers.find(c => c.id === node.id);
+          if (container) onOpenTerminal(container);
+        }}
         connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 1.5, opacity: 0.6 }}
       >
         <Background

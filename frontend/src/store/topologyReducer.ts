@@ -1,4 +1,4 @@
-import type { TopologyData, Site, Subnet, Container, Connection } from '../data/sampleTopology';
+import type { TopologyData, Site, Subnet, Container, Connection, Scenario, AttackPhase } from '../data/sampleTopology';
 import { generateId } from '../utils/idGenerator';
 import { getNextAvailableIp } from '../utils/validation';
 
@@ -34,6 +34,13 @@ export type TopologyAction =
   // Subnet connections (container-to-container within a subnet)
   | { type: 'ADD_SUBNET_CONNECTION'; payload: { siteId: string; subnetId: string; connection: Connection } }
   | { type: 'DELETE_SUBNET_CONNECTION'; payload: { siteId: string; subnetId: string; from: string; to: string } }
+  // Scenarios
+  | { type: 'ADD_SCENARIO'; payload: Scenario }
+  | { type: 'UPDATE_SCENARIO'; payload: { scenarioId: string; updates: Partial<Omit<Scenario, 'id' | 'phases'>> } }
+  | { type: 'DELETE_SCENARIO'; payload: { scenarioId: string } }
+  | { type: 'ADD_PHASE'; payload: { scenarioId: string; phase: AttackPhase } }
+  | { type: 'UPDATE_PHASE'; payload: { scenarioId: string; phaseId: string; updates: Partial<Omit<AttackPhase, 'id'>> } }
+  | { type: 'DELETE_PHASE'; payload: { scenarioId: string; phaseId: string } }
   // Bulk
   | { type: 'LOAD_TOPOLOGY'; payload: TopologyData }
   // Backend integration
@@ -265,6 +272,51 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
           c => !(c.from === action.payload.from && c.to === action.payload.to) &&
                !(c.from === action.payload.to && c.to === action.payload.from)
         );
+      }
+      draft.dirty = true;
+      break;
+    }
+
+    // ── Scenarios ──
+    case 'ADD_SCENARIO':
+      if (!draft.topology.scenarios) draft.topology.scenarios = [];
+      draft.topology.scenarios.push(action.payload);
+      draft.dirty = true;
+      break;
+
+    case 'UPDATE_SCENARIO': {
+      const scenario = draft.topology.scenarios?.find(s => s.id === action.payload.scenarioId);
+      if (scenario) Object.assign(scenario, action.payload.updates);
+      draft.dirty = true;
+      break;
+    }
+
+    case 'DELETE_SCENARIO':
+      if (draft.topology.scenarios) {
+        draft.topology.scenarios = draft.topology.scenarios.filter(s => s.id !== action.payload.scenarioId);
+      }
+      draft.dirty = true;
+      break;
+
+    case 'ADD_PHASE': {
+      const scenario = draft.topology.scenarios?.find(s => s.id === action.payload.scenarioId);
+      if (scenario) scenario.phases.push(action.payload.phase);
+      draft.dirty = true;
+      break;
+    }
+
+    case 'UPDATE_PHASE': {
+      const scenario = draft.topology.scenarios?.find(s => s.id === action.payload.scenarioId);
+      const phase = scenario?.phases.find(p => p.id === action.payload.phaseId);
+      if (phase) Object.assign(phase, action.payload.updates);
+      draft.dirty = true;
+      break;
+    }
+
+    case 'DELETE_PHASE': {
+      const scenario = draft.topology.scenarios?.find(s => s.id === action.payload.scenarioId);
+      if (scenario) {
+        scenario.phases = scenario.phases.filter(p => p.id !== action.payload.phaseId);
       }
       draft.dirty = true;
       break;

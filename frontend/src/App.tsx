@@ -15,6 +15,7 @@ import { ControlBar } from './components/ControlBar';
 import { TopologyBrowser } from './components/TopologyBrowser';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassroomPanel } from './components/ClassroomPanel';
+import { ScenarioPanel } from './components/ScenarioPanel';
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
@@ -62,6 +63,7 @@ function App() {
   const [firewallError, setFirewallError] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
+  const [scenariosOpen, setScenariosOpen] = useState(false);
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -463,6 +465,7 @@ function App() {
               onDestroy={handleDestroy}
               onExport={handleExport}
               onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
+              onScenarios={!readOnly ? () => setScenariosOpen(true) : undefined}
               isBusy={busy}
               readOnly={readOnly}
             />
@@ -593,6 +596,19 @@ function App() {
             <ClassroomPanel
               open={classroomOpen}
               onClose={() => setClassroomOpen(false)}
+            />
+          )}
+
+          {/* Scenario panel (instructor only) */}
+          {!readOnly && (
+            <ScenarioPanel
+              open={scenariosOpen}
+              onClose={() => setScenariosOpen(false)}
+              topology={topology}
+              topologyId={backendId}
+              deployStatus={deployStatus}
+              dispatch={dispatch}
+              onSave={handleSave}
             />
           )}
         </div>

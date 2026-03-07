@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
 import type { ContainerType, Container } from '../../data/sampleTopology';
@@ -114,6 +114,19 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
   const { container, onSelect, onOpenTerminal } = data;
   const color = typeColors[container.type];
   const typeLabel = typeLabels[container.type];
+  const lastClickRef = useRef(0);
+
+  const handleClick = () => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 350) {
+      // Double-click detected
+      onOpenTerminal(container);
+      lastClickRef.current = 0;
+    } else {
+      lastClickRef.current = now;
+      onSelect(container);
+    }
+  };
 
   return (
     <div
@@ -130,8 +143,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
         transition: 'all 0.2s ease',
         minWidth: '115px',
       }}
-      onClick={() => onSelect(container)}
-      onDoubleClick={(e) => { e.stopPropagation(); onOpenTerminal(container); }}
+      onClick={handleClick}
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.borderColor = `${color}88`;

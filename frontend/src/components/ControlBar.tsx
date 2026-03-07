@@ -16,6 +16,7 @@ interface ControlBarProps {
   onDestroy: () => void;
   onExport: () => void;
   onClassroom?: () => void;
+  onScenarios?: () => void;
   isBusy: boolean;
   readOnly?: boolean;
 }
@@ -40,6 +41,7 @@ export function ControlBar({
   onDestroy,
   onExport,
   onClassroom,
+  onScenarios,
   isBusy,
   readOnly,
 }: ControlBarProps) {
@@ -126,6 +128,17 @@ export function ControlBar({
                 title="Manage classroom sessions"
               >
                 Classroom
+              </button>
+            )}
+
+            {onScenarios && (
+              <button
+                className="control-btn btn-scenarios"
+                onClick={onScenarios}
+                disabled={isBusy}
+                title="Manage attack scenarios"
+              >
+                Scenarios
               </button>
             )}
           </>

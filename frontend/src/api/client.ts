@@ -178,6 +178,40 @@ export function putFirewallRules(
   });
 }
 
+// ── Scripts ───────────────────────────────────────────────────────
+
+export interface AvailableScript {
+  path: string;
+  scriptDir: string;
+  containerTypes: string[];
+  filename: string;
+}
+
+export function listAvailableScripts(): Promise<{ scripts: AvailableScript[] }> {
+  return request(`${BASE}/scripts/available`);
+}
+
+// ── Scenarios ─────────────────────────────────────────────────────
+
+export interface PhaseExecutionResult {
+  containerId: string;
+  script: string;
+  returncode: number;
+  stdout: string;
+  stderr: string;
+}
+
+export function executePhase(
+  topologyId: string,
+  scenarioId: string,
+  phaseId: string,
+): Promise<{ phase_id: string; results: PhaseExecutionResult[] }> {
+  return request(
+    `${BASE}/${topologyId}/scenarios/${scenarioId}/phases/${phaseId}/execute`,
+    { method: 'POST' },
+  );
+}
+
 // ── Classroom ─────────────────────────────────────────────────────
 
 export interface ClassSessionRecord {
@@ -246,4 +280,47 @@ export function deleteSlot(sessionId: string, slotId: string): Promise<void> {
     `${CLASSROOM}/sessions/${sessionId}/slots/${slotId}`,
     { method: 'DELETE' },
   );
+}
+
+// ── Batch Phase Execution ────────────────────────────────────────
+
+export interface BatchTopologyResult {
+  topology_id: string;
+  label: string | null;
+  skipped: boolean;
+  reason?: string;
+  results: PhaseExecutionResult[];
+}
+
+export function executePhaseBatch(
+  sessionId: string,
+  scenarioId: string,
+  phaseId: string,
+): Promise<{ session_id: string; topology_results: BatchTopologyResult[] }> {
+  return request(
+    `${CLASSROOM}/sessions/${sessionId}/execute-phase`,
+    { method: 'POST', ...json({ scenario_id: scenarioId, phase_id: phaseId }) },
+  );
+}
+
+// ── Presets ──────────────────────────────────────────────────────
+
+export interface PresetSummary {
+  id: string;
+  name: string;
+  description: string;
+  scenario_count: number;
+  site_count: number;
+}
+
+const PRESETS = '/api/presets';
+
+export function listPresets(): Promise<{ presets: PresetSummary[] }> {
+  return request(`${PRESETS}`);
+}
+
+export function loadPreset(
+  presetId: string,
+): Promise<{ id: string; name: string; status: string; created_at: string }> {
+  return request(`${PRESETS}/${presetId}/load`, { method: 'POST' });
 }

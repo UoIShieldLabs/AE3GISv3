@@ -1,0 +1,190 @@
+{
+  "name": "Stuxnet ICS Attack",
+  "description": "Industrial Control System attack scenario modeled after the Stuxnet worm. Features corporate IT, DMZ, and OT/SCADA network segments with PLCs, HMI workstations, and engineering stations. Scenarios cover the full kill chain from initial USB infection through lateral movement to PLC manipulation.",
+  "topology": {
+    "name": "stuxnet-ics",
+    "sites": [
+      {
+        "id": "corporate",
+        "name": "Corporate Office",
+        "location": "Corporate HQ",
+        "position": { "x": 100, "y": 100 },
+        "subnets": [
+          {
+            "id": "corp-lan",
+            "name": "Corporate LAN",
+            "cidr": "10.0.1.0/24",
+            "gateway": "10.0.1.1",
+            "containers": [
+              { "id": "corp-router", "name": "Corp Router", "type": "router", "ip": "10.0.1.1" },
+              { "id": "corp-switch", "name": "Corp Switch", "type": "switch", "ip": "10.0.1.2" },
+              { "id": "corp-fw", "name": "Corp Firewall", "type": "firewall", "ip": "10.0.1.3" },
+              { "id": "corp-ws-1", "name": "Engineer Workstation", "type": "workstation", "ip": "10.0.1.100" },
+              { "id": "corp-ws-2", "name": "Admin Workstation", "type": "workstation", "ip": "10.0.1.101" },
+              { "id": "corp-fileserv", "name": "File Server", "type": "file-server", "ip": "10.0.1.50" }
+            ],
+            "connections": [
+              { "from": "corp-router", "to": "corp-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "corp-switch", "to": "corp-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "corp-switch", "to": "corp-ws-1", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "corp-switch", "to": "corp-ws-2", "fromInterface": "eth4", "toInterface": "eth1" },
+              { "from": "corp-switch", "to": "corp-fileserv", "fromInterface": "eth5", "toInterface": "eth1" }
+            ]
+          }
+        ],
+        "subnetConnections": []
+      },
+      {
+        "id": "dmz",
+        "name": "DMZ",
+        "location": "DMZ Segment",
+        "position": { "x": 400, "y": 100 },
+        "subnets": [
+          {
+            "id": "dmz-net",
+            "name": "DMZ Network",
+            "cidr": "10.0.2.0/24",
+            "gateway": "10.0.2.1",
+            "containers": [
+              { "id": "dmz-router", "name": "DMZ Router", "type": "router", "ip": "10.0.2.1" },
+              { "id": "dmz-switch", "name": "DMZ Switch", "type": "switch", "ip": "10.0.2.2" },
+              { "id": "dmz-fw", "name": "DMZ Firewall", "type": "firewall", "ip": "10.0.2.3" },
+              { "id": "dmz-historian", "name": "Data Historian", "type": "web-server", "ip": "10.0.2.10" },
+              { "id": "dmz-jumpbox", "name": "Jump Server", "type": "web-server", "ip": "10.0.2.11" }
+            ],
+            "connections": [
+              { "from": "dmz-router", "to": "dmz-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-historian", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-jumpbox", "fromInterface": "eth4", "toInterface": "eth1" }
+            ]
+          }
+        ],
+        "subnetConnections": []
+      },
+      {
+        "id": "ot-plant",
+        "name": "OT Plant Floor",
+        "location": "Industrial Plant",
+        "position": { "x": 250, "y": 350 },
+        "subnets": [
+          {
+            "id": "scada-net",
+            "name": "SCADA Network",
+            "cidr": "10.0.10.0/24",
+            "gateway": "10.0.10.1",
+            "containers": [
+              { "id": "scada-router", "name": "SCADA Router", "type": "router", "ip": "10.0.10.1" },
+              { "id": "scada-switch", "name": "SCADA Switch", "type": "switch", "ip": "10.0.10.2" },
+              { "id": "scada-fw", "name": "OT Firewall", "type": "firewall", "ip": "10.0.10.3" },
+              { "id": "hmi-1", "name": "HMI Workstation", "type": "workstation", "ip": "10.0.10.100" },
+              { "id": "eng-ws", "name": "Engineering Station", "type": "workstation", "ip": "10.0.10.101" },
+              { "id": "plc-1", "name": "Centrifuge PLC", "type": "plc", "ip": "10.0.10.200" },
+              { "id": "plc-2", "name": "Valve PLC", "type": "plc", "ip": "10.0.10.201" }
+            ],
+            "connections": [
+              { "from": "scada-router", "to": "scada-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "scada-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "hmi-1", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "eng-ws", "fromInterface": "eth4", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "plc-1", "fromInterface": "eth5", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "plc-2", "fromInterface": "eth6", "toInterface": "eth1" }
+            ]
+          }
+        ],
+        "subnetConnections": []
+      }
+    ],
+    "siteConnections": [
+      {
+        "from": "corporate",
+        "to": "dmz",
+        "label": "Corp-DMZ Link"
+      },
+      {
+        "from": "dmz",
+        "to": "ot-plant",
+        "label": "DMZ-OT Link"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "stuxnet-kill-chain",
+        "name": "Stuxnet Kill Chain",
+        "description": "Full Stuxnet-style attack: USB infection → lateral movement → SCADA compromise → PLC manipulation. Each phase escalates access deeper into the OT network.",
+        "phases": [
+          {
+            "id": "phase-1-initial-access",
+            "name": "Phase 1: Initial Access (USB Drop)",
+            "description": "Simulate USB-based malware delivery to an engineer workstation. The payload establishes a foothold in the corporate network.",
+            "executions": [
+              {
+                "containerId": "corp-ws-1",
+                "script": "/scripts/workstation/init.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-2-lateral-movement",
+            "name": "Phase 2: Lateral Movement",
+            "description": "Spread from the compromised workstation to the file server and other corporate hosts using stolen credentials and network shares.",
+            "executions": [
+              {
+                "containerId": "corp-fileserv",
+                "script": "/scripts/server/init.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-3-pivot-to-dmz",
+            "name": "Phase 3: Pivot to DMZ",
+            "description": "Exploit the data historian connection to pivot from corporate into the DMZ, establishing a beachhead closer to OT systems.",
+            "executions": [
+              {
+                "containerId": "dmz-historian",
+                "script": "/scripts/server/init.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-4-scada-compromise",
+            "name": "Phase 4: SCADA Compromise",
+            "description": "Compromise the engineering workstation and HMI to gain access to the SCADA/ICS control plane.",
+            "executions": [
+              {
+                "containerId": "eng-ws",
+                "script": "/scripts/workstation/init.sh",
+                "args": []
+              },
+              {
+                "containerId": "hmi-1",
+                "script": "/scripts/workstation/init.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-5-plc-manipulation",
+            "name": "Phase 5: PLC Manipulation",
+            "description": "Inject malicious ladder logic into the centrifuge and valve PLCs, causing physical process disruption while reporting normal values to the HMI.",
+            "executions": [
+              {
+                "containerId": "plc-1",
+                "script": "/scripts/server/init.sh",
+                "args": []
+              },
+              {
+                "containerId": "plc-2",
+                "script": "/scripts/server/init.sh",
+                "args": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
