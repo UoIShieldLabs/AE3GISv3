@@ -12,8 +12,12 @@ services:
   backend:
     build: ./backend
     network_mode: host
+    pid: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # ContainerLab needs host netns access to create veth pairs
+      - /run/netns:/run/netns:shared
+      - /proc:/host/proc:ro
       # Persistent data
       - ae3gis-db:/app/data
       - ae3gis-clab:/app/clab-workdir
