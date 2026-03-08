@@ -9,10 +9,12 @@ interface NodeInfoPanelProps {
   container: Container | null;
   onClose: () => void;
   onOpenTerminal: (container: Container) => void;
+  onOpenWireshark?: (container: Container) => void;
   siteId: string | null;
   subnetId: string | null;
   topologyId: string | null;
   readOnly?: boolean;
+  deployStatus?: string;
 }
 
 const typeDisplayNames: Record<string, string> = {
@@ -29,10 +31,12 @@ export function NodeInfoPanel({
   container,
   onClose,
   onOpenTerminal,
+  onOpenWireshark,
   siteId,
   subnetId,
   topologyId,
   readOnly,
+  deployStatus,
 }: NodeInfoPanelProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const auth = useContext(AuthContext);
@@ -170,6 +174,15 @@ export function NodeInfoPanel({
             >
               Open Terminal
             </button>
+            {onOpenWireshark && deployStatus === 'deployed' && (
+              <button
+                className="btn-terminal"
+                style={{ marginTop: '8px', background: 'rgba(180, 77, 255, 0.1)', borderColor: 'var(--neon-purple, #b44dff)', color: 'var(--neon-purple, #b44dff)' }}
+                onClick={() => onOpenWireshark(container)}
+              >
+                Capture Traffic
+              </button>
+            )}
             {['web-server', 'plc'].includes(container.type) && auth?.token && topologyId && (
               <button
                 className="btn-terminal"
