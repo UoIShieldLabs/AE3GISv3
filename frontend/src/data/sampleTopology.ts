@@ -49,10 +49,31 @@ export interface Site {
   subnetConnections: Connection[];
 }
 
+export interface ScriptExecution {
+  containerId: string;
+  script: string;
+  args?: string[];
+}
+
+export interface AttackPhase {
+  id: string;
+  name: string;
+  description?: string;
+  executions: ScriptExecution[];
+}
+
+export interface Scenario {
+  id: string;
+  name: string;
+  description?: string;
+  phases: AttackPhase[];
+}
+
 export interface TopologyData {
   name?: string;
   sites: Site[];
   siteConnections: Connection[];
+  scenarios?: Scenario[];
 }
 
 // ── Data (loaded from JSON) ───────────────────────────────────────

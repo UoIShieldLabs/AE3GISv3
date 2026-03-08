@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './ui/Dialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { ImportClabDialog } from './dialogs/ImportClabDialog';
-import { listTopologies, deleteTopology, type TopologySummary } from '../api/client';
+import { listTopologies, deleteTopology, listPresets, loadPreset, type TopologySummary, type PresetSummary } from '../api/client';
 import './TopologyBrowser.css';
 
 interface TopologyBrowserProps {
@@ -28,6 +28,11 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
   const [deleteTarget, setDeleteTarget] = useState<TopologySummary | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
+  // Presets
+  const [presets, setPresets] = useState<PresetSummary[]>([]);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open) return;
     void listTopologies()
@@ -35,6 +40,9 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
       .catch(() => { setLoading(false); setTopologies([]); });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
+    listPresets()
+      .then(res => setPresets(res.presets))
+      .catch(() => setPresets([]));
   }, [open]);
 
   const handleDelete = async () => {
@@ -58,10 +66,23 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
     setImportOpen(false);
   };
 
+  const handleLoadPreset = async (presetId: string) => {
+    setLoadingPreset(presetId);
+    try {
+      const result = await loadPreset(presetId);
+      onLoad(result.id);
+      onClose();
+    } catch (err) {
+      console.error('Failed to load preset:', err);
+    } finally {
+      setLoadingPreset(null);
+    }
+  };
+
   return (
     <>
       <Dialog title="Load Topology" open={open} onClose={onClose} width={520}>
-        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button
             onClick={() => setImportOpen(true)}
             style={{
@@ -80,6 +101,93 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
             Import .clab
           </button>
         </div>
+
+        {/* Preset templates */}
+        {presets.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <button
+              onClick={() => setPresetsOpen(!presetsOpen)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                background: 'rgba(255, 170, 0, 0.05)',
+                border: '1px solid rgba(255, 170, 0, 0.3)',
+                borderRadius: '4px',
+                color: '#ffaa00',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                textAlign: 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span>Preset Templates ({presets.length})</span>
+              <span style={{ fontSize: '10px' }}>{presetsOpen ? '▲' : '▼'}</span>
+            </button>
+            {presetsOpen && (
+              <div style={{
+                border: '1px solid rgba(255, 170, 0, 0.15)',
+                borderTop: 'none',
+                borderRadius: '0 0 4px 4px',
+                overflow: 'hidden',
+              }}>
+                {presets.map(preset => (
+                  <div key={preset.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 14px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                    background: 'rgba(20, 20, 30, 0.5)',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '14px',
+                        color: 'var(--text-primary)',
+                        marginBottom: '2px',
+                      }}>
+                        {preset.name}
+                      </div>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '11px',
+                        color: 'var(--text-dim)',
+                      }}>
+                        {preset.site_count} site{preset.site_count !== 1 ? 's' : ''} · {preset.scenario_count} scenario{preset.scenario_count !== 1 ? 's' : ''}
+                        {preset.description && ` — ${preset.description.slice(0, 80)}${preset.description.length > 80 ? '…' : ''}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleLoadPreset(preset.id)}
+                      disabled={loadingPreset !== null}
+                      style={{
+                        padding: '6px 14px',
+                        background: 'rgba(255, 170, 0, 0.08)',
+                        border: '1px solid #ffaa00',
+                        color: '#ffaa00',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        borderRadius: '4px',
+                        cursor: loadingPreset ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                        opacity: loadingPreset === preset.id ? 0.6 : 1,
+                      }}
+                    >
+                      {loadingPreset === preset.id ? 'Loading...' : 'Load'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="topology-browser-loading">Loading...</div>

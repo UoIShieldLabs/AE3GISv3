@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pty
+import shlex
 import struct
 import termios
 from typing import Any
@@ -62,6 +63,40 @@ def _validate_ws_token(token: str | None, topology_id: str, db: Session) -> bool
         return True
     slot = db.query(StudentSlot).filter(StudentSlot.join_code == token).first()
     return slot is not None and slot.topology_id == topology_id
+
+
+# ── Available Scripts ───────────────────────────────────────────────
+
+
+@router.get("/scripts/available")
+def list_available_scripts(
+    _=Depends(require_instructor),
+):
+    """Return all scripts available for mounting, grouped by container type."""
+    from services.clab_generator import SCRIPTS_DIR, _SCRIPT_TYPE_MAP
+
+    # Invert the map: script_dir -> [container_types]
+    dir_to_types: dict[str, list[str]] = {}
+    for ctype, sdir in _SCRIPT_TYPE_MAP.items():
+        dir_to_types.setdefault(sdir, []).append(ctype)
+
+    results: list[dict[str, Any]] = []
+    if SCRIPTS_DIR.exists():
+        for script_dir in sorted(SCRIPTS_DIR.iterdir()):
+            if not script_dir.is_dir():
+                continue
+            dir_name = script_dir.name
+            container_types = dir_to_types.get(dir_name, [])
+            for script_file in sorted(script_dir.rglob("*.sh")):
+                rel = script_file.relative_to(script_dir)
+                results.append({
+                    "path": f"/scripts/{dir_name}/{rel}",
+                    "scriptDir": dir_name,
+                    "containerTypes": container_types,
+                    "filename": script_file.name,
+                })
+
+    return {"scripts": results}
 
 
 # ── Generate ────────────────────────────────────────────────────────
@@ -399,6 +434,68 @@ async def exec_precheck(
         "detail": detail or f"docker inspect failed with return code {proc.returncode}",
         "docker_name": docker_name,
     }
+
+
+@router.post("/{topology_id}/scenarios/{scenario_id}/phases/{phase_id}/execute")
+async def execute_phase(
+    topology_id: str,
+    scenario_id: str,
+    phase_id: str,
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
+    """Execute all script actions in a given attack phase."""
+    topo = _get_topo(topology_id, db)
+    if topo.status != "deployed":
+        raise HTTPException(409, "Topology is not deployed")
+
+    data = topo.data or {}
+    scenarios = data.get("scenarios") or []
+    scenario = next((s for s in scenarios if s.get("id") == scenario_id), None)
+    if not scenario:
+        raise HTTPException(404, "Scenario not found")
+    phase = next((p for p in scenario.get("phases", []) if p.get("id") == phase_id), None)
+    if not phase:
+        raise HTTPException(404, "Phase not found")
+
+    topo_name = _topo_name(topo)
+    results: list[dict[str, Any]] = []
+
+    for execution in phase.get("executions", []):
+        container_id = execution.get("containerId", "")
+        script = execution.get("script", "")
+        args = execution.get("args") or []
+
+        if not container_id or not script:
+            results.append({
+                "containerId": container_id,
+                "script": script,
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "Missing containerId or script",
+            })
+            continue
+
+        docker_name = f"clab-{topo_name}-{container_id}"
+        quoted_script = shlex.quote(script)
+        quoted_args = " ".join(shlex.quote(a) for a in args)
+        shell_cmd = f"sh {quoted_script} {quoted_args}".strip()
+        cmd = ["sh", "-c", shell_cmd]
+        env = clab_manager.build_topology_env(data, container_id)
+        rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
+        results.append({
+            "containerId": container_id,
+            "script": script,
+            "returncode": rc,
+            "stdout": stdout,
+            "stderr": stderr,
+        })
+        log.info(
+            "Phase %s execution on %s: %s -> rc=%d",
+            phase.get("name"), container_id, script, rc,
+        )
+
+    return {"phase_id": phase_id, "results": results}
 
 
 @router.get("/{topology_id}/firewall/{container_id}", response_model=FirewallRulesResponse)

@@ -81,8 +81,62 @@ async def _run(cmd: list[str]) -> tuple[int, str, str]:
     return proc.returncode, stdout.decode(), stderr.decode()
 
 
-async def _docker_exec(docker_name: str, args: list[str]) -> tuple[int, str, str]:
-    return await _run(["sudo", "docker", "exec", docker_name, *args])
+async def _docker_exec(
+    docker_name: str,
+    args: list[str],
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
+    env_flags: list[str] = []
+    for k, v in (env or {}).items():
+        env_flags += ["-e", f"{k}={v}"]
+    return await _run(["sudo", "docker", "exec", *env_flags, docker_name, *args])
+
+
+def build_topology_env(topology_data: dict, target_container_id: str = "") -> dict[str, str]:
+    """Build env vars describing the topology for script consumption.
+
+    Provides:
+      TOPO_NAME                          — topology name
+      TARGET_ID, TARGET_IP, TARGET_TYPE  — the container the script runs on
+      CONTAINER_{NAME}_IP               — IP for every container (name uppercased, hyphens → underscores)
+      CONTAINER_{NAME}_TYPE             — type for every container
+      SUBNET_{NAME}_CIDR                — CIDR for every subnet
+      SUBNET_{NAME}_GATEWAY             — gateway for every subnet
+      SITE_{NAME}                        — site name
+    """
+    env: dict[str, str] = {}
+    env["TOPO_NAME"] = topology_data.get("name") or ""
+
+    for site in topology_data.get("sites", []):
+        site_key = _env_key(site.get("name", ""))
+        if site_key:
+            env[f"SITE_{site_key}"] = site.get("name", "")
+        for subnet in site.get("subnets", []):
+            sn_key = _env_key(subnet.get("name", ""))
+            if sn_key:
+                env[f"SUBNET_{sn_key}_CIDR"] = subnet.get("cidr", "")
+                env[f"SUBNET_{sn_key}_GATEWAY"] = subnet.get("gateway", "")
+            for c in subnet.get("containers", []):
+                c_key = _env_key(c.get("name", ""))
+                if c_key:
+                    env[f"CONTAINER_{c_key}_IP"] = c.get("ip", "")
+                    env[f"CONTAINER_{c_key}_TYPE"] = c.get("type", "")
+                    env[f"CONTAINER_{c_key}_ID"] = c.get("id", "")
+                if c.get("id") == target_container_id:
+                    env["TARGET_ID"] = c.get("id", "")
+                    env["TARGET_IP"] = c.get("ip", "")
+                    env["TARGET_TYPE"] = c.get("type", "")
+                    env["TARGET_NAME"] = c.get("name", "")
+                    env["TARGET_SUBNET"] = subnet.get("name", "")
+                    env["TARGET_SUBNET_CIDR"] = subnet.get("cidr", "")
+                    env["TARGET_GATEWAY"] = subnet.get("gateway", "")
+
+    return env
+
+
+def _env_key(name: str) -> str:
+    """Sanitize a name into a valid env var component (uppercase, underscores)."""
+    return name.upper().replace(" ", "_").replace("-", "_").replace(".", "_")
 
 
 def _iter_containers(topology_data: dict) -> list[dict]:

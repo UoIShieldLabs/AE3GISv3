@@ -67,10 +67,31 @@ class Site(BaseModel):
     subnetConnections: list[Connection]
 
 
+class ScriptExecution(BaseModel):
+    containerId: str
+    script: str
+    args: list[str] | None = None
+
+
+class AttackPhase(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    executions: list[ScriptExecution]
+
+
+class Scenario(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    phases: list[AttackPhase]
+
+
 class TopologyData(BaseModel):
     name: str | None = None
     sites: list[Site]
     siteConnections: list[Connection]
+    scenarios: list[Scenario] | None = None
 
 
 # ── API request/response models ────────────────────────────────────
