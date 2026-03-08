@@ -20,9 +20,11 @@ services:
       - /proc:/host/proc:ro
       # Persistent data
       - ae3gis-db:/app/data
-      - ae3gis-clab:/app/clab-workdir
       # Live-reload: mount backend source so uvicorn --reload picks up changes
       - ./backend:/app
+      # ContainerLab bind-mount source paths are resolved by the host Docker daemon.
+      # Mount clab-workdir at the same absolute path in container and host.
+      - ./backend/clab-workdir:${PWD}/backend/clab-workdir
       # Scripts: mounted at the same absolute path inside the container as on the host
       # so ContainerLab (inside container) validates the path, and Docker (host daemon)
       # can bind-mount it into clab containers
@@ -30,10 +32,10 @@ services:
     environment:
       #- AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-changeme}
       - AE3GIS_DB_PATH=/app/data/ae3gis.db
+      - AE3GIS_CLAB_WORKDIR=${PWD}/backend/clab-workdir
       - AE3GIS_HOST_SCRIPTS_DIR=${PWD}/backend/scripts
     restart: unless-stopped
     privileged: true
 
 volumes:
   ae3gis-db:
-  ae3gis-clab:

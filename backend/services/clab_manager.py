@@ -156,7 +156,7 @@ async def _remove_fs_path(path: Path) -> None:
         raise RuntimeError(f"failed to remove path {path}: {stderr.strip()}")
 
 
-async def _prune_removed_persistence_paths(topology_id: str, topology_data: dict) -> None:
+async def prune_removed_persistence_paths(topology_id: str, topology_data: dict) -> None:
     """Delete backend persistence dirs/sentinels no longer present in topology data."""
     desired: dict[str, set[str]] = {}
     for container in _iter_containers(topology_data):
@@ -253,7 +253,7 @@ async def _seed_persistence_from_image(image: str, container_path: str, host_pat
 
 async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> None:
     """Ensure persistent bind paths exist and are initialized once from image defaults."""
-    await _prune_removed_persistence_paths(topology_id, topology_data)
+    await prune_removed_persistence_paths(topology_id, topology_data)
 
     for container in _iter_containers(topology_data):
         container_id = (container.get("id") or "").strip()
