@@ -8,6 +8,7 @@ interface ToolbarProps {
   onBulkAdd?: () => void;
   layoutMode?: LayoutMode;
   onLayoutModeChange?: (mode: LayoutMode) => void;
+  onPurdue?: () => void;
   readOnly?: boolean;
 }
 
@@ -17,7 +18,7 @@ const layoutModes: { value: LayoutMode; label: string }[] = [
   { value: 'grid', label: 'Grid' },
 ];
 
-export function Toolbar({ onAdd, addLabel, onAutoLayout, onBulkAdd, layoutMode, onLayoutModeChange, readOnly }: ToolbarProps) {
+export function Toolbar({ onAdd, addLabel, onAutoLayout, onBulkAdd, layoutMode, onLayoutModeChange, onPurdue, readOnly }: ToolbarProps) {
   return (
     <div className="toolbar">
       {!readOnly && (
@@ -33,23 +34,26 @@ export function Toolbar({ onAdd, addLabel, onAutoLayout, onBulkAdd, layoutMode, 
         </>
       )}
       {layoutMode && onLayoutModeChange ? (
-        <div className="toolbar-layout-group">
+        <select
+          className="toolbar-layout-select"
+          value={layoutMode}
+          onChange={e => {
+            onLayoutModeChange(e.target.value as LayoutMode);
+            onAutoLayout();
+          }}
+        >
           {layoutModes.map(m => (
-            <button
-              key={m.value}
-              className={`toolbar-btn layout-btn${layoutMode === m.value ? ' active' : ''}`}
-              onClick={() => {
-                onLayoutModeChange(m.value);
-                onAutoLayout();
-              }}
-            >
-              {m.label}
-            </button>
+            <option key={m.value} value={m.value}>{m.label}</option>
           ))}
-        </div>
+        </select>
       ) : (
         <button className="toolbar-btn" onClick={onAutoLayout}>
           Auto Layout
+        </button>
+      )}
+      {onPurdue && (
+        <button className="toolbar-btn btn-purdue" onClick={onPurdue} title="View Purdue Model">
+          Purdue
         </button>
       )}
     </div>

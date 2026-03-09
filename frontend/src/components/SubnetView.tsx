@@ -34,9 +34,10 @@ interface SubnetViewProps {
   onSelectSubnet: (subnetId: string) => void;
   onOpenRouterTerminal: (container: Container) => void;
   readOnly?: boolean;
+  onPurdue?: () => void;
 }
 
-export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnly }: SubnetViewProps) {
+export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnly, onPurdue }: SubnetViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -481,6 +482,7 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
         onAutoLayout={handleAutoLayout}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        onPurdue={onPurdue}
         readOnly={readOnly}
       />
 

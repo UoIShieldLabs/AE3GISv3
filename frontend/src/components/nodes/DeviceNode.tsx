@@ -178,9 +178,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
         color: '#d0d0d8',
         textAlign: 'center',
         maxWidth: '120px',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        wordBreak: 'break-word',
       }}>
         {container.name}
       </div>

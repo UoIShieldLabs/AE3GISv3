@@ -37,13 +37,41 @@
   box-shadow: 0 0 10px rgba(0, 255, 159, 0.2);
 }
 
-.toolbar-layout-group {
-  display: flex;
-  gap: 4px;
+.toolbar-layout-select {
+  padding: 10px 10px;
+  background: rgba(10, 10, 15, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  text-align: left;
 }
 
-.toolbar-layout-group .layout-btn.active {
+.toolbar-layout-select:hover,
+.toolbar-layout-select:focus {
+  outline: none;
   border-color: var(--neon-cyan);
   color: var(--neon-cyan);
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.toolbar-layout-select option {
+  background: #111119;
+  color: #808090;
+}
+
+.toolbar-btn.btn-purdue {
+  border-color: #44aaff;
+  color: #44aaff;
+}
+
+.toolbar-btn.btn-purdue:hover {
+  background: rgba(68, 170, 255, 0.12);
+  box-shadow: 0 0 10px rgba(68, 170, 255, 0.3);
+  border-color: #44aaff;
+  color: #44aaff;
 }

@@ -514,22 +514,26 @@ def cleanup(topology_id: str, topology_name: str) -> None:
 async def inspect(topology_name: str) -> list[dict]:
     """Inspect a running topology, return list of container statuses.
 
-    Falls back to an empty list if containerlab is not available or the
-    topology is not deployed.
+    Uses docker ps directly (more reliable than containerlab inspect).
+    Falls back to an empty list on failure.
     """
+    prefix = f"clab-{topology_name}-"
     rc, stdout, stderr = await _run([
-        "sudo", "containerlab", "inspect",
-        "--name", topology_name,
-        "--format", "json",
+        "sudo", "docker", "ps", "-a",
+        "--filter", f"name={prefix}",
+        "--format", "{{.Names}}\t{{.State}}",
     ])
     if rc != 0:
-        log.warning("containerlab inspect failed: %s", stderr)
+        log.warning("docker ps failed: %s", stderr)
         return []
 
-    try:
-        data = json.loads(stdout)
-        # containerlab inspect --format json returns {"containers": [...]}
-        return data.get("containers", [])
-    except json.JSONDecodeError:
-        log.warning("Failed to parse inspect output")
-        return []
+    containers = []
+    for line in stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        name, state = parts
+        containers.append({"name": name.strip(), "state": state.strip()})
+    return containers

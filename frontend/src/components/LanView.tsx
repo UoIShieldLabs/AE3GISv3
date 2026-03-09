@@ -51,9 +51,10 @@ interface LanViewProps {
   onDeselect: () => void;
   topologyId: string | null;
   readOnly?: boolean;
+  onPurdue?: () => void;
 }
 
-export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
+export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly, onPurdue }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
   const auth = useContext(AuthContext);
@@ -479,6 +480,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
         onBulkAdd={() => setBulkDialog(true)}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        onPurdue={onPurdue}
         readOnly={readOnly}
       />
 
