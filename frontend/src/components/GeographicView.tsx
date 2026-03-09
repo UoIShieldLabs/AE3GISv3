@@ -33,9 +33,10 @@ interface GeographicViewProps {
   onSelectSite: (siteId: string) => void;
   readOnly?: boolean;
   autoLayoutTrigger?: number;
+  onPurdue?: () => void;
 }
 
-export function GeographicView({ topology, onSelectSite, readOnly, autoLayoutTrigger }: GeographicViewProps) {
+export function GeographicView({ topology, onSelectSite, readOnly, autoLayoutTrigger, onPurdue }: GeographicViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
 
@@ -284,6 +285,7 @@ export function GeographicView({ topology, onSelectSite, readOnly, autoLayoutTri
         onAdd={() => setSiteDialog({ open: true })}
         addLabel="Site"
         onAutoLayout={handleAutoLayout}
+        onPurdue={onPurdue}
         readOnly={readOnly}
       />
 

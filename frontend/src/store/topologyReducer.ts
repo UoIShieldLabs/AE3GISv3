@@ -48,7 +48,8 @@ export type TopologyAction =
   | { type: 'SET_DEPLOY_STATUS'; payload: DeployStatus }
   | { type: 'MARK_CLEAN' }
   | { type: 'CLEAR_BACKEND' }
-  | { type: 'UPDATE_CONTAINER_STATUSES'; payload: { statuses: Record<string, 'running' | 'stopped' | 'paused'> } };
+  | { type: 'UPDATE_CONTAINER_STATUSES'; payload: { statuses: Record<string, 'running' | 'stopped' | 'paused'> } }
+  | { type: 'CLEAR_CONTAINER_STATUSES' };
 
 export function topologyReducer(draft: TopologyState, action: TopologyAction) {
   switch (action.type) {
@@ -355,13 +356,22 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
       for (const site of draft.topology.sites) {
         for (const subnet of site.subnets) {
           for (const container of subnet.containers) {
-            if (container.id in statuses) {
-              container.status = statuses[container.id];
-            }
+            container.status = statuses[container.id] ?? 'stopped';
           }
         }
       }
       // NOTE: does NOT set dirty — status updates are transient
+      break;
+    }
+
+    case 'CLEAR_CONTAINER_STATUSES': {
+      for (const site of draft.topology.sites) {
+        for (const subnet of site.subnets) {
+          for (const container of subnet.containers) {
+            container.status = 'stopped';
+          }
+        }
+      }
       break;
     }
   }
