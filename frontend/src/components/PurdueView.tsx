@@ -44,8 +44,13 @@ type SubnetZone = 'ot' | 'dmz' | 'it';
 
 function classifySubnetZone(containers: Container[]): SubnetZone {
   const types = new Set(containers.map(c => c.type));
+  // OT: any subnet hosting a PLC is operational technology
   if (types.has('plc')) return 'ot';
-  if (types.has('firewall')) return 'dmz';
+  // DMZ: server-only subnets (historian, jumpbox, etc.) with no end-user workstations
+  const hasServers = types.has('web-server') || types.has('file-server');
+  const hasWorkstations = types.has('workstation');
+  if (hasServers && !hasWorkstations) return 'dmz';
+  // IT: everything else (workstation subnets, mixed IT subnets)
   return 'it';
 }
 
@@ -56,7 +61,9 @@ function assignPurdueLevel(zone: SubnetZone, containerType: ContainerType): numb
     return 3;
   }
   if (zone === 'dmz') return 3.5;
-  if (containerType === 'router' || containerType === 'switch' || containerType === 'firewall') return 4;
+  // IT zone: infrastructure + servers → Level 4, end-user workstations → Level 5
+  if (containerType === 'router' || containerType === 'switch' || containerType === 'firewall'
+      || containerType === 'web-server' || containerType === 'file-server') return 4;
   return 5;
 }
 
