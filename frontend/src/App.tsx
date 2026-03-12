@@ -16,6 +16,7 @@ import { TopologyBrowser } from './components/TopologyBrowser';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassroomPanel } from './components/ClassroomPanel';
 import { ScenarioPanel } from './components/ScenarioPanel';
+import { PurdueView } from './components/PurdueView';
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
@@ -64,6 +65,7 @@ function App() {
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
   const [scenariosOpen, setScenariosOpen] = useState(false);
+  const [purdueOpen, setPurdueOpen] = useState(false);
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -88,7 +90,7 @@ function App() {
   }, []);
   const [busy, setBusy] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Navigation handlers ────────────────────────────────────────
 
@@ -147,30 +149,26 @@ function App() {
     [topology.sites]
   );
 
-  // ── WebSocket management ──────────────────────────────────────
+  // ── Status polling ─────────────────────────────────────────────
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
 
   const connectWebSocket = useCallback((topoId: string, topoName: string) => {
-    // Close existing connection
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    stopPolling();
+    const sanitized = topoName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const prefix = `clab-${sanitized}-`;
 
-    const wsUrlStr = api.wsUrl(`/api/topologies/ws/${topoId}/status`);
-    const ws = new WebSocket(wsUrlStr);
-
-    ws.onmessage = (event) => {
+    const poll = async () => {
       try {
-        const data = JSON.parse(event.data);
-        const containers: api.ClabContainer[] = data.containers || [];
-        // Map clab container names → frontend container IDs
-        // clab names are prefixed with "clab-{topo_name}-"
-        const prefix = `clab-${topoName}-`;
+        const { containers } = await api.getTopologyStatus(topoId);
         const statuses: Record<string, 'running' | 'stopped' | 'paused'> = {};
         for (const c of containers) {
-          const id = c.name.startsWith(prefix)
-            ? c.name.slice(prefix.length)
-            : c.name;
+          const id = c.name.startsWith(prefix) ? c.name.slice(prefix.length) : c.name;
           const state = c.state?.toLowerCase();
           if (state === 'running') statuses[id] = 'running';
           else if (state === 'paused') statuses[id] = 'paused';
@@ -178,31 +176,22 @@ function App() {
         }
         dispatch({ type: 'UPDATE_CONTAINER_STATUSES', payload: { statuses } });
       } catch {
-        // ignore parse errors
+        // ignore transient failures
       }
     };
 
-    ws.onclose = () => {
-      // Only clear ref if this is still the active connection
-      if (wsRef.current === ws) wsRef.current = null;
-    };
-
-    wsRef.current = ws;
-  }, [dispatch]);
+    void poll(); // immediate first fetch
+    pollIntervalRef.current = setInterval(() => { void poll(); }, 5000);
+  }, [dispatch, stopPolling]);
 
   const disconnectWebSocket = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, []);
+    stopPolling();
+  }, [stopPolling]);
 
-  // Clean up WebSocket on unmount
+  // Clean up on unmount
   useEffect(() => {
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, []);
+    return () => stopPolling();
+  }, [stopPolling]);
 
   // ── Backend handlers ──────────────────────────────────────────
 
@@ -243,12 +232,12 @@ function App() {
       setNav({ scale: 'geographic', siteId: null, subnetId: null });
       setSelectedContainer(null);
       setLoadVersion(v => v + 1);
-      // If deployed, connect WebSocket
+      // Always reset statuses to stopped; WebSocket fills in live values if deployed
+      disconnectWebSocket();
+      dispatch({ type: 'CLEAR_CONTAINER_STATUSES' });
       if (record.status === 'deployed') {
         const topoName = deploymentName(record.id, record.data.name);
         connectWebSocket(record.id, topoName);
-      } else {
-        disconnectWebSocket();
       }
     } catch (err) {
       console.error('Load failed:', err);
@@ -289,6 +278,7 @@ function App() {
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'destroying' });
       await api.destroyTopology(backendId);
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'idle' });
+      dispatch({ type: 'CLEAR_CONTAINER_STATUSES' });
       disconnectWebSocket();
     } catch (err) {
       console.error('Destroy failed:', err);
@@ -491,6 +481,7 @@ function App() {
                   onSelectSite={goToSite}
                   readOnly={readOnly}
                   autoLayoutTrigger={loadVersion}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -502,6 +493,7 @@ function App() {
                   onSelectSubnet={goToSubnet}
                   onOpenRouterTerminal={setRouterActionContainer}
                   readOnly={readOnly}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -516,6 +508,7 @@ function App() {
                   onOpenTerminal={openTerminal}
                   onDeselect={() => setSelectedContainer(null)}
                   readOnly={readOnly}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -611,6 +604,13 @@ function App() {
               onSave={handleSave}
             />
           )}
+
+          {/* Purdue Model view (all roles) */}
+          <PurdueView
+            open={purdueOpen}
+            onClose={() => setPurdueOpen(false)}
+            topology={topology}
+          />
         </div>
       </TopologyDispatchContext.Provider>
     </AuthContext.Provider>
