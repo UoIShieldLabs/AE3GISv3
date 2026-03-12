@@ -77,7 +77,7 @@ def get_topology(
 
 
 @router.put("/{topology_id}", response_model=TopologyRecord)
-def update_topology(
+async def update_topology(
     topology_id: str,
     body: TopologyUpdate,
     db: Session = Depends(get_db),
@@ -89,7 +89,11 @@ def update_topology(
     if body.name is not None:
         topo.name = body.name
     if body.data is not None:
-        topo.data = body.data.model_dump(by_alias=True)
+        next_data = body.data.model_dump(by_alias=True)
+        topo.data = next_data
+        # Enforce persistence lifecycle at save time: if a path is removed
+        # from persistencePaths, delete its backend directory immediately.
+        await clab_manager.prune_removed_persistence_paths(topology_id, next_data)
     db.commit()
     db.refresh(topo)
     return topo
