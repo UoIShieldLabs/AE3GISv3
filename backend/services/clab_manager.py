@@ -261,7 +261,7 @@ async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> No
             continue
 
         container_type = (container.get("type") or "").strip()
-        image = clab_generator.image_for_container_type(container_type)
+        image = clab_generator.resolve_container_image(container, container_type)
         raw_paths = container.get("persistencePaths", []) or []
         for raw_path in raw_paths:
             container_path = clab_generator.normalize_persistence_path(str(raw_path))

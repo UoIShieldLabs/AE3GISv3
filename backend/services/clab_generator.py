@@ -54,6 +54,17 @@ def image_for_container_type(ctype: str) -> str:
     return _IMAGE_HOST
 
 
+def resolve_container_image(container: dict | None = None, ctype: str | None = None) -> str:
+    """Return the explicit container image when provided, else the type default."""
+    if container:
+        explicit_image = str(container.get("image") or "").strip()
+        if explicit_image:
+            return explicit_image
+        if ctype is None:
+            ctype = str(container.get("type") or "").strip()
+    return image_for_container_type((ctype or "").strip())
+
+
 def get_script_bind(ctype: str) -> str | None:
     """Get the read-only bind mount for a container type's scripts.
     
@@ -409,7 +420,7 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
                     if gateway:
                         exec_cmds.append(f"ip route replace default via {gateway}")
 
-                node_cfg: dict = {"kind": "linux", "image": image_for_container_type(ctype)}
+                node_cfg: dict = {"kind": "linux", "image": resolve_container_image(container, ctype)}
                 if topology_id:
                     binds: list[str] = []
                     raw_persist = container.get("persistencePaths", []) or []
