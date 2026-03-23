@@ -89,15 +89,49 @@ html, body, #root {
 
 /* ── Header / Title Bar ───────────────────────────────────────── */
 .header-bar {
-  height: 54px;
-  display: flex;
+  height: 72px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
+  padding: 8px 20px 0;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   z-index: 100;
   flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.header-topo-name {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.header-center-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
 }
 
 .header-title {
@@ -112,7 +146,7 @@ html, body, #root {
 
 .header-stats {
   display: flex;
-  gap: 20px;
+  gap: 14px;
   font-family: var(--font-mono);
   font-size: 17px;
   color: var(--text-secondary);
@@ -125,8 +159,8 @@ html, body, #root {
 }
 
 .header-stat .dot {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--neon-green);
   box-shadow: var(--glow-green);

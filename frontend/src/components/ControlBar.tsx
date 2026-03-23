@@ -12,22 +12,10 @@ interface ControlBarProps {
   onNew: () => void;
   onSave: (name?: string) => void;
   onLoad: () => void;
-  onDeploy: () => void;
-  onDestroy: () => void;
   onExport: () => void;
-  onClassroom?: () => void;
-  onScenarios?: () => void;
   isBusy: boolean;
   readOnly?: boolean;
 }
-
-const statusLabels: Record<DeployStatus, string> = {
-  idle: 'Idle',
-  deployed: 'Deployed',
-  deploying: 'Deploying...',
-  destroying: 'Destroying...',
-  error: 'Error',
-};
 
 export function ControlBar({
   backendId,
@@ -37,11 +25,7 @@ export function ControlBar({
   onNew,
   onSave,
   onLoad,
-  onDeploy,
-  onDestroy,
   onExport,
-  onClassroom,
-  onScenarios,
   isBusy,
   readOnly,
 }: ControlBarProps) {
@@ -68,11 +52,6 @@ export function ControlBar({
   return (
     <>
       <div className="control-bar">
-        <div className={`control-bar-status status-${deployStatus}`}>
-          <span className="status-dot" />
-          <span>{statusLabels[deployStatus]}</span>
-        </div>
-
         {!readOnly && (
           <>
             <button
@@ -101,46 +80,6 @@ export function ControlBar({
             >
               Load
             </button>
-
-            <button
-              className="control-btn btn-deploy"
-              onClick={onDeploy}
-              disabled={isBusy || !backendId || deployStatus !== 'idle'}
-              title={!backendId ? 'Save first to deploy' : 'Deploy to ContainerLab'}
-            >
-              Deploy
-            </button>
-
-            <button
-              className="control-btn btn-destroy"
-              onClick={onDestroy}
-              disabled={isBusy || (deployStatus !== 'deployed' && deployStatus !== 'error')}
-              title="Destroy running network"
-            >
-              Destroy
-            </button>
-
-            {onClassroom && (
-              <button
-                className="control-btn btn-classroom"
-                onClick={onClassroom}
-                disabled={isBusy}
-                title="Manage classroom sessions"
-              >
-                Classroom
-              </button>
-            )}
-
-            {onScenarios && (
-              <button
-                className="control-btn btn-scenarios"
-                onClick={onScenarios}
-                disabled={isBusy}
-                title="Manage attack scenarios"
-              >
-                Scenarios
-              </button>
-            )}
           </>
         )}
 

@@ -218,6 +218,67 @@ export function computeCircleLayout(
   return positions;
 }
 
+/**
+ * Zigzag / staircase layout for small subnet graphs.
+ * Uses dagre only to determine rank order, then places each rank in
+ * alternating left / right columns so adjacent subnets sit diagonally
+ * rather than directly above each other.  This avoids vertical overlap
+ * with router nodes that are rendered below each subnet cloud.
+ */
+export function computeZigzagLayout(
+  nodes: LayoutNode[],
+  edges: LayoutEdge[],
+  options: { xLeft?: number; xRight?: number; yStep?: number } = {}
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
+  const n = nodes.length;
+  if (n === 0) return positions;
+  if (n === 1) {
+    positions.set(nodes[0].id, { x: 300, y: 80 });
+    return positions;
+  }
+
+  const { xLeft = 80, xRight = 460, yStep = 210 } = options;
+
+  // Use dagre solely for rank assignment
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', nodesep: 80, ranksep: 120 });
+  g.setDefaultEdgeLabel(() => ({}));
+  for (const node of nodes) g.setNode(node.id, { width: node.width, height: node.height });
+  for (const edge of edges) g.setEdge(edge.source, edge.target);
+  dagre.layout(g);
+
+  // Collect raw dagre y-values and sort them to get rank indices
+  const rawY = new Map<string, number>();
+  for (const id of g.nodes()) rawY.set(id, g.node(id)?.y ?? 0);
+  const uniqueYs = [...new Set(rawY.values())].sort((a, b) => a - b);
+  const yToRank = new Map(uniqueYs.map((y, i) => [y, i]));
+
+  // Group layout nodes by rank index
+  const byRank = new Map<number, LayoutNode[]>();
+  for (const node of nodes) {
+    const rank = yToRank.get(rawY.get(node.id) ?? 0) ?? 0;
+    if (!byRank.has(rank)) byRank.set(rank, []);
+    byRank.get(rank)!.push(node);
+  }
+
+  for (const [rankIdx, rankNodes] of byRank) {
+    const colX = rankIdx % 2 === 0 ? xLeft : xRight;
+    const y = 60 + rankIdx * yStep;
+
+    // If multiple nodes share a rank, spread them horizontally from colX
+    const gapX = 40;
+    const totalW = rankNodes.reduce((s, nd) => s + nd.width, 0) + (rankNodes.length - 1) * gapX;
+    let cursor = colX - totalW / 2 + (rankNodes[0].width / 2);
+    for (const node of rankNodes) {
+      positions.set(node.id, { x: cursor - node.width / 2, y });
+      cursor += node.width + gapX;
+    }
+  }
+
+  return positions;
+}
+
 export function computeGridLayout(
   nodes: LayoutNode[],
   options: { spacing?: number } = {}

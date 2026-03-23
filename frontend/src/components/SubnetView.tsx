@@ -21,7 +21,7 @@ import { ConnectionDialog } from './dialogs/ConnectionDialog';
 import { BulkConnectionDialog } from './dialogs/BulkConnectionDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
-import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
+import { computeZigzagLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
 import type { Site, Subnet, Container } from '../data/sampleTopology';
 
@@ -76,12 +76,11 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
         );
       } else if (layoutMode === 'grid') {
-        computedPositions = computeGridLayout(layoutNodes);
+        computedPositions = computeGridLayout(layoutNodes, { spacing: 120 });
       } else {
-        computedPositions = computeLayout(
+        computedPositions = computeZigzagLayout(
           layoutNodes,
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
-          { direction: 'TB', nodeSpacing: 100, rankSpacing: 120 }
         );
       }
     }
@@ -395,12 +394,11 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
         );
       } else if (layoutMode === 'grid') {
-        computedPositions = computeGridLayout(layoutNodes);
+        computedPositions = computeGridLayout(layoutNodes, { spacing: 120 });
       } else {
-        computedPositions = computeLayout(
+        computedPositions = computeZigzagLayout(
           layoutNodes,
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
-          { direction: 'TB', nodeSpacing: 100, rankSpacing: 120 }
         );
       }
     }
