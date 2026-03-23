@@ -1,0 +1,204 @@
+{
+  "name": "Stuxnet ICS Attack (Single site)",
+  "description": "Industrial Control System attack scenario modeled after the Stuxnet worm. Features ITorate IT, DMZ, and OT/SCADA network segments with PLCs, HMI workstations, and engineering stations. Scenarios cover the full kill chain from initial USB infection through lateral movement to PLC manipulation.",
+  "topology": {
+    "name": "stuxnet-ics",
+    "sites": [
+      {
+        "id": "Enrichment Facility",
+        "name": "Enrichment Facility",
+        "location": "Enrichment Facility",
+        "position": { "x": 250, "y": 200 },
+        "subnets": [
+          {
+            "id": "ent-lan",
+            "name": "IT LAN",
+            "cidr": "10.0.1.0/24",
+            "gateway": "10.0.1.1",
+            "containers": [
+              { "id": "IT-router", "name": "IT Router", "type": "router", "ip": "10.0.1.1" },
+              { "id": "IT-switch", "name": "IT Switch", "type": "switch", "ip": "10.0.1.2" },
+              { "id": "IT-fw", "name": "IT Firewall", "type": "firewall", "ip": "10.0.1.3" },
+              { "id": "IT-ws-1", "name": "Engineer Workstation", "type": "workstation", "ip": "10.0.1.100" },
+              { "id": "IT-ws-2", "name": "Admin Workstation", "type": "workstation", "ip": "10.0.1.101" },
+              { "id": "IT-fileserv", "name": "File Server", "type": "file-server", "ip": "10.0.1.50" }
+            ],
+            "connections": [
+              { "from": "IT-router", "to": "IT-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "IT-switch", "to": "IT-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "IT-switch", "to": "IT-ws-1", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "IT-switch", "to": "IT-ws-2", "fromInterface": "eth4", "toInterface": "eth1" },
+              { "from": "IT-switch", "to": "IT-fileserv", "fromInterface": "eth5", "toInterface": "eth1" }
+            ]
+          },
+          {
+            "id": "dmz-net",
+            "name": "DMZ Network",
+            "cidr": "10.0.2.0/24",
+            "gateway": "10.0.2.1",
+            "containers": [
+              { "id": "dmz-router", "name": "DMZ Router", "type": "router", "ip": "10.0.2.1" },
+              { "id": "dmz-switch", "name": "DMZ Switch", "type": "switch", "ip": "10.0.2.2" },
+              { "id": "dmz-fw", "name": "DMZ Firewall", "type": "firewall", "ip": "10.0.2.3" },
+              { "id": "dmz-historian", "name": "Data Historian", "type": "web-server", "ip": "10.0.2.10" },
+              { "id": "dmz-jumpbox", "name": "Jump Server", "type": "web-server", "ip": "10.0.2.11" }
+            ],
+            "connections": [
+              { "from": "dmz-router", "to": "dmz-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-historian", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "dmz-switch", "to": "dmz-jumpbox", "fromInterface": "eth4", "toInterface": "eth1" }
+            ]
+          },
+          {
+            "id": "scada-net",
+            "name": "SCADA Network",
+            "cidr": "10.0.10.0/24",
+            "gateway": "10.0.10.1",
+            "containers": [
+              { "id": "scada-router", "name": "SCADA Router", "type": "router", "ip": "10.0.10.1" },
+              { "id": "scada-switch", "name": "SCADA Switch", "type": "switch", "ip": "10.0.10.2" },
+              { "id": "scada-fw", "name": "OT Firewall", "type": "firewall", "ip": "10.0.10.3" },
+              { "id": "hmi-1", "name": "HMI Workstation", "type": "workstation", "ip": "10.0.10.100" },
+              { "id": "eng-ws", "name": "Engineering Station", "type": "workstation", "ip": "10.0.10.101" },
+              { "id": "plc-1", "name": "Centrifuge PLC", "type": "plc", "ip": "10.0.10.200" },
+              { "id": "plc-2", "name": "Valve PLC", "type": "plc", "ip": "10.0.10.201" }
+            ],
+            "connections": [
+              { "from": "scada-router", "to": "scada-switch", "fromInterface": "eth1", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "scada-fw", "fromInterface": "eth2", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "hmi-1", "fromInterface": "eth3", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "eng-ws", "fromInterface": "eth4", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "plc-1", "fromInterface": "eth5", "toInterface": "eth1" },
+              { "from": "scada-switch", "to": "plc-2", "fromInterface": "eth6", "toInterface": "eth1" }
+            ]
+          }
+        ],
+        "subnetConnections": [
+          {
+            "from": "ent-lan",
+            "to": "dmz-net",
+            "label": "IT-DMZ Link"
+          },
+          {
+            "from": "dmz-net",
+            "to": "scada-net",
+            "label": "DMZ-OT Link"
+          }
+        ]
+      }
+    ],
+    "siteConnections": [],
+    "scenarios": [
+      {
+        "id": "stuxnet-kill-chain",
+        "name": "Stuxnet Kill Chain",
+        "description": "Full Stuxnet-style attack: USB infection → lateral movement → SCADA compromise → PLC manipulation. Each phase escalates access deeper into the OT network.",
+        "phases": [
+          {
+            "id": "phase-0-environment-setup",
+            "name": "Phase 0: Environment Setup",
+            "description": "Initialize realistic ICS network segmentation: apply iptables rules on each router enforcing IT/DMZ/SCADA boundaries, and start PLC simulation daemons that stream live process data to /plc/status.log. Run this immediately after deploy.",
+            "executions": [
+              {
+                "containerId": "IT-router",
+                "script": "/scripts/router/setup_fw_it.sh",
+                "args": []
+              },
+              {
+                "containerId": "dmz-router",
+                "script": "/scripts/router/setup_fw_dmz.sh",
+                "args": []
+              },
+              {
+                "containerId": "scada-router",
+                "script": "/scripts/router/setup_fw_scada.sh",
+                "args": []
+              },
+              {
+                "containerId": "plc-1",
+                "script": "/scripts/server/plc_daemon.sh",
+                "args": []
+              },
+              {
+                "containerId": "plc-2",
+                "script": "/scripts/server/plc_daemon.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-1-initial-access",
+            "name": "Phase 1: Initial Access (USB Drop)",
+            "description": "Simulate USB-based malware delivery to an engineer workstation. Creates credential cache, autorun artifacts, and starts a C2 beacon polling IT-fileserv:4444 every 10s (SYN→RST until Phase 2).",
+            "executions": [
+              {
+                "containerId": "IT-ws-1",
+                "script": "/scripts/workstation/phase1_usb_drop.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-2-lateral-movement",
+            "name": "Phase 2: Lateral Movement",
+            "description": "Spread from the compromised workstation to the file server using stolen credentials. Starts C2 relay on :4444 — Phase 1 beacon connections now succeed (observable TCP handshake on Wireshark).",
+            "executions": [
+              {
+                "containerId": "IT-fileserv",
+                "script": "/scripts/server/phase2_lateral_movement.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-3-pivot-to-dmz",
+            "name": "Phase 3: Pivot to DMZ",
+            "description": "Exploit historian credentials to deploy toolkit on DMZ historian. Probes SCADA hosts on port 102 (crosses dmz-router — allowed by FW but anomalous direction). Starts pivot relay on :9001.",
+            "executions": [
+              {
+                "containerId": "dmz-historian",
+                "script": "/scripts/server/phase3_dmz_pivot.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-4-scada-compromise",
+            "name": "Phase 4: SCADA Compromise",
+            "description": "Inject infected Step7 project on engineering station (eng-ws attempts historian query — blocked by scada-router, visible as dropped SYNs). Start HMI monitoring daemon on hmi-1 that will later display spoofed normal values.",
+            "executions": [
+              {
+                "containerId": "eng-ws",
+                "script": "/scripts/workstation/phase4_eng_compromise.sh",
+                "args": []
+              },
+              {
+                "containerId": "hmi-1",
+                "script": "/scripts/workstation/phase4_hmi_spoof.sh",
+                "args": []
+              }
+            ]
+          },
+          {
+            "id": "phase-5-plc-manipulation",
+            "name": "Phase 5: PLC Manipulation",
+            "description": "Overwrite PLC setpoints with dangerous values (centrifuge over-speed; valve overpressure). Daemon immediately logs dangerous state to /plc/status.log. Starts HMI spoofing listener on :9900 serving fake-normal values — hmi-1 display.log shows nothing wrong while the PLCs are compromised.",
+            "executions": [
+              {
+                "containerId": "plc-1",
+                "script": "/scripts/server/phase5_plc_manipulate.sh",
+                "args": []
+              },
+              {
+                "containerId": "plc-2",
+                "script": "/scripts/server/phase5_plc_manipulate.sh",
+                "args": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

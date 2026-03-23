@@ -432,41 +432,92 @@ function App() {
 
           {/* Header */}
           <header className="header-bar">
-            <div className="header-title">AE3GIS</div>
-            <div className="header-stats">
-              <div className="header-stat">
-                <span className="dot" />
-                <span>{topology.sites.length} sites</span>
+            {/* Left: branding + file operations */}
+            <div className="header-left">
+              <div className="header-title">AE3GIS</div>
+              <ControlBar
+                backendId={backendId}
+                backendName={backendName}
+                deployStatus={deployStatus}
+                dirty={dirty}
+                onNew={handleNew}
+                onSave={handleSave}
+                onLoad={() => setBrowserOpen(true)}
+                onExport={handleExport}
+                isBusy={busy}
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Center: topology name + deploy status + stats */}
+            <div className="header-center">
+              <div className="header-topo-name">
+                {backendName ?? topology.name ?? 'Untitled Topology'}
               </div>
-              <div className="header-stat">
-                <span className="dot" />
-                <span>{totalContainers} containers</span>
+              <div className="header-center-row">
+                <div className={`control-bar-status status-${deployStatus}`}>
+                  <span className="status-dot" />
+                  <span>{deployStatus === 'idle' ? 'Idle' : deployStatus === 'deployed' ? 'Deployed' : deployStatus === 'deploying' ? 'Deploying...' : deployStatus === 'destroying' ? 'Destroying...' : 'Error'}</span>
+                </div>
+                <div className="header-stats">
+                  <div className="header-stat">
+                    <span className="dot" />
+                    <span>{topology.sites.length} sites</span>
+                  </div>
+                  <div className="header-stat">
+                    <span className="dot" />
+                    <span>{totalContainers} containers</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <ControlBar
-              backendId={backendId}
-              backendName={backendName}
-              deployStatus={deployStatus}
-              dirty={dirty}
-              onNew={handleNew}
-              onSave={handleSave}
-              onLoad={() => setBrowserOpen(true)}
-              onDeploy={handleDeploy}
-              onDestroy={handleDestroy}
-              onExport={handleExport}
-              onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
-              onScenarios={!readOnly ? () => setScenariosOpen(true) : undefined}
-              isBusy={busy}
-              readOnly={readOnly}
-            />
-            <button
-              className="control-btn"
-              onClick={handleLogout}
-              style={{ marginLeft: 8 }}
-              title="Logout"
-            >
-              Logout
-            </button>
+
+            {/* Right: deployment operations + logout */}
+            <div className="header-right">
+              {!readOnly && (
+                <>
+                  <button
+                    className="control-btn btn-deploy"
+                    onClick={handleDeploy}
+                    disabled={busy || !backendId || deployStatus !== 'idle'}
+                    title={!backendId ? 'Save first to deploy' : 'Deploy to ContainerLab'}
+                  >
+                    Deploy
+                  </button>
+                  <button
+                    className="control-btn btn-destroy"
+                    onClick={handleDestroy}
+                    disabled={busy || (deployStatus !== 'deployed' && deployStatus !== 'error')}
+                    title="Destroy running network"
+                  >
+                    Destroy
+                  </button>
+                  <button
+                    className="control-btn btn-classroom"
+                    onClick={() => setClassroomOpen(true)}
+                    disabled={busy}
+                    title="Manage classroom sessions"
+                  >
+                    Classroom
+                  </button>
+                  <button
+                    className="control-btn btn-scenarios"
+                    onClick={() => setScenariosOpen(true)}
+                    disabled={busy}
+                    title="Manage attack scenarios"
+                  >
+                    Scenarios
+                  </button>
+                </>
+              )}
+              <button
+                className="control-btn"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                Logout
+              </button>
+            </div>
           </header>
 
           {/* Breadcrumb navigation */}
