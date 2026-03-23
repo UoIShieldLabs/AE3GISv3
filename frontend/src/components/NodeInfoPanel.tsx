@@ -25,6 +25,13 @@ const typeDisplayNames: Record<string, string> = {
   'workstation': 'Workstation',
 };
 
+function webUiPort(container: Container): number {
+  const raw = container.metadata?.webUiPort;
+  const parsed = raw ? Number(raw) : NaN;
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
+  return container.type === 'plc' ? 8080 : 80;
+}
+
 export function NodeInfoPanel({
   container,
   onClose,
@@ -175,7 +182,7 @@ export function NodeInfoPanel({
                 className="btn-terminal"
                 style={{ marginTop: '8px', background: 'rgba(0, 255, 159, 0.1)', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
                 onClick={() => {
-                  const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+                  const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}&port=${webUiPort(container)}`;
                   window.open(url, '_blank');
                 }}
               >

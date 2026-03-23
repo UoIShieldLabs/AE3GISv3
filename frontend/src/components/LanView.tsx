@@ -43,6 +43,13 @@ const typeColors: Record<ContainerType, string> = {
   'workstation': '#4466ff',
 };
 
+function webUiPort(container: Container): number {
+  const raw = container.metadata?.webUiPort;
+  const parsed = raw ? Number(raw) : NaN;
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
+  return container.type === 'plc' ? 8080 : 80;
+}
+
 interface LanViewProps {
   subnet: Subnet;
   siteId: string;
@@ -227,7 +234,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
       items.push({
         label: '🌐 Open Web UI',
         onClick: () => {
-          const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+          const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}&port=${webUiPort(container)}`;
           window.open(url, '_blank');
         },
       });
