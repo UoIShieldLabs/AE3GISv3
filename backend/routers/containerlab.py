@@ -65,6 +65,23 @@ def _validate_ws_token(token: str | None, topology_id: str, db: Session) -> bool
     return slot is not None and slot.topology_id == topology_id
 
 
+def _interactive_shell_command() -> list[str]:
+    """Prefer a richer interactive shell when the container provides one."""
+    return [
+        "sh",
+        "-lc",
+        (
+            "if command -v bash >/dev/null 2>&1; then "
+            "exec bash -il; "
+            "elif command -v ash >/dev/null 2>&1; then "
+            "exec ash -l; "
+            "else "
+            "exec sh -l; "
+            "fi"
+        ),
+    ]
+
+
 # ── Available Scripts ───────────────────────────────────────────────
 
 
@@ -242,7 +259,7 @@ async def exec_terminal(
     container_id: str,
     token: str | None = Query(default=None),
 ):
-    """Attach an interactive /bin/sh session inside a deployed container via PTY."""
+    """Attach an interactive shell session inside a deployed container via PTY."""
     db = next(get_db())
     proc = None
     master_fd = -1
@@ -271,8 +288,15 @@ async def exec_terminal(
         # Set a sensible default terminal size (client will send a resize immediately)
         fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
         try:
-                proc = await asyncio.create_subprocess_exec(
-                "sudo", "docker", "exec", "-it", docker_name, "/bin/sh",
+            proc = await asyncio.create_subprocess_exec(
+                "sudo",
+                "docker",
+                "exec",
+                "-e",
+                "TERM=xterm-256color",
+                "-it",
+                docker_name,
+                *_interactive_shell_command(),
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
