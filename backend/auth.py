@@ -26,6 +26,7 @@ class StudentIdentity:
 
 
 AuthIdentity = InstructorIdentity | StudentIdentity
+PROXY_AUTH_COOKIE = "ae3gis_proxy_token"
 
 
 def _parse_bearer(authorization: str | None) -> str | None:
@@ -57,7 +58,10 @@ def require_any_auth(
         token = request.query_params.get("token")
 
     if not token:
-        raise HTTPException(401, "Authorization header or token query parameter required")
+        token = request.cookies.get(PROXY_AUTH_COOKIE)
+
+    if not token:
+        raise HTTPException(401, "Authorization header, token query parameter, or auth cookie required")
 
     if token == INSTRUCTOR_TOKEN:
         return InstructorIdentity()
