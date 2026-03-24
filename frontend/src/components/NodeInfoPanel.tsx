@@ -25,13 +25,19 @@ const typeDisplayNames: Record<string, string> = {
   'switch': 'Network Switch',
   'router': 'Router',
   'workstation': 'Workstation',
+  'hmi': 'HMI',
 };
+
+function isHmiContainer(container: Container): boolean {
+  return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));
+}
 
 function webUiPort(container: Container): number {
   const raw = container.metadata?.webUiPort;
   const parsed = raw ? Number(raw) : NaN;
   if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
-  return container.type === 'plc' ? 8080 : 80;
+  if (container.type === 'plc' || isHmiContainer(container)) return 8080;
+  return 80;
 }
 
 export function NodeInfoPanel({
@@ -190,12 +196,14 @@ export function NodeInfoPanel({
                 Capture Traffic
               </button>
             )}
-            {['web-server', 'plc'].includes(container.type) && auth?.token && topologyId && (
+            {(container.type === 'web-server' || container.type === 'plc' || container.type === 'hmi' || isHmiContainer(container)) && auth?.token && topologyId && (
               <button
                 className="btn-terminal"
                 style={{ marginTop: '8px', background: 'rgba(0, 255, 159, 0.1)', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
                 onClick={() => {
-                  const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}&port=${webUiPort(container)}`;
+                  const base = `/api/proxy/${topologyId}/${container.id}`;
+                  const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '';
+                  const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
                   window.open(url, '_blank');
                 }}
               >

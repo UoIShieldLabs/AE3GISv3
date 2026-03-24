@@ -7,7 +7,8 @@ export type ContainerType =
   | 'firewall'
   | 'switch'
   | 'router'
-  | 'workstation';
+  | 'workstation'
+  | 'hmi';
 
 export interface Container {
   id: string;

@@ -28,6 +28,7 @@ const TYPE_COLORS: Record<ContainerType, string> = {
   'file-server': '#00d4ff',
   'plc':         '#ffaa00',
   'workstation': '#4466ff',
+  'hmi':         '#33ccff',
 };
 
 const TYPE_LABELS: Record<ContainerType, string> = {
@@ -38,6 +39,7 @@ const TYPE_LABELS: Record<ContainerType, string> = {
   'file-server': 'FS',
   'plc':         'PLC',
   'workstation': 'WS',
+  'hmi':         'HMI',
 };
 
 type SubnetZone = 'ot' | 'dmz' | 'it';
@@ -48,7 +50,7 @@ function classifySubnetZone(containers: Container[]): SubnetZone {
   if (types.has('plc')) return 'ot';
   // DMZ: server-only subnets (historian, jumpbox, etc.) with no end-user workstations
   const hasServers = types.has('web-server') || types.has('file-server');
-  const hasWorkstations = types.has('workstation');
+  const hasWorkstations = types.has('workstation') || types.has('hmi');
   if (hasServers && !hasWorkstations) return 'dmz';
   // IT: everything else (workstation subnets, mixed IT subnets)
   return 'it';
@@ -57,7 +59,7 @@ function classifySubnetZone(containers: Container[]): SubnetZone {
 function assignPurdueLevel(zone: SubnetZone, containerType: ContainerType): number {
   if (zone === 'ot') {
     if (containerType === 'plc') return 1;
-    if (containerType === 'workstation') return 2;
+    if (containerType === 'workstation' || containerType === 'hmi') return 2;
     return 3;
   }
   if (zone === 'dmz') return 3.5;

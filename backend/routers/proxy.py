@@ -5,7 +5,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from auth import AuthIdentity, PROXY_AUTH_COOKIE, require_any_auth, validate_student_topology
@@ -138,8 +138,30 @@ async def proxy_web_ui(
             
         topo_name = clab_manager.deployment_name(topo.id, topo.data)
         docker_name = f"clab-{topo_name}-{container_id}"
+        
+        # Detect if this is an HMI container and prepend /ScadaBR to path if needed
+        is_hmi = False
+        topo_data = topo.data if isinstance(topo.data, dict) else {}
+        for site in topo_data.get("sites", []):
+            for subnet in site.get("subnets", []):
+                for container in subnet.get("containers", []):
+                    if container.get("id") == container_id and container.get("type") == "hmi":
+                        is_hmi = True
+                        break
+            if is_hmi:
+                break
     finally:
         db.close() # Close DB connection prevent pool exhaustion during streaming
+
+    # For HMI containers, redirect root to /ScadaBR
+    if is_hmi and (not path or path == "/"):
+        redirect_url = f"/api/proxy/{topology_id}/{container_id}/ScadaBR"
+        if port:
+            redirect_url += f"?port={port}"
+        token = request.query_params.get("token")
+        if token:
+            redirect_url += f"{'&' if '?' in redirect_url else '?'}token={token}"
+        return RedirectResponse(url=redirect_url, status_code=307)
 
 
     cookie_port_raw = request.cookies.get(PROXY_PORT_COOKIE)
