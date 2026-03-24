@@ -7,6 +7,7 @@ interface RouterActionDialogProps {
   onClose: () => void;
   onOpenTerminal: () => void;
   onOpenFirewallRules: () => void;
+  onOpenWireshark?: () => void;
 }
 
 export function RouterActionDialog({
@@ -15,6 +16,7 @@ export function RouterActionDialog({
   onClose,
   onOpenTerminal,
   onOpenFirewallRules,
+  onOpenWireshark,
 }: RouterActionDialogProps) {
   return (
     <Dialog title="Router Actions" open={open} onClose={onClose} width={460}>
@@ -63,6 +65,25 @@ export function RouterActionDialog({
           >
             Firewall Rules
           </button>
+
+          {onOpenWireshark && (
+            <button
+              onClick={onOpenWireshark}
+              style={{
+                padding: '12px',
+                background: 'rgba(180, 77, 255, 0.08)',
+                border: '1px solid var(--neon-purple, #b44dff)',
+                color: 'var(--neon-purple, #b44dff)',
+                borderRadius: '4px',
+                fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                cursor: 'pointer',
+              }}
+            >
+              Capture Traffic
+            </button>
+          )}
         </div>
       )}
     </Dialog>

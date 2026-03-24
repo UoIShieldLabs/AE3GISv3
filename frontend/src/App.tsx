@@ -11,12 +11,17 @@ import { LanView } from './components/LanView';
 import { Breadcrumb } from './components/Breadcrumb';
 import { NodeInfoPanel } from './components/NodeInfoPanel';
 import { TerminalOverlay } from './components/TerminalOverlay';
+import { WiresharkOverlay } from './components/WiresharkOverlay';
 import { ControlBar } from './components/ControlBar';
 import { TopologyBrowser } from './components/TopologyBrowser';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassroomPanel } from './components/ClassroomPanel';
 import { ScenarioPanel } from './components/ScenarioPanel';
+<<<<<<< HEAD
 import { PurdueView } from './components/PurdueView';
+=======
+import { AiChatPanel } from './components/AiChatPanel';
+>>>>>>> brax/working2
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
@@ -57,6 +62,9 @@ function App() {
   const [terminalSessions, setTerminalSessions] = useState<Container[]>([]);
   const [activeTerminalId, setActiveTerminalId] = useState<string | null>(null);
   const [terminalMinimized, setTerminalMinimized] = useState(false);
+  const [wiresharkSessions, setWiresharkSessions] = useState<Container[]>([]);
+  const [activeWiresharkId, setActiveWiresharkId] = useState<string | null>(null);
+  const [wiresharkMinimized, setWiresharkMinimized] = useState(false);
   const [routerActionContainer, setRouterActionContainer] = useState<Container | null>(null);
   const [firewallContainer, setFirewallContainer] = useState<Container | null>(null);
   const [firewallRulesByContainer, setFirewallRulesByContainer] = useState<Record<string, FirewallRule[]>>({});
@@ -65,7 +73,11 @@ function App() {
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
   const [scenariosOpen, setScenariosOpen] = useState(false);
+<<<<<<< HEAD
   const [purdueOpen, setPurdueOpen] = useState(false);
+=======
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+>>>>>>> brax/working2
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -88,6 +100,39 @@ function App() {
       return next;
     });
   }, []);
+
+  const openWireshark = useCallback(async (container: Container) => {
+    if (!backendId) return;
+    // Start capture session on backend
+    try {
+      await api.startCapture(backendId, container.id);
+    } catch (err) {
+      console.error('Failed to start capture:', err);
+      return;
+    }
+    setWiresharkSessions(prev => {
+      if (prev.find(c => c.id === container.id)) {
+        setActiveWiresharkId(container.id);
+        return prev;
+      }
+      setActiveWiresharkId(container.id);
+      return [...prev, container];
+    });
+    setWiresharkMinimized(false);
+  }, [backendId]);
+
+  const closeWireshark = useCallback(async (containerId: string) => {
+    if (backendId) {
+      try { await api.stopCapture(backendId, containerId); } catch { /* ignore */ }
+    }
+    setWiresharkSessions(prev => {
+      const next = prev.filter(c => c.id !== containerId);
+      setActiveWiresharkId(curr =>
+        curr === containerId ? (next.length > 0 ? next[next.length - 1].id : null) : curr
+      );
+      return next;
+    });
+  }, [backendId]);
   const [busy, setBusy] = useState(false);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -471,6 +516,7 @@ function App() {
                 </div>
               </div>
             </div>
+<<<<<<< HEAD
 
             {/* Right: deployment operations + logout */}
             <div className="header-right">
@@ -518,6 +564,40 @@ function App() {
                 Logout
               </button>
             </div>
+=======
+            <ControlBar
+              backendId={backendId}
+              backendName={backendName}
+              deployStatus={deployStatus}
+              dirty={dirty}
+              onNew={handleNew}
+              onSave={handleSave}
+              onLoad={() => setBrowserOpen(true)}
+              onDeploy={handleDeploy}
+              onDestroy={handleDestroy}
+              onExport={handleExport}
+              onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
+              onScenarios={!readOnly ? () => setScenariosOpen(true) : undefined}
+              isBusy={busy}
+              readOnly={readOnly}
+            />
+            <button
+              className="control-btn btn-ai"
+              onClick={() => setAiChatOpen(prev => !prev)}
+              style={{ marginLeft: 8 }}
+              title="AI Assistant"
+            >
+              AI
+            </button>
+            <button
+              className="control-btn"
+              onClick={handleLogout}
+              style={{ marginLeft: 8 }}
+              title="Logout"
+            >
+              Logout
+            </button>
+>>>>>>> brax/working2
           </header>
 
           {/* Breadcrumb navigation */}
@@ -569,10 +649,12 @@ function App() {
               container={activeContainer}
               onClose={() => setSelectedContainer(null)}
               onOpenTerminal={openTerminal}
+              onOpenWireshark={openWireshark}
               siteId={effectiveNav.siteId}
               subnetId={effectiveNav.subnetId}
               topologyId={backendId}
               readOnly={readOnly}
+              deployStatus={deployStatus}
             />
           </div>
 
@@ -588,6 +670,19 @@ function App() {
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
               minimized={terminalMinimized}
               onMinimizedChange={setTerminalMinimized}
+            />
+          )}
+
+          {/* Wireshark capture panel */}
+          {wiresharkSessions.length > 0 && activeWiresharkId && (
+            <WiresharkOverlay
+              sessions={wiresharkSessions}
+              activeId={activeWiresharkId}
+              onActivate={setActiveWiresharkId}
+              onClose={closeWireshark}
+              backendId={backendId}
+              minimized={wiresharkMinimized}
+              onMinimizedChange={setWiresharkMinimized}
             />
           )}
 
@@ -607,6 +702,11 @@ function App() {
               setRouterActionContainer(null);
               setFirewallError(null);
             }}
+            onOpenWireshark={deployStatus === 'deployed' ? () => {
+              if (!routerActionContainer) return;
+              openWireshark(routerActionContainer);
+              setRouterActionContainer(null);
+            } : undefined}
           />
 
           {/* Firewall rules manager */}
@@ -656,11 +756,19 @@ function App() {
             />
           )}
 
+<<<<<<< HEAD
           {/* Purdue Model view (all roles) */}
           <PurdueView
             open={purdueOpen}
             onClose={() => setPurdueOpen(false)}
             topology={topology}
+=======
+          {/* AI Chat panel */}
+          <AiChatPanel
+            open={aiChatOpen}
+            onClose={() => setAiChatOpen(false)}
+            topologyId={backendId}
+>>>>>>> brax/working2
           />
         </div>
       </TopologyDispatchContext.Provider>
