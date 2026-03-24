@@ -17,11 +17,8 @@ import { TopologyBrowser } from './components/TopologyBrowser';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassroomPanel } from './components/ClassroomPanel';
 import { ScenarioPanel } from './components/ScenarioPanel';
-<<<<<<< HEAD
 import { PurdueView } from './components/PurdueView';
-=======
 import { AiChatPanel } from './components/AiChatPanel';
->>>>>>> brax/working2
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
 import * as api from './api/client';
@@ -73,11 +70,8 @@ function App() {
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
   const [scenariosOpen, setScenariosOpen] = useState(false);
-<<<<<<< HEAD
   const [purdueOpen, setPurdueOpen] = useState(false);
-=======
   const [aiChatOpen, setAiChatOpen] = useState(false);
->>>>>>> brax/working2
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -516,7 +510,6 @@ function App() {
                 </div>
               </div>
             </div>
-<<<<<<< HEAD
 
             {/* Right: deployment operations + logout */}
             <div className="header-right">
@@ -557,6 +550,13 @@ function App() {
                 </>
               )}
               <button
+                className="control-btn btn-ai"
+                onClick={() => setAiChatOpen(prev => !prev)}
+                title="AI Assistant"
+              >
+                AI
+              </button>
+              <button
                 className="control-btn"
                 onClick={handleLogout}
                 title="Logout"
@@ -564,40 +564,6 @@ function App() {
                 Logout
               </button>
             </div>
-=======
-            <ControlBar
-              backendId={backendId}
-              backendName={backendName}
-              deployStatus={deployStatus}
-              dirty={dirty}
-              onNew={handleNew}
-              onSave={handleSave}
-              onLoad={() => setBrowserOpen(true)}
-              onDeploy={handleDeploy}
-              onDestroy={handleDestroy}
-              onExport={handleExport}
-              onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
-              onScenarios={!readOnly ? () => setScenariosOpen(true) : undefined}
-              isBusy={busy}
-              readOnly={readOnly}
-            />
-            <button
-              className="control-btn btn-ai"
-              onClick={() => setAiChatOpen(prev => !prev)}
-              style={{ marginLeft: 8 }}
-              title="AI Assistant"
-            >
-              AI
-            </button>
-            <button
-              className="control-btn"
-              onClick={handleLogout}
-              style={{ marginLeft: 8 }}
-              title="Logout"
-            >
-              Logout
-            </button>
->>>>>>> brax/working2
           </header>
 
           {/* Breadcrumb navigation */}
@@ -756,19 +722,18 @@ function App() {
             />
           )}
 
-<<<<<<< HEAD
           {/* Purdue Model view (all roles) */}
           <PurdueView
             open={purdueOpen}
             onClose={() => setPurdueOpen(false)}
             topology={topology}
-=======
+          />
+
           {/* AI Chat panel */}
           <AiChatPanel
             open={aiChatOpen}
             onClose={() => setAiChatOpen(false)}
             topologyId={backendId}
->>>>>>> brax/working2
           />
         </div>
       </TopologyDispatchContext.Provider>
