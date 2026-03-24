@@ -34,6 +34,9 @@ services:
       - AE3GIS_DB_PATH=/app/data/ae3gis.db
       - AE3GIS_CLAB_WORKDIR=${PWD}/backend/clab-workdir
       - AE3GIS_HOST_SCRIPTS_DIR=${PWD}/backend/scripts
+      - AE3GIS_LLM_BASE_URL=${AE3GIS_LLM_BASE_URL:-http://localhost:11434/v1}
+      - AE3GIS_LLM_API_KEY=${AE3GIS_LLM_API_KEY:-ollama}
+      - AE3GIS_LLM_MODEL=${AE3GIS_LLM_MODEL:-qwen2.5:7b}
     restart: unless-stopped
     privileged: true
 

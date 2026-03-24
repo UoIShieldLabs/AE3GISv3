@@ -10,7 +10,7 @@ import struct
 import termios
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from auth import (
@@ -23,7 +23,7 @@ from config import INSTRUCTOR_TOKEN
 from database import get_db
 from models import StudentSlot, Topology
 from schemas import FirewallRulesResponse, FirewallRulesUpdate
-from services import clab_generator, clab_manager
+from services import capture_manager, clab_generator, clab_manager
 
 log = logging.getLogger(__name__)
 
@@ -188,6 +188,8 @@ async def destroy(
     topo = _get_topo(topology_id, db)
 
     try:
+        # Stop any active capture sessions before destroying containers
+        await capture_manager.stop_all_for_topology(topology_id)
         output = await clab_manager.destroy(topology_id)
         topo.status = "idle"
         db.commit()
@@ -572,3 +574,242 @@ async def put_firewall_rules(
         return {"rules": rules}
     except RuntimeError as exc:
         raise HTTPException(500, str(exc))
+
+
+# ── Packet Capture (Wireshark in browser) ─────────────────────────
+
+
+@router.post("/{topology_id}/capture/{container_id}/start")
+async def start_capture(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    validate_student_topology(identity, topology_id)
+    topo = _get_topo(topology_id, db)
+    if topo.status != "deployed":
+        raise HTTPException(409, "Topology is not deployed")
+    container = _find_container(topo, container_id)
+    if not container:
+        raise HTTPException(404, "Container not found")
+
+    topo_name = _topo_name(topo)
+    docker_name = f"clab-{topo_name}-{container_id}"
+
+    try:
+        session = await capture_manager.start_capture(topology_id, container_id, docker_name)
+        return {
+            "status": "started",
+            "port": session.port,
+            "url": f"/api/topologies/{topology_id}/capture/{container_id}/view/",
+        }
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc))
+
+
+@router.post("/{topology_id}/capture/{container_id}/stop")
+async def stop_capture_endpoint(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    validate_student_topology(identity, topology_id)
+    _get_topo(topology_id, db)
+    await capture_manager.stop_capture(topology_id, container_id)
+    return {"status": "stopped"}
+
+
+@router.get("/{topology_id}/capture/{container_id}/status")
+async def capture_status(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    validate_student_topology(identity, topology_id)
+    _get_topo(topology_id, db)
+    session = capture_manager.get_session(topology_id, container_id)
+    return {"active": session is not None, "port": session.port if session else None}
+
+
+@router.get("/{topology_id}/capture/{container_id}/download")
+async def capture_download_pcap(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    """Download the most recent capture file from the Wireshark GUI session."""
+    from fastapi.responses import Response
+
+    validate_student_topology(identity, topology_id)
+    topo = _get_topo(topology_id, db)
+    if topo.status != "deployed":
+        raise HTTPException(409, "Topology is not deployed")
+
+    try:
+        pcap_bytes, filename = await capture_manager.export_pcap(
+            topology_id, container_id,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(404, str(exc))
+
+    return Response(
+        content=pcap_bytes,
+        media_type="application/vnd.tcpdump.pcap",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.api_route(
+    "/{topology_id}/capture/{container_id}/view/{path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
+)
+async def capture_proxy_http(
+    topology_id: str,
+    container_id: str,
+    path: str,
+    request: Request,
+    token: str | None = Query(default=None),
+):
+    """Reverse-proxy HTTP requests to the Wireshark noVNC container."""
+    # Auth via query param, or fall back to token in the Referer URL
+    # (sub-resources loaded by the iframe won't have ?token= themselves)
+    effective_token = token
+    if not effective_token:
+        from urllib.parse import parse_qs, urlparse
+        referer = request.headers.get("referer", "")
+        qs = parse_qs(urlparse(referer).query)
+        effective_token = qs.get("token", [None])[0]
+
+    db = next(get_db())
+    try:
+        if not _validate_ws_token(effective_token, topology_id, db):
+            raise HTTPException(403, "Forbidden")
+    finally:
+        db.close()
+
+    session = capture_manager.get_session(topology_id, container_id)
+    if not session:
+        raise HTTPException(404, "No active capture session")
+
+    import httpx
+    from fastapi.responses import StreamingResponse
+
+    target_url = f"http://{session.target_ip}:{session.port}/{path}"
+    query_params = dict(request.query_params)
+    query_params.pop("token", None)
+
+    excluded_headers = ["host", "content-length"]
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in excluded_headers}
+
+    client = httpx.AsyncClient()
+    try:
+        req = client.build_request(
+            method=request.method,
+            url=target_url,
+            params=query_params,
+            headers=headers,
+            content=request.stream(),
+        )
+        response = await client.send(req, stream=True)
+        return StreamingResponse(
+            response.aiter_raw(),
+            status_code=response.status_code,
+            headers={k: v for k, v in response.headers.items() if k.lower() not in ["transfer-encoding"]},
+            background=response.aclose,
+        )
+    except httpx.RequestError as e:
+        await client.aclose()
+        raise HTTPException(502, f"Failed to proxy to Wireshark: {e}")
+
+
+@router.websocket("/{topology_id}/capture/{container_id}/view/{path:path}")
+async def capture_proxy_ws_view(
+    websocket: WebSocket,
+    topology_id: str,
+    container_id: str,
+    path: str,
+    token: str | None = Query(default=None),
+):
+    """WebSocket proxy for noVNC requests coming through the /view/ path."""
+    return await _capture_ws_proxy(websocket, topology_id, container_id, path, token)
+
+
+async def _capture_ws_proxy(
+    websocket: WebSocket,
+    topology_id: str,
+    container_id: str,
+    path: str,
+    token: str | None,
+):
+    """Shared WebSocket proxy logic for Wireshark noVNC."""
+    db = next(get_db())
+    try:
+        if not _validate_ws_token(token, topology_id, db):
+            await websocket.close(code=4003, reason="Forbidden")
+            return
+    finally:
+        db.close()
+
+    session = capture_manager.get_session(topology_id, container_id)
+    if not session:
+        await websocket.close(code=4004, reason="No active capture session")
+        return
+
+    await websocket.accept()
+
+    import websockets
+
+    ws_url = f"ws://{session.target_ip}:{session.port}/{path}"
+    try:
+        async with websockets.connect(ws_url, subprotocols=["binary"]) as upstream:
+            async def _forward_to_upstream():
+                try:
+                    while True:
+                        msg = await websocket.receive()
+                        if msg.get("type") == "websocket.disconnect":
+                            break
+                        if msg.get("bytes") is not None:
+                            await upstream.send(msg["bytes"])
+                        elif msg.get("text") is not None:
+                            await upstream.send(msg["text"])
+                except (WebSocketDisconnect, Exception):
+                    pass
+
+            async def _forward_from_upstream():
+                try:
+                    async for message in upstream:
+                        if isinstance(message, bytes):
+                            await websocket.send_bytes(message)
+                        else:
+                            await websocket.send_text(message)
+                except (WebSocketDisconnect, Exception):
+                    pass
+
+            tasks = [
+                asyncio.create_task(_forward_to_upstream()),
+                asyncio.create_task(_forward_from_upstream()),
+            ]
+            await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for t in tasks:
+                t.cancel()
+    except Exception as e:
+        log.warning("Capture WebSocket proxy error: %s", e)
+    finally:
+        with contextlib.suppress(Exception):
+            await websocket.close()
+
+
+@router.websocket("/ws/{topology_id}/capture/{container_id}/{path:path}")
+async def capture_proxy_ws(
+    websocket: WebSocket,
+    topology_id: str,
+    container_id: str,
+    path: str,
+    token: str | None = Query(default=None),
+):
+    """Reverse-proxy WebSocket connections to the Wireshark noVNC container."""
+    return await _capture_ws_proxy(websocket, topology_id, container_id, path, token)

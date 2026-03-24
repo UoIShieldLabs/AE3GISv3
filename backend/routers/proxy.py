@@ -91,7 +91,7 @@ def _rewrite_html_body(html: str, proxy_prefix: str) -> str:
 
 def _rewrite_location(location: str, request: Request, topology_id: str, container_id: str, port: int) -> str:
     parsed = urlsplit(location)
-    proxy_prefix = _proxy_prefix(request, topology_id, container_id)
+    path_prefix = f"/api/proxy/{topology_id}/{container_id}"
     token = request.query_params.get("token")
 
     def _with_proxy_params(path: str, query: str) -> str:
@@ -100,7 +100,7 @@ def _rewrite_location(location: str, request: Request, topology_id: str, contain
         if token:
             params.setdefault("token", token)
         encoded = urlencode(params)
-        return f"{proxy_prefix}{path}" + (f"?{encoded}" if encoded else "")
+        return f"{path_prefix}{path}" + (f"?{encoded}" if encoded else "")
 
     if parsed.scheme and parsed.netloc:
         return _with_proxy_params(parsed.path or "/", parsed.query)
@@ -195,13 +195,15 @@ async def proxy_web_ui(
     
     # 4. Proxy the request
     try:
-        # We need to strip host headers that might confuse the target server
-        excluded_headers = ["host", "content-length"]
-        headers = {k: v for k, v in request.headers.items() if k.lower() not in excluded_headers}
-        headers["x-forwarded-host"] = request.headers.get("host", "")
-        headers["x-forwarded-proto"] = request.url.scheme
-        headers["x-forwarded-prefix"] = f"/api/proxy/{topology_id}/{container_id}"
-        headers["x-forwarded-port"] = str(port)
+        # Only forward headers that the target app needs; strip auth,
+        # proxy, and host headers that confuse simple web servers like Werkzeug.
+        _pass_through = {"accept", "accept-language", "accept-encoding",
+                         "content-type", "user-agent", "referer", "origin",
+                         "cache-control", "pragma", "if-none-match",
+                         "if-modified-since", "cookie"}
+        headers = {k: v for k, v in request.headers.items()
+                   if k.lower() in _pass_through}
+        headers["host"] = f"{target_ip}:{port}"
         
         # We use httpx to stream the response back.
         # This handles large files (like images or video) without buffering everything in memory.
@@ -217,7 +219,7 @@ async def proxy_web_ui(
         response = await http_client.send(req, stream=True)
         
         response_headers = {
-            k: v for k, v in response.headers.items() if k.lower() not in ["transfer-encoding", "location", "content-length"]
+            k: v for k, v in response.headers.items() if k.lower() not in ["transfer-encoding", "location", "content-length", "set-cookie"]
         }
         location = response.headers.get("location")
         if location:
@@ -242,6 +244,18 @@ async def proxy_web_ui(
                 headers=response_headers,
                 background=response.aclose
             )
+        # Forward Set-Cookie headers from target, rewriting Path to proxy prefix
+        proxy_path = f"/api/proxy/{topology_id}/{container_id}"
+        for raw_cookie in response.headers.get_list("set-cookie"):
+            rewritten_cookie = re.sub(
+                r"(?i)(;\s*path=)/[^;]*",
+                rf"\g<1>{proxy_path}",
+                raw_cookie,
+            )
+            if not re.search(r"(?i);\s*path=", rewritten_cookie):
+                rewritten_cookie += f"; Path={proxy_path}"
+            proxy_response.headers.append("set-cookie", rewritten_cookie)
+
         token = request.query_params.get("token") or request.cookies.get(PROXY_AUTH_COOKIE)
         if token:
             proxy_response.set_cookie(
@@ -249,14 +263,14 @@ async def proxy_web_ui(
                 value=token,
                 httponly=True,
                 samesite="lax",
-                path=f"/api/proxy/{topology_id}/{container_id}",
+                path=proxy_path,
             )
         proxy_response.set_cookie(
             key=PROXY_PORT_COOKIE,
             value=str(port),
             httponly=True,
             samesite="lax",
-            path=f"/api/proxy/{topology_id}/{container_id}",
+            path=proxy_path,
         )
         return proxy_response
         

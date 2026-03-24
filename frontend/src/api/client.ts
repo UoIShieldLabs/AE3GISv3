@@ -303,6 +303,88 @@ export function executePhaseBatch(
   );
 }
 
+// ── AI Chat ─────────────────────────────────────────────────────
+
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AiToolResult {
+  tool: string;
+  args: Record<string, unknown>;
+  result: string;
+}
+
+export interface AiChatResponse {
+  reply: string;
+  tool_results: AiToolResult[] | null;
+}
+
+const AI_BASE = '/api/ai';
+
+export function aiChat(
+  topologyId: string,
+  messages: AiChatMessage[],
+  signal?: AbortSignal,
+): Promise<AiChatResponse> {
+  return request<AiChatResponse>(`${AI_BASE}/chat`, {
+    method: 'POST',
+    signal,
+    ...json({ topology_id: topologyId, messages }),
+  });
+}
+
+export function aiHealth(): Promise<{ status: string; model?: string; error?: string }> {
+  return request(`${AI_BASE}/health`);
+}
+
+// ── Packet Capture (Wireshark) ───────────────────────────────────
+
+export function startCapture(
+  topologyId: string,
+  containerId: string,
+): Promise<{ status: string; url: string }> {
+  return request(`${BASE}/${topologyId}/capture/${containerId}/start`, { method: 'POST' });
+}
+
+export function stopCapture(
+  topologyId: string,
+  containerId: string,
+): Promise<{ status: string }> {
+  return request(`${BASE}/${topologyId}/capture/${containerId}/stop`, { method: 'POST' });
+}
+
+export function getCaptureStatus(
+  topologyId: string,
+  containerId: string,
+): Promise<{ active: boolean; port?: number }> {
+  return request(`${BASE}/${topologyId}/capture/${containerId}/status`);
+}
+
+export async function downloadPcap(
+  topologyId: string,
+  containerId: string,
+): Promise<void> {
+  const url = `${BASE}/${topologyId}/capture/${containerId}/download`;
+  const headers: Record<string, string> = {};
+  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || `Download failed (${resp.status})`);
+  }
+  const blob = await resp.blob();
+  const disposition = resp.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] || 'capture.pcapng';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 // ── Presets ──────────────────────────────────────────────────────
 
 export interface PresetSummary {
