@@ -140,6 +140,19 @@ export async function importTopology(name: string, file: File): Promise<Topology
   return res.json();
 }
 
+export async function importJsonTopology(file: File): Promise<TopologySummary> {
+  const form = new FormData();
+  form.append('file', file);
+  const headers: Record<string, string> = {};
+  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  const res = await fetch(`${BASE}/import-json`, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
 // ── ContainerLab ───────────────────────────────────────────────────
 
 export function deployTopology(id: string): Promise<{ status: string; output: string }> {
