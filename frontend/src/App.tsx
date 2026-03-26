@@ -734,6 +734,10 @@ function App() {
             open={aiChatOpen}
             onClose={() => setAiChatOpen(false)}
             topologyId={backendId}
+            onTopologyAction={(action) => {
+              // Reload the topology (created or modified)
+              void handleLoad(action.topology_id);
+            }}
           />
         </div>
       </TopologyDispatchContext.Provider>

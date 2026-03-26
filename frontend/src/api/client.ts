@@ -316,15 +316,22 @@ export interface AiToolResult {
   result: string;
 }
 
+export interface AiTopologyAction {
+  action: 'created' | 'modified';
+  topology_id: string;
+  name: string;
+}
+
 export interface AiChatResponse {
   reply: string;
   tool_results: AiToolResult[] | null;
+  topology_action: AiTopologyAction | null;
 }
 
 const AI_BASE = '/api/ai';
 
 export function aiChat(
-  topologyId: string,
+  topologyId: string | null,
   messages: AiChatMessage[],
   signal?: AbortSignal,
 ): Promise<AiChatResponse> {

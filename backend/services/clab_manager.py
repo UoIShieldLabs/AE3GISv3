@@ -352,6 +352,22 @@ def _parse_chain_rules(output: str) -> list[dict[str, str]]:
     return rules
 
 
+async def pull_images(topology_data: dict) -> None:
+    """Pre-pull all unique container images so deploy doesn't fail on missing images."""
+    images: set[str] = set()
+    for container in _iter_containers(topology_data):
+        image = clab_generator.resolve_container_image(container, container.get("type", ""))
+        images.add(image)
+
+    for image in images:
+        log.info("Pulling image: %s", image)
+        rc, stdout, stderr = await _run(["sudo", "docker", "pull", image])
+        if rc != 0:
+            log.error("Failed to pull image %s: %s", image, stderr.strip())
+            raise RuntimeError(f"Failed to pull image '{image}': {stderr.strip()}")
+        log.info("Pulled image: %s", image)
+
+
 async def deploy(topology_id: str) -> str:
     """Deploy a topology. Returns containerlab stdout."""
     path = _yaml_path(topology_id)

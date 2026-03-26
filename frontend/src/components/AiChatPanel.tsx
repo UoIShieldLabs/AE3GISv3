@@ -1,22 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
-import { aiChat, type AiChatMessage, type AiToolResult } from '../api/client';
+import { aiChat, type AiChatMessage, type AiToolResult, type AiTopologyAction } from '../api/client';
 import './AiChatPanel.css';
 
 interface AiChatPanelProps {
   open: boolean;
   onClose: () => void;
   topologyId: string | null;
+  onTopologyAction?: (action: AiTopologyAction) => void;
 }
 
 interface ChatEntry {
   role: 'user' | 'assistant';
   content: string;
   toolResults?: AiToolResult[];
+  topologyAction?: AiTopologyAction;
   error?: boolean;
 }
 
-export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
+export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiChatPanelProps) {
   const auth = useAuth();
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [input, setInput] = useState('');
@@ -56,7 +58,7 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading || !topologyId) return;
+    if (!text || loading) return;
 
     const userEntry: ChatEntry = { role: 'user', content: text };
     setMessages(prev => [...prev, userEntry]);
@@ -79,8 +81,12 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
           role: 'assistant',
           content: resp.reply,
           toolResults: resp.tool_results ?? undefined,
+          topologyAction: resp.topology_action ?? undefined,
         },
       ]);
+      if (resp.topology_action && onTopologyAction) {
+        onTopologyAction(resp.topology_action);
+      }
     } catch (err) {
       if (controller.signal.aborted) {
         setMessages(prev => [
@@ -137,7 +143,7 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
       <div className="ai-chat-messages">
         {messages.length === 0 && (
           <div className="ai-chat-empty">
-            {!topologyId ? (
+            {auth.role === 'student' && !topologyId ? (
               <p>Save or load a topology first to start chatting.</p>
             ) : auth.role === 'student' ? (
               <>
@@ -153,10 +159,10 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
               <>
                 <p>I can help you manage your topology:</p>
                 <ul>
+                  <li>"Create a topology with a corporate LAN and DMZ"</li>
+                  <li>"Add a SCADA subnet with 2 PLCs and an HMI"</li>
                   <li>"Describe this network for a lab handout"</li>
-                  <li>"Add a static route on router-1 to reach 10.0.2.0/24"</li>
                   <li>"Run a ping from workstation-1 to the server"</li>
-                  <li>"Block SSH traffic on the firewall"</li>
                 </ul>
               </>
             )}
@@ -179,6 +185,13 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
                 </span>
               ))}
             </div>
+            {msg.topologyAction && (
+              <div className="ai-chat-topo-action">
+                {msg.topologyAction.action === 'created'
+                  ? `New topology "${msg.topologyAction.name}" created.`
+                  : `Topology "${msg.topologyAction.name}" updated.`}
+              </div>
+            )}
             {msg.toolResults && msg.toolResults.length > 0 && (
               <div className="ai-chat-tools">
                 <button
@@ -224,13 +237,15 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            !topologyId
+            auth.role === 'student' && !topologyId
               ? 'Load a topology first...'
               : loading
                 ? 'Waiting for response...'
-                : 'Ask about your network...'
+                : topologyId
+                  ? 'Ask about your network...'
+                  : 'Describe a topology to generate...'
           }
-          disabled={!topologyId || loading}
+          disabled={(auth.role === 'student' && !topologyId) || loading}
           rows={1}
         />
         {loading ? (
@@ -244,7 +259,7 @@ export function AiChatPanel({ open, onClose, topologyId }: AiChatPanelProps) {
           <button
             className="ai-chat-send"
             onClick={handleSend}
-            disabled={!input.trim() || !topologyId}
+            disabled={!input.trim() || (auth.role === 'student' && !topologyId)}
           >
             Send
           </button>
