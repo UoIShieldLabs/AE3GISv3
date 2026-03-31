@@ -96,6 +96,7 @@ function allContainersWithContext(topology: TopologyData): ContainerWithContext[
 /** Map from container type to which script directory gets mounted */
 const SCRIPT_TYPE_MAP: Record<ContainerType, string> = {
   'workstation': 'workstation',
+  'hmi': 'workstation',
   'web-server': 'server',
   'file-server': 'server',
   'plc': 'server',

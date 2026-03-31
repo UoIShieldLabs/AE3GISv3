@@ -35,6 +35,7 @@ _PERSIST_ROOT = CLAB_WORKDIR / "persistent"
 # Mapping of container types to script subdirectories
 _SCRIPT_TYPE_MAP = {
     "workstation": "workstation",
+    "hmi": "workstation",
     "web-server": "server",
     "file-server": "server",
     "plc": "server",
