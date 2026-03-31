@@ -44,6 +44,8 @@ Your capabilities:
 - Run any command on deployed containers (configure routes, firewalls, interfaces, services)
 - Analyze network paths and connectivity
 - Generate descriptions of topologies for documentation
+- Generate entirely new topologies from natural language descriptions
+- Modify existing topologies based on instructions
 
 CRITICAL RULES:
 1. Use the tool_calls mechanism to call tools. NEVER write tool calls as JSON text.
@@ -51,7 +53,13 @@ CRITICAL RULES:
 3. Do NOT repeat or list the topology information — you already have it in context.
 4. Only call tools that are necessary. If the user asks you to run a command, just call run_command — do NOT also call get_topology_summary or get_container_details unless needed.
 5. Keep responses SHORT. Execute the action, report the result, done.
-6. For destructive operations, confirm before executing."""
+6. For destructive operations, confirm before executing.
+
+TOPOLOGY GENERATION/MODIFICATION WORKFLOW:
+1. When the user asks to create or modify a topology, call generate_topology or modify_topology.
+2. Present the summary preview to the user and ask for confirmation.
+3. ONLY after the user confirms, call save_topology with the pending_id.
+4. Never call save_topology without explicit user confirmation."""
 
 # ── Request/Response models ────────────────────────────────────────
 
@@ -62,13 +70,20 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    topology_id: str
+    topology_id: str | None = None
     messages: list[ChatMessage]
+
+
+class TopologyAction(BaseModel):
+    action: str  # "created" or "modified"
+    topology_id: str
+    name: str
 
 
 class ChatResponse(BaseModel):
     reply: str
     tool_results: list[dict[str, Any]] | None = None
+    topology_action: TopologyAction | None = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────
@@ -115,27 +130,29 @@ async def chat(
     identity: AuthIdentity = Depends(require_any_auth),
     db: Session = Depends(get_db),
 ):
-    # Validate access
-    validate_student_topology(identity, req.topology_id)
-
-    # Load topology
-    topo = db.query(Topology).filter(Topology.id == req.topology_id).first()
-    if not topo:
-        raise HTTPException(404, "Topology not found")
-
-    topo_data = topo.data if isinstance(topo.data, dict) else {}
     is_instructor = isinstance(identity, InstructorIdentity)
+
+    # Load topology if provided
+    topo = None
+    topo_data: dict = {}
+    topo_id: str = ""
+    if req.topology_id:
+        validate_student_topology(identity, req.topology_id)
+        topo = db.query(Topology).filter(Topology.id == req.topology_id).first()
+        if not topo:
+            raise HTTPException(404, "Topology not found")
+        topo_data = topo.data if isinstance(topo.data, dict) else {}
+        topo_id = topo.id
 
     # Build system prompt with topology context
     system_prompt = INSTRUCTOR_SYSTEM_PROMPT if is_instructor else STUDENT_SYSTEM_PROMPT
-    system_prompt += f"\n\n## Current Topology\n"
-    system_prompt += f"Name: {topo.name} | Status: {topo.status}\n"
-
-    # Only inject the container list — NOT the full topology summary.
-    # The summary gives the model a big text block it tends to parrot back.
-    # The container list has all the info needed (name, id, type, ip, site/subnet).
-    container_list = _build_container_list(topo_data)
-    system_prompt += f"\n## Containers (use these names in tool calls)\n{container_list}"
+    if topo:
+        system_prompt += f"\n\n## Current Topology\n"
+        system_prompt += f"Name: {topo.name} | Status: {topo.status}\n"
+        container_list = _build_container_list(topo_data)
+        system_prompt += f"\n## Containers (use these names in tool calls)\n{container_list}"
+    else:
+        system_prompt += "\n\n## No topology loaded\nThe user has no topology open. You can help them generate a new one with the generate_topology tool."
 
     # Select tools based on role
     tools = llm_tools.INSTRUCTOR_TOOLS if is_instructor else llm_tools.STUDENT_TOOLS
@@ -147,6 +164,20 @@ async def chat(
 
     # Tool-calling loop
     all_tool_results = []
+    topology_action: TopologyAction | None = None
+
+    def _check_topology_action(result: str) -> None:
+        """Detect TOPOLOGY_CREATED / TOPOLOGY_MODIFIED markers from save_topology."""
+        nonlocal topology_action
+        if result.startswith("TOPOLOGY_CREATED:"):
+            parts = result.split(":", 2)
+            if len(parts) == 3:
+                topology_action = TopologyAction(action="created", topology_id=parts[1], name=parts[2])
+        elif result.startswith("TOPOLOGY_MODIFIED:"):
+            parts = result.split(":", 2)
+            if len(parts) == 3:
+                topology_action = TopologyAction(action="modified", topology_id=parts[1], name=parts[2])
+
     for _ in range(MAX_TOOL_ROUNDS):
         try:
             response = await llm_service.chat_completion(messages, tools=tools)
@@ -167,10 +198,15 @@ async def chat(
                 log.info("Tool call: %s(%s)", fn_name, args)
 
                 # Security: students can't use instructor-only tools
-                if not is_instructor and fn_name in ("exec_command", "describe_topology"):
+                if not is_instructor and fn_name in llm_tools.INSTRUCTOR_ONLY_TOOLS:
                     result = "Permission denied: this tool requires instructor access."
                 else:
-                    result = await llm_tools.execute_tool(fn_name, args, topo_data, topo.id, is_instructor=is_instructor)
+                    result = await llm_tools.execute_tool(
+                        fn_name, args, topo_data, topo_id,
+                        is_instructor=is_instructor, db=db,
+                    )
+
+                _check_topology_action(result)
 
                 all_tool_results.append({
                     "tool": fn_name,
@@ -193,10 +229,15 @@ async def chat(
             log.info("Detected %d text-embedded tool calls, executing them", len(text_tool_calls))
             tool_outputs = []
             for fn_name, args in text_tool_calls:
-                if not is_instructor and fn_name in ("exec_command", "describe_topology"):
+                if not is_instructor and fn_name in llm_tools.INSTRUCTOR_ONLY_TOOLS:
                     result = "Permission denied: this tool requires instructor access."
                 else:
-                    result = await llm_tools.execute_tool(fn_name, args, topo_data, topo.id, is_instructor=is_instructor)
+                    result = await llm_tools.execute_tool(
+                        fn_name, args, topo_data, topo_id,
+                        is_instructor=is_instructor, db=db,
+                    )
+
+                _check_topology_action(result)
 
                 all_tool_results.append({
                     "tool": fn_name,
@@ -219,6 +260,7 @@ async def chat(
         return ChatResponse(
             reply=content,
             tool_results=all_tool_results or None,
+            topology_action=topology_action,
         )
 
     # Exhausted tool rounds — ask the model for a final answer without tools
@@ -228,11 +270,13 @@ async def chat(
         return ChatResponse(
             reply=assistant_msg.get("content", "I was unable to complete the analysis."),
             tool_results=all_tool_results or None,
+            topology_action=topology_action,
         )
     except Exception:
         return ChatResponse(
             reply="I ran into an issue processing your request. Please try again.",
             tool_results=all_tool_results or None,
+            topology_action=topology_action,
         )
 
 

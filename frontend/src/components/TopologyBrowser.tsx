@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from './ui/Dialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { ImportClabDialog } from './dialogs/ImportClabDialog';
+import { ImportJsonDialog } from './dialogs/ImportJsonDialog';
 import { listTopologies, deleteTopology, listPresets, loadPreset, type TopologySummary, type PresetSummary } from '../api/client';
 import './TopologyBrowser.css';
 
@@ -27,6 +28,7 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TopologySummary | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [importJsonOpen, setImportJsonOpen] = useState(false);
 
   // Presets
   const [presets, setPresets] = useState<PresetSummary[]>([]);
@@ -64,6 +66,7 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
   const handleImported = (topo: TopologySummary) => {
     setTopologies((prev) => [topo, ...prev]);
     setImportOpen(false);
+    setImportJsonOpen(false);
   };
 
   const handleLoadPreset = async (presetId: string) => {
@@ -83,6 +86,23 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
     <>
       <Dialog title="Load Topology" open={open} onClose={onClose} width={520}>
         <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button
+            onClick={() => setImportJsonOpen(true)}
+            style={{
+              padding: '5px 12px',
+              background: 'rgba(0, 212, 255, 0.06)',
+              border: '1px solid rgba(0, 212, 255, 0.4)',
+              borderRadius: '4px',
+              color: 'var(--neon-cyan)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Import JSON
+          </button>
           <button
             onClick={() => setImportOpen(true)}
             style={{
@@ -236,6 +256,12 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
       <ImportClabDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
+        onImported={handleImported}
+      />
+
+      <ImportJsonDialog
+        open={importJsonOpen}
+        onClose={() => setImportJsonOpen(false)}
         onImported={handleImported}
       />
     </>

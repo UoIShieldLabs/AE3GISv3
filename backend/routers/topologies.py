@@ -63,6 +63,26 @@ async def import_topology(
     return topo
 
 
+@router.post("/import-json", response_model=TopologyRecord, status_code=201)
+async def import_json_topology(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
+    import json
+    content = (await file.read()).decode('utf-8')
+    try:
+        data = json.loads(content)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid JSON: {e}")
+    name = data.get('name') or file.filename.removesuffix('.json') or 'Imported Topology'
+    topo = Topology(name=name, data=data)
+    db.add(topo)
+    db.commit()
+    db.refresh(topo)
+    return topo
+
+
 @router.get("/{topology_id}", response_model=TopologyRecord)
 def get_topology(
     topology_id: str,
