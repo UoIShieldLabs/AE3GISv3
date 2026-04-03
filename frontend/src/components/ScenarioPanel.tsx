@@ -5,7 +5,7 @@ import { SelectField } from './ui/SelectField';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { generateId } from '../utils/idGenerator';
 import { executePhase, executePhaseBatch, listAvailableScripts, listSessions, type PhaseExecutionResult, type AvailableScript, type ClassSessionRecord, type BatchTopologyResult } from '../api/client';
-import type { TopologyData, Scenario, AttackPhase, ScriptExecution, Container, ContainerType } from '../data/sampleTopology';
+import type { TopologyData, Scenario, AttackPhase, ScriptExecution, Container } from '../data/sampleTopology';
 import type { TopologyAction } from '../store/topologyReducer';
 
 interface ScenarioPanelProps {
@@ -92,18 +92,6 @@ function allContainersWithContext(topology: TopologyData): ContainerWithContext[
   }
   return result;
 }
-
-/** Map from container type to which script directory gets mounted */
-const SCRIPT_TYPE_MAP: Record<ContainerType, string> = {
-  'workstation': 'workstation',
-  'hmi': 'workstation',
-  'web-server': 'server',
-  'file-server': 'server',
-  'plc': 'server',
-  'router': 'router',
-  'firewall': 'firewall',
-  'switch': 'switch',
-};
 
 // ── Component ───────────────────────────────────────────────────
 
@@ -542,9 +530,8 @@ export function ScenarioPanel({
                 {(() => {
                   const selectedEntry = containersCtx.find(e => e.container.id === execContainerId);
                   const selectedType = selectedEntry?.container.type;
-                  const scriptDir = selectedType ? SCRIPT_TYPE_MAP[selectedType] : undefined;
-                  const filteredScripts = scriptDir
-                    ? availableScripts.filter(s => s.scriptDir === scriptDir)
+                  const filteredScripts = selectedType
+                    ? availableScripts.filter(s => s.containerTypes.includes(selectedType))
                     : availableScripts;
                   const hasScripts = filteredScripts.length > 0;
                   return hasScripts ? (

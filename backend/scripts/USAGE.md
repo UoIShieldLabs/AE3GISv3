@@ -9,7 +9,8 @@ The `/backend/scripts` directory provides a centralized location for scripts tha
 ```
 backend/scripts/
 ├── workstation/          # Scripts for workstation containers
-├── server/               # Scripts for web-server, file-server, plc containers
+├── server/               # Scripts for web-server and file-server containers
+├── plc/                  # Scripts for PLC containers
 ├── router/               # Scripts for router containers
 ├── firewall/             # Scripts for firewall containers
 └── switch/               # Scripts for switch containers
@@ -22,7 +23,8 @@ backend/scripts/
 3. **Read-Only**: Containers cannot write to, modify, or delete scripts
 4. **Type Mapping**: 
    - `workstation` → `/scripts/workstation/`
-   - `web-server`, `file-server`, `plc` → `/scripts/server/`
+   - `web-server`, `file-server` → `/scripts/server/`
+   - `plc` → `/scripts/plc/`
    - `router` → `/scripts/router/`
    - `firewall` → `/scripts/firewall/`
    - `switch` → `/scripts/switch/`
@@ -50,6 +52,16 @@ bash /scripts/server/init.sh
 
 # Verify script is read-only
 touch /scripts/server/test.txt  # This will fail - permission denied
+```
+
+### In a PLC Container
+
+```bash
+# Start the PLC daemon
+bash /scripts/plc/plc_daemon.sh
+
+# Run the PLC manipulation phase script
+bash /scripts/plc/phase5_plc_manipulate.sh
 ```
 
 ### In a Router Container

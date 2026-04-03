@@ -38,7 +38,7 @@ _SCRIPT_TYPE_MAP = {
     "hmi": "workstation",
     "web-server": "server",
     "file-server": "server",
-    "plc": "server",
+    "plc": "plc",
     "router": "router",
     "firewall": "firewall",
     "switch": "switch",
