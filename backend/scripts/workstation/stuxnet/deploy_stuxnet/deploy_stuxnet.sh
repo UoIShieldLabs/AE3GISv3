@@ -1,10 +1,11 @@
 #!/bin/bash
-set -euo pipefail
+# set -euo pipefail
 
 PLC_URL=${1:-}
 STUXNET_FILE=${2:-motor_stuxnet_psm.py}
 PLC_USERNAME="openplc"
 PLC_PASSWORD="openplc"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COOKIE_JAR="$(mktemp /tmp/plc_cookie.XXXXXX)"
 trap 'rm -f "$COOKIE_JAR"' EXIT
 
@@ -26,7 +27,7 @@ if [[ ! "$PLC_URL" =~ /$ ]]; then
 fi
 
 if [[ ! "$STUXNET_FILE" =~ ^/ ]]; then
-    STUXNET_FILE="$STUXNET_FILE"
+    STUXNET_FILE="$SCRIPT_DIR/$STUXNET_FILE"
 fi
 
 extract_csrf_token() {

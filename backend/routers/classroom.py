@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import logging
-import shlex
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -268,10 +267,7 @@ async def batch_execute_phase(
                 continue
 
             docker_name = f"clab-{topo_name}-{container_id}"
-            quoted_script = shlex.quote(script)
-            quoted_args = " ".join(shlex.quote(a) for a in args)
-            shell_cmd = f"sh {quoted_script} {quoted_args}".strip()
-            cmd = ["sh", "-c", shell_cmd]
+            cmd = [script, *args]
             env = clab_manager.build_topology_env(topo_data, container_id)
             rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
             exec_results.append({

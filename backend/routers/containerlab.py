@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import pty
-import shlex
 import struct
 import termios
 from typing import Any
@@ -504,10 +503,7 @@ async def execute_phase(
             continue
 
         docker_name = f"clab-{topo_name}-{container_id}"
-        quoted_script = shlex.quote(script)
-        quoted_args = " ".join(shlex.quote(a) for a in args)
-        shell_cmd = f"sh {quoted_script} {quoted_args}".strip()
-        cmd = ["sh", "-c", shell_cmd]
+        cmd = [script, *args]
         env = clab_manager.build_topology_env(data, container_id)
         rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
         results.append({
