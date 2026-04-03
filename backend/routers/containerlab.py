@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import pty
-import shlex
+import signal
 import struct
 import termios
 from typing import Any
@@ -71,6 +71,9 @@ def _interactive_shell_command() -> list[str]:
         "sh",
         "-lc",
         (
+            "mkdir -p /tmp; "
+            "printf 'set horizontal-scroll-mode Off\nset enable-bracketed-paste Off\n' >/tmp/ae3gis.inputrc 2>/dev/null || true; "
+            "export INPUTRC=/tmp/ae3gis.inputrc; "
             "if command -v bash >/dev/null 2>&1; then "
             "exec bash -il; "
             "elif command -v ash >/dev/null 2>&1; then "
@@ -266,6 +269,16 @@ async def exec_terminal(
     db = next(get_db())
     proc = None
     master_fd = -1
+
+    def _resize_exec_pty(cols: int, rows: int) -> None:
+        nonlocal proc, master_fd
+        cols = max(1, int(cols))
+        rows = max(1, int(rows))
+        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+        if proc is not None and proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                proc.send_signal(signal.SIGWINCH)
+
     try:
         # minimal logging; token/topology errors are handled inline
         if not _validate_ws_token(token, topology_id, db):
@@ -289,7 +302,7 @@ async def exec_terminal(
         # `docker exec -it` sees a real TTY on its stdin and doesn't error out.
         master_fd, slave_fd = pty.openpty()
         # Set a sensible default terminal size (client will send a resize immediately)
-        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
+        _resize_exec_pty(80, 24)
         try:
             proc = await asyncio.create_subprocess_exec(
                 "sudo",
@@ -297,6 +310,10 @@ async def exec_terminal(
                 "exec",
                 "-e",
                 "TERM=xterm-256color",
+                "-e",
+                "COLUMNS=80",
+                "-e",
+                "LINES=24",
                 "-it",
                 docker_name,
                 *_interactive_shell_command(),
@@ -356,8 +373,7 @@ async def exec_terminal(
                         if isinstance(payload, dict) and payload.get('type') == 'resize':
                             cols = max(1, int(payload.get('cols', 80)))
                             rows = max(1, int(payload.get('rows', 24)))
-                            fcntl.ioctl(master_fd, termios.TIOCSWINSZ,
-                                        struct.pack('HHHH', rows, cols, 0, 0))
+                            _resize_exec_pty(cols, rows)
                             continue
                     except (json.JSONDecodeError, TypeError, ValueError):
                         pass
@@ -504,10 +520,7 @@ async def execute_phase(
             continue
 
         docker_name = f"clab-{topo_name}-{container_id}"
-        quoted_script = shlex.quote(script)
-        quoted_args = " ".join(shlex.quote(a) for a in args)
-        shell_cmd = f"sh {quoted_script} {quoted_args}".strip()
-        cmd = ["sh", "-c", shell_cmd]
+        cmd = [script, *args]
         env = clab_manager.build_topology_env(data, container_id)
         rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
         results.append({
