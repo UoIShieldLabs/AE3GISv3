@@ -33,6 +33,25 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
+  const fitAndSync = useCallback(() => {
+    const term = termRef.current;
+    const fitAddon = fitAddonRef.current;
+    const host = termDivRef.current;
+    if (!term || !fitAddon || !host) return;
+    if (host.offsetParent === null) return;
+
+    try {
+      fitAddon.fit();
+    } catch {
+      return;
+    }
+
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+    }
+  }, []);
+
   // Initialise xterm.js once on mount
   useEffect(() => {
     if (!termDivRef.current) return;
@@ -40,7 +59,8 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 14,
-      fontFamily: "'Share Tech Mono', 'Courier New', monospace",
+      // Use a local monospace stack so xterm measurements stay stable.
+      fontFamily: "'DejaVu Sans Mono', 'Liberation Mono', 'Consolas', 'Courier New', monospace",
       theme: {
         background: '#0c0c0c',
         foreground: '#d0d0d8',
@@ -53,33 +73,45 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(termDivRef.current);
-    try { fitAddon.fit(); } catch { /* ignore before layout */ }
 
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Auto-fit whenever the container div changes size (handles tab show/hide)
+    const scheduleFit = () => {
+      requestAnimationFrame(() => fitAndSync());
+    };
+
+    scheduleFit();
     const observer = new ResizeObserver(() => {
-      try { fitAddon.fit(); } catch { /* ignore */ }
+      scheduleFit();
     });
     observer.observe(termDivRef.current);
+    window.addEventListener('resize', scheduleFit);
+
+    const fontSet = document.fonts;
+    fontSet?.ready.then(() => scheduleFit()).catch(() => {});
 
     return () => {
       observer.disconnect();
+      window.removeEventListener('resize', scheduleFit);
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, []);
+  }, [fitAndSync]);
 
   // Also fit on explicit active change (belt-and-suspenders for display:none transitions)
   useEffect(() => {
     if (!active) return;
-    const t = setTimeout(() => {
-      try { fitAddonRef.current?.fit(); } catch { /* ignore */ }
-    }, 0);
-    return () => clearTimeout(t);
-  }, [active]);
+    const t1 = window.setTimeout(() => fitAndSync(), 0);
+    const t2 = window.setTimeout(() => fitAndSync(), 50);
+    const t3 = window.setTimeout(() => fitAndSync(), 150);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [active, fitAndSync]);
 
   // WebSocket connection — reconnects when backend/container/status changes
   useEffect(() => {
@@ -123,11 +155,7 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
         wsRef.current = ws;
 
         ws.onopen = () => {
-          // Send current terminal dimensions so the PTY is sized correctly
-          if (termRef.current) {
-            const { cols, rows } = termRef.current;
-            ws.send(JSON.stringify({ type: 'resize', cols, rows }));
-          }
+          fitAndSync();
         };
 
         ws.onmessage = (ev: MessageEvent<string | ArrayBuffer | Blob>) => {
