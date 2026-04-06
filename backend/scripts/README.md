@@ -5,7 +5,8 @@ This directory contains scripts that containers can read and execute. Scripts ar
 ## Structure
 
 - `workstation/` - Scripts for workstation containers
-- `server/` - Scripts for server containers (web-server, file-server, etc.)
+- `server/` - Scripts for web-server and file-server containers
+- `plc/` - Scripts for PLC containers
 - `router/` - Scripts for router containers
 - `firewall/` - Scripts for firewall containers
 - `switch/` - Scripts for switch containers
@@ -15,12 +16,14 @@ This directory contains scripts that containers can read and execute. Scripts ar
 Scripts in these directories are automatically mounted into containers at `/scripts/{type}/` based on the container type. For example:
 
 - A `workstation` container will have `/scripts/workstation/` mounted and readable
+- A `plc` container will have `/scripts/plc/` mounted and readable
 - A `router` container will have `/scripts/router/` mounted and readable
 
 Containers can execute these scripts:
 ```bash
 /scripts/workstation/init.sh
 python /scripts/server/setup.py
+/scripts/plc/plc_daemon.sh
 ```
 
 ## Permissions
