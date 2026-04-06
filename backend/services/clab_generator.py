@@ -20,7 +20,7 @@ SCRIPTS_DIR = Path(os.environ.get("AE3GIS_HOST_SCRIPTS_DIR", str(Path(__file__).
 
 log = logging.getLogger(__name__)
 
-_IMAGE_ROUTER     = "frrouting/frr:latest"
+_IMAGE_ROUTER     = "b3nwilson/frr-ssh:latest"
 # Use a plain Linux image for switch containers. The previous OVS image
 # attempts to load host kernel modules on startup, which breaks on vanilla
 # installs where openvswitch is not present.
