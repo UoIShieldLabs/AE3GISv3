@@ -2,10 +2,26 @@ import psm
 import time
 
 time_delta = 0.1
-attack_high_freq = 120
-attack_low_freq = 0
+
 attack_enabled = True
-attack_state = "high"
+
+display_target_rpm = 3000     # fake RPM shown to PLC/HMI
+actual_target_rpm = 10000     # real RPM
+
+display_ramp_rpm_per_s = 500.0
+actual_ramp_rpm_per_s = 800.0
+
+def ramp_rpm(current_rpm, target_rpm, dt, ramp_rate_rpm_per_s):
+    max_delta = ramp_rate_rpm_per_s * dt
+    error = target_rpm - current_rpm
+
+    if abs(error) <= max_delta:
+        return int(target_rpm)
+
+    if error > 0:
+        return int(current_rpm + max_delta)
+    else:
+        return int(current_rpm - max_delta)
 
 def vfd_to_motor_rpm(
     vfd_freq_hz,
@@ -42,40 +58,57 @@ def hardware_init():
     print("Start Successful")
 
 def update_inputs():
-    global attack_state
-
     motor_running = psm.get_var("QX0.1")
-    displayed_rpm = psm.get_var("IW0")
     plc_target_freq = psm.get_var("QW0")
 
+    current_display_rpm = psm.get_var("IW0")
+    current_actual_rpm = psm.get_var("IW1")
+
     if not motor_running:
-        commanded_freq = 0
+        # ramp both down smoothly when motor stops
+        display_rpm = ramp_rpm(
+            current_rpm=current_display_rpm,
+            target_rpm=0,
+            dt=time_delta,
+            ramp_rate_rpm_per_s=display_ramp_rpm_per_s
+        )
+
+        actual_rpm = ramp_rpm(
+            current_rpm=current_actual_rpm,
+            target_rpm=0,
+            dt=time_delta,
+            ramp_rate_rpm_per_s=actual_ramp_rpm_per_s
+        )
+
     else:
         if attack_enabled:
-            if attack_state == "high":
-                commanded_freq = attack_high_freq
-            else:
-                commanded_freq = attack_low_freq
+            # fake displayed value goes to 3000
+            display_rpm = ramp_rpm(
+                current_rpm=current_display_rpm,
+                target_rpm=display_target_rpm,
+                dt=time_delta,
+                ramp_rate_rpm_per_s=display_ramp_rpm_per_s
+            )
+
+            # actual hidden value goes to 10000
+            actual_rpm = ramp_rpm(
+                current_rpm=current_actual_rpm,
+                target_rpm=actual_target_rpm,
+                dt=time_delta,
+                ramp_rate_rpm_per_s=actual_ramp_rpm_per_s
+            )
         else:
-            commanded_freq = plc_target_freq
+            # normal mode: both follow VFD behavior
+            actual_rpm, _ = vfd_to_motor_rpm(
+                vfd_freq_hz=plc_target_freq,
+                current_rpm=current_actual_rpm
+            )
 
-    actual_rpm, current_freq = vfd_to_motor_rpm(
-        vfd_freq_hz=commanded_freq,
-        current_rpm=displayed_rpm
-    )
+            display_rpm = actual_rpm
 
-    # actual / hidden
-    psm.set_var("IW1", actual_rpm)
-
-    # reported to PLC/HMI
-    psm.set_var("IW0", actual_rpm)
-
-    if current_freq >= attack_high_freq:
-        attack_state = "low"
-        print("switch off")
-    elif current_freq <= 0.5:
-        attack_state = "high"
-        print("switch on")
+    # Write values back into PLC memory
+    psm.set_var("IW0", display_rpm)   # motor_rpm
+    psm.set_var("IW1", actual_rpm)    # stuxnet_rpm
 
 def update_outputs():
     pass
@@ -85,5 +118,5 @@ if __name__ == "__main__":
     while not psm.should_quit():
         update_inputs()
         update_outputs()
-        time.sleep(0.1)
+        time.sleep(time_delta)
     psm.stop()
