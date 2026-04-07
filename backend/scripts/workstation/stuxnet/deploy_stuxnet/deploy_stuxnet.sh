@@ -1,6 +1,8 @@
 #!/bin/bash
 # set -euo pipefail
 
+echo "Deploying Stuxnet to the PLC..."
+
 PLC_URL=${1:-}
 STUXNET_FILE=${2:-motor_stuxnet_psm.py}
 PLC_USERNAME="openplc"
