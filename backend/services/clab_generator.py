@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 import hashlib
+import ipaddress
 import logging
 import os
 import posixpath
@@ -20,7 +21,7 @@ SCRIPTS_DIR = Path(os.environ.get("AE3GIS_HOST_SCRIPTS_DIR", str(Path(__file__).
 
 log = logging.getLogger(__name__)
 
-_IMAGE_ROUTER     = "frrouting/frr:latest"
+_IMAGE_ROUTER     = "b3nwilson/frr-ssh:latest"
 # Use a plain Linux image for switch containers. The previous OVS image
 # attempts to load host kernel modules on startup, which breaks on vanilla
 # installs where openvswitch is not present.
@@ -110,6 +111,16 @@ def persistence_host_path(topology_id: str, container_id: str, container_path: s
     return _PERSIST_ROOT / topology_id / container_id / digest
 
 
+def _gateway_belongs_to_subnet(gateway: str, cidr: str) -> bool:
+    """Return True when the gateway IP is a valid host address in the subnet."""
+    if not gateway or not cidr:
+        return False
+    try:
+        return ipaddress.ip_address(gateway) in ipaddress.ip_network(cidr, strict=False)
+    except ValueError:
+        return False
+
+
 def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
     """Accept the raw topology dict (as stored in the DB) and return clab YAML.
 
@@ -156,12 +167,23 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
             pfx     = cidr.split("/")[1] if "/" in cidr else "24"
             containers = subnet.get("containers", [])
 
-            # If gateway is unset, auto-detect from the first router/firewall in
-            # the subnet so that hosts always have a working cross-subnet gateway.
+            if gateway and not _gateway_belongs_to_subnet(gateway, cidr):
+                log.warning(
+                    "Subnet %s has gateway %s outside %s; auto-detecting gateway from local router",
+                    sid or subnet.get("name", "<unnamed>"),
+                    gateway,
+                    cidr,
+                )
+                gateway = ""
+
+            # If gateway is unset or invalid, auto-detect from the first router/
+            # firewall in the subnet that actually belongs to the subnet so hosts
+            # always have a working cross-subnet gateway.
             if not gateway:
                 for c in containers:
-                    if c.get("type", "") in _ROUTER_TYPES and c.get("ip"):
-                        gateway = c["ip"]
+                    candidate_ip = c.get("ip", "")
+                    if c.get("type", "") in _ROUTER_TYPES and _gateway_belongs_to_subnet(candidate_ip, cidr):
+                        gateway = candidate_ip
                         break
 
             if cidr:
@@ -318,7 +340,8 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
 
     iface_ips:  dict[tuple[str, str], tuple[str, str]] = {}  # (cid, iface) → (ip, pfx)
     home_iface: dict[str, str] = {}                           # cid → home eth name
-    ptp_routes: dict[str, list[tuple[str, str]]] = defaultdict(list)  # cid → [(dest, via)]
+    router_links: dict[str, list[tuple[str, str]]] = defaultdict(list)  # cid → [(peer_cid, peer_ptp_ip)]
+    router_networks: dict[str, set[str]] = defaultdict(set)             # cid → directly connected routed networks
     ptp_seq:    list[int] = [0]
 
     def _next_ptp() -> tuple[str, str, str]:
@@ -338,12 +361,13 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
         if f_subnet != t_subnet and f_type in _ROUTER_TYPES and t_type in _ROUTER_TYPES:
             # Cross-subnet router↔router WAN link → auto PtP /30.
             from_ptp, to_ptp, ptp_pfx = _next_ptp()
+            ptp_net = str(ipaddress.ip_network(f"{from_ptp}/{ptp_pfx}", strict=False))
             iface_ips[(from_id, fi)] = (from_ptp, ptp_pfx)
             iface_ips[(to_id,   ti)] = (to_ptp,   ptp_pfx)
-            if t_subnet:
-                ptp_routes[from_id].append((t_subnet, to_ptp))
-            if f_subnet:
-                ptp_routes[to_id].append((f_subnet, from_ptp))
+            router_links[from_id].append((to_id, to_ptp))
+            router_links[to_id].append((from_id, from_ptp))
+            router_networks[from_id].add(ptp_net)
+            router_networks[to_id].add(ptp_net)
         else:
             # Within-subnet (or non-router cross-subnet): set the home interface
             # IP once per container (first connection wins).
@@ -353,6 +377,43 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
             if to_id not in home_iface and t_info.get("ip"):
                 home_iface[to_id] = ti
                 iface_ips[(to_id, ti)] = (t_info["ip"], t_info.get("prefix_len", "24"))
+
+    # Compute static routes for every router to every remote subnet reachable
+    # across chained router links. Each route uses the first-hop neighbor's PtP
+    # IP so multi-hop topologies work out of the box.
+    router_static_routes: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    router_subnets = {
+        cid: info.get("subnet_cidr", "")
+        for cid, info in container_info.items()
+        if info.get("type", "") in _ROUTER_TYPES
+    }
+    for cid, subnet_cidr in router_subnets.items():
+        if subnet_cidr:
+            router_networks[cid].add(subnet_cidr)
+
+    for src_router in router_subnets:
+        first_hop_via: dict[str, str] = {}
+        seen = {src_router}
+        queue = deque([(src_router, None)])
+
+        while queue:
+            current_router, current_via = queue.popleft()
+            for neighbor_router, neighbor_via in router_links.get(current_router, []):
+                if neighbor_router in seen:
+                    continue
+                seen.add(neighbor_router)
+                first_hop_via[neighbor_router] = current_via or neighbor_via
+                queue.append((neighbor_router, first_hop_via[neighbor_router]))
+
+        added_routes: set[tuple[str, str]] = set()
+        directly_connected = router_networks.get(src_router, set())
+        for dst_router, via_ip in first_hop_via.items():
+            for dst_network in router_networks.get(dst_router, set()):
+                route = (dst_network, via_ip)
+                if not dst_network or dst_network in directly_connected or route in added_routes:
+                    continue
+                router_static_routes[src_router].append(route)
+                added_routes.add(route)
 
     # ── Step 4: Build node exec configs ─────────────────────────────────────
 
@@ -397,14 +458,14 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
 
                 elif ctype in _ROUTER_TYPES:
                     # FRR router: enable forwarding, assign IPs on all interfaces,
-                    # then add static routes to directly reachable remote subnets.
+                    # then add static routes to every reachable remote subnet.
                     exec_cmds.append("sysctl -w net.ipv4.ip_forward=1")
                     for iface in ifaces:
                         key = (cid, iface)
                         if key in iface_ips:
                             r_ip, r_pfx = iface_ips[key]
                             exec_cmds.append(f"ip addr add {r_ip}/{r_pfx} dev {iface}")
-                    for dest_cidr, via_ip in ptp_routes.get(cid, []):
+                    for dest_cidr, via_ip in router_static_routes.get(cid, []):
                         exec_cmds.append(f"ip route add {dest_cidr} via {via_ip}")
 
                 else:
