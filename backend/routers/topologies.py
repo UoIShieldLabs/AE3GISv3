@@ -75,8 +75,17 @@ async def import_json_topology(
         data = json.loads(content)
     except Exception as e:
         raise HTTPException(400, f"Invalid JSON: {e}")
-    name = data.get('name') or file.filename.removesuffix('.json') or 'Imported Topology'
-    topo = Topology(name=name, data=data)
+    if not isinstance(data, dict):
+        raise HTTPException(400, "Invalid JSON: expected a JSON object")
+
+    topology_data = data.get('topology') if isinstance(data.get('topology'), dict) else data
+    name = (
+        data.get('name')
+        or topology_data.get('name')
+        or file.filename.removesuffix('.json')
+        or 'Imported Topology'
+    )
+    topo = Topology(name=name, data=topology_data)
     db.add(topo)
     db.commit()
     db.refresh(topo)

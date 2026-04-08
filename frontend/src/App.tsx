@@ -336,7 +336,12 @@ function App() {
   }, [dispatch, disconnectWebSocket]);
 
   const handleExport = useCallback(() => {
-    const json = JSON.stringify(topology, null, 2);
+    const presetLikeExport = {
+      name: backendName || topology.name || 'Exported Topology',
+      description: 'Exported topology from AE3GIS.',
+      topology,
+    };
+    const json = JSON.stringify(presetLikeExport, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -344,7 +349,7 @@ function App() {
     a.download = `${topology.name || 'topology'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [topology]);
+  }, [backendName, topology]);
 
   // ── Auth handlers ──────────────────────────────────────────────
 
