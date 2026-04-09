@@ -139,10 +139,9 @@ async def chat(
     if req.topology_id:
         validate_student_topology(identity, req.topology_id)
         topo = db.query(Topology).filter(Topology.id == req.topology_id).first()
-        if not topo:
-            raise HTTPException(404, "Topology not found")
-        topo_data = topo.data if isinstance(topo.data, dict) else {}
-        topo_id = topo.id
+        if topo:
+            topo_data = topo.data if isinstance(topo.data, dict) else {}
+            topo_id = topo.id
 
     # Build system prompt with topology context
     system_prompt = INSTRUCTOR_SYSTEM_PROMPT if is_instructor else STUDENT_SYSTEM_PROMPT

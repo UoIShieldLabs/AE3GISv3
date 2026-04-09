@@ -449,9 +449,20 @@ export function ScenarioPanel({
                         <span style={{ color: '#ffaa00', marginLeft: '8px' }}>
                           Skipped ({tr.reason})
                         </span>
+                      ) : tr.exec_sessions ? (
+                        <span style={{ marginLeft: '8px' }}>
+                          <span style={{ color: 'var(--neon-purple, #b44dff)' }}>
+                            {tr.exec_sessions.length} session{tr.exec_sessions.length !== 1 ? 's' : ''} pushed
+                          </span>
+                          {tr.exec_sessions.map((s, j) => (
+                            <span key={j} style={{ color: 'var(--text-dim)', marginLeft: '6px' }}>
+                              [{s.container_name}]
+                            </span>
+                          ))}
+                        </span>
                       ) : (
                         <span style={{ marginLeft: '8px' }}>
-                          {tr.results.map((r, j) => (
+                          {(tr.results ?? []).map((r, j) => (
                             <span key={j} style={{
                               color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)',
                               marginRight: '6px',
@@ -464,7 +475,7 @@ export function ScenarioPanel({
                     </div>
                   ))}
                   <div style={{ ...monoSmall, marginTop: '8px', color: 'var(--text-dim)' }}>
-                    {batchResults.filter(r => !r.skipped).length} executed,{' '}
+                    {batchResults.filter(r => !r.skipped).length} pushed,{' '}
                     {batchResults.filter(r => r.skipped).length} skipped
                   </div>
                 </div>

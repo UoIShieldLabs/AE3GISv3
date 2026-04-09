@@ -240,8 +240,8 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
       items.push({
         label: '🌐 Open Web UI',
         onClick: () => {
-          const base = `/api/proxy/${topologyId}/${container.id}`;
-          const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '';
+          const base = `${window.location.origin}/api/proxy/${topologyId}/${container.id}`;
+          const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '/';
           const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
           window.open(url, '_blank');
         },
