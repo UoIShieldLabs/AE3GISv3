@@ -17,9 +17,11 @@ import { TopologyBrowser } from './components/TopologyBrowser';
 import { LoginScreen } from './components/LoginScreen';
 import { ClassroomPanel } from './components/ClassroomPanel';
 import { ScenarioPanel } from './components/ScenarioPanel';
+import { PurdueView } from './components/PurdueView';
 import { AiChatPanel } from './components/AiChatPanel';
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
+import { PushedTerminalOverlay, type PushedSession } from './components/PushedTerminalOverlay';
 import * as api from './api/client';
 import { deploymentName } from './utils/deploymentName';
 
@@ -69,7 +71,14 @@ function App() {
   const [browserOpen, setBrowserOpen] = useState(false);
   const [classroomOpen, setClassroomOpen] = useState(false);
   const [scenariosOpen, setScenariosOpen] = useState(false);
+  const [purdueOpen, setPurdueOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+
+  // ── Pushed scenario terminals (instructor → student) ──────────────
+  const [pushedSessions, setPushedSessions] = useState<PushedSession[]>([]);
+  const [activePushedId, setActivePushedId] = useState<string | null>(null);
+  const [pushedMinimized, setPushedMinimized] = useState(false);
+  const notifyWsRef = useRef<WebSocket | null>(null);
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -127,7 +136,7 @@ function App() {
   }, [backendId]);
   const [busy, setBusy] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Navigation handlers ────────────────────────────────────────
 
@@ -186,30 +195,26 @@ function App() {
     [topology.sites]
   );
 
-  // ── WebSocket management ──────────────────────────────────────
+  // ── Status polling ─────────────────────────────────────────────
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
 
   const connectWebSocket = useCallback((topoId: string, topoName: string) => {
-    // Close existing connection
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    stopPolling();
+    const sanitized = topoName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const prefix = `clab-${sanitized}-`;
 
-    const wsUrlStr = api.wsUrl(`/api/topologies/ws/${topoId}/status`);
-    const ws = new WebSocket(wsUrlStr);
-
-    ws.onmessage = (event) => {
+    const poll = async () => {
       try {
-        const data = JSON.parse(event.data);
-        const containers: api.ClabContainer[] = data.containers || [];
-        // Map clab container names → frontend container IDs
-        // clab names are prefixed with "clab-{topo_name}-"
-        const prefix = `clab-${topoName}-`;
+        const { containers } = await api.getTopologyStatus(topoId);
         const statuses: Record<string, 'running' | 'stopped' | 'paused'> = {};
         for (const c of containers) {
-          const id = c.name.startsWith(prefix)
-            ? c.name.slice(prefix.length)
-            : c.name;
+          const id = c.name.startsWith(prefix) ? c.name.slice(prefix.length) : c.name;
           const state = c.state?.toLowerCase();
           if (state === 'running') statuses[id] = 'running';
           else if (state === 'paused') statuses[id] = 'paused';
@@ -217,31 +222,67 @@ function App() {
         }
         dispatch({ type: 'UPDATE_CONTAINER_STATUSES', payload: { statuses } });
       } catch {
-        // ignore parse errors
+        // ignore transient failures
       }
     };
 
-    ws.onclose = () => {
-      // Only clear ref if this is still the active connection
-      if (wsRef.current === ws) wsRef.current = null;
-    };
-
-    wsRef.current = ws;
-  }, [dispatch]);
+    void poll(); // immediate first fetch
+    pollIntervalRef.current = setInterval(() => { void poll(); }, 5000);
+  }, [dispatch, stopPolling]);
 
   const disconnectWebSocket = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, []);
+    stopPolling();
+  }, [stopPolling]);
 
-  // Clean up WebSocket on unmount
+  // Clean up on unmount
   useEffect(() => {
-    return () => {
-      if (wsRef.current) wsRef.current.close();
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  // ── Notify WebSocket — receives scenario_push from instructor ──
+  useEffect(() => {
+    if (!backendId) {
+      notifyWsRef.current?.close();
+      notifyWsRef.current = null;
+      return;
+    }
+
+    const wsUrlStr = api.wsUrl(`/api/topologies/ws/${backendId}/notify`);
+    const ws = new WebSocket(wsUrlStr);
+    notifyWsRef.current = ws;
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(typeof ev.data === 'string' ? ev.data : '') as Record<string, unknown>;
+        if (msg.type === 'ping') return;
+        if (msg.type === 'scenario_push') {
+          const rawSessions = (msg.sessions as Array<Record<string, string>>) ?? [];
+          const newSessions: PushedSession[] = rawSessions.map((s) => ({
+            sessionId: s.session_id,
+            topologyId: backendId,
+            containerId: s.container_id,
+            containerName: s.container_name,
+            script: s.script,
+            phaseName: s.phase_name,
+          }));
+          if (newSessions.length === 0) return;
+          setPushedSessions((prev) => {
+            const existingIds = new Set(prev.map((p) => p.sessionId));
+            return [...prev, ...newSessions.filter((s) => !existingIds.has(s.sessionId))];
+          });
+          setActivePushedId(newSessions[0].sessionId);
+          setPushedMinimized(false);
+        }
+      } catch {
+        // non-JSON messages ignored
+      }
     };
-  }, []);
+
+    return () => {
+      ws.close();
+      notifyWsRef.current = null;
+    };
+  }, [backendId]);
 
   // ── Backend handlers ──────────────────────────────────────────
 
@@ -282,12 +323,12 @@ function App() {
       setNav({ scale: 'geographic', siteId: null, subnetId: null });
       setSelectedContainer(null);
       setLoadVersion(v => v + 1);
-      // If deployed, connect WebSocket
+      // Always reset statuses to stopped; WebSocket fills in live values if deployed
+      disconnectWebSocket();
+      dispatch({ type: 'CLEAR_CONTAINER_STATUSES' });
       if (record.status === 'deployed') {
         const topoName = deploymentName(record.id, record.data.name);
         connectWebSocket(record.id, topoName);
-      } else {
-        disconnectWebSocket();
       }
     } catch (err) {
       console.error('Load failed:', err);
@@ -328,6 +369,7 @@ function App() {
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'destroying' });
       await api.destroyTopology(backendId);
       dispatch({ type: 'SET_DEPLOY_STATUS', payload: 'idle' });
+      dispatch({ type: 'CLEAR_CONTAINER_STATUSES' });
       disconnectWebSocket();
     } catch (err) {
       console.error('Destroy failed:', err);
@@ -346,7 +388,12 @@ function App() {
   }, [dispatch, disconnectWebSocket]);
 
   const handleExport = useCallback(() => {
-    const json = JSON.stringify(topology, null, 2);
+    const presetLikeExport = {
+      name: backendName || topology.name || 'Exported Topology',
+      description: 'Exported topology from AE3GIS.',
+      topology,
+    };
+    const json = JSON.stringify(presetLikeExport, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -354,7 +401,7 @@ function App() {
     a.download = `${topology.name || 'topology'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [topology]);
+  }, [backendName, topology]);
 
   // ── Auth handlers ──────────────────────────────────────────────
 
@@ -481,49 +528,99 @@ function App() {
 
           {/* Header */}
           <header className="header-bar">
-            <div className="header-title">AE3GIS</div>
-            <div className="header-stats">
-              <div className="header-stat">
-                <span className="dot" />
-                <span>{topology.sites.length} sites</span>
+            {/* Left: branding + file operations */}
+            <div className="header-left">
+              <div className="header-title">AE3GIS</div>
+              <ControlBar
+                backendId={backendId}
+                backendName={backendName}
+                deployStatus={deployStatus}
+                dirty={dirty}
+                onNew={handleNew}
+                onSave={handleSave}
+                onLoad={() => setBrowserOpen(true)}
+                onExport={handleExport}
+                isBusy={busy}
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Center: topology name + deploy status + stats */}
+            <div className="header-center">
+              <div className="header-topo-name">
+                {backendName ?? topology.name ?? 'Untitled Topology'}
               </div>
-              <div className="header-stat">
-                <span className="dot" />
-                <span>{totalContainers} containers</span>
+              <div className="header-center-row">
+                <div className={`control-bar-status status-${deployStatus}`}>
+                  <span className="status-dot" />
+                  <span>{deployStatus === 'idle' ? 'Idle' : deployStatus === 'deployed' ? 'Deployed' : deployStatus === 'deploying' ? 'Deploying...' : deployStatus === 'destroying' ? 'Destroying...' : 'Error'}</span>
+                </div>
+                <div className="header-stats">
+                  <div className="header-stat">
+                    <span className="dot" />
+                    <span>{topology.sites.length} sites</span>
+                  </div>
+                  <div className="header-stat">
+                    <span className="dot" />
+                    <span>{totalContainers} containers</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <ControlBar
-              backendId={backendId}
-              backendName={backendName}
-              deployStatus={deployStatus}
-              dirty={dirty}
-              onNew={handleNew}
-              onSave={handleSave}
-              onLoad={() => setBrowserOpen(true)}
-              onDeploy={handleDeploy}
-              onDestroy={handleDestroy}
-              onExport={handleExport}
-              onClassroom={!readOnly ? () => setClassroomOpen(true) : undefined}
-              onScenarios={!readOnly ? () => setScenariosOpen(true) : undefined}
-              isBusy={busy}
-              readOnly={readOnly}
-            />
-            <button
-              className="control-btn btn-ai"
-              onClick={() => setAiChatOpen(prev => !prev)}
-              style={{ marginLeft: 8 }}
-              title="AI Assistant"
-            >
-              AI
-            </button>
-            <button
-              className="control-btn"
-              onClick={handleLogout}
-              style={{ marginLeft: 8 }}
-              title="Logout"
-            >
-              Logout
-            </button>
+
+            {/* Right: deployment operations + logout */}
+            <div className="header-right">
+              {!readOnly && (
+                <>
+                  <button
+                    className="control-btn btn-deploy"
+                    onClick={handleDeploy}
+                    disabled={busy || !backendId || deployStatus !== 'idle'}
+                    title={!backendId ? 'Save first to deploy' : 'Deploy to ContainerLab'}
+                  >
+                    Deploy
+                  </button>
+                  <button
+                    className="control-btn btn-destroy"
+                    onClick={handleDestroy}
+                    disabled={busy || (deployStatus !== 'deployed' && deployStatus !== 'error')}
+                    title="Destroy running network"
+                  >
+                    Destroy
+                  </button>
+                  <button
+                    className="control-btn btn-classroom"
+                    onClick={() => setClassroomOpen(true)}
+                    disabled={busy}
+                    title="Manage classroom sessions"
+                  >
+                    Classroom
+                  </button>
+                  <button
+                    className="control-btn btn-scenarios"
+                    onClick={() => setScenariosOpen(true)}
+                    disabled={busy}
+                    title="Manage attack scenarios"
+                  >
+                    Scenarios
+                  </button>
+                </>
+              )}
+              <button
+                className="control-btn btn-ai"
+                onClick={() => setAiChatOpen(prev => !prev)}
+                title="AI Assistant"
+              >
+                AI
+              </button>
+              <button
+                className="control-btn"
+                onClick={handleLogout}
+                title="Logout"
+              >
+                Logout
+              </button>
+            </div>
           </header>
 
           {/* Breadcrumb navigation */}
@@ -538,6 +635,7 @@ function App() {
                   onSelectSite={goToSite}
                   readOnly={readOnly}
                   autoLayoutTrigger={loadVersion}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -549,6 +647,7 @@ function App() {
                   onSelectSubnet={goToSubnet}
                   onOpenRouterTerminal={setRouterActionContainer}
                   readOnly={readOnly}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -563,6 +662,7 @@ function App() {
                   onOpenTerminal={openTerminal}
                   onDeselect={() => setSelectedContainer(null)}
                   readOnly={readOnly}
+                  onPurdue={() => setPurdueOpen(true)}
                 />
               )}
             </ReactFlowProvider>
@@ -593,6 +693,24 @@ function App() {
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
               minimized={terminalMinimized}
               onMinimizedChange={setTerminalMinimized}
+            />
+          )}
+
+          {/* Pushed scenario terminals (instructor → student) */}
+          {pushedSessions.length > 0 && activePushedId && (
+            <PushedTerminalOverlay
+              sessions={pushedSessions}
+              activeId={activePushedId}
+              onActivate={setActivePushedId}
+              onClose={(id) => {
+                setPushedSessions((prev) => {
+                  const next = prev.filter((s) => s.sessionId !== id);
+                  if (activePushedId === id) setActivePushedId(next[0]?.sessionId ?? null);
+                  return next;
+                });
+              }}
+              minimized={pushedMinimized}
+              onMinimizedChange={setPushedMinimized}
             />
           )}
 
@@ -679,11 +797,22 @@ function App() {
             />
           )}
 
+          {/* Purdue Model view (all roles) */}
+          <PurdueView
+            open={purdueOpen}
+            onClose={() => setPurdueOpen(false)}
+            topology={topology}
+          />
+
           {/* AI Chat panel */}
           <AiChatPanel
             open={aiChatOpen}
             onClose={() => setAiChatOpen(false)}
             topologyId={backendId}
+            onTopologyAction={(action) => {
+              // Reload the topology (created or modified)
+              void handleLoad(action.topology_id);
+            }}
           />
         </div>
       </TopologyDispatchContext.Provider>

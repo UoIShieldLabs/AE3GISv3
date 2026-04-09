@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
+import uuid
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -18,6 +20,138 @@ from models import Topology
 from services.clab_manager import _docker_exec, deployment_name
 
 log = logging.getLogger(__name__)
+
+# ── Pending topology store (confirmation flow) ────────────────────
+
+_pending_topologies: dict[str, dict] = {}
+_PENDING_TTL = 1800  # 30 minutes
+
+
+def _cleanup_pending():
+    """Remove expired pending topologies."""
+    now = time.time()
+    expired = [k for k, v in _pending_topologies.items() if now - v["created_at"] > _PENDING_TTL]
+    for k in expired:
+        del _pending_topologies[k]
+
+
+# ── Topology generation system prompt ─────────────────────────────
+
+TOPOLOGY_GEN_SYSTEM_PROMPT = """You are a network topology JSON generator for AE3GIS. Given a description, produce a valid TopologyData JSON object.
+
+## Schema
+
+TopologyData:
+  name: string (optional)
+  sites: Site[]
+  siteConnections: Connection[]  (connections between sites using gateway router IDs)
+
+Site:
+  id: string (kebab-case, unique)
+  name: string
+  location: string
+  position: { x: number, y: number }  (space sites ~300px apart)
+  subnets: Subnet[]
+  subnetConnections: Connection[]  (connections between subnets within the site, using router IDs)
+
+Subnet:
+  id: string (kebab-case, unique)
+  name: string
+  cidr: string (e.g. "10.0.1.0/24")
+  gateway: string (IP of the subnet's router)
+  containers: Container[]
+  connections: Connection[]
+
+Container:
+  id: string (kebab-case, unique across entire topology)
+  name: string (human-readable)
+  type: one of "web-server", "file-server", "plc", "firewall", "switch", "router", "workstation"
+  ip: string (must be within subnet CIDR)
+
+Connection (intra-subnet only — inside subnet.connections):
+  from: string (container ID)
+  to: string (container ID)
+  fromInterface: string (e.g. "eth1")
+  toInterface: string (e.g. "eth1")
+
+SubnetConnection / SiteConnection (cross-subnet or cross-site):
+  from: string (router container ID from one subnet/site)
+  to: string (router container ID from the other subnet/site)
+  NOTE: Do NOT include fromInterface or toInterface — the system auto-assigns them.
+
+## Rules
+1. Every subnet MUST have exactly one router and one switch.
+2. The router and switch must be connected: router eth1 <-> switch eth1.
+3. All other containers connect to the switch: switch ethN <-> container eth1.
+4. Gateway IP is the router's IP (typically .1 in the subnet).
+5. Container IDs must be globally unique across the entire topology.
+6. Use sequential interface names on the switch: eth1, eth2, eth3, etc.
+7. For inter-subnet connections within a site, use subnetConnections with router IDs from each subnet. Do NOT specify interfaces.
+8. For inter-site connections, use siteConnections with gateway router IDs from each site. Do NOT specify interfaces.
+9. Use realistic CIDR ranges (10.x.x.0/24). Different subnets must use different ranges.
+10. Container types: router and firewall get frrouting/frr:latest; everything else gets alpine:latest.
+11. CRITICAL: Only specify fromInterface/toInterface inside subnet.connections (intra-subnet). NEVER on subnetConnections or siteConnections.
+
+## Example (two subnets in one site)
+
+{
+  "sites": [{
+    "id": "office", "name": "Office", "location": "HQ", "position": {"x": 100, "y": 100},
+    "subnets": [
+      {
+        "id": "office-lan", "name": "Office LAN", "cidr": "10.0.1.0/24", "gateway": "10.0.1.1",
+        "containers": [
+          {"id": "lan-router", "name": "LAN Router", "type": "router", "ip": "10.0.1.1"},
+          {"id": "lan-switch", "name": "LAN Switch", "type": "switch", "ip": "10.0.1.2"},
+          {"id": "ws1", "name": "Workstation 1", "type": "workstation", "ip": "10.0.1.100"}
+        ],
+        "connections": [
+          {"from": "lan-router", "to": "lan-switch", "fromInterface": "eth1", "toInterface": "eth1"},
+          {"from": "lan-switch", "to": "ws1", "fromInterface": "eth2", "toInterface": "eth1"}
+        ]
+      },
+      {
+        "id": "office-dmz", "name": "DMZ", "cidr": "10.0.2.0/24", "gateway": "10.0.2.1",
+        "containers": [
+          {"id": "dmz-router", "name": "DMZ Router", "type": "router", "ip": "10.0.2.1"},
+          {"id": "dmz-switch", "name": "DMZ Switch", "type": "switch", "ip": "10.0.2.2"},
+          {"id": "web1", "name": "Web Server", "type": "web-server", "ip": "10.0.2.100"}
+        ],
+        "connections": [
+          {"from": "dmz-router", "to": "dmz-switch", "fromInterface": "eth1", "toInterface": "eth1"},
+          {"from": "dmz-switch", "to": "web1", "fromInterface": "eth2", "toInterface": "eth1"}
+        ]
+      }
+    ],
+    "subnetConnections": [
+      {"from": "lan-router", "to": "dmz-router"}
+    ]
+  }],
+  "siteConnections": []
+}
+
+Respond with ONLY the JSON object. No markdown fences, no explanation, no comments."""
+
+
+TOPOLOGY_MODIFY_SYSTEM_PROMPT = """You are a network topology JSON modifier for AE3GIS. You will receive the current topology JSON and modification instructions. Apply the requested changes and return the complete modified topology.
+
+Follow the EXACT same schema and rules as topology generation:
+- Every subnet needs exactly one router and one switch, wired together.
+- All other containers connect to the switch.
+- Container IDs must be globally unique (kebab-case).
+- Use sequential eth interfaces on switches.
+- Gateway IP is the router's IP.
+- Different subnets must use different CIDR ranges.
+- For inter-subnet connections, use subnetConnections with router IDs. Do NOT include interfaces.
+- For inter-site connections, use siteConnections with gateway router IDs. Do NOT include interfaces.
+- ONLY specify fromInterface/toInterface inside subnet.connections (intra-subnet links).
+
+IMPORTANT:
+- Preserve ALL existing parts of the topology that are not being changed.
+- Keep existing container IDs, IPs, and connections intact unless the instructions say to change them.
+- Only add, remove, or modify what the instructions specify.
+
+Respond with ONLY the complete modified JSON object. No markdown fences, no explanation."""
 
 
 # ── Tool schemas (OpenAI function-calling format) ──────────────────
@@ -100,6 +234,61 @@ INSTRUCTOR_TOOLS = STUDENT_TOOLS + [
                     },
                 },
                 "required": ["scope"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_topology",
+            "description": "Generate a brand new network topology from a natural language description. Returns a preview summary for the user to confirm before saving. Use this when the user wants to create a new topology from scratch.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "Detailed natural language description of the desired topology: sites, subnets, container types, and how they should be connected.",
+                    },
+                },
+                "required": ["description"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modify_topology",
+            "description": "Modify the current topology based on natural language instructions. Returns a preview summary of the changes for the user to confirm before saving. Use this when the user wants to add, remove, or change parts of the existing topology.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "instructions": {
+                        "type": "string",
+                        "description": "Natural language instructions describing what to change (e.g. 'add a DMZ subnet with a web server and firewall', 'remove the workstation from the corporate LAN', 'change the SCADA network CIDR to 10.0.20.0/24').",
+                    },
+                },
+                "required": ["instructions"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_topology",
+            "description": "Save a previously generated or modified topology after the user confirms. ONLY call this after showing the user the preview and receiving their confirmation.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pending_id": {
+                        "type": "string",
+                        "description": "The pending topology ID returned by generate_topology or modify_topology.",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the topology. Required when saving a newly generated topology.",
+                    },
+                },
+                "required": ["pending_id"],
             },
         },
     },
@@ -349,6 +538,213 @@ async def exec_exec_command(topo_data: dict, topo_id: str, container_name: str, 
     return await exec_run_command(topo_data=topo_data, topo_id=topo_id, container_name=container_name, command=command, is_instructor=True, **kw)
 
 
+async def _llm_generate_json(system_prompt: str, user_prompt: str) -> dict:
+    """Make a secondary LLM call to generate topology JSON. Returns parsed dict or raises."""
+    from services import llm_service
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    response = await llm_service.chat_completion(messages, tools=None, temperature=0.2)
+    content = llm_service.extract_reply(response).get("content", "")
+
+    # Strip markdown fences if present
+    content = content.strip()
+    if content.startswith("```"):
+        content = re.sub(r'^```\w*\n?', '', content)
+        content = re.sub(r'\n?```$', '', content)
+        content = content.strip()
+
+    return json.loads(content)
+
+
+def _normalize_topology(data: dict) -> None:
+    """Post-process LLM-generated topology to fix common issues.
+
+    - Strips fromInterface/toInterface from subnetConnections and siteConnections
+      (the clab_generator auto-assigns them; explicit ones cause duplicate endpoint errors).
+    """
+    for conn in data.get("siteConnections", []):
+        conn.pop("fromInterface", None)
+        conn.pop("toInterface", None)
+    for site in data.get("sites", []):
+        for conn in site.get("subnetConnections", []):
+            conn.pop("fromInterface", None)
+            conn.pop("toInterface", None)
+
+
+def _validate_topology(data: dict) -> list[str]:
+    """Validate topology structure. Returns list of error messages (empty = valid)."""
+    errors = []
+    if not isinstance(data.get("sites"), list):
+        errors.append("Missing or invalid 'sites' array.")
+        return errors
+
+    container_ids: set[str] = set()
+    for site in data["sites"]:
+        if not site.get("id") or not site.get("name"):
+            errors.append(f"Site missing id or name: {site}")
+        for subnet in site.get("subnets", []):
+            if not subnet.get("cidr"):
+                errors.append(f"Subnet '{subnet.get('name', '?')}' missing CIDR.")
+            routers = [c for c in subnet.get("containers", []) if c.get("type") == "router"]
+            switches = [c for c in subnet.get("containers", []) if c.get("type") == "switch"]
+            if not routers:
+                errors.append(f"Subnet '{subnet.get('name', '?')}' has no router.")
+            if not switches:
+                errors.append(f"Subnet '{subnet.get('name', '?')}' has no switch.")
+            for c in subnet.get("containers", []):
+                cid = c.get("id", "")
+                if cid in container_ids:
+                    errors.append(f"Duplicate container ID: '{cid}'.")
+                container_ids.add(cid)
+                if not c.get("ip"):
+                    errors.append(f"Container '{c.get('name', '?')}' missing IP.")
+    return errors
+
+
+def _summarize_topology(data: dict) -> str:
+    """Generate a human-readable summary of a topology."""
+    lines = []
+    sites = data.get("sites", [])
+    total_containers = 0
+    for site in sites:
+        subnet_descs = []
+        for subnet in site.get("subnets", []):
+            containers = subnet.get("containers", [])
+            total_containers += len(containers)
+            types = {}
+            for c in containers:
+                t = c.get("type", "unknown")
+                types[t] = types.get(t, 0) + 1
+            type_str = ", ".join(f"{v} {k}{'s' if v > 1 else ''}" for k, v in types.items())
+            subnet_descs.append(f"  - {subnet['name']} ({subnet.get('cidr', '?')}): {type_str}")
+        lines.append(f"Site: {site['name']} ({len(site.get('subnets', []))} subnet{'s' if len(site.get('subnets', [])) != 1 else ''})")
+        lines.extend(subnet_descs)
+
+    site_conns = data.get("siteConnections", [])
+    summary = f"Total: {len(sites)} site{'s' if len(sites) != 1 else ''}, {total_containers} containers"
+    if site_conns:
+        summary += f", {len(site_conns)} inter-site connection{'s' if len(site_conns) != 1 else ''}"
+    lines.insert(0, summary)
+    return "\n".join(lines)
+
+
+async def exec_generate_topology(topo_data: dict, description: str, **_: Any) -> str:
+    """Generate a new topology from a natural language description."""
+    _cleanup_pending()
+    try:
+        data = await _llm_generate_json(TOPOLOGY_GEN_SYSTEM_PROMPT, description)
+    except json.JSONDecodeError as e:
+        return f"Failed to parse generated topology JSON: {e}. Please try rephrasing."
+    except Exception as e:
+        return f"LLM generation failed: {e}"
+
+    # Ensure top-level fields and normalize
+    data.setdefault("siteConnections", [])
+    for site in data.get("sites", []):
+        site.setdefault("subnetConnections", [])
+        site.setdefault("position", {"x": 100, "y": 100})
+    _normalize_topology(data)
+
+    errors = _validate_topology(data)
+    if errors:
+        return "Generated topology has validation errors:\n" + "\n".join(f"- {e}" for e in errors) + "\nPlease try with a more specific description."
+
+    pending_id = uuid.uuid4().hex[:12]
+    _pending_topologies[pending_id] = {
+        "data": data,
+        "mode": "create",
+        "created_at": time.time(),
+    }
+
+    summary = _summarize_topology(data)
+    return (
+        f"Topology generated successfully. Preview:\n\n{summary}\n\n"
+        f"Pending ID: {pending_id}\n"
+        f"Ask the user to confirm before calling save_topology."
+    )
+
+
+async def exec_modify_topology(topo_data: dict, instructions: str, **_: Any) -> str:
+    """Modify the current topology based on natural language instructions."""
+    _cleanup_pending()
+    current_json = json.dumps(topo_data, indent=2)
+    user_prompt = (
+        f"## Current Topology\n```json\n{current_json}\n```\n\n"
+        f"## Modification Instructions\n{instructions}"
+    )
+
+    try:
+        data = await _llm_generate_json(TOPOLOGY_MODIFY_SYSTEM_PROMPT, user_prompt)
+    except json.JSONDecodeError as e:
+        return f"Failed to parse modified topology JSON: {e}. Please try rephrasing."
+    except Exception as e:
+        return f"LLM modification failed: {e}"
+
+    # Ensure top-level fields and normalize
+    data.setdefault("siteConnections", [])
+    for site in data.get("sites", []):
+        site.setdefault("subnetConnections", [])
+        site.setdefault("position", {"x": 100, "y": 100})
+    _normalize_topology(data)
+
+    errors = _validate_topology(data)
+    if errors:
+        return "Modified topology has validation errors:\n" + "\n".join(f"- {e}" for e in errors) + "\nPlease try with clearer instructions."
+
+    pending_id = uuid.uuid4().hex[:12]
+    _pending_topologies[pending_id] = {
+        "data": data,
+        "mode": "modify",
+        "created_at": time.time(),
+    }
+
+    summary = _summarize_topology(data)
+    return (
+        f"Topology modified successfully. Preview:\n\n{summary}\n\n"
+        f"Pending ID: {pending_id}\n"
+        f"Ask the user to confirm before calling save_topology."
+    )
+
+
+async def exec_save_topology(
+    topo_data: dict, topo_id: str, pending_id: str, name: str | None = None,
+    db: Session | None = None, **_: Any,
+) -> str:
+    """Save a pending topology after user confirmation."""
+    pending = _pending_topologies.get(pending_id)
+    if not pending:
+        return f"Pending topology '{pending_id}' not found or expired. Please generate/modify again."
+
+    if not db:
+        return "Database session unavailable — cannot save."
+
+    data = pending["data"]
+    mode = pending["mode"]
+
+    if mode == "create":
+        topo_name = name or data.get("name") or "AI-Generated Topology"
+        new_topo = Topology(name=topo_name, data=data)
+        db.add(new_topo)
+        db.commit()
+        db.refresh(new_topo)
+        del _pending_topologies[pending_id]
+        return f"TOPOLOGY_CREATED:{new_topo.id}:{topo_name}"
+    else:
+        # Modify existing
+        topo = db.get(Topology, topo_id)
+        if not topo:
+            return f"Topology '{topo_id}' not found."
+        if name:
+            topo.name = name
+        topo.data = data
+        db.commit()
+        del _pending_topologies[pending_id]
+        return f"TOPOLOGY_MODIFIED:{topo_id}:{topo.name}"
+
+
 async def exec_describe_topology(topo_data: dict, scope: str, name: str | None = None, **_: Any) -> str:
     # Just return structured data — the LLM will generate the natural language description
     if scope == "full":
@@ -378,7 +774,16 @@ EXECUTORS = {
     "run_diagnostic": exec_run_diagnostic,
     "exec_command": exec_exec_command,
     "describe_topology": exec_describe_topology,
+    "generate_topology": exec_generate_topology,
+    "modify_topology": exec_modify_topology,
+    "save_topology": exec_save_topology,
 }
+
+# Tools that require a db session
+_DB_TOOLS = {"save_topology"}
+
+# Instructor-only tools (students blocked from these)
+INSTRUCTOR_ONLY_TOOLS = {"exec_command", "describe_topology", "generate_topology", "modify_topology", "save_topology"}
 
 
 async def execute_tool(
@@ -387,11 +792,16 @@ async def execute_tool(
     topo_data: dict,
     topo_id: str,
     is_instructor: bool = False,
+    db: Session | None = None,
 ) -> str:
     executor = EXECUTORS.get(tool_name)
     if not executor:
         return f"Unknown tool: {tool_name}"
-    # Pass is_instructor for run_command's safety check
+    # Build extra kwargs without mutating the original args dict
+    # (args is referenced by ai.py's tool_results and gets serialized)
+    extra: dict[str, Any] = {}
     if tool_name == "run_command":
-        args["is_instructor"] = is_instructor
-    return await executor(topo_data=topo_data, topo_id=topo_id, **args)
+        extra["is_instructor"] = is_instructor
+    if tool_name in _DB_TOOLS:
+        extra["db"] = db
+    return await executor(topo_data=topo_data, topo_id=topo_id, **args, **extra)

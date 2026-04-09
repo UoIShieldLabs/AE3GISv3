@@ -140,6 +140,19 @@ export async function importTopology(name: string, file: File): Promise<Topology
   return res.json();
 }
 
+export async function importJsonTopology(file: File): Promise<TopologySummary> {
+  const form = new FormData();
+  form.append('file', file);
+  const headers: Record<string, string> = {};
+  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  const res = await fetch(`${BASE}/import-json`, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
 // ── ContainerLab ───────────────────────────────────────────────────
 
 export function deployTopology(id: string): Promise<{ status: string; output: string }> {
@@ -284,12 +297,24 @@ export function deleteSlot(sessionId: string, slotId: string): Promise<void> {
 
 // ── Batch Phase Execution ────────────────────────────────────────
 
+export interface PushedExecSession {
+  session_id: string;
+  container_id: string;
+  container_name: string;
+  script: string;
+  phase_name: string;
+}
+
 export interface BatchTopologyResult {
   topology_id: string;
   label: string | null;
   skipped: boolean;
   reason?: string;
-  results: PhaseExecutionResult[];
+  /** Live interactive PTY sessions created for each execution (new style). */
+  exec_sessions?: PushedExecSession[];
+  skipped_executions?: { containerId: string; script: string; reason: string }[];
+  /** Legacy one-shot results — only present for non-batch single-topology execute. */
+  results?: PhaseExecutionResult[];
 }
 
 export function executePhaseBatch(
@@ -316,15 +341,22 @@ export interface AiToolResult {
   result: string;
 }
 
+export interface AiTopologyAction {
+  action: 'created' | 'modified';
+  topology_id: string;
+  name: string;
+}
+
 export interface AiChatResponse {
   reply: string;
   tool_results: AiToolResult[] | null;
+  topology_action: AiTopologyAction | null;
 }
 
 const AI_BASE = '/api/ai';
 
 export function aiChat(
-  topologyId: string,
+  topologyId: string | null,
   messages: AiChatMessage[],
   signal?: AbortSignal,
 ): Promise<AiChatResponse> {

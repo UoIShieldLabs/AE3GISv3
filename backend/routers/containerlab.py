@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import pty
-import shlex
+import signal
 import struct
 import termios
 from typing import Any
@@ -24,6 +24,7 @@ from database import get_db
 from models import StudentSlot, Topology
 from schemas import FirewallRulesResponse, FirewallRulesUpdate
 from services import capture_manager, clab_generator, clab_manager
+from services.exec_session_manager import exec_session_manager
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +64,26 @@ def _validate_ws_token(token: str | None, topology_id: str, db: Session) -> bool
         return True
     slot = db.query(StudentSlot).filter(StudentSlot.join_code == token).first()
     return slot is not None and slot.topology_id == topology_id
+
+
+def _interactive_shell_command() -> list[str]:
+    """Prefer a richer interactive shell when the container provides one."""
+    return [
+        "sh",
+        "-lc",
+        (
+            "mkdir -p /tmp; "
+            "printf 'set horizontal-scroll-mode Off\nset enable-bracketed-paste Off\n' >/tmp/ae3gis.inputrc 2>/dev/null || true; "
+            "export INPUTRC=/tmp/ae3gis.inputrc; "
+            "if command -v bash >/dev/null 2>&1; then "
+            "exec bash -il; "
+            "elif command -v ash >/dev/null 2>&1; then "
+            "exec ash -l; "
+            "else "
+            "exec sh -l; "
+            "fi"
+        ),
+    ]
 
 
 # ── Available Scripts ───────────────────────────────────────────────
@@ -146,6 +167,7 @@ async def deploy(
         log.info("YAML write verified OK for %s", topology_id)
 
         topo.clab_yaml = yaml_str
+        await clab_manager.pull_images(topo_data)
         await clab_manager.prepare_persistence_paths(topology_id, topo_data)
 
         output = await clab_manager.deploy(topology_id)
@@ -178,6 +200,7 @@ async def destroy(
         db.commit()
         return {"status": "destroyed", "output": output}
     except (FileNotFoundError, RuntimeError) as e:
+        print(f"[ERROR] destroy topology {topology_id}: {e}")
         topo.status = "error"
         db.commit()
         raise HTTPException(500, str(e))
@@ -244,10 +267,20 @@ async def exec_terminal(
     container_id: str,
     token: str | None = Query(default=None),
 ):
-    """Attach an interactive /bin/sh session inside a deployed container via PTY."""
+    """Attach an interactive shell session inside a deployed container via PTY."""
     db = next(get_db())
     proc = None
     master_fd = -1
+
+    def _resize_exec_pty(cols: int, rows: int) -> None:
+        nonlocal proc, master_fd
+        cols = max(1, int(cols))
+        rows = max(1, int(rows))
+        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+        if proc is not None and proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                proc.send_signal(signal.SIGWINCH)
+
     try:
         # minimal logging; token/topology errors are handled inline
         if not _validate_ws_token(token, topology_id, db):
@@ -271,10 +304,21 @@ async def exec_terminal(
         # `docker exec -it` sees a real TTY on its stdin and doesn't error out.
         master_fd, slave_fd = pty.openpty()
         # Set a sensible default terminal size (client will send a resize immediately)
-        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
+        _resize_exec_pty(80, 24)
         try:
-                proc = await asyncio.create_subprocess_exec(
-                "sudo", "docker", "exec", "-it", docker_name, "/bin/sh",
+            proc = await asyncio.create_subprocess_exec(
+                "sudo",
+                "docker",
+                "exec",
+                "-e",
+                "TERM=xterm-256color",
+                "-e",
+                "COLUMNS=80",
+                "-e",
+                "LINES=24",
+                "-it",
+                docker_name,
+                *_interactive_shell_command(),
                 stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
@@ -331,8 +375,7 @@ async def exec_terminal(
                         if isinstance(payload, dict) and payload.get('type') == 'resize':
                             cols = max(1, int(payload.get('cols', 80)))
                             rows = max(1, int(payload.get('rows', 24)))
-                            fcntl.ioctl(master_fd, termios.TIOCSWINSZ,
-                                        struct.pack('HHHH', rows, cols, 0, 0))
+                            _resize_exec_pty(cols, rows)
                             continue
                     except (json.JSONDecodeError, TypeError, ValueError):
                         pass
@@ -381,6 +424,128 @@ async def exec_terminal(
             proc.terminate()
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(proc.wait(), timeout=2.0)
+        db.close()
+
+
+# ── Topology notification channel ────────────────────────────────────
+
+
+@router.websocket("/ws/{topology_id}/notify")
+async def topology_notify(
+    websocket: WebSocket,
+    topology_id: str,
+    token: str | None = Query(default=None),
+):
+    """Push-only channel used to notify students when a phase is executed on their topology."""
+    db = next(get_db())
+    q = None
+    try:
+        if not _validate_ws_token(token, topology_id, db):
+            await websocket.close(code=4003, reason="Forbidden")
+            return
+
+        await websocket.accept()
+        q = exec_session_manager.register_notify(topology_id)
+
+        async def _ping() -> None:
+            try:
+                while True:
+                    await asyncio.sleep(15)
+                    await websocket.send_json({"type": "ping"})
+            except Exception:
+                pass
+
+        ping_task = asyncio.create_task(_ping())
+        try:
+            while True:
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=30.0)
+                    await websocket.send_json(msg)
+                except asyncio.TimeoutError:
+                    continue
+        except (WebSocketDisconnect, Exception):
+            pass
+        finally:
+            ping_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ping_task
+    finally:
+        if q is not None:
+            exec_session_manager.unregister_notify(topology_id, q)
+        db.close()
+
+
+# ── Exec session terminal (for pushed scripts) ───────────────────────
+
+
+@router.websocket("/ws/{topology_id}/exec-session/{session_id}")
+async def exec_session_terminal(
+    websocket: WebSocket,
+    topology_id: str,
+    session_id: str,
+    token: str | None = Query(default=None),
+):
+    """Attach to a running PTY exec session created by a pushed scenario phase.
+
+    Both students and instructors can connect.  Buffered output is replayed
+    on connect so late joiners see what they missed.  Keystrokes are
+    forwarded to the running process (interactive scripts are supported).
+    """
+    db = next(get_db())
+    try:
+        if not _validate_ws_token(token, topology_id, db):
+            await websocket.close(code=4003, reason="Forbidden")
+            return
+
+        await websocket.accept()
+
+        ok = await exec_session_manager.subscribe(session_id, websocket)
+        if not ok:
+            await websocket.send_text("Error: session not found or already expired\r\n")
+            await websocket.close(code=4004)
+            return
+
+        async def _ping() -> None:
+            try:
+                while True:
+                    await asyncio.sleep(15)
+                    await websocket.send_json({"type": "ping"})
+            except Exception:
+                pass
+
+        ping_task = asyncio.create_task(_ping())
+        try:
+            while True:
+                try:
+                    msg = await websocket.receive()
+                except WebSocketDisconnect:
+                    break
+                if msg.get("type") in ("websocket.disconnect", "websocket.close"):
+                    break
+                if msg.get("type") != "websocket.receive":
+                    continue
+                raw = msg.get("bytes") if msg.get("bytes") is not None else msg.get("text", "")
+                if isinstance(raw, str):
+                    raw = raw.encode("utf-8")
+                # Resize control message
+                try:
+                    payload = json.loads(raw.decode("utf-8", "ignore"))
+                    if isinstance(payload, dict) and payload.get("type") == "resize":
+                        cols = max(1, int(payload.get("cols", 80)))
+                        rows = max(1, int(payload.get("rows", 24)))
+                        exec_session_manager.resize(session_id, cols, rows)
+                        continue
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    pass
+                exec_session_manager.write_input(session_id, raw)
+        finally:
+            ping_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ping_task
+    except WebSocketDisconnect:
+        pass
+    finally:
+        exec_session_manager.unsubscribe(session_id, websocket)
         db.close()
 
 
@@ -479,10 +644,7 @@ async def execute_phase(
             continue
 
         docker_name = f"clab-{topo_name}-{container_id}"
-        quoted_script = shlex.quote(script)
-        quoted_args = " ".join(shlex.quote(a) for a in args)
-        shell_cmd = f"sh {quoted_script} {quoted_args}".strip()
-        cmd = ["sh", "-c", shell_cmd]
+        cmd = [script, *args]
         env = clab_manager.build_topology_env(data, container_id)
         rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
         results.append({

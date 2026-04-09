@@ -19,6 +19,7 @@ const typeColors: Record<ContainerType, string> = {
   'file-server': '#00d4ff',
   'plc': '#ffaa00',
   'workstation': '#4466ff',
+  'hmi': '#33ccff',
 };
 
 const typeLabels: Record<ContainerType, string> = {
@@ -29,6 +30,7 @@ const typeLabels: Record<ContainerType, string> = {
   'file-server': 'FS',
   'plc': 'PLC',
   'workstation': 'WS',
+  'hmi': 'HMI',
 };
 
 function DeviceIcon({ type }: { type: ContainerType }) {
@@ -107,6 +109,17 @@ function DeviceIcon({ type }: { type: ContainerType }) {
           <line x1="10" y1="12" x2="14" y2="12" stroke={color} strokeWidth="1" opacity="0.5" />
         </svg>
       );
+
+    case 'hmi':
+      return (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="6" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(51,204,255,0.08)" />
+          <path d="M8 14h16" stroke={color} strokeWidth="1" opacity="0.7" />
+          <path d="M8 10h16" stroke={color} strokeWidth="1" opacity="0.7" />
+          <rect x="12" y="18" width="8" height="2" fill={color} opacity="0.8" />
+          <circle cx="16" cy="26" r="1.5" fill={color} opacity="0.8" />
+        </svg>
+      );
   }
 }
 
@@ -178,9 +191,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
         color: '#d0d0d8',
         textAlign: 'center',
         maxWidth: '120px',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        wordBreak: 'break-word',
       }}>
         {container.name}
       </div>

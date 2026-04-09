@@ -17,6 +17,7 @@ ContainerType = Literal[
     "switch",
     "router",
     "workstation",
+    "hmi",
 ]
 
 

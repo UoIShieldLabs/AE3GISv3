@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { DeviceNode } from './nodes/DeviceNode';
+import { HmiNode } from './nodes/HmiNode';
 import { NeonEdge, NeonEdgeDirect } from './edges/NeonEdge';
 import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
 import { Toolbar } from './Toolbar';
@@ -26,7 +27,7 @@ import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode 
 import { generateId } from '../utils/idGenerator';
 import type { Subnet, Container, ContainerType } from '../data/sampleTopology';
 
-const nodeTypes = { device: DeviceNode };
+const nodeTypes = { device: DeviceNode, hmi: HmiNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 
 // Layout hierarchy: lower number = higher rank (router → switch → everything else)
@@ -41,7 +42,20 @@ const typeColors: Record<ContainerType, string> = {
   'file-server': '#00d4ff',
   'plc': '#ffaa00',
   'workstation': '#4466ff',
+  'hmi': '#33ccff',
 };
+
+function isHmiContainer(container: Container): boolean {
+  return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));
+}
+
+function webUiPort(container: Container): number {
+  const raw = container.metadata?.webUiPort;
+  const parsed = raw ? Number(raw) : NaN;
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
+  if (container.type === 'plc' || isHmiContainer(container)) return 8080;
+  return 80;
+}
 
 interface LanViewProps {
   subnet: Subnet;
@@ -51,9 +65,10 @@ interface LanViewProps {
   onDeselect: () => void;
   topologyId: string | null;
   readOnly?: boolean;
+  onPurdue?: () => void;
 }
 
-export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly }: LanViewProps) {
+export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly, onPurdue }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
   const auth = useContext(AuthContext);
@@ -163,7 +178,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
         const pos = computedPositions.get(container.id) || { x: 0, y: 0 };
         return {
           id: container.id,
-          type: 'device',
+          type: container.type === 'hmi' ? 'hmi' : 'device',
           position: pos,
           data: {
             container,
@@ -220,13 +235,14 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
 
     const items: ContextMenuItem[] = [];
 
-    // Allow Web UI access for appropriate types
-    const webUiTypes = ['web-server', 'plc'];
-    if (webUiTypes.includes(container.type) && auth?.token && topologyId) {
+    // Allow Web UI access for appropriate types and HMI workstation
+    if ((['web-server', 'plc', 'hmi'].includes(container.type) || isHmiContainer(container)) && auth?.token && topologyId) {
       items.push({
         label: '🌐 Open Web UI',
         onClick: () => {
-          const url = `/api/proxy/${topologyId}/${container.id}/?token=${auth.token}`;
+          const base = `${window.location.origin}/api/proxy/${topologyId}/${container.id}`;
+          const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '/';
+          const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
           window.open(url, '_blank');
         },
       });
@@ -479,6 +495,7 @@ export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenT
         onBulkAdd={() => setBulkDialog(true)}
         layoutMode={layoutMode}
         onLayoutModeChange={setLayoutMode}
+        onPurdue={onPurdue}
         readOnly={readOnly}
       />
 

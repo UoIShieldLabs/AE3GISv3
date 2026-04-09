@@ -156,7 +156,7 @@ async def _remove_fs_path(path: Path) -> None:
         raise RuntimeError(f"failed to remove path {path}: {stderr.strip()}")
 
 
-async def _prune_removed_persistence_paths(topology_id: str, topology_data: dict) -> None:
+async def prune_removed_persistence_paths(topology_id: str, topology_data: dict) -> None:
     """Delete backend persistence dirs/sentinels no longer present in topology data."""
     desired: dict[str, set[str]] = {}
     for container in _iter_containers(topology_data):
@@ -253,7 +253,7 @@ async def _seed_persistence_from_image(image: str, container_path: str, host_pat
 
 async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> None:
     """Ensure persistent bind paths exist and are initialized once from image defaults."""
-    await _prune_removed_persistence_paths(topology_id, topology_data)
+    await prune_removed_persistence_paths(topology_id, topology_data)
 
     for container in _iter_containers(topology_data):
         container_id = (container.get("id") or "").strip()
@@ -261,7 +261,7 @@ async def prepare_persistence_paths(topology_id: str, topology_data: dict) -> No
             continue
 
         container_type = (container.get("type") or "").strip()
-        image = clab_generator.image_for_container_type(container_type)
+        image = clab_generator.resolve_container_image(container, container_type)
         raw_paths = container.get("persistencePaths", []) or []
         for raw_path in raw_paths:
             container_path = clab_generator.normalize_persistence_path(str(raw_path))
@@ -350,6 +350,22 @@ def _parse_chain_rules(output: str) -> list[dict[str, str]]:
             rule["port"] = "-"
         rules.append(rule)
     return rules
+
+
+async def pull_images(topology_data: dict) -> None:
+    """Pre-pull all unique container images so deploy doesn't fail on missing images."""
+    images: set[str] = set()
+    for container in _iter_containers(topology_data):
+        image = clab_generator.resolve_container_image(container, container.get("type", ""))
+        images.add(image)
+
+    for image in images:
+        log.info("Pulling image: %s", image)
+        rc, stdout, stderr = await _run(["sudo", "docker", "pull", image])
+        if rc != 0:
+            log.error("Failed to pull image %s: %s", image, stderr.strip())
+            raise RuntimeError(f"Failed to pull image '{image}': {stderr.strip()}")
+        log.info("Pulled image: %s", image)
 
 
 async def deploy(topology_id: str) -> str:
@@ -472,6 +488,43 @@ async def apply_firewall_rules(
     return await get_firewall_rules(topology_name, container_id)
 
 
+async def _force_destroy_containers(topology_id: str) -> str:
+    """Fallback: remove containers by Docker label + remove management network.
+
+    Used when `containerlab destroy` itself fails (e.g. subnet overlap prevents
+    ContainerLab from recreating the management network during tear-down).
+    """
+    path = _yaml_path(topology_id)
+    log.warning(
+        "containerlab destroy failed for %s — falling back to manual Docker cleanup",
+        topology_id,
+    )
+
+    # Find containers that belong to this lab via the topo-file label.
+    rc, ids_out, _ = await _run([
+        "sudo", "docker", "ps", "-a", "-q",
+        "--filter", f"label=clab-topo-file={path}",
+    ])
+    container_ids = ids_out.strip().split() if ids_out.strip() else []
+
+    removed: list[str] = []
+    if container_ids:
+        rm_rc, _, rm_err = await _run(["sudo", "docker", "rm", "-f"] + container_ids)
+        if rm_rc == 0:
+            removed = container_ids
+            log.info("Forcibly removed %d containers for topology %s", len(removed), topology_id)
+        else:
+            log.warning("docker rm -f failed: %s", rm_err.strip())
+
+    # Remove management network.
+    mgmt_net = management_network_name(topology_id)
+    await _run(["sudo", "docker", "network", "rm", mgmt_net])
+
+    if not container_ids:
+        return f"Force cleanup: no containers found (label=clab-topo-file={path})"
+    return f"Force cleanup: removed {len(removed)} container(s) for topology {topology_id}"
+
+
 async def destroy(topology_id: str) -> str:
     """Destroy a deployed topology. Returns containerlab stdout."""
     path = _yaml_path(topology_id)
@@ -483,13 +536,18 @@ async def destroy(topology_id: str) -> str:
         "-t", str(path),
     ])
     if rc != 0:
+        # ContainerLab's destroy internally tries to recreate the management
+        # network, which can fail with a subnet-overlap error when another
+        # Docker network (e.g. a stale compose project) occupies the same
+        # range.  In that case fall back to manual container + network removal.
+        if "overlap" in stderr.lower() or "pool overlaps" in stderr.lower():
+            return await _force_destroy_containers(topology_id)
         raise RuntimeError(f"containerlab destroy failed:\n{stderr}")
 
     # Remove the management Docker network so it doesn't linger.
     mgmt_net = management_network_name(topology_id)
     rm_rc, _, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
     if rm_rc != 0:
-        # Not fatal — network may already be gone or still draining.
         log.warning("Could not remove management network %s: %s", mgmt_net, rm_stderr.strip())
     else:
         log.info("Removed management network %s", mgmt_net)
@@ -514,22 +572,26 @@ def cleanup(topology_id: str, topology_name: str) -> None:
 async def inspect(topology_name: str) -> list[dict]:
     """Inspect a running topology, return list of container statuses.
 
-    Falls back to an empty list if containerlab is not available or the
-    topology is not deployed.
+    Uses docker ps directly (more reliable than containerlab inspect).
+    Falls back to an empty list on failure.
     """
+    prefix = f"clab-{topology_name}-"
     rc, stdout, stderr = await _run([
-        "sudo", "containerlab", "inspect",
-        "--name", topology_name,
-        "--format", "json",
+        "sudo", "docker", "ps", "-a",
+        "--filter", f"name={prefix}",
+        "--format", "{{.Names}}\t{{.State}}",
     ])
     if rc != 0:
-        log.warning("containerlab inspect failed: %s", stderr)
+        log.warning("docker ps failed: %s", stderr)
         return []
 
-    try:
-        data = json.loads(stdout)
-        # containerlab inspect --format json returns {"containers": [...]}
-        return data.get("containers", [])
-    except json.JSONDecodeError:
-        log.warning("Failed to parse inspect output")
-        return []
+    containers = []
+    for line in stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) != 2:
+            continue
+        name, state = parts
+        containers.append({"name": name.strip(), "state": state.strip()})
+    return containers

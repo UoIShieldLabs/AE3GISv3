@@ -63,6 +63,35 @@ async def import_topology(
     return topo
 
 
+@router.post("/import-json", response_model=TopologyRecord, status_code=201)
+async def import_json_topology(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(require_instructor),
+):
+    import json
+    content = (await file.read()).decode('utf-8')
+    try:
+        data = json.loads(content)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid JSON: {e}")
+    if not isinstance(data, dict):
+        raise HTTPException(400, "Invalid JSON: expected a JSON object")
+
+    topology_data = data.get('topology') if isinstance(data.get('topology'), dict) else data
+    name = (
+        data.get('name')
+        or topology_data.get('name')
+        or file.filename.removesuffix('.json')
+        or 'Imported Topology'
+    )
+    topo = Topology(name=name, data=topology_data)
+    db.add(topo)
+    db.commit()
+    db.refresh(topo)
+    return topo
+
+
 @router.get("/{topology_id}", response_model=TopologyRecord)
 def get_topology(
     topology_id: str,
@@ -77,7 +106,7 @@ def get_topology(
 
 
 @router.put("/{topology_id}", response_model=TopologyRecord)
-def update_topology(
+async def update_topology(
     topology_id: str,
     body: TopologyUpdate,
     db: Session = Depends(get_db),
@@ -89,7 +118,11 @@ def update_topology(
     if body.name is not None:
         topo.name = body.name
     if body.data is not None:
-        topo.data = body.data.model_dump(by_alias=True)
+        next_data = body.data.model_dump(by_alias=True)
+        topo.data = next_data
+        # Enforce persistence lifecycle at save time: if a path is removed
+        # from persistencePaths, delete its backend directory immediately.
+        await clab_manager.prune_removed_persistence_paths(topology_id, next_data)
     db.commit()
     db.refresh(topo)
     return topo

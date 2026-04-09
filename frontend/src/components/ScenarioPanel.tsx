@@ -5,7 +5,7 @@ import { SelectField } from './ui/SelectField';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { generateId } from '../utils/idGenerator';
 import { executePhase, executePhaseBatch, listAvailableScripts, listSessions, type PhaseExecutionResult, type AvailableScript, type ClassSessionRecord, type BatchTopologyResult } from '../api/client';
-import type { TopologyData, Scenario, AttackPhase, ScriptExecution, Container, ContainerType } from '../data/sampleTopology';
+import type { TopologyData, Scenario, AttackPhase, ScriptExecution, Container } from '../data/sampleTopology';
 import type { TopologyAction } from '../store/topologyReducer';
 
 interface ScenarioPanelProps {
@@ -92,17 +92,6 @@ function allContainersWithContext(topology: TopologyData): ContainerWithContext[
   }
   return result;
 }
-
-/** Map from container type to which script directory gets mounted */
-const SCRIPT_TYPE_MAP: Record<ContainerType, string> = {
-  'workstation': 'workstation',
-  'web-server': 'server',
-  'file-server': 'server',
-  'plc': 'server',
-  'router': 'router',
-  'firewall': 'firewall',
-  'switch': 'switch',
-};
 
 // ── Component ───────────────────────────────────────────────────
 
@@ -460,9 +449,20 @@ export function ScenarioPanel({
                         <span style={{ color: '#ffaa00', marginLeft: '8px' }}>
                           Skipped ({tr.reason})
                         </span>
+                      ) : tr.exec_sessions ? (
+                        <span style={{ marginLeft: '8px' }}>
+                          <span style={{ color: 'var(--neon-purple, #b44dff)' }}>
+                            {tr.exec_sessions.length} session{tr.exec_sessions.length !== 1 ? 's' : ''} pushed
+                          </span>
+                          {tr.exec_sessions.map((s, j) => (
+                            <span key={j} style={{ color: 'var(--text-dim)', marginLeft: '6px' }}>
+                              [{s.container_name}]
+                            </span>
+                          ))}
+                        </span>
                       ) : (
                         <span style={{ marginLeft: '8px' }}>
-                          {tr.results.map((r, j) => (
+                          {(tr.results ?? []).map((r, j) => (
                             <span key={j} style={{
                               color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)',
                               marginRight: '6px',
@@ -475,7 +475,7 @@ export function ScenarioPanel({
                     </div>
                   ))}
                   <div style={{ ...monoSmall, marginTop: '8px', color: 'var(--text-dim)' }}>
-                    {batchResults.filter(r => !r.skipped).length} executed,{' '}
+                    {batchResults.filter(r => !r.skipped).length} pushed,{' '}
                     {batchResults.filter(r => r.skipped).length} skipped
                   </div>
                 </div>
@@ -541,9 +541,8 @@ export function ScenarioPanel({
                 {(() => {
                   const selectedEntry = containersCtx.find(e => e.container.id === execContainerId);
                   const selectedType = selectedEntry?.container.type;
-                  const scriptDir = selectedType ? SCRIPT_TYPE_MAP[selectedType] : undefined;
-                  const filteredScripts = scriptDir
-                    ? availableScripts.filter(s => s.scriptDir === scriptDir)
+                  const filteredScripts = selectedType
+                    ? availableScripts.filter(s => s.containerTypes.includes(selectedType))
                     : availableScripts;
                   const hasScripts = filteredScripts.length > 0;
                   return hasScripts ? (

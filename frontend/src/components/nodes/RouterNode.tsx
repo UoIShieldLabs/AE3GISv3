@@ -102,9 +102,7 @@ export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNod
         color: '#d0d0d8',
         textAlign: 'center',
         maxWidth: '110px',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        wordBreak: 'break-word',
       }}>
         {data.label}
       </div>
