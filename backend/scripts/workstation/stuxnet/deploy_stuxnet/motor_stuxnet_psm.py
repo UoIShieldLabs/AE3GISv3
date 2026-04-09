@@ -5,8 +5,12 @@ time_delta = 0.1
 
 attack_enabled = True
 
-display_target_rpm = 3000     # fake RPM shown to PLC/HMI
-actual_target_rpm = 10000     # real RPM
+display_min_rpm = 2990        # fake RPM lower bound shown to PLC/HMI
+display_max_rpm = 3000        # fake RPM upper bound shown to PLC/HMI
+display_target_rpm = display_max_rpm
+actual_min_rpm = 900          # real RPM lower bound
+actual_max_rpm = 10000        # real RPM upper bound
+actual_target_rpm = actual_max_rpm
 
 display_ramp_rpm_per_s = 500.0
 actual_ramp_rpm_per_s = 800.0
@@ -58,6 +62,8 @@ def hardware_init():
     print("Start Successful")
 
 def update_inputs():
+    global actual_target_rpm, display_target_rpm
+
     motor_running = psm.get_var("QX0.1")
     plc_target_freq = psm.get_var("QW0")
 
@@ -82,7 +88,12 @@ def update_inputs():
 
     else:
         if attack_enabled:
-            # fake displayed value goes to 3000
+            # fake displayed value oscillates slightly between 2990 and 3000
+            if current_display_rpm >= display_max_rpm:
+                display_target_rpm = display_min_rpm
+            elif current_display_rpm <= display_min_rpm:
+                display_target_rpm = display_max_rpm
+
             display_rpm = ramp_rpm(
                 current_rpm=current_display_rpm,
                 target_rpm=display_target_rpm,
@@ -90,7 +101,12 @@ def update_inputs():
                 ramp_rate_rpm_per_s=display_ramp_rpm_per_s
             )
 
-            # actual hidden value goes to 10000
+            # actual hidden value oscillates between 900 and 10000
+            if current_actual_rpm >= actual_max_rpm:
+                actual_target_rpm = actual_min_rpm
+            elif current_actual_rpm <= actual_min_rpm:
+                actual_target_rpm = actual_max_rpm
+
             actual_rpm = ramp_rpm(
                 current_rpm=current_actual_rpm,
                 target_rpm=actual_target_rpm,
