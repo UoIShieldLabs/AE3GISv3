@@ -22,10 +22,21 @@ from schemas import (
     TokenResponse,
 )
 from services import clab_manager
+from services.exec_session_manager import exec_session_manager
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/classroom", tags=["classroom"])
+
+
+def _container_name(topo_data: dict, container_id: str) -> str:
+    """Return the human-readable name of a container, falling back to its id."""
+    for site in topo_data.get("sites", []):
+        for subnet in site.get("subnets", []):
+            for c in subnet.get("containers", []):
+                if c.get("id") == container_id:
+                    return c.get("name") or container_id
+    return container_id
 
 
 # ── Student login (public) ────────────────────────────────────────
@@ -249,7 +260,8 @@ async def batch_execute_phase(
 
         topo_data = topo.data or {}
         topo_name = clab_manager.deployment_name(topo.id, topo_data)
-        exec_results: list[dict[str, Any]] = []
+        pushed_sessions: list[dict[str, Any]] = []
+        skipped_executions: list[dict[str, Any]] = []
 
         for execution in executions:
             container_id = execution.get("containerId", "")
@@ -257,37 +269,54 @@ async def batch_execute_phase(
             args = execution.get("args") or []
 
             if not container_id or not script:
-                exec_results.append({
+                skipped_executions.append({
                     "containerId": container_id,
                     "script": script,
-                    "returncode": -1,
-                    "stdout": "",
-                    "stderr": "Missing containerId or script",
+                    "reason": "Missing containerId or script",
                 })
                 continue
 
             docker_name = f"clab-{topo_name}-{container_id}"
-            cmd = [script, *args]
+            container_name = _container_name(topo_data, container_id)
             env = clab_manager.build_topology_env(topo_data, container_id)
-            rc, stdout, stderr = await clab_manager._docker_exec(docker_name, cmd, env=env)
-            exec_results.append({
-                "containerId": container_id,
+
+            session = await exec_session_manager.create_session(
+                topology_id=slot.topology_id,
+                container_id=container_id,
+                container_name=container_name,
+                docker_name=docker_name,
+                script=script,
+                args=args,
+                env=env,
+                phase_name=phase.get("name", ""),
+            )
+            pushed_sessions.append({
+                "session_id": session.session_id,
+                "container_id": container_id,
+                "container_name": container_name,
                 "script": script,
-                "returncode": rc,
-                "stdout": stdout,
-                "stderr": stderr,
+                "phase_name": phase.get("name", ""),
+            })
+
+        # Notify the student (and any instructor watching) about the new sessions.
+        if pushed_sessions:
+            await exec_session_manager.broadcast_topology(slot.topology_id, {
+                "type": "scenario_push",
+                "phase_name": phase.get("name", ""),
+                "sessions": pushed_sessions,
             })
 
         log.info(
-            "Batch phase %s on %s (%s): %d executions",
-            phase.get("name"), slot.label, slot.topology_id, len(exec_results),
+            "Batch phase %s on %s (%s): %d exec sessions created",
+            phase.get("name"), slot.label, slot.topology_id, len(pushed_sessions),
         )
 
         topology_results.append({
             "topology_id": slot.topology_id,
             "label": slot.label,
             "skipped": False,
-            "results": exec_results,
+            "exec_sessions": pushed_sessions,
+            "skipped_executions": skipped_executions,
         })
 
     return {"session_id": session_id, "topology_results": topology_results}

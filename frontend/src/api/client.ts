@@ -297,12 +297,24 @@ export function deleteSlot(sessionId: string, slotId: string): Promise<void> {
 
 // ── Batch Phase Execution ────────────────────────────────────────
 
+export interface PushedExecSession {
+  session_id: string;
+  container_id: string;
+  container_name: string;
+  script: string;
+  phase_name: string;
+}
+
 export interface BatchTopologyResult {
   topology_id: string;
   label: string | null;
   skipped: boolean;
   reason?: string;
-  results: PhaseExecutionResult[];
+  /** Live interactive PTY sessions created for each execution (new style). */
+  exec_sessions?: PushedExecSession[];
+  skipped_executions?: { containerId: string; script: string; reason: string }[];
+  /** Legacy one-shot results — only present for non-batch single-topology execute. */
+  results?: PhaseExecutionResult[];
 }
 
 export function executePhaseBatch(

@@ -483,6 +483,10 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
                         exec_cmds.append(f"ip route replace default via {gateway}")
 
                 node_cfg: dict = {"kind": "linux", "image": resolve_container_image(container, ctype)}
+
+                if container.get("metadata", None) is not None:
+                    node_cfg["env"] = container.get("metadata", None)
+
                 if topology_id:
                     binds: list[str] = []
                     raw_persist = container.get("persistencePaths", []) or []

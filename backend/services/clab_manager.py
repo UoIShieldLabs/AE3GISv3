@@ -488,6 +488,43 @@ async def apply_firewall_rules(
     return await get_firewall_rules(topology_name, container_id)
 
 
+async def _force_destroy_containers(topology_id: str) -> str:
+    """Fallback: remove containers by Docker label + remove management network.
+
+    Used when `containerlab destroy` itself fails (e.g. subnet overlap prevents
+    ContainerLab from recreating the management network during tear-down).
+    """
+    path = _yaml_path(topology_id)
+    log.warning(
+        "containerlab destroy failed for %s — falling back to manual Docker cleanup",
+        topology_id,
+    )
+
+    # Find containers that belong to this lab via the topo-file label.
+    rc, ids_out, _ = await _run([
+        "sudo", "docker", "ps", "-a", "-q",
+        "--filter", f"label=clab-topo-file={path}",
+    ])
+    container_ids = ids_out.strip().split() if ids_out.strip() else []
+
+    removed: list[str] = []
+    if container_ids:
+        rm_rc, _, rm_err = await _run(["sudo", "docker", "rm", "-f"] + container_ids)
+        if rm_rc == 0:
+            removed = container_ids
+            log.info("Forcibly removed %d containers for topology %s", len(removed), topology_id)
+        else:
+            log.warning("docker rm -f failed: %s", rm_err.strip())
+
+    # Remove management network.
+    mgmt_net = management_network_name(topology_id)
+    await _run(["sudo", "docker", "network", "rm", mgmt_net])
+
+    if not container_ids:
+        return f"Force cleanup: no containers found (label=clab-topo-file={path})"
+    return f"Force cleanup: removed {len(removed)} container(s) for topology {topology_id}"
+
+
 async def destroy(topology_id: str) -> str:
     """Destroy a deployed topology. Returns containerlab stdout."""
     path = _yaml_path(topology_id)
@@ -499,13 +536,18 @@ async def destroy(topology_id: str) -> str:
         "-t", str(path),
     ])
     if rc != 0:
+        # ContainerLab's destroy internally tries to recreate the management
+        # network, which can fail with a subnet-overlap error when another
+        # Docker network (e.g. a stale compose project) occupies the same
+        # range.  In that case fall back to manual container + network removal.
+        if "overlap" in stderr.lower() or "pool overlaps" in stderr.lower():
+            return await _force_destroy_containers(topology_id)
         raise RuntimeError(f"containerlab destroy failed:\n{stderr}")
 
     # Remove the management Docker network so it doesn't linger.
     mgmt_net = management_network_name(topology_id)
     rm_rc, _, rm_stderr = await _run(["sudo", "docker", "network", "rm", mgmt_net])
     if rm_rc != 0:
-        # Not fatal — network may already be gone or still draining.
         log.warning("Could not remove management network %s: %s", mgmt_net, rm_stderr.strip())
     else:
         log.info("Removed management network %s", mgmt_net)

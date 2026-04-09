@@ -4,7 +4,7 @@ USER="root"
 PASS="root"
 
 echo "Scanning router for exposed services..."
-nmap -sV -O --script=vuln 192.168.2.1
+nmap -sV -O --script=vuln 192.168.2.1 -T5
 
 echo "SSH is open, attempting to connect..."
 sshpass -p "$PASS" ssh -o StrictHostKeyChecking=no $USER@192.168.2.1 "ip route" > ~/routes.txt

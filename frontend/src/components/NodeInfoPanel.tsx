@@ -201,8 +201,8 @@ export function NodeInfoPanel({
                 className="btn-terminal"
                 style={{ marginTop: '8px', background: 'rgba(0, 255, 159, 0.1)', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
                 onClick={() => {
-                  const base = `/api/proxy/${topologyId}/${container.id}`;
-                  const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '';
+                  const base = `${window.location.origin}/api/proxy/${topologyId}/${container.id}`;
+                  const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '/';
                   const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
                   window.open(url, '_blank');
                 }}

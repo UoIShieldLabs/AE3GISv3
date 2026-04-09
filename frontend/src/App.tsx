@@ -21,6 +21,7 @@ import { PurdueView } from './components/PurdueView';
 import { AiChatPanel } from './components/AiChatPanel';
 import { RouterActionDialog } from './components/dialogs/RouterActionDialog';
 import { FirewallRulesDialog, type FirewallRule } from './components/dialogs/FirewallRulesDialog';
+import { PushedTerminalOverlay, type PushedSession } from './components/PushedTerminalOverlay';
 import * as api from './api/client';
 import { deploymentName } from './utils/deploymentName';
 
@@ -72,6 +73,12 @@ function App() {
   const [scenariosOpen, setScenariosOpen] = useState(false);
   const [purdueOpen, setPurdueOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+
+  // ── Pushed scenario terminals (instructor → student) ──────────────
+  const [pushedSessions, setPushedSessions] = useState<PushedSession[]>([]);
+  const [activePushedId, setActivePushedId] = useState<string | null>(null);
+  const [pushedMinimized, setPushedMinimized] = useState(false);
+  const notifyWsRef = useRef<WebSocket | null>(null);
 
   const openTerminal = useCallback((container: Container) => {
     setTerminalSessions(prev => {
@@ -231,6 +238,51 @@ function App() {
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
+
+  // ── Notify WebSocket — receives scenario_push from instructor ──
+  useEffect(() => {
+    if (!backendId) {
+      notifyWsRef.current?.close();
+      notifyWsRef.current = null;
+      return;
+    }
+
+    const wsUrlStr = api.wsUrl(`/api/topologies/ws/${backendId}/notify`);
+    const ws = new WebSocket(wsUrlStr);
+    notifyWsRef.current = ws;
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(typeof ev.data === 'string' ? ev.data : '') as Record<string, unknown>;
+        if (msg.type === 'ping') return;
+        if (msg.type === 'scenario_push') {
+          const rawSessions = (msg.sessions as Array<Record<string, string>>) ?? [];
+          const newSessions: PushedSession[] = rawSessions.map((s) => ({
+            sessionId: s.session_id,
+            topologyId: backendId,
+            containerId: s.container_id,
+            containerName: s.container_name,
+            script: s.script,
+            phaseName: s.phase_name,
+          }));
+          if (newSessions.length === 0) return;
+          setPushedSessions((prev) => {
+            const existingIds = new Set(prev.map((p) => p.sessionId));
+            return [...prev, ...newSessions.filter((s) => !existingIds.has(s.sessionId))];
+          });
+          setActivePushedId(newSessions[0].sessionId);
+          setPushedMinimized(false);
+        }
+      } catch {
+        // non-JSON messages ignored
+      }
+    };
+
+    return () => {
+      ws.close();
+      notifyWsRef.current = null;
+    };
+  }, [backendId]);
 
   // ── Backend handlers ──────────────────────────────────────────
 
@@ -636,6 +688,24 @@ function App() {
               topoName={backendId ? deploymentName(backendId, topology.name) : (topology.name || 'ae3gis-topology')}
               minimized={terminalMinimized}
               onMinimizedChange={setTerminalMinimized}
+            />
+          )}
+
+          {/* Pushed scenario terminals (instructor → student) */}
+          {pushedSessions.length > 0 && activePushedId && (
+            <PushedTerminalOverlay
+              sessions={pushedSessions}
+              activeId={activePushedId}
+              onActivate={setActivePushedId}
+              onClose={(id) => {
+                setPushedSessions((prev) => {
+                  const next = prev.filter((s) => s.sessionId !== id);
+                  if (activePushedId === id) setActivePushedId(next[0]?.sessionId ?? null);
+                  return next;
+                });
+              }}
+              minimized={pushedMinimized}
+              onMinimizedChange={setPushedMinimized}
             />
           )}
 
