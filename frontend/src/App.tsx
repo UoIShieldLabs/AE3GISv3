@@ -810,8 +810,11 @@ function App() {
             onClose={() => setAiChatOpen(false)}
             topologyId={backendId}
             onTopologyAction={(action) => {
-              // Reload the topology (created or modified)
               void handleLoad(action.topology_id);
+            }}
+            onScenarioAction={() => {
+              // Reload current topology so ScenarioPanel picks up the new scenario
+              if (backendId) void handleLoad(backendId);
             }}
           />
         </div>

@@ -24,8 +24,12 @@ def _yaml_path(topology_id: str) -> Path:
 
 def deployment_name(topology_id: str, topology_data: dict | None = None) -> str:
     """Return a deterministic, unique containerlab topology name per record."""
+    import re
     base = (topology_data or {}).get("name") or "ae3gis-topology"
     base = str(base).strip() or "ae3gis-topology"
+    # ContainerLab node names must contain only alphanumerics, hyphens, underscores
+    base = re.sub(r"[^a-zA-Z0-9_-]", "-", base)
+    base = re.sub(r"-{2,}", "-", base).strip("-") or "ae3gis-topology"
     return f"{base}-{topology_id[:8]}"
 
 

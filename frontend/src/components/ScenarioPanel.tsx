@@ -18,8 +18,6 @@ interface ScenarioPanelProps {
   onSave?: () => void;
 }
 
-// ── Shared inline styles (matching ClassroomPanel) ──────────────
-
 const rowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -67,13 +65,11 @@ const monoSmall: React.CSSProperties = {
   color: 'var(--text-secondary)',
 };
 
-// ── Helper: collect all containers with site/subnet context ─────
-
 interface ContainerWithContext {
   container: Container;
   siteName: string;
   subnetName: string;
-  label: string; // "SiteName / SubnetName / ContainerName (type)"
+  label: string;
 }
 
 function allContainersWithContext(topology: TopologyData): ContainerWithContext[] {
@@ -93,8 +89,6 @@ function allContainersWithContext(topology: TopologyData): ContainerWithContext[
   return result;
 }
 
-// ── Component ───────────────────────────────────────────────────
-
 export function ScenarioPanel({
   open,
   onClose,
@@ -107,8 +101,6 @@ export function ScenarioPanel({
   const scenarios = topology.scenarios || [];
   const containersCtx = useMemo(() => allContainersWithContext(topology), [topology]);
 
-  // Auto-save after scenario mutations (debounced to batch rapid changes)
-  // Use a ref so the timeout always calls the latest onSave (avoids stale closure)
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
   const autoSaveTimer = useMemo(() => ({ id: null as ReturnType<typeof setTimeout> | null }), []);
@@ -117,78 +109,58 @@ export function ScenarioPanel({
     autoSaveTimer.id = setTimeout(() => { onSaveRef.current?.(); autoSaveTimer.id = null; }, 300);
   }, [autoSaveTimer]);
 
-  // ── Available scripts from backend
   const [availableScripts, setAvailableScripts] = useState<AvailableScript[]>([]);
   useEffect(() => {
     if (!open) return;
     listAvailableScripts()
-      .then(res => { console.log('Available scripts:', res.scripts); setAvailableScripts(res.scripts); })
-      .catch(err => { console.error('Failed to fetch scripts:', err); setAvailableScripts([]); });
+      .then(res => setAvailableScripts(res.scripts))
+      .catch(() => setAvailableScripts([]));
   }, [open]);
 
-  // ── View state
+  // view: 'list' | 'scenario' | 'phase-edit'
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
-  const [activePhase, setActivePhase] = useState<AttackPhase | null>(null);
+  const [editingPhase, setEditingPhase] = useState<AttackPhase | null>(null);
 
-  // ── Create scenario form
   const [newScenarioName, setNewScenarioName] = useState('');
   const [newScenarioDesc, setNewScenarioDesc] = useState('');
-
-  // ── Create phase form
   const [newPhaseName, setNewPhaseName] = useState('');
   const [newPhaseDesc, setNewPhaseDesc] = useState('');
-
-  // ── Add execution form
   const [execContainerId, setExecContainerId] = useState('');
   const [execScript, setExecScript] = useState('');
   const [execArgs, setExecArgs] = useState('');
 
-  // ── Execution results
   const [executing, setExecuting] = useState(false);
-  const [execResults, setExecResults] = useState<PhaseExecutionResult[] | null>(null);
+  const [execResults, setExecResults] = useState<{ phaseId: string; results: PhaseExecutionResult[] } | null>(null);
   const [execError, setExecError] = useState('');
 
-  // ── Batch execution
   const [sessions, setSessions] = useState<ClassSessionRecord[]>([]);
   const [batchSessionId, setBatchSessionId] = useState('');
   const [batchExecuting, setBatchExecuting] = useState(false);
-  const [batchResults, setBatchResults] = useState<BatchTopologyResult[] | null>(null);
+  const [batchResults, setBatchResults] = useState<{ phaseId: string; results: BatchTopologyResult[] } | null>(null);
   const [batchError, setBatchError] = useState('');
 
-  // Fetch sessions when panel opens
   useEffect(() => {
     if (!open) return;
-    listSessions()
-      .then(setSessions)
-      .catch(() => setSessions([]));
+    listSessions().then(setSessions).catch(() => setSessions([]));
   }, [open]);
 
-  // ── Delete confirmations
   const [deleteScenarioTarget, setDeleteScenarioTarget] = useState<Scenario | null>(null);
   const [deletePhaseTarget, setDeletePhaseTarget] = useState<AttackPhase | null>(null);
 
-  // Keep active references in sync with topology state
   const currentScenario = useMemo(
     () => activeScenario ? scenarios.find(s => s.id === activeScenario.id) || null : null,
     [scenarios, activeScenario],
   );
-  const currentPhase = useMemo(
-    () => currentScenario && activePhase
-      ? currentScenario.phases.find(p => p.id === activePhase.id) || null
+  const currentEditPhase = useMemo(
+    () => currentScenario && editingPhase
+      ? currentScenario.phases.find(p => p.id === editingPhase.id) || null
       : null,
-    [currentScenario, activePhase],
+    [currentScenario, editingPhase],
   );
-
-  // ── Handlers ──────────────────────────────────────────────────
 
   const handleCreateScenario = () => {
     if (!newScenarioName.trim()) return;
-    const scenario: Scenario = {
-      id: generateId(),
-      name: newScenarioName.trim(),
-      description: newScenarioDesc.trim() || undefined,
-      phases: [],
-    };
+    const scenario: Scenario = { id: generateId(), name: newScenarioName.trim(), description: newScenarioDesc.trim() || undefined, phases: [] };
     dispatch({ type: 'ADD_SCENARIO', payload: scenario });
     scheduleAutoSave();
     setNewScenarioName('');
@@ -199,21 +171,13 @@ export function ScenarioPanel({
     if (!deleteScenarioTarget) return;
     dispatch({ type: 'DELETE_SCENARIO', payload: { scenarioId: deleteScenarioTarget.id } });
     scheduleAutoSave();
-    if (activeScenario?.id === deleteScenarioTarget.id) {
-      setActiveScenario(null);
-      setActivePhase(null);
-    }
+    if (activeScenario?.id === deleteScenarioTarget.id) setActiveScenario(null);
     setDeleteScenarioTarget(null);
   };
 
   const handleCreatePhase = () => {
     if (!currentScenario || !newPhaseName.trim()) return;
-    const phase: AttackPhase = {
-      id: generateId(),
-      name: newPhaseName.trim(),
-      description: newPhaseDesc.trim() || undefined,
-      executions: [],
-    };
+    const phase: AttackPhase = { id: generateId(), name: newPhaseName.trim(), description: newPhaseDesc.trim() || undefined, executions: [] };
     dispatch({ type: 'ADD_PHASE', payload: { scenarioId: currentScenario.id, phase } });
     scheduleAutoSave();
     setNewPhaseName('');
@@ -222,47 +186,24 @@ export function ScenarioPanel({
 
   const handleDeletePhase = () => {
     if (!deletePhaseTarget || !currentScenario) return;
-    dispatch({
-      type: 'DELETE_PHASE',
-      payload: { scenarioId: currentScenario.id, phaseId: deletePhaseTarget.id },
-    });
+    dispatch({ type: 'DELETE_PHASE', payload: { scenarioId: currentScenario.id, phaseId: deletePhaseTarget.id } });
     scheduleAutoSave();
-    if (activePhase?.id === deletePhaseTarget.id) setActivePhase(null);
+    if (editingPhase?.id === deletePhaseTarget.id) setEditingPhase(null);
     setDeletePhaseTarget(null);
   };
 
   const handleAddExecution = () => {
-    if (!currentScenario || !currentPhase || !execContainerId || !execScript.trim()) return;
-    const newExecution: ScriptExecution = {
-      containerId: execContainerId,
-      script: execScript.trim(),
-      args: execArgs.trim() ? execArgs.trim().split(/\s+/) : undefined,
-    };
-    const updatedExecutions = [...currentPhase.executions, newExecution];
-    dispatch({
-      type: 'UPDATE_PHASE',
-      payload: {
-        scenarioId: currentScenario.id,
-        phaseId: currentPhase.id,
-        updates: { executions: updatedExecutions },
-      },
-    });
+    if (!currentScenario || !currentEditPhase || !execContainerId || !execScript.trim()) return;
+    const newExecution: ScriptExecution = { containerId: execContainerId, script: execScript.trim(), args: execArgs.trim() ? execArgs.trim().split(/\s+/) : undefined };
+    dispatch({ type: 'UPDATE_PHASE', payload: { scenarioId: currentScenario.id, phaseId: currentEditPhase.id, updates: { executions: [...currentEditPhase.executions, newExecution] } } });
     scheduleAutoSave();
     setExecScript('');
     setExecArgs('');
   };
 
   const handleRemoveExecution = (index: number) => {
-    if (!currentScenario || !currentPhase) return;
-    const updatedExecutions = currentPhase.executions.filter((_, i) => i !== index);
-    dispatch({
-      type: 'UPDATE_PHASE',
-      payload: {
-        scenarioId: currentScenario.id,
-        phaseId: currentPhase.id,
-        updates: { executions: updatedExecutions },
-      },
-    });
+    if (!currentScenario || !currentEditPhase) return;
+    dispatch({ type: 'UPDATE_PHASE', payload: { scenarioId: currentScenario.id, phaseId: currentEditPhase.id, updates: { executions: currentEditPhase.executions.filter((_, i) => i !== index) } } });
     scheduleAutoSave();
   };
 
@@ -273,10 +214,8 @@ export function ScenarioPanel({
     setExecError('');
     try {
       const result = await executePhase(topologyId, scenarioId, phaseId);
-      console.log('Phase execution result:', result);
-      setExecResults(result.results);
+      setExecResults({ phaseId, results: result.results });
     } catch (e) {
-      console.error('Phase execution error:', e);
       setExecError(e instanceof Error ? e.message : 'Execution failed');
     } finally {
       setExecuting(false);
@@ -290,7 +229,7 @@ export function ScenarioPanel({
     setBatchError('');
     try {
       const result = await executePhaseBatch(batchSessionId, scenarioId, phaseId);
-      setBatchResults(result.topology_results);
+      setBatchResults({ phaseId, results: result.topology_results });
     } catch (e) {
       setBatchError(e instanceof Error ? e.message : 'Batch execution failed');
     } finally {
@@ -305,222 +244,43 @@ export function ScenarioPanel({
 
   const isDeployed = deployStatus === 'deployed';
 
-  // ── Render: Phase detail view ─────────────────────────────────
+  // ── Phase edit view ───────────────────────────────────────────
 
-  if (currentScenario && currentPhase) {
+  if (currentScenario && currentEditPhase) {
     return (
       <>
-        <Dialog title="Scenario — Phase" open={open} onClose={onClose} width={700}>
-          <button
-            onClick={() => { setActivePhase(null); setExecResults(null); setExecError(''); }}
-            style={{ ...btnCyan, marginBottom: '12px' }}
-          >
+        <Dialog title="Edit Phase Scripts" open={open} onClose={onClose} width={700}>
+          <button onClick={() => { setEditingPhase(null); }} style={{ ...btnCyan, marginBottom: '12px' }}>
             &larr; Back to {currentScenario.name}
           </button>
 
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            color: '#ff00ff',
-            fontSize: '20px',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            marginBottom: '4px',
-          }}>
-            {currentPhase.name}
+          <div style={{ fontFamily: 'var(--font-display)', color: '#ff00ff', fontSize: '20px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>
+            {currentEditPhase.name}
           </div>
-          {currentPhase.description && (
-            <div style={{ ...monoSmall, marginBottom: '12px' }}>{currentPhase.description}</div>
+          {currentEditPhase.description && (
+            <div style={{ ...monoSmall, marginBottom: '12px' }}>{currentEditPhase.description}</div>
           )}
 
-          {/* Execute button */}
-          <div style={{ marginBottom: '16px' }}>
-            <button
-              onClick={() => handleExecutePhase(currentScenario.id, currentPhase.id)}
-              disabled={executing || !isDeployed || currentPhase.executions.length === 0}
-              style={{
-                ...btnMagenta,
-                padding: '10px 20px',
-                fontSize: '14px',
-                opacity: (!isDeployed || currentPhase.executions.length === 0) ? 0.4 : 1,
-              }}
-              title={!isDeployed ? 'Topology must be deployed' : ''}
-            >
-              {executing ? 'Executing...' : 'Execute Phase'}
-            </button>
-            {!isDeployed && (
-              <span style={{ ...monoSmall, marginLeft: '12px', color: '#ffaa00' }}>
-                Deploy topology first
-              </span>
-            )}
-          </div>
-
-          {/* Execution results */}
-          {execError && (
-            <div style={{ ...monoSmall, color: 'var(--neon-red)', marginBottom: '12px' }}>
-              {execError}
-            </div>
-          )}
-          {execResults && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              border: '1px solid rgba(255,0,255,0.2)',
-              borderRadius: '4px',
-              background: 'rgba(255,0,255,0.03)',
-              maxHeight: '200px',
-              overflowY: 'auto',
-            }}>
-              <div style={{ ...sectionHeader, marginTop: 0 }}>Results</div>
-              {execResults.map((r, i) => (
-                <div key={i} style={{
-                  ...monoSmall,
-                  padding: '6px 0',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                }}>
-                  <span style={{ color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)' }}>
-                    [{r.returncode === 0 ? 'OK' : `ERR:${r.returncode}`}]
-                  </span>
-                  {' '}{containerLabel(r.containerId)} — {r.script}
-                  {r.stdout && <pre style={{ margin: '4px 0 0 16px', color: 'var(--text-dim)', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{r.stdout.trim()}</pre>}
-                  {r.stderr && <pre style={{ margin: '4px 0 0 16px', color: 'var(--neon-red)', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{r.stderr.trim()}</pre>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Batch execute on all students */}
-          {sessions.length > 0 && currentPhase.executions.length > 0 && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              border: '1px solid rgba(255,0,255,0.2)',
-              borderRadius: '4px',
-              background: 'rgba(255,0,255,0.03)',
-            }}>
-              <div style={{ ...sectionHeader, marginTop: 0 }}>Execute on All Students</div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
-                  <SelectField
-                    label="Class Session"
-                    value={batchSessionId}
-                    onChange={setBatchSessionId}
-                    options={[
-                      { value: '', label: '\u2014 Select Session \u2014' },
-                      ...sessions.map(s => ({
-                        value: s.id,
-                        label: s.name,
-                      })),
-                    ]}
-                  />
-                </div>
-                <button
-                  onClick={() => handleBatchExecute(currentScenario.id, currentPhase.id)}
-                  disabled={!batchSessionId || batchExecuting}
-                  style={{
-                    ...btnMagenta,
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    marginBottom: '16px',
-                    opacity: !batchSessionId ? 0.4 : 1,
-                  }}
-                >
-                  {batchExecuting ? 'Executing...' : 'Run on All Students'}
-                </button>
-              </div>
-
-              {batchError && (
-                <div style={{ ...monoSmall, color: 'var(--neon-red)', marginTop: '8px' }}>
-                  {batchError}
-                </div>
-              )}
-
-              {batchResults && (
-                <div style={{ maxHeight: '250px', overflowY: 'auto', marginTop: '8px' }}>
-                  {batchResults.map((tr, i) => (
-                    <div key={i} style={{
-                      ...monoSmall,
-                      padding: '6px 0',
-                      borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>
-                        {tr.label || tr.topology_id}
-                      </span>
-                      {tr.skipped ? (
-                        <span style={{ color: '#ffaa00', marginLeft: '8px' }}>
-                          Skipped ({tr.reason})
-                        </span>
-                      ) : tr.exec_sessions ? (
-                        <span style={{ marginLeft: '8px' }}>
-                          <span style={{ color: 'var(--neon-purple, #b44dff)' }}>
-                            {tr.exec_sessions.length} session{tr.exec_sessions.length !== 1 ? 's' : ''} pushed
-                          </span>
-                          {tr.exec_sessions.map((s, j) => (
-                            <span key={j} style={{ color: 'var(--text-dim)', marginLeft: '6px' }}>
-                              [{s.container_name}]
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span style={{ marginLeft: '8px' }}>
-                          {(tr.results ?? []).map((r, j) => (
-                            <span key={j} style={{
-                              color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)',
-                              marginRight: '6px',
-                            }}>
-                              [{r.returncode === 0 ? 'OK' : `ERR:${r.returncode}`}]
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  <div style={{ ...monoSmall, marginTop: '8px', color: 'var(--text-dim)' }}>
-                    {batchResults.filter(r => !r.skipped).length} pushed,{' '}
-                    {batchResults.filter(r => r.skipped).length} skipped
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Script executions list */}
-          <div style={sectionHeader}>
-            Script Executions ({currentPhase.executions.length})
-          </div>
-          {currentPhase.executions.length === 0 ? (
-            <div style={{ ...monoSmall, padding: '8px 0' }}>
-              No scripts configured. Add one below.
-            </div>
+          <div style={sectionHeader}>Script Executions ({currentEditPhase.executions.length})</div>
+          {currentEditPhase.executions.length === 0 ? (
+            <div style={{ ...monoSmall, padding: '8px 0' }}>No scripts configured. Add one below.</div>
           ) : (
-            currentPhase.executions.map((exec, i) => (
+            currentEditPhase.executions.map((exec, i) => (
               <div key={i} style={rowStyle}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '14px',
-                    color: 'var(--text-primary)',
-                  }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--text-primary)' }}>
                     {containerLabel(exec.containerId)}
                   </div>
                   <div style={{ ...monoSmall, fontSize: '12px' }}>
                     {exec.script}{exec.args?.length ? ` ${exec.args.join(' ')}` : ''}
                   </div>
                 </div>
-                <button onClick={() => handleRemoveExecution(i)} style={btnRed}>
-                  Del
-                </button>
+                <button onClick={() => handleRemoveExecution(i)} style={btnRed}>Del</button>
               </div>
             ))
           )}
 
-          {/* Add execution form */}
-          <div style={{
-            marginTop: '12px',
-            padding: '12px',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            background: 'rgba(20,20,30,0.3)',
-          }}>
+          <div style={{ marginTop: '12px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'rgba(20,20,30,0.3)' }}>
             <div style={{ ...sectionHeader, marginTop: 0 }}>Add Script Execution</div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ minWidth: '220px', flex: 1 }}>
@@ -528,226 +288,181 @@ export function ScenarioPanel({
                   label="Target Container"
                   value={execContainerId}
                   onChange={(v) => { setExecContainerId(v); setExecScript(''); }}
-                  options={[
-                    { value: '', label: '\u2014 Select \u2014' },
-                    ...containersCtx.map(e => ({
-                      value: e.container.id,
-                      label: e.label,
-                    })),
-                  ]}
+                  options={[{ value: '', label: '— Select —' }, ...containersCtx.map(e => ({ value: e.container.id, label: e.label }))]}
                 />
               </div>
               <div style={{ minWidth: '220px', flex: 1 }}>
                 {(() => {
-                  const selectedEntry = containersCtx.find(e => e.container.id === execContainerId);
-                  const selectedType = selectedEntry?.container.type;
-                  const filteredScripts = selectedType
-                    ? availableScripts.filter(s => s.containerTypes.includes(selectedType))
-                    : availableScripts;
-                  const hasScripts = filteredScripts.length > 0;
-                  return hasScripts ? (
+                  const selectedType = containersCtx.find(e => e.container.id === execContainerId)?.container.type;
+                  const filtered = selectedType ? availableScripts.filter(s => s.containerTypes.includes(selectedType)) : availableScripts;
+                  return filtered.length > 0 ? (
                     <SelectField
                       label="Script"
                       value={execScript}
                       onChange={setExecScript}
-                      options={[
-                        { value: '', label: '\u2014 Select \u2014' },
-                        ...filteredScripts.map(s => ({
-                          value: s.path,
-                          label: s.path,
-                        })),
-                      ]}
+                      options={[{ value: '', label: '— Select —' }, ...filtered.map(s => ({ value: s.path, label: s.path }))]}
                     />
                   ) : (
-                    <FormField
-                      label="Script Path"
-                      value={execScript}
-                      onChange={setExecScript}
-                      placeholder="/scripts/workstation/exploit.sh"
-                    />
+                    <FormField label="Script Path" value={execScript} onChange={setExecScript} placeholder="/scripts/workstation/exploit.sh" />
                   );
                 })()}
               </div>
               <div style={{ minWidth: '120px', flex: 1 }}>
-                <FormField
-                  label="Args (optional)"
-                  value={execArgs}
-                  onChange={setExecArgs}
-                  placeholder="--target 10.0.1.5"
-                />
+                <FormField label="Args (optional)" value={execArgs} onChange={setExecArgs} placeholder="--target 10.0.1.5" />
               </div>
-              <button
-                onClick={handleAddExecution}
-                disabled={!execContainerId || !execScript.trim()}
-                style={{ ...btnGreen, marginBottom: '16px' }}
-              >
-                Add
-              </button>
+              <button onClick={handleAddExecution} disabled={!execContainerId || !execScript.trim()} style={{ ...btnGreen, marginBottom: '16px' }}>Add</button>
             </div>
           </div>
         </Dialog>
-
-        <ConfirmDialog
-          open={false}
-          title=""
-          message=""
-          onConfirm={() => {}}
-          onCancel={() => {}}
-        />
+        <ConfirmDialog open={false} title="" message="" onConfirm={() => {}} onCancel={() => {}} />
       </>
     );
   }
 
-  // ── Render: Scenario detail (phases list) ─────────────────────
+  // ── Scenario detail: phases list with inline Run / Run Students ──
 
   if (currentScenario) {
     return (
       <>
-        <Dialog title="Scenario" open={open} onClose={onClose} width={650}>
-          <button
-            onClick={() => { setActiveScenario(null); setExecResults(null); setExecError(''); }}
-            style={{ ...btnCyan, marginBottom: '12px' }}
-          >
+        <Dialog title="Scenario" open={open} onClose={onClose} width={700}>
+          <button onClick={() => { setActiveScenario(null); setExecResults(null); setExecError(''); setBatchResults(null); }} style={{ ...btnCyan, marginBottom: '12px' }}>
             &larr; Back to Scenarios
           </button>
 
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            color: '#ff00ff',
-            fontSize: '22px',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            marginBottom: '4px',
-          }}>
+          <div style={{ fontFamily: 'var(--font-display)', color: '#ff00ff', fontSize: '22px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>
             {currentScenario.name}
           </div>
           {currentScenario.description && (
             <div style={{ ...monoSmall, marginBottom: '8px' }}>{currentScenario.description}</div>
           )}
 
-          {/* Phases */}
-          <div style={sectionHeader}>
-            Phases ({currentScenario.phases.length})
-          </div>
-          {currentScenario.phases.length === 0 ? (
-            <div style={{ ...monoSmall, padding: '8px 0' }}>
-              No phases defined. Create one below.
+          {/* Session selector — shown once at top if sessions exist */}
+          {sessions.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', marginBottom: '8px', padding: '10px 12px', border: '1px solid rgba(255,0,255,0.2)', borderRadius: '4px', background: 'rgba(255,0,255,0.03)' }}>
+              <div style={{ flex: 1, maxWidth: '320px' }}>
+                <SelectField
+                  label="Deploy to class session"
+                  value={batchSessionId}
+                  onChange={setBatchSessionId}
+                  options={[{ value: '', label: '— Select Session —' }, ...sessions.map(s => ({ value: s.id, label: s.name }))]}
+                />
+              </div>
+              {batchSessionId && (
+                <div style={{ ...monoSmall, paddingBottom: '18px', color: 'var(--neon-green)' }}>
+                  "Run Students" buttons enabled
+                </div>
+              )}
             </div>
+          )}
+
+          {/* Phases */}
+          <div style={sectionHeader}>Phases ({currentScenario.phases.length})</div>
+          {currentScenario.phases.length === 0 ? (
+            <div style={{ ...monoSmall, padding: '8px 0' }}>No phases defined. Create one below.</div>
           ) : (
             currentScenario.phases.map((phase, idx) => (
-              <div key={phase.id} style={rowStyle}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '14px',
-                  color: '#ff00ff',
-                  width: '28px',
-                  textAlign: 'center',
-                  flexShrink: 0,
-                }}>
-                  {idx + 1}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '15px',
-                    color: 'var(--text-primary)',
-                    marginBottom: '2px',
-                  }}>
-                    {phase.name}
+              <div key={phase.id}>
+                <div style={rowStyle}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: '#ff00ff', width: '24px', textAlign: 'center', flexShrink: 0 }}>
+                    {idx + 1}
                   </div>
-                  <div style={monoSmall}>
-                    {phase.executions.length} script{phase.executions.length !== 1 ? 's' : ''}
-                    {phase.description ? ` — ${phase.description}` : ''}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', color: 'var(--text-primary)', marginBottom: '2px' }}>
+                      {phase.name}
+                    </div>
+                    <div style={monoSmall}>
+                      {phase.executions.length} script{phase.executions.length !== 1 ? 's' : ''}
+                      {phase.description ? ` — ${phase.description}` : ''}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleExecutePhase(currentScenario.id, phase.id)}
+                    disabled={executing || !isDeployed || phase.executions.length === 0}
+                    style={{ ...btnMagenta, opacity: (!isDeployed || phase.executions.length === 0) ? 0.4 : 1 }}
+                    title={!isDeployed ? 'Deploy topology first' : 'Run on this topology'}
+                  >
+                    {executing && execResults?.phaseId !== phase.id ? '...' : 'Run'}
+                  </button>
+                  {sessions.length > 0 && (
+                    <button
+                      onClick={() => handleBatchExecute(currentScenario.id, phase.id)}
+                      disabled={!batchSessionId || batchExecuting || phase.executions.length === 0}
+                      style={{ ...btnAmber, opacity: (!batchSessionId || phase.executions.length === 0) ? 0.4 : 1 }}
+                      title={!batchSessionId ? 'Select a class session above' : 'Run on all students in session'}
+                    >
+                      {batchExecuting && batchResults?.phaseId !== phase.id ? '...' : 'Run Students'}
+                    </button>
+                  )}
+                  <button onClick={() => setEditingPhase(phase)} style={btnCyan}>Edit</button>
+                  <button onClick={() => setDeletePhaseTarget(phase)} style={btnRed}>Del</button>
                 </div>
-                <button
-                  onClick={() => handleExecutePhase(currentScenario.id, phase.id)}
-                  disabled={executing || !isDeployed || phase.executions.length === 0}
-                  style={{
-                    ...btnMagenta,
-                    opacity: (!isDeployed || phase.executions.length === 0) ? 0.4 : 1,
-                  }}
-                  title={!isDeployed ? 'Deploy topology first' : ''}
-                >
-                  {executing ? '...' : 'Run'}
-                </button>
-                <button
-                  onClick={() => setActivePhase(phase)}
-                  style={btnCyan}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setDeletePhaseTarget(phase)}
-                  style={btnRed}
-                >
-                  Del
-                </button>
+
+                {/* Inline results for this phase */}
+                {execResults?.phaseId === phase.id && (
+                  <div style={{ marginBottom: '8px', marginTop: '-4px', padding: '10px 12px', border: '1px solid rgba(255,0,255,0.2)', borderRadius: '4px', background: 'rgba(255,0,255,0.03)', maxHeight: '180px', overflowY: 'auto' }}>
+                    {execResults.results.map((r, i) => (
+                      <div key={i} style={{ ...monoSmall, padding: '3px 0' }}>
+                        <span style={{ color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)' }}>
+                          [{r.returncode === 0 ? 'OK' : `ERR:${r.returncode}`}]
+                        </span>
+                        {' '}{containerLabel(r.containerId)} — {r.script}
+                        {r.stdout && <pre style={{ margin: '2px 0 0 16px', color: 'var(--text-dim)', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{r.stdout.trim()}</pre>}
+                        {r.stderr && <pre style={{ margin: '2px 0 0 16px', color: 'var(--neon-red)', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{r.stderr.trim()}</pre>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Inline batch results for this phase */}
+                {batchResults?.phaseId === phase.id && (
+                  <div style={{ marginBottom: '8px', marginTop: '-4px', padding: '10px 12px', border: '1px solid rgba(255,170,0,0.2)', borderRadius: '4px', background: 'rgba(255,170,0,0.03)', maxHeight: '180px', overflowY: 'auto' }}>
+                    {batchResults.results.map((tr, i) => (
+                      <div key={i} style={{ ...monoSmall, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{tr.label || tr.topology_id}</span>
+                        {tr.skipped ? (
+                          <span style={{ color: '#ffaa00', marginLeft: '8px' }}>Skipped ({tr.reason})</span>
+                        ) : tr.exec_sessions ? (
+                          <span style={{ color: 'var(--neon-purple, #b44dff)', marginLeft: '8px' }}>
+                            {tr.exec_sessions.length} session{tr.exec_sessions.length !== 1 ? 's' : ''} pushed
+                          </span>
+                        ) : (
+                          <span style={{ marginLeft: '8px' }}>
+                            {(tr.results ?? []).map((r, j) => (
+                              <span key={j} style={{ color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)', marginRight: '4px' }}>
+                                [{r.returncode === 0 ? 'OK' : `ERR:${r.returncode}`}]
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ ...monoSmall, marginTop: '6px', color: 'var(--text-dim)' }}>
+                      {batchResults.results.filter(r => !r.skipped).length} pushed, {batchResults.results.filter(r => r.skipped).length} skipped
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
 
-          {/* Execution results at scenario level */}
-          {execError && (
-            <div style={{ ...monoSmall, color: 'var(--neon-red)', marginTop: '8px' }}>
-              {execError}
-            </div>
-          )}
-          {execResults && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              border: '1px solid rgba(255,0,255,0.2)',
-              borderRadius: '4px',
-              background: 'rgba(255,0,255,0.03)',
-              maxHeight: '200px',
-              overflowY: 'auto',
-            }}>
-              <div style={{ ...sectionHeader, marginTop: 0 }}>Last Execution Results</div>
-              {execResults.map((r, i) => (
-                <div key={i} style={{ ...monoSmall, padding: '4px 0' }}>
-                  <span style={{ color: r.returncode === 0 ? 'var(--neon-green)' : 'var(--neon-red)' }}>
-                    [{r.returncode === 0 ? 'OK' : `ERR:${r.returncode}`}]
-                  </span>
-                  {' '}{containerLabel(r.containerId)} — {r.script}
-                </div>
-              ))}
-            </div>
+          {execError && <div style={{ ...monoSmall, color: 'var(--neon-red)', marginTop: '8px' }}>{execError}</div>}
+          {batchError && <div style={{ ...monoSmall, color: '#ffaa00', marginTop: '8px' }}>{batchError}</div>}
+
+          {!isDeployed && (
+            <div style={{ ...monoSmall, color: '#ffaa00', marginTop: '8px' }}>Topology must be deployed to run phases.</div>
           )}
 
-          {/* Create phase form */}
-          <div style={{
-            marginTop: '16px',
-            padding: '12px',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            background: 'rgba(20,20,30,0.3)',
-          }}>
+          {/* Add phase form */}
+          <div style={{ marginTop: '16px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'rgba(20,20,30,0.3)' }}>
             <div style={{ ...sectionHeader, marginTop: 0 }}>Add Phase</div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
               <div style={{ flex: 1 }}>
-                <FormField
-                  label="Phase Name"
-                  value={newPhaseName}
-                  onChange={setNewPhaseName}
-                  placeholder="e.g. Initial Access"
-                />
+                <FormField label="Phase Name" value={newPhaseName} onChange={setNewPhaseName} placeholder="e.g. Initial Access" />
               </div>
               <div style={{ flex: 1 }}>
-                <FormField
-                  label="Description"
-                  value={newPhaseDesc}
-                  onChange={setNewPhaseDesc}
-                  placeholder="e.g. Phishing payload delivery"
-                />
+                <FormField label="Description" value={newPhaseDesc} onChange={setNewPhaseDesc} placeholder="e.g. Phishing payload delivery" />
               </div>
-              <button
-                onClick={handleCreatePhase}
-                disabled={!newPhaseName.trim()}
-                style={{ ...btnGreen, marginBottom: '16px' }}
-              >
-                Add
-              </button>
+              <button onClick={handleCreatePhase} disabled={!newPhaseName.trim()} style={{ ...btnGreen, marginBottom: '16px' }}>Add</button>
             </div>
           </div>
         </Dialog>
@@ -763,7 +478,7 @@ export function ScenarioPanel({
     );
   }
 
-  // ── Render: Scenarios list ────────────────────────────────────
+  // ── Scenarios list ────────────────────────────────────────────
 
   return (
     <>
@@ -771,45 +486,22 @@ export function ScenarioPanel({
         <div style={sectionHeader}>Create Scenario</div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
-            <FormField
-              label="Scenario Name"
-              value={newScenarioName}
-              onChange={setNewScenarioName}
-              placeholder="e.g. Ransomware Attack Chain"
-            />
+            <FormField label="Scenario Name" value={newScenarioName} onChange={setNewScenarioName} placeholder="e.g. Ransomware Attack Chain" />
           </div>
           <div style={{ flex: 1 }}>
-            <FormField
-              label="Description"
-              value={newScenarioDesc}
-              onChange={setNewScenarioDesc}
-              placeholder="Multi-phase attack simulation"
-            />
+            <FormField label="Description" value={newScenarioDesc} onChange={setNewScenarioDesc} placeholder="Multi-phase attack simulation" />
           </div>
-          <button
-            onClick={handleCreateScenario}
-            disabled={!newScenarioName.trim()}
-            style={{ ...btnGreen, marginBottom: '16px' }}
-          >
-            Create
-          </button>
+          <button onClick={handleCreateScenario} disabled={!newScenarioName.trim()} style={{ ...btnGreen, marginBottom: '16px' }}>Create</button>
         </div>
 
         <div style={sectionHeader}>Scenarios ({scenarios.length})</div>
         {scenarios.length === 0 ? (
-          <div style={{ ...monoSmall, padding: '12px 0' }}>
-            No scenarios defined. Create one above to orchestrate attack phases.
-          </div>
+          <div style={{ ...monoSmall, padding: '12px 0' }}>No scenarios defined. Create one above.</div>
         ) : (
           scenarios.map(scenario => (
             <div key={scenario.id} style={rowStyle}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '15px',
-                  color: 'var(--text-primary)',
-                  marginBottom: '2px',
-                }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', color: 'var(--text-primary)', marginBottom: '2px' }}>
                   {scenario.name}
                 </div>
                 <div style={monoSmall}>
@@ -817,12 +509,10 @@ export function ScenarioPanel({
                   {scenario.description ? ` — ${scenario.description}` : ''}
                 </div>
               </div>
-              <button onClick={() => setActiveScenario(scenario)} style={btnAmber}>
-                Manage
+              <button onClick={() => { setActiveScenario(scenario); setExecResults(null); setBatchResults(null); setExecError(''); setBatchError(''); }} style={btnAmber}>
+                Open
               </button>
-              <button onClick={() => setDeleteScenarioTarget(scenario)} style={btnRed}>
-                Del
-              </button>
+              <button onClick={() => setDeleteScenarioTarget(scenario)} style={btnRed}>Del</button>
             </div>
           ))
         )}

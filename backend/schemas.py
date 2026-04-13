@@ -24,12 +24,12 @@ ContainerType = Literal[
 class Container(BaseModel):
     id: str
     name: str
-    type: ContainerType
+    type: str  # validated as ContainerType on the frontend; kept loose here to survive LLM-generated values
     ip: str
     kind: str | None = None
     image: str | None = None
-    status: Literal["running", "stopped", "paused"] | None = None
-    metadata: dict[str, str] | None = None
+    status: str | None = None  # "running" | "stopped" | "paused" at runtime; loose for stored data
+    metadata: dict | None = None
     persistencePaths: list[str] | None = None
 
 
@@ -50,8 +50,8 @@ class Subnet(BaseModel):
     name: str
     cidr: str
     gateway: str | None = None
-    containers: list[Container]
-    connections: list[Connection]
+    containers: list[Container] = Field(default_factory=list)
+    connections: list[Connection] = Field(default_factory=list)
 
 
 class Position(BaseModel):
@@ -62,10 +62,10 @@ class Position(BaseModel):
 class Site(BaseModel):
     id: str
     name: str
-    location: str
-    position: Position
-    subnets: list[Subnet]
-    subnetConnections: list[Connection]
+    location: str = ""
+    position: Position = Field(default_factory=lambda: Position(x=100, y=100))
+    subnets: list[Subnet] = Field(default_factory=list)
+    subnetConnections: list[Connection] = Field(default_factory=list)
 
 
 class ScriptExecution(BaseModel):
@@ -78,20 +78,20 @@ class AttackPhase(BaseModel):
     id: str
     name: str
     description: str | None = None
-    executions: list[ScriptExecution]
+    executions: list[ScriptExecution] = Field(default_factory=list)
 
 
 class Scenario(BaseModel):
     id: str
     name: str
     description: str | None = None
-    phases: list[AttackPhase]
+    phases: list[AttackPhase] = Field(default_factory=list)
 
 
 class TopologyData(BaseModel):
     name: str | None = None
-    sites: list[Site]
-    siteConnections: list[Connection]
+    sites: list[Site] = Field(default_factory=list)
+    siteConnections: list[Connection] = Field(default_factory=list)
     scenarios: list[Scenario] | None = None
 
 
