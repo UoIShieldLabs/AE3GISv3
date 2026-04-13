@@ -8,7 +8,7 @@
 # ============================================================
 
 #TARGETS="${TARGETS:?TARGETS must be set}"
-TARGETS="${TARGETS:10.10.1.10, 10.10.1.11, 10.10.5.20}"
+TARGETS="${TARGETS:-10.10.1.10, 10.10.1.11, 10.10.5.20}"
 INTERVAL="${INTERVAL:-20}"
 
 IFS=',' read -ra TARGET_LIST <<< "$TARGETS"
