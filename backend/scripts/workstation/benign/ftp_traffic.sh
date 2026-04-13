@@ -9,7 +9,8 @@
 #   FTP_PASS   : FTP password (default: password)
 # ============================================================
 
-FTP_TARGET="${FTP_TARGET:?FTP_TARGET must be set}"
+#FTP_TARGET="${FTP_TARGET:?FTP_TARGET must be set}"
+FTP_TARGET="${FTP_TARGET:10.10.5.21, 10.10.1.13}"
 INTERVAL="${INTERVAL:-20}"
 FTP_USER="${FTP_USER:-admin}"
 FTP_PASS="${FTP_PASS:-password}"
