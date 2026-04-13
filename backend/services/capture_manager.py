@@ -115,18 +115,8 @@ async def start_capture(
         if rc != 0:
             raise RuntimeError(f"Failed to start capture container: {stderr or stdout}")
 
-        # Wait for noVNC to become ready (up to ~15 seconds)
-        import socket
-        for attempt in range(30):
-            try:
-                s = socket.create_connection((target_ip, WIRESHARK_NOVNC_PORT), timeout=1)
-                s.close()
-                log.info("noVNC ready after ~%0.1fs", attempt * 0.5)
-                break
-            except OSError:
-                await asyncio.sleep(0.5)
-        else:
-            log.warning("noVNC did not become ready in time; proceeding anyway")
+        # Return immediately — noVNC readiness is checked via the /ready endpoint
+        # so the browser overlay appears without blocking on a 15-second poll.
 
         # The image may auto-capture on eth0 (management network).
         # Data-plane interfaces are eth1+. Users can switch via
@@ -161,6 +151,26 @@ async def stop_capture(topology_id: str, container_id: str) -> None:
 def get_session(topology_id: str, container_id: str) -> CaptureSession | None:
     """Return an existing capture session, or None."""
     return _sessions.get((topology_id, container_id))
+
+
+async def check_ready(topology_id: str, container_id: str) -> bool:
+    """Return True if the noVNC port inside the capture container is accepting connections."""
+    session = _sessions.get((topology_id, container_id))
+    if not session:
+        return False
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(session.target_ip, WIRESHARK_NOVNC_PORT),
+            timeout=1.0,
+        )
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
 
 
 async def stop_all_for_topology(topology_id: str) -> None:

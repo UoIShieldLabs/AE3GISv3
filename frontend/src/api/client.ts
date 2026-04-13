@@ -400,6 +400,13 @@ export function getCaptureStatus(
   return request(`${BASE}/${topologyId}/capture/${containerId}/status`);
 }
 
+export function checkCaptureReady(
+  topologyId: string,
+  containerId: string,
+): Promise<{ ready: boolean }> {
+  return request(`${BASE}/${topologyId}/capture/${containerId}/ready`);
+}
+
 export async function downloadPcap(
   topologyId: string,
   containerId: string,
