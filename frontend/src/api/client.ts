@@ -347,10 +347,16 @@ export interface AiTopologyAction {
   name: string;
 }
 
+export interface AiScenarioAction {
+  scenario_id: string;
+  name: string;
+}
+
 export interface AiChatResponse {
   reply: string;
   tool_results: AiToolResult[] | null;
   topology_action: AiTopologyAction | null;
+  scenario_action: AiScenarioAction | null;
 }
 
 const AI_BASE = '/api/ai';

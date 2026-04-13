@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
-import { aiChat, type AiChatMessage, type AiToolResult, type AiTopologyAction } from '../api/client';
+import { aiChat, type AiChatMessage, type AiToolResult, type AiTopologyAction, type AiScenarioAction } from '../api/client';
 import './AiChatPanel.css';
 
 interface AiChatPanelProps {
@@ -8,6 +8,7 @@ interface AiChatPanelProps {
   onClose: () => void;
   topologyId: string | null;
   onTopologyAction?: (action: AiTopologyAction) => void;
+  onScenarioAction?: (action: AiScenarioAction) => void;
 }
 
 interface ChatEntry {
@@ -15,10 +16,11 @@ interface ChatEntry {
   content: string;
   toolResults?: AiToolResult[];
   topologyAction?: AiTopologyAction;
+  scenarioAction?: AiScenarioAction;
   error?: boolean;
 }
 
-export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiChatPanelProps) {
+export function AiChatPanel({ open, onClose, topologyId, onTopologyAction, onScenarioAction }: AiChatPanelProps) {
   const auth = useAuth();
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [input, setInput] = useState('');
@@ -82,10 +84,14 @@ export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiC
           content: resp.reply,
           toolResults: resp.tool_results ?? undefined,
           topologyAction: resp.topology_action ?? undefined,
+          scenarioAction: resp.scenario_action ?? undefined,
         },
       ]);
       if (resp.topology_action && onTopologyAction) {
         onTopologyAction(resp.topology_action);
+      }
+      if (resp.scenario_action && onScenarioAction) {
+        onScenarioAction(resp.scenario_action);
       }
     } catch (err) {
       if (controller.signal.aborted) {
@@ -161,7 +167,8 @@ export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiC
                 <ul>
                   <li>"Create a topology with a corporate LAN and DMZ"</li>
                   <li>"Add a SCADA subnet with 2 PLCs and an HMI"</li>
-                  <li>"Describe this network for a lab handout"</li>
+                  <li>"Generate a Stuxnet-style attack scenario targeting the PLC"</li>
+                  <li>"Create a recon + lateral movement scenario for this network"</li>
                   <li>"Run a ping from workstation-1 to the server"</li>
                 </ul>
               </>
@@ -190,6 +197,11 @@ export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiC
                 {msg.topologyAction.action === 'created'
                   ? `New topology "${msg.topologyAction.name}" created.`
                   : `Topology "${msg.topologyAction.name}" updated.`}
+              </div>
+            )}
+            {msg.scenarioAction && (
+              <div className="ai-chat-scenario-action">
+                Scenario "{msg.scenarioAction.name}" added to topology.
               </div>
             )}
             {msg.toolResults && msg.toolResults.length > 0 && (
@@ -246,7 +258,7 @@ export function AiChatPanel({ open, onClose, topologyId, onTopologyAction }: AiC
                   : 'Describe a topology to generate...'
           }
           disabled={(auth.role === 'student' && !topologyId) || loading}
-          rows={1}
+          rows={3}
         />
         {loading ? (
           <button

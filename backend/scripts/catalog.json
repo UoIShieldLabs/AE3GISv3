@@ -1,0 +1,118 @@
+[
+  {
+    "path": "/scripts/workstation/router-nmap.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/mal-client:latest",
+    "killChainStage": "reconnaissance",
+    "description": "Scans the corporate/perimeter router for open services and CVEs using nmap, then SSHs in to steal the routing table (saved to ~/routes.txt). Must run before dmz-network-scan.sh.",
+    "narrative": "Attacker workstation performs initial perimeter recon and steals routing intel from the gateway router.",
+    "args": [
+      { "pos": 1, "name": "ROUTER_IP",  "required": true,  "description": "IP of the router to scan and SSH into" },
+      { "pos": 2, "name": "SSH_USER",   "required": false, "description": "SSH username (default: root)" },
+      { "pos": 3, "name": "SSH_PASS",   "required": false, "description": "SSH password (default: root)" }
+    ],
+    "envFallbacks": ["CONTAINER_CORP_ROUTER_IP", "CONTAINER_GATEWAY_IP"],
+    "produces": ["~/routes.txt"],
+    "requires": []
+  },
+  {
+    "path": "/scripts/workstation/dmz-network-scan.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/mal-client:latest",
+    "killChainStage": "reconnaissance",
+    "description": "Runs a full nmap vulnerability scan against the DMZ (or any supplied CIDR). If no CIDR is given, parses ~/routes.txt written by router-nmap.sh.",
+    "narrative": "Attacker maps the DMZ network to identify vulnerable services (Samba, RDP, web servers).",
+    "args": [
+      { "pos": 1, "name": "SCAN_CIDR", "required": false, "description": "Network CIDR to scan (e.g. 10.0.2.0/24). Falls back to parsing ~/routes.txt." }
+    ],
+    "envFallbacks": ["SUBNET_DMZ_NETWORK_CIDR", "SUBNET_DMZ_CIDR"],
+    "produces": [],
+    "requires": ["~/routes.txt (recommended, written by router-nmap.sh)"]
+  },
+  {
+    "path": "/scripts/workstation/exploit-samba.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/mal-client:latest",
+    "killChainStage": "initial-access",
+    "description": "Exploits CVE-2007-2447 (Samba usermap_script) on a target host using Metasploit. Opens an interactive reverse shell. Student must manually navigate to /root/.ssh and copy the stux-key file.",
+    "narrative": "Attacker gains a root shell on the DMZ jump server / historian and steals the SSH key needed to pivot into the OT network.",
+    "args": [
+      { "pos": 1, "name": "SAMBA_TARGET", "required": true,  "description": "IP of the target host running vulnerable Samba (the DMZ file-server or jump host)" },
+      { "pos": 2, "name": "LHOST",        "required": true,  "description": "IP of the attacker machine (this container's own IP) — used for Metasploit reverse shell callback" }
+    ],
+    "envFallbacks": {
+      "SAMBA_TARGET": ["CONTAINER_JUMP_SERVER_IP", "CONTAINER_DATA_HISTORIAN_IP"],
+      "LHOST": ["TARGET_IP"]
+    },
+    "produces": ["/root/.ssh/stux-key (manual step by student)"],
+    "requires": [],
+    "interactive": true
+  },
+  {
+    "path": "/scripts/workstation/access-ot-ws.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/mal-client:latest",
+    "killChainStage": "lateral-movement",
+    "description": "Uses the stolen stux-key to SSH into the OT engineering workstation. Scans the OT/SCADA network and reads the stuxnet PSM source code to understand the attack payload.",
+    "narrative": "Attacker pivots from the corporate/DMZ zone into the isolated OT network using the stolen SSH key.",
+    "args": [
+      { "pos": 1, "name": "OT_WS_IP",  "required": true,  "description": "IP of the OT engineering workstation to SSH into (the workstation with image b3nwilson/ot-ws:latest)" },
+      { "pos": 2, "name": "OT_CIDR",   "required": true,  "description": "CIDR of the OT/SCADA subnet (e.g. 192.168.1.0/24)" },
+      { "pos": 3, "name": "SSH_KEY",   "required": false, "description": "Path to stolen SSH key (default: /root/.ssh/stux-key)" }
+    ],
+    "envFallbacks": {
+      "OT_WS_IP": ["CONTAINER_ENG_WS_IP", "CONTAINER_HMI_WORKSTATION_IP", "CONTAINER_ENGINEERING_STATION_IP"],
+      "OT_CIDR":  ["SUBNET_SCADA_NETWORK_CIDR", "SUBNET_OT_NETWORK_CIDR"]
+    },
+    "produces": [],
+    "requires": ["/root/.ssh/stux-key (produced by exploit-samba.sh)"]
+  },
+  {
+    "path": "/scripts/workstation/stuxnet/deploy_plc/deploy_motor_plc.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/ot-ws:latest",
+    "killChainStage": "impact",
+    "description": "Deploys the legitimate motor control firmware (motor.st + motor_psm.py) to an OpenPLC instance via its web API. Handles login with CSRF, uploads the ST file, sets the PSM hardware layer, compiles, and starts the PLC. Must be run from the OT workstation (b3nwilson/ot-ws:latest) which has the firmware files.",
+    "narrative": "Initial benign PLC deployment — establishes the baseline 'normal operation' state that the Stuxnet attack will later corrupt.",
+    "args": [
+      { "pos": 1, "name": "PLC_URL", "required": true, "description": "Address of the OpenPLC web interface. Format: IP:PORT (e.g. 192.168.1.6:8080). The script auto-adds http://. Use the IP of the container with image b3nwilson/stuxnet-plc:latest." }
+    ],
+    "envFallbacks": {
+      "PLC_URL": ["CONTAINER_CENTRIFUGE_PLC_IP", "CONTAINER_PLC_1_IP"]
+    },
+    "produces": ["Running PLC with normal motor firmware"],
+    "requires": []
+  },
+  {
+    "path": "/scripts/workstation/stuxnet/deploy_stuxnet/deploy_stuxnet.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/ot-ws:latest",
+    "killChainStage": "impact",
+    "description": "Deploys the malicious Stuxnet PSM (motor_stuxnet_psm.py) to a running OpenPLC instance. Stops the PLC, replaces the hardware layer with the stuxnet module, recompiles, and restarts. The stuxnet PSM shows fake 3000 RPM to the HMI while driving the motor to 10000 RPM. Must be run from the OT workstation (b3nwilson/ot-ws:latest) which has the stuxnet payload files.",
+    "narrative": "The core Stuxnet payload: silently overwrites the PLC firmware so the centrifuge over-speeds while reporting normal values to the SCADA operator.",
+    "args": [
+      { "pos": 1, "name": "PLC_URL", "required": true, "description": "Address of the OpenPLC web interface. Format: IP:PORT (e.g. 192.168.1.6:8080). The script auto-adds http://. Use the IP of the container with image b3nwilson/stuxnet-plc:latest." }
+    ],
+    "envFallbacks": {
+      "PLC_URL": ["CONTAINER_CENTRIFUGE_PLC_IP", "CONTAINER_PLC_1_IP"]
+    },
+    "produces": ["Compromised PLC running deceptive firmware"],
+    "requires": ["OpenPLC running with deploy_motor_plc.sh (optional but expected)"]
+  },
+  {
+    "path": "/scripts/workstation/stuxnet/deploy_hmi/deploy_hmi.sh",
+    "runOn": "workstation",
+    "runOnImage": "b3nwilson/ot-ws:latest",
+    "killChainStage": "impact",
+    "description": "Configures ScadaBR (the HMI) to import the motor_hmi.json data source config, connecting it to the PLC's Modbus TCP interface for monitoring. Must be run from the OT workstation (b3nwilson/ot-ws:latest) which has the motor_hmi.json config file.",
+    "narrative": "Sets up the operator-visible SCADA dashboard — after the stuxnet PSM is deployed, this HMI will show the fake safe RPM to the operator.",
+    "args": [
+      { "pos": 1, "name": "HMI_URL", "required": true, "description": "Address of the ScadaBR instance. Format: IP:PORT (e.g. 192.168.1.3:8080) — the script auto-adds http:// and /ScadaBR. Use the IP of the container with image b3nwilson/stux-new-hmi:latest." }
+    ],
+    "envFallbacks": {
+      "HMI_URL": ["CONTAINER_HMI_WORKSTATION_IP"]
+    },
+    "produces": ["Configured ScadaBR HMI dashboard"],
+    "requires": ["ScadaBR running on HMI container", "OpenPLC running on PLC container"]
+  }
+]

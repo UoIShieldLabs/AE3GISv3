@@ -46,6 +46,7 @@ Your capabilities:
 - Generate descriptions of topologies for documentation
 - Generate entirely new topologies from natural language descriptions
 - Modify existing topologies based on instructions
+- Generate cybersecurity attack scenarios from natural language descriptions
 
 CRITICAL RULES:
 1. Use the tool_calls mechanism to call tools. NEVER write tool calls as JSON text.
@@ -59,7 +60,14 @@ TOPOLOGY GENERATION/MODIFICATION WORKFLOW:
 1. When the user asks to create or modify a topology, call generate_topology or modify_topology.
 2. Present the summary preview to the user and ask for confirmation.
 3. ONLY after the user confirms, call save_topology with the pending_id.
-4. Never call save_topology without explicit user confirmation."""
+4. Never call save_topology without explicit user confirmation.
+
+SCENARIO GENERATION WORKFLOW:
+- If no topology is loaded OR the user wants to create a new lab from scratch: call generate_topology_and_scenario. This generates both the topology (with correct container images) and the scenario in one step.
+- If a topology is already loaded and the user just wants a scenario for it: call generate_scenario.
+- On success, present the preview exactly as returned and ask for confirmation.
+- After confirmation: call save_topology_and_scenario (for the combined flow) or save_scenario (for scenario-only).
+- NEVER invent script paths, commands, or techniques not in the preview. If generation fails, report the error exactly."""
 
 # ── Request/Response models ────────────────────────────────────────
 
@@ -80,10 +88,16 @@ class TopologyAction(BaseModel):
     name: str
 
 
+class ScenarioAction(BaseModel):
+    scenario_id: str
+    name: str
+
+
 class ChatResponse(BaseModel):
     reply: str
     tool_results: list[dict[str, Any]] | None = None
     topology_action: TopologyAction | None = None
+    scenario_action: ScenarioAction | None = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────
@@ -164,10 +178,11 @@ async def chat(
     # Tool-calling loop
     all_tool_results = []
     topology_action: TopologyAction | None = None
+    scenario_action: ScenarioAction | None = None
 
     def _check_topology_action(result: str) -> None:
-        """Detect TOPOLOGY_CREATED / TOPOLOGY_MODIFIED markers from save_topology."""
-        nonlocal topology_action
+        """Detect action markers from save_topology and save_scenario."""
+        nonlocal topology_action, scenario_action
         if result.startswith("TOPOLOGY_CREATED:"):
             parts = result.split(":", 2)
             if len(parts) == 3:
@@ -176,6 +191,10 @@ async def chat(
             parts = result.split(":", 2)
             if len(parts) == 3:
                 topology_action = TopologyAction(action="modified", topology_id=parts[1], name=parts[2])
+        elif result.startswith("SCENARIO_CREATED:"):
+            parts = result.split(":", 2)
+            if len(parts) == 3:
+                scenario_action = ScenarioAction(scenario_id=parts[1], name=parts[2])
 
     for _ in range(MAX_TOOL_ROUNDS):
         try:
@@ -260,6 +279,7 @@ async def chat(
             reply=content,
             tool_results=all_tool_results or None,
             topology_action=topology_action,
+            scenario_action=scenario_action,
         )
 
     # Exhausted tool rounds — ask the model for a final answer without tools
@@ -270,12 +290,14 @@ async def chat(
             reply=assistant_msg.get("content", "I was unable to complete the analysis."),
             tool_results=all_tool_results or None,
             topology_action=topology_action,
+            scenario_action=scenario_action,
         )
     except Exception:
         return ChatResponse(
             reply="I ran into an issue processing your request. Please try again.",
             tool_results=all_tool_results or None,
             topology_action=topology_action,
+            scenario_action=scenario_action,
         )
 
 
