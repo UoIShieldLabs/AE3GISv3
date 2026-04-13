@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Container } from '../data/sampleTopology';
-import { getAuthToken, downloadPcap } from '../api/client';
+import { getAuthToken, downloadPcap, checkCaptureReady } from '../api/client';
 
 export interface WiresharkOverlayProps {
   sessions: Container[];
@@ -21,8 +21,36 @@ interface WiresharkSessionProps {
 }
 
 function WiresharkSession({ container, backendId, active }: WiresharkSessionProps) {
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('Starting Wireshark...');
   const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+
+  useEffect(() => {
+    if (!backendId || ready) return;
+
+    // Poll /ready every 500ms until noVNC accepts connections (max ~30s)
+    pollRef.current = setInterval(async () => {
+      elapsedRef.current += 0.5;
+      try {
+        const res = await checkCaptureReady(backendId, container.id);
+        if (res.ready) {
+          clearInterval(pollRef.current!);
+          setReady(true);
+        } else if (elapsedRef.current >= 30) {
+          clearInterval(pollRef.current!);
+          setError('Wireshark did not start in time. Try closing and reopening.');
+        } else {
+          setLoadingMsg(`Starting Wireshark... (${Math.round(elapsedRef.current)}s)`);
+        }
+      } catch {
+        // network error — keep polling
+      }
+    }, 500);
+
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [backendId, container.id, ready]);
 
   if (!backendId) {
     return (
@@ -46,14 +74,22 @@ function WiresharkSession({ container, backendId, active }: WiresharkSessionProp
         position: 'relative',
       }}
     >
-      {loading && !error && (
+      {!ready && !error && (
         <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           background: '#0c0c0c', color: 'var(--neon-cyan)', zIndex: 1,
-          fontSize: '14px',
+          fontSize: '14px', gap: '12px',
         }}>
-          Starting Wireshark...
+          <div>{loadingMsg}</div>
+          <div style={{ width: '160px', height: '3px', background: 'rgba(0,212,255,0.15)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', background: 'var(--neon-cyan)',
+              borderRadius: '2px',
+              animation: 'ws-progress 1.5s ease-in-out infinite',
+            }} />
+          </div>
+          <style>{`@keyframes ws-progress { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }`}</style>
         </div>
       )}
       {error && (
@@ -61,21 +97,21 @@ function WiresharkSession({ container, backendId, active }: WiresharkSessionProp
           position: 'absolute', inset: 0, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           background: '#0c0c0c', color: 'var(--neon-red)', zIndex: 1,
-          fontSize: '14px',
+          fontSize: '14px', textAlign: 'center', padding: '20px',
         }}>
           {error}
         </div>
       )}
-      <iframe
-        src={src}
-        style={{
-          flex: 1, border: 'none', width: '100%', minHeight: 0,
-          background: '#0c0c0c',
-        }}
-        onLoad={() => setLoading(false)}
-        onError={() => { setLoading(false); setError('Failed to load Wireshark'); }}
-        allow="clipboard-write"
-      />
+      {ready && (
+        <iframe
+          src={src}
+          style={{
+            flex: 1, border: 'none', width: '100%', minHeight: 0,
+            background: '#0c0c0c',
+          }}
+          allow="clipboard-write"
+        />
+      )}
     </div>
   );
 }

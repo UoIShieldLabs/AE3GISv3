@@ -772,6 +772,18 @@ async def capture_status(
     return {"active": session is not None, "port": session.port if session else None}
 
 
+@router.get("/{topology_id}/capture/{container_id}/ready")
+async def capture_ready(
+    topology_id: str,
+    container_id: str,
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    """Lightweight readiness probe — returns {ready: true} once noVNC is accepting connections."""
+    validate_student_topology(identity, topology_id)
+    ready = await capture_manager.check_ready(topology_id, container_id)
+    return {"ready": ready}
+
+
 @router.get("/{topology_id}/capture/{container_id}/download")
 async def capture_download_pcap(
     topology_id: str,
