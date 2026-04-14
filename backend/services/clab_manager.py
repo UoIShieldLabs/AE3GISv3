@@ -357,19 +357,37 @@ def _parse_chain_rules(output: str) -> list[dict[str, str]]:
 
 
 async def pull_images(topology_data: dict) -> None:
-    """Pre-pull all unique container images so deploy doesn't fail on missing images."""
+    """Pre-pull all unique container images so deploy doesn't fail on missing images.
+
+    Also pulls the Wireshark capture image so that opening a capture session
+    doesn't stall on a first-time image download.
+    """
+    from services.capture_manager import CAPTURE_IMAGE
+
     images: set[str] = set()
     for container in _iter_containers(topology_data):
         image = clab_generator.resolve_container_image(container, container.get("type", ""))
         images.add(image)
 
+    # Always ensure the Wireshark sidecar image is local
+    images.add(CAPTURE_IMAGE)
+
     for image in images:
+        # Skip pull if image is already present locally
+        rc_check, _, _ = await _run(["sudo", "docker", "image", "inspect", image])
+        if rc_check == 0:
+            log.info("Image already local, skipping pull: %s", image)
+            continue
         log.info("Pulling image: %s", image)
         rc, stdout, stderr = await _run(["sudo", "docker", "pull", image])
         if rc != 0:
             log.error("Failed to pull image %s: %s", image, stderr.strip())
-            raise RuntimeError(f"Failed to pull image '{image}': {stderr.strip()}")
-        log.info("Pulled image: %s", image)
+            # Only hard-fail for topology images; Wireshark is optional
+            if image != CAPTURE_IMAGE:
+                raise RuntimeError(f"Failed to pull image '{image}': {stderr.strip()}")
+            log.warning("Wireshark image pull failed — capture may be slow on first use")
+        else:
+            log.info("Pulled image: %s", image)
 
 
 async def deploy(topology_id: str) -> str:

@@ -219,13 +219,16 @@ async def proxy_web_ui(
     try:
         # Only forward headers that the target app needs; strip auth,
         # proxy, and host headers that confuse simple web servers like Werkzeug.
-        _pass_through = {"accept", "accept-language", "accept-encoding",
+        _pass_through = {"accept", "accept-language",
                          "content-type", "user-agent", "referer", "origin",
                          "cache-control", "pragma", "if-none-match",
                          "if-modified-since", "cookie"}
         headers = {k: v for k, v in request.headers.items()
                    if k.lower() in _pass_through}
         headers["host"] = f"{target_ip}:{port}"
+        # Tell the upstream server not to compress — we proxy raw bytes and
+        # rewrite HTML as plain text, so compression causes encoding errors.
+        headers["accept-encoding"] = "identity"
         
         # We use httpx to stream the response back.
         # This handles large files (like images or video) without buffering everything in memory.
@@ -240,8 +243,11 @@ async def proxy_web_ui(
         # We don't await the full response body, we stream it
         response = await http_client.send(req, stream=True)
         
+        log.debug("Upstream response headers for %s: %s", target_url, dict(response.headers))
         response_headers = {
-            k: v for k, v in response.headers.items() if k.lower() not in ["transfer-encoding", "location", "content-length", "set-cookie"]
+            k: v for k, v in response.headers.items()
+            if k.lower() not in ["transfer-encoding", "location", "content-length",
+                                  "set-cookie", "content-encoding"]
         }
         location = response.headers.get("location")
         if location:
@@ -249,7 +255,9 @@ async def proxy_web_ui(
         content_type = response.headers.get("content-type", "")
         proxy_prefix = f"/api/proxy/{topology_id}/{container_id}"
         if "text/html" in content_type.lower():
-            body = await response.aread()
+            # aiter_bytes() decompresses gzip/brotli automatically regardless of
+            # what the server sent — avoids Content Encoding Error in the browser.
+            body = b"".join([chunk async for chunk in response.aiter_bytes()])
             await response.aclose()
             text = body.decode(response.encoding or "utf-8", errors="replace")
             rewritten = _rewrite_html_body(text, proxy_prefix)
@@ -260,8 +268,11 @@ async def proxy_web_ui(
                 media_type=content_type,
             )
         else:
+            # aiter_bytes() yields decompressed chunks; content-encoding is
+            # already stripped from response_headers so the browser won't try
+            # to decompress again.
             proxy_response = StreamingResponse(
-                response.aiter_raw(),
+                response.aiter_bytes(),
                 status_code=response.status_code,
                 headers=response_headers,
                 background=response.aclose

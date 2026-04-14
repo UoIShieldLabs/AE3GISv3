@@ -21,7 +21,7 @@ import { ConnectionDialog } from './dialogs/ConnectionDialog';
 import { BulkConnectionDialog } from './dialogs/BulkConnectionDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
-import { computeZigzagLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
+import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
 import type { Site, Subnet, Container } from '../data/sampleTopology';
 
@@ -78,9 +78,10 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
       } else if (layoutMode === 'grid') {
         computedPositions = computeGridLayout(layoutNodes, { spacing: 120 });
       } else {
-        computedPositions = computeZigzagLayout(
+        computedPositions = computeLayout(
           layoutNodes,
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
+          { nodeSpacing: 120, rankSpacing: 180 },
         );
       }
     }
@@ -168,14 +169,13 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
       }
     }
 
-    // WAN edges: router-to-router (use fromContainer/toContainer when set)
+    // WAN edges: always subnet cloud → subnet cloud so edges align with
+    // the dagre layout positions and don't produce long crossing diagonals.
     site.subnetConnections.forEach((conn, i) => {
-      const source = conn.fromContainer ?? conn.from;
-      const target = conn.toContainer ?? conn.to;
       newEdges.push({
         id: `wan-edge-${i}`,
-        source,
-        target,
+        source: conn.from,
+        target: conn.to,
         type: edgeType,
         data: { color: '#00d4ff', label: conn.label },
       });
@@ -396,9 +396,10 @@ export function SubnetView({ site, onSelectSubnet, onOpenRouterTerminal, readOnl
       } else if (layoutMode === 'grid') {
         computedPositions = computeGridLayout(layoutNodes, { spacing: 120 });
       } else {
-        computedPositions = computeZigzagLayout(
+        computedPositions = computeLayout(
           layoutNodes,
           site.subnetConnections.map(c => ({ source: c.from, target: c.to })),
+          { nodeSpacing: 120, rankSpacing: 180 },
         );
       }
     }

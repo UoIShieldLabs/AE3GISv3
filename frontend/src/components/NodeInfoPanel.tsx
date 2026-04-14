@@ -1,9 +1,10 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import type { Container, ContainerType } from '../data/sampleTopology';
 import { TopologyDispatchContext } from '../store/TopologyContext';
 import { AuthContext } from '../store/AuthContext';
 import { ContainerDialog } from './dialogs/ContainerDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
+import { prewarmCapture } from '../api/client';
 
 interface NodeInfoPanelProps {
   container: Container | null;
@@ -55,6 +56,13 @@ export function NodeInfoPanel({
   const auth = useContext(AuthContext);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Pre-warm the Wireshark sidecar as soon as a deployed container is selected,
+  // so it's ready by the time the user clicks "Capture Traffic".
+  useEffect(() => {
+    if (!container || !topologyId || deployStatus !== 'deployed' || !onOpenWireshark) return;
+    prewarmCapture(topologyId, container.id).catch(() => {/* best-effort */});
+  }, [container?.id, topologyId, deployStatus]);
 
   const handleEdit = (data: {
     name: string; type: ContainerType; ip: string; image: string;

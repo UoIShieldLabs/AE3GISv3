@@ -746,6 +746,36 @@ async def start_capture(
         raise HTTPException(500, str(exc))
 
 
+@router.post("/{topology_id}/capture/{container_id}/prewarm")
+async def prewarm_capture(
+    topology_id: str,
+    container_id: str,
+    db: Session = Depends(get_db),
+    identity: AuthIdentity = Depends(require_any_auth),
+):
+    """Start the Wireshark sidecar in the background so it's ready when the user opens capture.
+    Returns immediately — use the /ready endpoint to poll for readiness."""
+    validate_student_topology(identity, topology_id)
+    topo = _get_topo(topology_id, db)
+    if topo.status != "deployed":
+        return {"status": "skipped", "reason": "not deployed"}
+
+    # Already running
+    if capture_manager.get_session(topology_id, container_id):
+        return {"status": "already_running"}
+
+    container = _find_container(topo, container_id)
+    if not container:
+        return {"status": "skipped", "reason": "container not found"}
+
+    topo_name = _topo_name(topo)
+    docker_name = f"clab-{topo_name}-{container_id}"
+
+    # Fire and forget — don't await
+    asyncio.create_task(capture_manager.start_capture(topology_id, container_id, docker_name))
+    return {"status": "starting"}
+
+
 @router.post("/{topology_id}/capture/{container_id}/stop")
 async def stop_capture_endpoint(
     topology_id: str,

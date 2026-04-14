@@ -386,6 +386,13 @@ export function startCapture(
   return request(`${BASE}/${topologyId}/capture/${containerId}/start`, { method: 'POST' });
 }
 
+export function prewarmCapture(
+  topologyId: string,
+  containerId: string,
+): Promise<{ status: string }> {
+  return request(`${BASE}/${topologyId}/capture/${containerId}/prewarm`, { method: 'POST' });
+}
+
 export function stopCapture(
   topologyId: string,
   containerId: string,
