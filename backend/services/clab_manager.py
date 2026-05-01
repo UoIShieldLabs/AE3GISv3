@@ -46,24 +46,25 @@ def _mgmt_seed(topology_id: str) -> int:
 def management_ipv4_subnet(topology_id: str, attempt: int = 0) -> str:
     """Return a deterministic management IPv4 subnet per topology.
 
-    Uses 100.64.0.0/10 with /24s. This avoids Docker's default bridge
-    network (172.17.0.0/16), which was causing frequent overlaps.
+    Uses 172.21.0.0/16 through 172.28.0.0/16 to avoid:
+    - Docker's default bridge (172.17.0.0/16)
+    - Existing Docker custom networks (172.18-172.20)
+    - Host WiFi LAN (172.29.128.0/18)
+    - Tailscale's CGNAT range (100.64.0.0/10), which caused proxy timeouts
+    Each /16 supports up to 65534 containers for large-scale benchmarks.
     """
-    # 100.64.0.0/10 -> second octet 64..127 and third octet 0..255
-    total_slots = 64 * 256
-    slot = (_mgmt_seed(topology_id) + (attempt * 9973)) % total_slots
-    second_octet = 64 + (slot // 256)  # 64..127
-    third_octet = slot % 256
-    return f"100.{second_octet}.{third_octet}.0/24"
+    total_slots = 8  # 172.21 through 172.28
+    slot = (_mgmt_seed(topology_id) + attempt) % total_slots
+    second_octet = 21 + slot
+    return f"172.{second_octet}.0.0/16"
 
 
 def management_ipv6_subnet(topology_id: str, attempt: int = 0) -> str:
-    """Return a deterministic management IPv6 subnet per topology (/64)."""
-    total_slots = 64 * 256
-    slot = (_mgmt_seed(topology_id) + (attempt * 9973)) % total_slots
-    second_octet = 64 + (slot // 256)
-    third_octet = slot % 256
-    return f"3fff:100:{second_octet}:{third_octet}::/64"
+    """Return a deterministic management IPv6 subnet per topology (/48)."""
+    total_slots = 8
+    slot = (_mgmt_seed(topology_id) + attempt) % total_slots
+    second_octet = 21 + slot
+    return f"3fff:172:{second_octet}::/48"
 
 
 def write_yaml(topology_id: str, yaml_content: str) -> Path:
