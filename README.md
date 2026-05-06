@@ -21,25 +21,15 @@ Interactive network topology visualization and deployment platform. Design multi
 
 ## Getting Started
 
-### Frontend
-
+Simply need to have Docker as well as ContainerLab installed on the hosting system. Then in the root level of the directory run 
 ```bash
-cd frontend
-npm install
-npm run dev          # http://localhost:5173
+docker compose up --build
+```
+To tear down the container run
+```bash
+docker compose down
 ```
 
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m uvicorn main:app --reload --port 8000
-```
-
-The frontend proxies `/api/*` and WebSocket paths to the backend at `http://localhost:8000`.
 
 ## Sudoers Configuration (Passwordless Operations)
 
