@@ -29,6 +29,10 @@ const TYPE_COLORS: Record<ContainerType, string> = {
   'plc':         '#ffaa00',
   'workstation': '#4466ff',
   'hmi':         '#33ccff',
+  'directory': '#240177',
+  'ids': '#240177',
+  'siem': '#240177',
+  'database': '#240177',
 };
 
 const TYPE_LABELS: Record<ContainerType, string> = {
@@ -40,6 +44,10 @@ const TYPE_LABELS: Record<ContainerType, string> = {
   'plc':         'PLC',
   'workstation': 'WS',
   'hmi':         'HMI',
+  'directory':   'DIR',
+  'ids':         'IDS',
+  'siem':        'SIEM',
+  'database':    'DB'
 };
 
 type SubnetZone = 'ot' | 'dmz' | 'it';

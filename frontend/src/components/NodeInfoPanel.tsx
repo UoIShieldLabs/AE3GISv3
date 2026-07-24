@@ -27,6 +27,10 @@ const typeDisplayNames: Record<string, string> = {
   'router': 'Router',
   'workstation': 'Workstation',
   'hmi': 'HMI',
+  'directory': 'Directory',
+  'ids': 'IDS',
+  'siem': 'SIEM',
+  'database': 'Database',
 };
 
 function isHmiContainer(container: Container): boolean {

@@ -8,7 +8,11 @@ export type ContainerType =
   | 'switch'
   | 'router'
   | 'workstation'
-  | 'hmi';
+  | 'hmi'
+  | 'directory'
+  | 'ids'
+  | 'siem'
+  | 'database' ;
 
 export interface Container {
   id: string;

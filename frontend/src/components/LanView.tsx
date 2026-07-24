@@ -43,6 +43,10 @@ const typeColors: Record<ContainerType, string> = {
   'plc': '#ffaa00',
   'workstation': '#4466ff',
   'hmi': '#33ccff',
+  'directory': '#240177',
+  'ids': '#240177',
+  'siem': '#240177',
+  'database': '#240177',
 };
 
 function isHmiContainer(container: Container): boolean {

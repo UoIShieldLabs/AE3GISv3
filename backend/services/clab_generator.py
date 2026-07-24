@@ -53,6 +53,14 @@ def image_for_container_type(ctype: str) -> str:
         return _IMAGE_SWITCH
     if ctype == "web-server":
         return _IMAGE_WEB_SERVER
+    if ctype == "database":
+        return "uiaegisv3/debian-postgres:1.0"
+    if ctype == "directory":
+        return "uiaegisv3/ubuntu-openldap"
+    if ctype == "ids":
+        return "uiaegisv3/ids"
+    if ctype == "siem":
+        return "uiaegisv3/custom-wazuh-debian:1.0"
     return _IMAGE_HOST
 
 
