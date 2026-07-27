@@ -47,6 +47,8 @@ const typeColors: Record<ContainerType, string> = {
   'ids': '#240177',
   'siem': '#240177',
   'database': '#240177',
+  'pcap': '#240177',
+  'bastion': '#240177',
 };
 
 function isHmiContainer(container: Container): boolean {

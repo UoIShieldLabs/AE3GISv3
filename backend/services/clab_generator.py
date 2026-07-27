@@ -48,11 +48,11 @@ _SCRIPT_TYPE_MAP = {
 
 def image_for_container_type(ctype: str) -> str:
     if ctype in _ROUTER_TYPES:
-        return _IMAGE_ROUTER
+        return "uiaegisv3/router"
     if ctype in _SWITCH_TYPES:
-        return _IMAGE_SWITCH
+        return "uiaegisv3/switch"
     if ctype == "web-server":
-        return _IMAGE_WEB_SERVER
+        return "uiaegisv3/nginx-webserver:1.0"
     if ctype == "database":
         return "uiaegisv3/debian-postgres:1.0"
     if ctype == "directory":
@@ -61,6 +61,12 @@ def image_for_container_type(ctype: str) -> str:
         return "uiaegisv3/ids"
     if ctype == "siem":
         return "uiaegisv3/custom-wazuh-debian:1.0"
+    if ctype == "workstation":
+        return "uiaegisv3/workstation"
+    if ctype == "bastion":
+        return "uiaegisv3/bastion"
+    if ctype == "pcap":
+        return _IMAGE_HOST
     return _IMAGE_HOST
 
 

@@ -24,6 +24,8 @@ const typeColors: Record<ContainerType, string> = {
   'ids': '#240177',
   'siem': '#240177',
   'database': '#240177',
+  'pcap': '#240177',
+  'bastion': '#240177'
 };
 
 const typeLabels: Record<ContainerType, string> = {
@@ -38,7 +40,9 @@ const typeLabels: Record<ContainerType, string> = {
   'directory':   'DIR',
   'ids':         'IDS',
   'siem':        'SIEM',
-  'database':    'DB'
+  'database':    'DB',
+  'pcap':        'PCAP',
+  'bastion':     'BS'
 };
 
 function DeviceIcon({ type }: { type: ContainerType }) {

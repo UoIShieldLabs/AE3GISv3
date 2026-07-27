@@ -18,6 +18,8 @@ const typeOptions = [
   { value: 'directory', label: 'Directory' },
   { value: 'ids', label: 'IDS' },
   { value: 'siem', label: 'SIEM' },
+  { value: 'pcap', label: 'Packet Capture' },
+  { value: 'bastion', label: 'Bastion' },
 ];
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;

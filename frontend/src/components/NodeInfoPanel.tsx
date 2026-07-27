@@ -31,6 +31,8 @@ const typeDisplayNames: Record<string, string> = {
   'ids': 'IDS',
   'siem': 'SIEM',
   'database': 'Database',
+  'pcap': 'PCAP',
+  'bastion': 'Bastion'
 };
 
 function isHmiContainer(container: Container): boolean {

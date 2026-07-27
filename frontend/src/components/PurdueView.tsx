@@ -33,6 +33,8 @@ const TYPE_COLORS: Record<ContainerType, string> = {
   'ids': '#240177',
   'siem': '#240177',
   'database': '#240177',
+  'pcap': '#240177',
+  'bastion': '#240177'
 };
 
 const TYPE_LABELS: Record<ContainerType, string> = {
@@ -47,7 +49,9 @@ const TYPE_LABELS: Record<ContainerType, string> = {
   'directory':   'DIR',
   'ids':         'IDS',
   'siem':        'SIEM',
-  'database':    'DB'
+  'database':    'DB',
+  'pcap':        'PCAP',
+  'bastion':     'BS'
 };
 
 type SubnetZone = 'ot' | 'dmz' | 'it';

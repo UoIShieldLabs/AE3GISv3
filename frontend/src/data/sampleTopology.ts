@@ -12,7 +12,9 @@ export type ContainerType =
   | 'directory'
   | 'ids'
   | 'siem'
-  | 'database' ;
+  | 'database'
+  | 'pcap'
+  | 'bastion' ;
 
 export interface Container {
   id: string;
