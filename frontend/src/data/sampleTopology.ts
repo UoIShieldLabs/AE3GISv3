@@ -14,7 +14,11 @@ export type ContainerType =
   | 'siem'
   | 'database'
   | 'pcap'
-  | 'bastion' ;
+  | 'bastion' 
+  | 'proxy'
+  | 'internal-dns'
+  | 'external-dns'
+  | 'dhcp';
 
 export interface Container {
   id: string;

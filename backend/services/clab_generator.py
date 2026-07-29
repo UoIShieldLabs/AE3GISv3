@@ -47,8 +47,10 @@ _SCRIPT_TYPE_MAP = {
 
 
 def image_for_container_type(ctype: str) -> str:
-    if ctype in _ROUTER_TYPES:
+    if ctype == "router":
         return "uiaegisv3/router"
+    if ctype == "firewall":
+        return "uiaegisv3/fwallperim"
     if ctype in _SWITCH_TYPES:
         return "uiaegisv3/switch"
     if ctype == "web-server":
@@ -66,6 +68,14 @@ def image_for_container_type(ctype: str) -> str:
     if ctype == "bastion":
         return "uiaegisv3/bastion"
     if ctype == "pcap":
+        return "uiaegisv3/tcp-pcap"
+    if ctype == "proxy":
+        return "uiaegisv3/seproxy"
+    if ctype == "internal-dns":
+        return "uiaegisv3/internaldns"
+    if ctype == "external-dns":
+        return "uiaegisv3/externaldns"
+    if ctype == "dhcp":
         return _IMAGE_HOST
     return _IMAGE_HOST
 

@@ -20,6 +20,10 @@ const typeOptions = [
   { value: 'siem', label: 'SIEM' },
   { value: 'pcap', label: 'Packet Capture' },
   { value: 'bastion', label: 'Bastion' },
+  { value: 'proxy', label: 'Proxy' },
+  { value: 'internal-dns', label: 'Internal DNS' },
+  { value: 'external-dns', label: 'External DNS' },
+  { value: 'dhcp', label: 'DHCP' },
 ];
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;

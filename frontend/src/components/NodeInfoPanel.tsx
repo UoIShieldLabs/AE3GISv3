@@ -32,7 +32,11 @@ const typeDisplayNames: Record<string, string> = {
   'siem': 'SIEM',
   'database': 'Database',
   'pcap': 'PCAP',
-  'bastion': 'Bastion'
+  'bastion': 'Bastion',
+  'proxy': 'Proxy',
+  'internal-dns': 'Internal DNS',
+  'external-dns': 'External DNS',
+  'dhcp': "DHCP"
 };
 
 function isHmiContainer(container: Container): boolean {

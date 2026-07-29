@@ -34,7 +34,11 @@ const TYPE_COLORS: Record<ContainerType, string> = {
   'siem': '#240177',
   'database': '#240177',
   'pcap': '#240177',
-  'bastion': '#240177'
+  'bastion': '#240177',
+  'proxy': '#240177',
+  'internal-dns': '#240177',
+  'external-dns': '#240177',
+  'dhcp': '#240177'
 };
 
 const TYPE_LABELS: Record<ContainerType, string> = {
@@ -51,7 +55,11 @@ const TYPE_LABELS: Record<ContainerType, string> = {
   'siem':        'SIEM',
   'database':    'DB',
   'pcap':        'PCAP',
-  'bastion':     'BS'
+  'bastion':     'BS',
+  'proxy':       'PRX',
+  'internal-dns':'IDNS',
+  'external-dns':'EDNS',
+  'dhcp':        'DHCP'
 };
 
 type SubnetZone = 'ot' | 'dmz' | 'it';
