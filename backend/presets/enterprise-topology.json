@@ -1,0 +1,165 @@
+{
+  "name": "Enterprise Topology",
+  "description": "Exported topology from AE3GIS.",
+  "topology": {
+    "name": "enterprise-topology",
+    "sites": [
+      {
+        "id": "e4a21b3d-8f92-411a-b325-1a8c9b56f7d2",
+        "name": "Enterprise Network",
+        "location": "",
+        "position": {
+          "x": 150,
+          "y": 150
+        },
+        "subnets": [
+          {
+            "id": "150116a2-a4dd-4e1f-8f83-466d95c7d56d",
+            "name": "ISP Transit",
+            "cidr": "203.0.113.0/30",
+            "gateway": "203.0.113.1",
+            "containers": [
+              {
+                "id": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
+                "name": "ISP Transit Subnet Router",
+                "type": "router",
+                "ip": "203.0.113.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "c15dac42-4973-40f2-919b-81e3b31a23c7",
+                "name": "Edge Router",
+                "type": "router",
+                "ip": "203.0.113.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "c15dac42-4973-40f2-919b-81e3b31a23c7",
+                "to": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": null,
+                "toContainer": null
+              }
+            ]
+          },
+          {
+            "id": "94a8a108-b419-4588-a3a2-289870ea9161",
+            "name": "Edge to Perimeter Transit",
+            "cidr": "10.255.255.0/30",
+            "gateway": "10.255.255.1",
+            "containers": [
+              {
+                "id": "489a1184-827c-4948-9a6a-f64caab6eb29",
+                "name": "Edge Router",
+                "type": "router",
+                "ip": "10.255.255.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "7b96a028-ac88-4567-8653-d1fb06d83a88",
+                "name": "Perimeter Firewall",
+                "type": "firewall",
+                "ip": "10.255.255.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "7b96a028-ac88-4567-8653-d1fb06d83a88",
+                "to": "489a1184-827c-4948-9a6a-f64caab6eb29",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": null,
+                "toContainer": null
+              }
+            ]
+          },
+          {
+            "id": "59a61e9f-14bf-4438-8893-7fa44aee6634",
+            "name": "Perimeter to Internal Firewall Transit",
+            "cidr": "10.255.255.4/30",
+            "gateway": "10.255.255.5",
+            "containers": [
+              {
+                "id": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0",
+                "name": "Perimeter to Internal Firewall Transit Router",
+                "type": "router",
+                "ip": "10.255.255.5",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "8199ba90-9d63-4526-a8b3-96d6e99fa351",
+                "name": "Perimeter to Internal Firewall Transit Switch",
+                "type": "switch",
+                "ip": "10.255.255.6",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "8199ba90-9d63-4526-a8b3-96d6e99fa351",
+                "to": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": null,
+                "toContainer": null
+              }
+            ]
+          }
+        ],
+        "subnetConnections": [
+          {
+            "from": "150116a2-a4dd-4e1f-8f83-466d95c7d56d",
+            "to": "94a8a108-b419-4588-a3a2-289870ea9161",
+            "label": null,
+            "fromInterface": null,
+            "toInterface": null,
+            "fromContainer": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
+            "toContainer": "489a1184-827c-4948-9a6a-f64caab6eb29"
+          },
+          {
+            "from": "94a8a108-b419-4588-a3a2-289870ea9161",
+            "to": "59a61e9f-14bf-4438-8893-7fa44aee6634",
+            "label": null,
+            "fromInterface": null,
+            "toInterface": null,
+            "fromContainer": "489a1184-827c-4948-9a6a-f64caab6eb29",
+            "toContainer": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0"
+          }
+        ]
+      }
+    ],
+    "siteConnections": [],
+    "scenarios": []
+  }
+}
