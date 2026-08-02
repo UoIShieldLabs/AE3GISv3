@@ -25,7 +25,9 @@ import { TopologyDispatchContext } from '../store/TopologyContext';
 import { AuthContext } from '../store/AuthContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
-import type { Subnet, Container, ContainerType } from '../data/sampleTopology';
+import type { Subnet, Container } from '../data/sampleTopology';
+import { typeColors } from './ContainerAspects';
+import type { ContainerType } from './ContainerAspects';
 
 const nodeTypes = { device: DeviceNode, hmi: HmiNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
@@ -34,27 +36,6 @@ const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 // Layout hierarchy: lower number = higher rank (router → firewall → switch → everything else)
 const TYPE_RANK: Partial<Record<string, number>> = { router: 0, firewall: 1, switch: 2 };
 const getTypeRank = (type: string) => TYPE_RANK[type] ?? 3;
-
-const typeColors: Record<ContainerType, string> = {
-  'router': '#ff00ff',
-  'firewall': '#ff3344',
-  'switch': '#ffaa00',
-  'web-server': '#00ff9f',
-  'file-server': '#00d4ff',
-  'plc': '#ffaa00',
-  'workstation': '#4466ff',
-  'hmi': '#33ccff',
-  'directory': '#240177',
-  'ids': '#240177',
-  'siem': '#240177',
-  'database': '#240177',
-  'pcap': '#240177',
-  'bastion': '#240177',
-  'proxy': '#240177',
-  'internal-dns': '#240177',
-  'external-dns': '#240177',
-  'dhcp': '#240177'
-};
 
 function isHmiContainer(container: Container): boolean {
   return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));

@@ -76,7 +76,7 @@ def image_for_container_type(ctype: str) -> str:
     if ctype == "external-dns":
         return "uiaegisv3/externaldns"
     if ctype == "dhcp":
-        return _IMAGE_HOST
+        return "uiaegisv3/dhcpserv"
     return _IMAGE_HOST
 
 

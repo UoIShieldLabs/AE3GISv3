@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import type { TopologyData, Container, ContainerType } from '../data/sampleTopology';
+import type { TopologyData, Container } from '../data/sampleTopology';
 import './PurdueView.css';
+import { typeColors as TYPE_COLORS} from './ContainerAspects';
+import { typeLabels as TYPE_LABELS } from './ContainerAspects';
+import type { ContainerType } from './ContainerAspects';
 
 interface PurdueViewProps {
   open: boolean;
@@ -19,48 +22,6 @@ const PURDUE_LEVELS = [
 ] as const;
 
 type PurdueLevel = (typeof PURDUE_LEVELS)[number];
-
-const TYPE_COLORS: Record<ContainerType, string> = {
-  'router':      '#ff00ff',
-  'firewall':    '#ff3344',
-  'switch':      '#ffaa00',
-  'web-server':  '#00ff9f',
-  'file-server': '#00d4ff',
-  'plc':         '#ffaa00',
-  'workstation': '#4466ff',
-  'hmi':         '#33ccff',
-  'directory': '#240177',
-  'ids': '#240177',
-  'siem': '#240177',
-  'database': '#240177',
-  'pcap': '#240177',
-  'bastion': '#240177',
-  'proxy': '#240177',
-  'internal-dns': '#240177',
-  'external-dns': '#240177',
-  'dhcp': '#240177'
-};
-
-const TYPE_LABELS: Record<ContainerType, string> = {
-  'router':      'RTR',
-  'firewall':    'FW',
-  'switch':      'SW',
-  'web-server':  'WEB',
-  'file-server': 'FS',
-  'plc':         'PLC',
-  'workstation': 'WS',
-  'hmi':         'HMI',
-  'directory':   'DIR',
-  'ids':         'IDS',
-  'siem':        'SIEM',
-  'database':    'DB',
-  'pcap':        'PCAP',
-  'bastion':     'BS',
-  'proxy':       'PRX',
-  'internal-dns':'IDNS',
-  'external-dns':'EDNS',
-  'dhcp':        'DHCP'
-};
 
 type SubnetZone = 'ot' | 'dmz' | 'it';
 

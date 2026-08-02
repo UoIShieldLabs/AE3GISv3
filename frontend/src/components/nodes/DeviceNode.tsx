@@ -1,7 +1,10 @@
 import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
-import type { ContainerType, Container } from '../../data/sampleTopology';
+import type { Container } from '../../data/sampleTopology';
+import { typeColors } from '../ContainerAspects'
+import { typeLabels } from '../ContainerAspects'
+import type { ContainerType } from '../ContainerAspects';
 
 export type DeviceNodeData = {
   container: Container;
@@ -10,48 +13,6 @@ export type DeviceNodeData = {
 };
 
 export type DeviceNodeType = Node<DeviceNodeData, 'device'>;
-
-const typeColors: Record<ContainerType, string> = {
-  'router': '#ff00ff',
-  'firewall': '#ff3344',
-  'switch': '#ffaa00',
-  'web-server': '#00ff9f',
-  'file-server': '#00d4ff',
-  'plc': '#ffaa00',
-  'workstation': '#4466ff',
-  'hmi': '#33ccff',
-  'directory': '#240177',
-  'ids': '#240177',
-  'siem': '#240177',
-  'database': '#240177',
-  'pcap': '#240177',
-  'bastion': '#240177',
-  'proxy': '#240177',
-  'internal-dns': '#240177',
-  'external-dns': '#240177',
-  'dhcp': '#240177'
-};
-
-const typeLabels: Record<ContainerType, string> = {
-  'router': 'RTR',
-  'firewall': 'FW',
-  'switch': 'SW',
-  'web-server': 'WEB',
-  'file-server': 'FS',
-  'plc': 'PLC',
-  'workstation': 'WS',
-  'hmi': 'HMI',
-  'directory':   'DIR',
-  'ids':         'IDS',
-  'siem':        'SIEM',
-  'database':    'DB',
-  'pcap':        'PCAP',
-  'bastion':     'BS',
-  'proxy':       'PRX',
-  'internal-dns':'IDNS',
-  'external-dns':'EDNS',
-  'dhcp':        'DHCP'
-};
 
 function DeviceIcon({ type }: { type: ContainerType }) {
   const color = typeColors[type];

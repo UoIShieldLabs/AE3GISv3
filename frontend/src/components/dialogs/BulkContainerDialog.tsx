@@ -3,28 +3,8 @@ import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
 import { SelectField } from '../ui/SelectField';
 import { isValidIp, isIpInCidr, getAvailableIps, getSubnetCapacity } from '../../utils/validation';
-import type { ContainerType } from '../../data/sampleTopology';
-
-const typeOptions = [
-  { value: 'router', label: 'Router' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'switch', label: 'Switch' },
-  { value: 'web-server', label: 'Web Server' },
-  { value: 'file-server', label: 'File Server' },
-  { value: 'plc', label: 'PLC' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'hmi', label: 'HMI' },
-  { value: 'database', label: 'Database' },
-  { value: 'directory', label: 'Directory' },
-  { value: 'ids', label: 'IDS' },
-  { value: 'siem', label: 'SIEM' },
-  { value: 'pcap', label: 'Packet Capture' },
-  { value: 'bastion', label: 'Bastion' },
-  { value: 'proxy', label: 'Proxy' },
-  { value: 'internal-dns', label: 'Internal DNS' },
-  { value: 'external-dns', label: 'External DNS' },
-  { value: 'dhcp', label: 'DHCP' },
-];
+import { typeOptions } from '../ContainerAspects'
+import type { ContainerType } from '../ContainerAspects';
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
 

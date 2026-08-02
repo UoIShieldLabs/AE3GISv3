@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
-import type { ContainerType } from '../../data/sampleTopology';
+import type { ContainerType } from '../ContainerAspects';
 
 export type RouterNodeData = {
   label: string;

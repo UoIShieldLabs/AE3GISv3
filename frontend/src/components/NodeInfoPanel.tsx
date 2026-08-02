@@ -1,10 +1,12 @@
 import { useContext, useEffect, useState } from 'react';
-import type { Container, ContainerType } from '../data/sampleTopology';
+import type { Container } from '../data/sampleTopology';
 import { TopologyDispatchContext } from '../store/TopologyContext';
 import { AuthContext } from '../store/AuthContext';
 import { ContainerDialog } from './dialogs/ContainerDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { prewarmCapture } from '../api/client';
+import { typeDisplayNames } from './ContainerAspects';
+import type { ContainerType } from './ContainerAspects';
 
 interface NodeInfoPanelProps {
   container: Container | null;
@@ -17,27 +19,6 @@ interface NodeInfoPanelProps {
   readOnly?: boolean;
   deployStatus?: string;
 }
-
-const typeDisplayNames: Record<string, string> = {
-  'web-server': 'Web Server',
-  'file-server': 'File Server',
-  'plc': 'PLC Controller',
-  'firewall': 'Firewall',
-  'switch': 'Network Switch',
-  'router': 'Router',
-  'workstation': 'Workstation',
-  'hmi': 'HMI',
-  'directory': 'Directory',
-  'ids': 'IDS',
-  'siem': 'SIEM',
-  'database': 'Database',
-  'pcap': 'PCAP',
-  'bastion': 'Bastion',
-  'proxy': 'Proxy',
-  'internal-dns': 'Internal DNS',
-  'external-dns': 'External DNS',
-  'dhcp': "DHCP"
-};
 
 function isHmiContainer(container: Container): boolean {
   return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));

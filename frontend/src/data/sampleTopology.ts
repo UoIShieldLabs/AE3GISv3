@@ -1,24 +1,5 @@
 // ── Types ──────────────────────────────────────────────────────────
-
-export type ContainerType =
-  | 'web-server'
-  | 'file-server'
-  | 'plc'
-  | 'firewall'
-  | 'switch'
-  | 'router'
-  | 'workstation'
-  | 'hmi'
-  | 'directory'
-  | 'ids'
-  | 'siem'
-  | 'database'
-  | 'pcap'
-  | 'bastion' 
-  | 'proxy'
-  | 'internal-dns'
-  | 'external-dns'
-  | 'dhcp';
+import type { ContainerType } from '../components/ContainerAspects';
 
 export interface Container {
   id: string;
