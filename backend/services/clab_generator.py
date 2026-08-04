@@ -224,13 +224,21 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
     nodes: dict[str, dict] = {}
     links: list[dict] = []
 
-    # ── Step 1: Build container and subnet metadata ──────────────────────────
+    # ── Step 1: Build container + subnet metadata (multi-homing aware) ──────
+    #
+    # A container can now appear in more than one subnet's `containers` list
+    # (e.g. a firewall with a leg in the DMZ and another leg in a Servers
+    # VLAN). Each such occurrence is a distinct *membership*: its own real
+    # interface, in its own real subnet, with its own real IP. `container_type`
+    # holds the single logical type for the node; `container_memberships`
+    # holds one entry per subnet the node has an interface in.
 
-    container_info: dict[str, dict] = {}   # cid → {type, ip, subnet_cidr, prefix_len, gateway}
-    all_subnets:    dict[str, dict] = {}   # cidr → {gateway, prefix_len}
-    subnet_id_map:  dict[str, dict] = {}   # subnet_id → {cidr, gateway, prefix_len}
-    subnet_id_containers: dict[str, list] = {}  # subnet_id → [container dicts]
-    site_id_subnets: dict[str, list] = {}   # site_id → [subnet dicts]
+    container_type: dict[str, str] = {}
+    container_memberships: dict[str, list[dict]] = defaultdict(list)
+    all_subnets:    dict[str, dict] = {}
+    subnet_id_map:  dict[str, dict] = {}
+    subnet_id_containers: dict[str, list] = {}
+    site_id_subnets: dict[str, list] = {}
 
     for site in topology.get("sites", []):
         site_id = site.get("id", "")
@@ -270,44 +278,71 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
                 subnet_id_containers[sid] = containers
 
             for c in containers:
-                container_info[c["id"]] = {
-                    "type":        c.get("type", ""),
-                    "ip":          c.get("ip", ""),
-                    "subnet_cidr": cidr,
-                    "prefix_len":  pfx,
-                    "gateway":     gateway,  # effective gateway (may be auto-detected)
-                }
+                cid   = c["id"]
+                ctype = c.get("type", "")
+                if cid in container_type and container_type[cid] != ctype:
+                    log.warning(
+                        "Container %s has inconsistent type across its subnet memberships "
+                        "(%s vs %s); using the first one seen",
+                        cid, container_type[cid], ctype,
+                    )
+                container_type.setdefault(cid, ctype)
+                container_memberships[cid].append({
+                    "subnet_id":  sid,
+                    "cidr":       cidr,
+                    "ip":         c.get("ip", ""),
+                    "prefix_len": pfx,
+                    "gateway":    gateway,
+                })
+
+    def _primary(cid: str) -> dict:
+        """First-seen membership — the only one that matters for the vast
+        majority of nodes (hosts/switches), which are single-homed."""
+        memberships = container_memberships.get(cid) or [{}]
+        return memberships[0]
+
+    def _membership_for_subnet(cid: str, sid: str | None) -> dict | None:
+        if not sid:
+            return None
+        for m in container_memberships.get(cid, []):
+            if m["subnet_id"] == sid:
+                return m
+        return None
+
+    # Thin backward-compatible view for code (Step 4's switch/host branches)
+    # that only ever cares about a single-homed node's one IP/subnet.
+    container_info: dict[str, dict] = {
+        cid: {"type": container_type[cid], **_primary(cid)}
+        for cid in container_memberships
+    }
 
     # Build lookup: subnet_id / site_id → best gateway router container_id.
-    # Priority: router/firewall whose IP matches the subnet gateway.
-    # Fallback:  first router/firewall found in the subnet.
-    # This lets subnet/site-level connections auto-resolve to the correct routers
-    # without the user having to specify container endpoints manually.
-
-    def _find_gateway_router(containers: list[dict]) -> str | None:
-        subnet_gateway = None
-        # Try to infer gateway from subnet metadata if available
+    # Priority: router/firewall whose IP in *this subnet* matches the
+    # subnet's gateway. Fallback: first router/firewall found in the subnet.
+    def _find_gateway_router(containers: list[dict], sid: str | None = None) -> str | None:
         best = fallback = None
         for c in containers:
-            if c.get("type", "") in _ROUTER_TYPES and c["id"] in container_info:
-                gw = container_info[c["id"]].get("gateway", "")
-                if c.get("ip") == gw and not best:
-                    best = c["id"]
-                if not fallback:
-                    fallback = c["id"]
+            cid = c["id"]
+            if container_type.get(cid, "") not in _ROUTER_TYPES:
+                continue
+            m = _membership_for_subnet(cid, sid) or _primary(cid)
+            if c.get("ip") == m.get("gateway") and not best:
+                best = cid
+            if not fallback:
+                fallback = cid
         return best or fallback
 
-    gateway_router_map: dict[str, str] = {}   # subnet_id → container_id
+    gateway_router_map: dict[str, str] = {}      # subnet_id → container_id
     site_gateway_router_map: dict[str, str] = {}  # site_id → container_id
 
     for sid, containers in subnet_id_containers.items():
-        gw = _find_gateway_router(containers)
+        gw = _find_gateway_router(containers, sid)
         if gw:
             gateway_router_map[sid] = gw
 
     for site_id, subnets in site_id_subnets.items():
         for subnet in subnets:
-            gw = _find_gateway_router(subnet.get("containers", []))
+            gw = _find_gateway_router(subnet.get("containers", []), subnet.get("id"))
             if gw:
                 site_gateway_router_map[site_id] = gw
                 break  # use first subnet that has a router
@@ -316,7 +351,7 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
         """Map subnet/site IDs to their gateway router; pass container IDs through."""
         if not raw_id:
             return None
-        if raw_id in container_info:
+        if raw_id in container_memberships:
             return raw_id
         return gateway_router_map.get(raw_id) or site_gateway_router_map.get(raw_id)
 
@@ -370,9 +405,13 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
             iface_counter[to_id] = max(iface_counter[to_id], _eth_index(conn["toInterface"]))
         return from_id, fi, to_id, ti
 
-    link_registry: list[tuple[str, str, str, str]] = []
+    # link_registry entries now carry the *subnet_id* a connection was
+    # declared under (None for subnetConnections/siteConnections). Step 3
+    # uses that to pick the right membership for multi-homed endpoints
+    # instead of assuming a single global "home" IP per container.
+    link_registry: list[tuple[str, str, str, str, str | None]] = []
 
-    def _add_link(conn: dict) -> None:
+    def _add_link(conn: dict, subnet_id: str | None) -> None:
         """Resolve a connection and add it only if both endpoints are containers.
 
         Subnet and site IDs are automatically resolved to their gateway router/
@@ -388,7 +427,7 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
 
         if not from_id or not to_id:
             return
-        if from_id not in container_info or to_id not in container_info:
+        if from_id not in container_memberships or to_id not in container_memberships:
             return
 
         # Rebuild conn with resolved container IDs so _resolve_conn picks them up.
@@ -396,30 +435,37 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
         _, fi, _, ti = _resolve_conn(resolved)
 
         links.append({"endpoints": [f"{from_id}:{fi}", f"{to_id}:{ti}"]})
-        link_registry.append((from_id, fi, to_id, ti))
+        link_registry.append((from_id, fi, to_id, ti, subnet_id))
 
     # Intra-subnet connections first → routers/hosts get their home interface
     # assigned as eth1 before any cross-subnet WAN interfaces are allocated.
     for site in topology.get("sites", []):
         for subnet in site.get("subnets", []):
             for conn in subnet.get("connections", []):
-                _add_link(conn)
+                _add_link(conn, subnet.get("id"))
         for conn in site.get("subnetConnections", []):
-            _add_link(conn)
+            _add_link(conn, None)
     for conn in topology.get("siteConnections", []):
-        _add_link(conn)
+        _add_link(conn, None)
 
     # ── Step 3: Compute per-interface IPs and static routes ─────────────────
     #
-    # Same-subnet links      → container's primary IP on its first interface.
-    # Router↔router WAN link → auto-assigned /30 PtP IPs from 10.255.0.0/24.
-    #   Each side also gets a static route to the peer's subnet via the PtP IP.
+    # Link classification, in priority order:
+    #   1. Declared inside a specific subnet's `connections` list, and at
+    #      least one endpoint has a real membership in that subnet → assign
+    #      that endpoint its *real, doc-specified* IP from that membership.
+    #      This is what makes multi-legged firewalls work: wire each leg
+    #      inside its own subnet's `connections` block and it keeps that
+    #      subnet's real address, no matter how many other subnets the same
+    #      container is also a member of.
+    #   2. No subnet context (subnetConnections / siteConnections) → the
+    #      original auto-assigned /30 PtP WAN link between two routers.
 
-    iface_ips:  dict[tuple[str, str], tuple[str, str]] = {}  # (cid, iface) → (ip, pfx)
-    home_iface: dict[str, str] = {}                           # cid → home eth name
-    router_links: dict[str, list[tuple[str, str]]] = defaultdict(list)  # cid → [(peer_cid, peer_ptp_ip)]
-    router_networks: dict[str, set[str]] = defaultdict(set)             # cid → directly connected routed networks
-    ptp_seq:    list[int] = [0]
+    iface_ips:  dict[tuple[str, str], tuple[str, str]] = {}
+    home_iface: dict[str, str] = {}   # single-homed hosts only; read in Step 4
+    router_links: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    router_networks: dict[str, set[str]] = defaultdict(set)
+    ptp_seq: list[int] = [0]
 
     def _next_ptp() -> tuple[str, str, str]:
         """Allocate next /30 PtP pair from 10.255.0.0/24."""
@@ -427,16 +473,26 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
         b = 4 * n
         return f"10.255.0.{b + 1}", f"10.255.0.{b + 2}", "30"
 
-    for from_id, fi, to_id, ti in link_registry:
-        f_info   = container_info.get(from_id, {})
-        t_info   = container_info.get(to_id,   {})
-        f_subnet = f_info.get("subnet_cidr", "")
-        t_subnet = t_info.get("subnet_cidr", "")
-        f_type   = f_info.get("type", "")
-        t_type   = t_info.get("type", "")
+    assigned_iface_for_subnet: dict[tuple[str, str], str] = {}  # (cid, subnet_id) → claimed iface
 
-        if f_subnet != t_subnet and f_type in _ROUTER_TYPES and t_type in _ROUTER_TYPES:
-            # Cross-subnet router↔router WAN link → auto PtP /30.
+    for from_id, fi, to_id, ti, subnet_id in link_registry:
+        f_mem = _membership_for_subnet(from_id, subnet_id)
+        t_mem = _membership_for_subnet(to_id, subnet_id)
+
+        if subnet_id and (f_mem or t_mem):
+            if f_mem:
+                key = (from_id, subnet_id)
+                iface = assigned_iface_for_subnet.setdefault(key, fi)
+                iface_ips[(from_id, iface)] = (f_mem["ip"], f_mem["prefix_len"])
+                home_iface.setdefault(from_id, iface)
+            if t_mem:
+                key = (to_id, subnet_id)
+                iface = assigned_iface_for_subnet.setdefault(key, ti)
+                iface_ips[(to_id, iface)] = (t_mem["ip"], t_mem["prefix_len"])
+                home_iface.setdefault(to_id, iface)
+        else:
+            # No explicit subnet context → synthetic /30 WAN link between two
+            # distinct router/firewall containers (unchanged legacy behavior).
             from_ptp, to_ptp, ptp_pfx = _next_ptp()
             ptp_net = str(ipaddress.ip_network(f"{from_ptp}/{ptp_pfx}", strict=False))
             iface_ips[(from_id, fi)] = (from_ptp, ptp_pfx)
@@ -445,28 +501,40 @@ def generate_clab_yaml(topology: dict, topology_id: str | None = None) -> str:
             router_links[to_id].append((from_id, from_ptp))
             router_networks[from_id].add(ptp_net)
             router_networks[to_id].add(ptp_net)
-        else:
-            # Within-subnet (or non-router cross-subnet): set the home interface
-            # IP once per container (first connection wins).
-            if from_id not in home_iface and f_info.get("ip"):
-                home_iface[from_id] = fi
-                iface_ips[(from_id, fi)] = (f_info["ip"], f_info.get("prefix_len", "24"))
-            if to_id not in home_iface and t_info.get("ip"):
-                home_iface[to_id] = ti
-                iface_ips[(to_id, ti)] = (t_info["ip"], t_info.get("prefix_len", "24"))
+
+    # Router adjacency for static-route propagation now comes directly from
+    # *shared subnet membership*, not only from auto-PtP links. Two routers
+    # that both have a real interface on the same subnet (e.g. perim-fw and
+    # int-fw both sitting on the "Perimeter↔Internal Transit" /30) are
+    # adjacent by construction — no synthetic link needed to discover that.
+    router_subnets: dict[str, set[str]] = defaultdict(set)
+    for cid, memberships in container_memberships.items():
+        if container_type.get(cid, "") not in _ROUTER_TYPES:
+            continue
+        for m in memberships:
+            if m["cidr"]:
+                router_networks[cid].add(m["cidr"])
+                router_subnets[cid].add(m["cidr"])
+
+    routers_by_subnet: dict[str, list[str]] = defaultdict(list)
+    for cid, cidrs in router_subnets.items():
+        for cidr in cidrs:
+            routers_by_subnet[cidr].append(cid)
+
+    for cidr, cids in routers_by_subnet.items():
+        for i, cid_a in enumerate(cids):
+            for cid_b in cids[i + 1:]:
+                ip_a = next((m["ip"] for m in container_memberships[cid_a] if m["cidr"] == cidr), None)
+                ip_b = next((m["ip"] for m in container_memberships[cid_b] if m["cidr"] == cidr), None)
+                if ip_a and ip_b:
+                    router_links[cid_a].append((cid_b, ip_b))
+                    router_links[cid_b].append((cid_a, ip_a))
 
     # Compute static routes for every router to every remote subnet reachable
-    # across chained router links. Each route uses the first-hop neighbor's PtP
-    # IP so multi-hop topologies work out of the box.
+    # across chained router links. Each route uses the first-hop neighbor's
+    # address so multi-hop topologies (edge-rtr → perim-fw → int-fw → VLANs)
+    # work out of the box.
     router_static_routes: dict[str, list[tuple[str, str]]] = defaultdict(list)
-    router_subnets = {
-        cid: info.get("subnet_cidr", "")
-        for cid, info in container_info.items()
-        if info.get("type", "") in _ROUTER_TYPES
-    }
-    for cid, subnet_cidr in router_subnets.items():
-        if subnet_cidr:
-            router_networks[cid].add(subnet_cidr)
 
     for src_router in router_subnets:
         first_hop_via: dict[str, str] = {}
