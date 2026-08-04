@@ -7,7 +7,6 @@ export type ContainerType =
   | 'internaldns-server'
   | 'externaldns-server'
   | 'dhcp-server'
-  | 'testing-server'
   | 'siem'
   | 'router'
   | 'switch'
@@ -22,19 +21,19 @@ export type ContainerType =
   | 'plc';
 
 export const typeOptions = [
-  { value: 'database-server', label: 'Database Server' },  { value: 'web-server', label: 'Web Server' },  { value: 'directory-server', label: 'Directory Server' },  { value: 'file-server', label: 'File Server' },  { value: 'internaldns-server', label: 'Internaldns Server' },  { value: 'externaldns-server', label: 'Externaldns Server' },  { value: 'dhcp-server', label: 'Dhcp Server' },  { value: 'testing-server', label: 'Testing Server' },  { value: 'siem', label: 'siem' },  { value: 'router', label: 'router' },  { value: 'switch', label: 'switch' },  { value: 'ids', label: 'ids' },  { value: 'bastion', label: 'bastion' },  { value: 'honeypot', label: 'honeypot' },  { value: 'proxy', label: 'proxy' },  { value: 'pcap', label: 'pcap' },  { value: 'firewall', label: 'firewall' },  { value: 'hmi', label: 'hmi' },  { value: 'workstation', label: 'workstation' },  { value: 'plc', label: 'plc' }
+  { value: 'database-server', label: 'Database Server' },  { value: 'web-server', label: 'Web Server' },  { value: 'directory-server', label: 'Directory Server' },  { value: 'file-server', label: 'File Server' },  { value: 'internaldns-server', label: 'Internaldns Server' },  { value: 'externaldns-server', label: 'Externaldns Server' },  { value: 'dhcp-server', label: 'Dhcp Server' },  { value: 'siem', label: 'siem' },  { value: 'router', label: 'router' },  { value: 'switch', label: 'switch' },  { value: 'ids', label: 'ids' },  { value: 'bastion', label: 'bastion' },  { value: 'honeypot', label: 'honeypot' },  { value: 'proxy', label: 'proxy' },  { value: 'pcap', label: 'pcap' },  { value: 'firewall', label: 'firewall' },  { value: 'hmi', label: 'hmi' },  { value: 'workstation', label: 'workstation' },  { value: 'plc', label: 'plc' }
 ];
 
 export const typeColors: Record<ContainerType, string> = {
-  'database-server': '#240177',  'web-server': '#00ff9f',  'directory-server': '#240177',  'file-server': '#00d4ff',  'internaldns-server': '#240177',  'externaldns-server': '#240177',  'dhcp-server': '#240177',  'testing-server': '#9ca3af',  'siem': '#240177',  'router': '#ff00ff',  'switch': '#ffaa00',  'ids': '#240177',  'bastion': '#240177',  'honeypot': '#240177',  'proxy': '#240177',  'pcap': '#240177',  'firewall': '#ff3344',  'hmi': '#33ccff',  'workstation': '#4466ff',  'plc': '#ffaa00'
+  'database-server': '#240177',  'web-server': '#00ff9f',  'directory-server': '#240177',  'file-server': '#00d4ff',  'internaldns-server': '#240177',  'externaldns-server': '#240177',  'dhcp-server': '#240177',  'siem': '#240177',  'router': '#ff00ff',  'switch': '#ffaa00',  'ids': '#240177',  'bastion': '#240177',  'honeypot': '#240177',  'proxy': '#240177',  'pcap': '#240177',  'firewall': '#ff3344',  'hmi': '#33ccff',  'workstation': '#4466ff',  'plc': '#ffaa00'
 };
 
 export const typeLabels: Record<ContainerType, string> = {
-  'database-server': 'DB',  'web-server': 'WEB',  'directory-server': 'DIR',  'file-server': 'FS',  'internaldns-server': 'IDNS',  'externaldns-server': 'EDNS',  'dhcp-server': 'DHCP',  'testing-server': 'UNK',  'siem': 'SIEM',  'router': 'RTR',  'switch': 'SW',  'ids': 'IDS',  'bastion': 'BS',  'honeypot': 'HP',  'proxy': 'PXY',  'pcap': 'PCAP',  'firewall': 'FW',  'hmi': 'HMI',  'workstation': 'WS',  'plc': 'PLC'
+  'database-server': 'DB',  'web-server': 'WEB',  'directory-server': 'DIR',  'file-server': 'FS',  'internaldns-server': 'IDNS',  'externaldns-server': 'EDNS',  'dhcp-server': 'DHCP',  'siem': 'SIEM',  'router': 'RTR',  'switch': 'SW',  'ids': 'IDS',  'bastion': 'BS',  'honeypot': 'HP',  'proxy': 'PXY',  'pcap': 'PCAP',  'firewall': 'FW',  'hmi': 'HMI',  'workstation': 'WS',  'plc': 'PLC'
 };
 
 export const typeDisplayNames: Record<string, string> = {
-  'database-server': 'Database Server',  'web-server': 'Web Server',  'directory-server': 'Directory Server',  'file-server': 'File Server',  'internaldns-server': 'Internaldns Server',  'externaldns-server': 'Externaldns Server',  'dhcp-server': 'Dhcp Server',  'testing-server': 'Testing Server',  'siem': 'siem',  'router': 'router',  'switch': 'switch',  'ids': 'ids',  'bastion': 'bastion',  'honeypot': 'honeypot',  'proxy': 'proxy',  'pcap': 'pcap',  'firewall': 'firewall',  'hmi': 'hmi',  'workstation': 'workstation',  'plc': 'plc'
+  'database-server': 'Database Server',  'web-server': 'Web Server',  'directory-server': 'Directory Server',  'file-server': 'File Server',  'internaldns-server': 'Internaldns Server',  'externaldns-server': 'Externaldns Server',  'dhcp-server': 'Dhcp Server',  'siem': 'siem',  'router': 'router',  'switch': 'switch',  'ids': 'ids',  'bastion': 'bastion',  'honeypot': 'honeypot',  'proxy': 'proxy',  'pcap': 'pcap',  'firewall': 'firewall',  'hmi': 'hmi',  'workstation': 'workstation',  'plc': 'plc'
 };
 
 export const menuHierarchy: Record<string, Partial<Record<ContainerType, string[]>>> = {
@@ -60,8 +59,7 @@ export const menuHierarchy: Record<string, Partial<Record<ContainerType, string[
     "dhcp-server": [
       "isc-dhcp 4.4.3",
       "isc-dhcp latest"
-    ],
-    "testing-server": []
+    ]
   },
   "management": {
     "siem": [
