@@ -96,8 +96,8 @@ export function topologyReducer(draft: TopologyState, action: TopologyAction) {
         cidr,
         gateway: routerIp,
         containers: [
-          { id: routerId, name: `${name} Router`, type: 'router', ip: routerIp },
-          { id: switchId, name: `${name} Switch`, type: 'switch', ip: switchIp },
+          { id: routerId, name: `${name} Router`, type: 'router', ip: routerIp, image: 'latest',  status: 'running'},
+          { id: switchId, name: `${name} Switch`, type: 'switch', ip: switchIp , image: 'latest',  status: 'running'},
         ],
         connections: [{ from: switchId, to: routerId }],
       });

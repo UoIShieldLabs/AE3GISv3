@@ -1,104 +1,106 @@
 
 export type ContainerType =
+  | 'database-server'
   | 'web-server'
+  | 'directory-server'
   | 'file-server'
-  | 'plc'
-  | 'firewall'
-  | 'switch'
-  | 'router'
-  | 'workstation'
-  | 'hmi'
-  | 'directory'
-  | 'ids'
+  | 'internaldns-server'
+  | 'externaldns-server'
+  | 'dhcp-server'
+  | 'testing-server'
   | 'siem'
-  | 'database'
-  | 'pcap'
-  | 'bastion' 
+  | 'router'
+  | 'switch'
+  | 'ids'
+  | 'bastion'
+  | 'honeypot'
   | 'proxy'
-  | 'internal-dns'
-  | 'external-dns'
-  | 'dhcp';
+  | 'pcap'
+  | 'firewall'
+  | 'hmi'
+  | 'workstation'
+  | 'plc';
 
 export const typeOptions = [
-  { value: 'router', label: 'Router' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'switch', label: 'Switch' },
-  { value: 'web-server', label: 'Web Server' },
-  { value: 'file-server', label: 'File Server' },
-  { value: 'plc', label: 'PLC' },
-  { value: 'workstation', label: 'Workstation' },
-  { value: 'hmi', label: 'HMI' },
-  { value: 'database', label: 'Database' },
-  { value: 'directory', label: 'Directory' },
-  { value: 'ids', label: 'IDS' },
-  { value: 'siem', label: 'SIEM' },
-  { value: 'pcap', label: 'Packet Capture' },
-  { value: 'bastion', label: 'Bastion' },
-  { value: 'proxy', label: 'Proxy' },
-  { value: 'internal-dns', label: 'Internal DNS' },
-  { value: 'external-dns', label: 'External DNS' },
-  { value: 'dhcp', label: 'DHCP' },
+  { value: 'database-server', label: 'Database Server' },  { value: 'web-server', label: 'Web Server' },  { value: 'directory-server', label: 'Directory Server' },  { value: 'file-server', label: 'File Server' },  { value: 'internaldns-server', label: 'Internaldns Server' },  { value: 'externaldns-server', label: 'Externaldns Server' },  { value: 'dhcp-server', label: 'Dhcp Server' },  { value: 'testing-server', label: 'Testing Server' },  { value: 'siem', label: 'siem' },  { value: 'router', label: 'router' },  { value: 'switch', label: 'switch' },  { value: 'ids', label: 'ids' },  { value: 'bastion', label: 'bastion' },  { value: 'honeypot', label: 'honeypot' },  { value: 'proxy', label: 'proxy' },  { value: 'pcap', label: 'pcap' },  { value: 'firewall', label: 'firewall' },  { value: 'hmi', label: 'hmi' },  { value: 'workstation', label: 'workstation' },  { value: 'plc', label: 'plc' }
 ];
 
 export const typeColors: Record<ContainerType, string> = {
-  'router': '#ff00ff',
-  'firewall': '#ff3344',
-  'switch': '#ffaa00',
-  'web-server': '#00ff9f',
-  'file-server': '#00d4ff',
-  'plc': '#ffaa00',
-  'workstation': '#4466ff',
-  'hmi': '#33ccff',
-  'directory': '#240177',
-  'ids': '#240177',
-  'siem': '#240177',
-  'database': '#240177',
-  'pcap': '#240177',
-  'bastion': '#240177',
-  'proxy': '#240177',
-  'internal-dns': '#240177',
-  'external-dns': '#240177',
-  'dhcp': '#240177'
+  'database-server': '#240177',  'web-server': '#00ff9f',  'directory-server': '#240177',  'file-server': '#00d4ff',  'internaldns-server': '#240177',  'externaldns-server': '#240177',  'dhcp-server': '#240177',  'testing-server': '#9ca3af',  'siem': '#240177',  'router': '#ff00ff',  'switch': '#ffaa00',  'ids': '#240177',  'bastion': '#240177',  'honeypot': '#240177',  'proxy': '#240177',  'pcap': '#240177',  'firewall': '#ff3344',  'hmi': '#33ccff',  'workstation': '#4466ff',  'plc': '#ffaa00'
 };
 
 export const typeLabels: Record<ContainerType, string> = {
-  'router': 'RTR',
-  'firewall': 'FW',
-  'switch': 'SW',
-  'web-server': 'WEB',
-  'file-server': 'FS',
-  'plc': 'PLC',
-  'workstation': 'WS',
-  'hmi': 'HMI',
-  'directory':   'DIR',
-  'ids':         'IDS',
-  'siem':        'SIEM',
-  'database':    'DB',
-  'pcap':        'PCAP',
-  'bastion':     'BS',
-  'proxy':       'PRX',
-  'internal-dns':'IDNS',
-  'external-dns':'EDNS',
-  'dhcp':        'DHCP'
+  'database-server': 'DB',  'web-server': 'WEB',  'directory-server': 'DIR',  'file-server': 'FS',  'internaldns-server': 'IDNS',  'externaldns-server': 'EDNS',  'dhcp-server': 'DHCP',  'testing-server': 'UNK',  'siem': 'SIEM',  'router': 'RTR',  'switch': 'SW',  'ids': 'IDS',  'bastion': 'BS',  'honeypot': 'HP',  'proxy': 'PXY',  'pcap': 'PCAP',  'firewall': 'FW',  'hmi': 'HMI',  'workstation': 'WS',  'plc': 'PLC'
 };
 
 export const typeDisplayNames: Record<string, string> = {
-  'web-server': 'Web Server',
-  'file-server': 'File Server',
-  'plc': 'PLC Controller',
-  'firewall': 'Firewall',
-  'switch': 'Network Switch',
-  'router': 'Router',
-  'workstation': 'Workstation',
-  'hmi': 'HMI',
-  'directory': 'Directory',
-  'ids': 'IDS',
-  'siem': 'SIEM',
-  'database': 'Database',
-  'pcap': 'PCAP',
-  'bastion': 'Bastion',
-  'proxy': 'Proxy',
-  'internal-dns': 'Internal DNS',
-  'external-dns': 'External DNS',
-  'dhcp': "DHCP"
+  'database-server': 'Database Server',  'web-server': 'Web Server',  'directory-server': 'Directory Server',  'file-server': 'File Server',  'internaldns-server': 'Internaldns Server',  'externaldns-server': 'Externaldns Server',  'dhcp-server': 'Dhcp Server',  'testing-server': 'Testing Server',  'siem': 'siem',  'router': 'router',  'switch': 'switch',  'ids': 'ids',  'bastion': 'bastion',  'honeypot': 'honeypot',  'proxy': 'proxy',  'pcap': 'pcap',  'firewall': 'firewall',  'hmi': 'hmi',  'workstation': 'workstation',  'plc': 'plc'
+};
+
+export const menuHierarchy: Record<string, Partial<Record<ContainerType, string[]>>> = {
+  "server": {
+    "database-server": [
+      "postgres 1.0"
+    ],
+    "web-server": [
+      "nginx 1.0"
+    ],
+    "directory-server": [
+      "openldap latest"
+    ],
+    "file-server": [
+      "samba latest"
+    ],
+    "internaldns-server": [
+      "bind9 latest"
+    ],
+    "externaldns-server": [
+      "bind9 latest"
+    ],
+    "dhcp-server": [
+      "isc-dhcp 4.4.3",
+      "isc-dhcp latest"
+    ],
+    "testing-server": []
+  },
+  "management": {
+    "siem": [
+      "wazuh 1.0"
+    ],
+    "router": [
+      "frrouting latest"
+    ],
+    "switch": [
+      "open-vswitch latest"
+    ],
+    "ids": [
+      "suricata-snort latest"
+    ],
+    "bastion": [
+      "ssh latest"
+    ],
+    "honeypot": [
+      "opencanary latest"
+    ],
+    "proxy": [
+      "squid-egress latest"
+    ],
+    "pcap": [
+      "tcp latest"
+    ],
+    "firewall": [
+      "vyos latest"
+    ],
+    "hmi": [
+      "alpine+scripts latest"
+    ]
+  },
+  "other": {
+    "workstation": [
+      "ubuntu latest"
+    ],
+    "plc": [
+      "alpine+scripts latest"
+    ]
+  }
 };

@@ -72,4 +72,4 @@ export interface TopologyData {
 
 import topologyJson from './topology.json';
 
-export const sampleTopology: TopologyData = topologyJson as TopologyData;
+export const sampleTopology: TopologyData = topologyJson.topology as TopologyData;

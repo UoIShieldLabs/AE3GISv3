@@ -2,10 +2,15 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+RUN apk add --no-cache python3 py3-requests
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY . .
+
+RUN python3 src/components/dynamicFrontendGenerator.py
+
 RUN npm run build
 
 FROM nginx:alpine

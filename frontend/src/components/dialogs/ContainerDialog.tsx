@@ -4,7 +4,7 @@ import { FormField } from '../ui/FormField';
 import { SelectField } from '../ui/SelectField';
 import { isValidIp, isIpInCidr, getNextAvailableIp, getSubnetCapacity } from '../../utils/validation';
 import type { Container } from '../../data/sampleTopology';
-import { typeOptions } from '../ContainerAspects';
+import { typeOptions, menuHierarchy, typeDisplayNames } from '../ContainerAspects';
 import type { ContainerType } from '../ContainerAspects';
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
@@ -62,6 +62,10 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
   const [persistencePathInput, setPersistencePathInput] = useState('');
   const [persistencePaths, setPersistencePaths] = useState<string[]>(initial?.persistencePaths ? [...initial.persistencePaths] : []);
   const [persistencePathError, setPersistencePathError] = useState('');
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeTypeMenu, setActiveTypeMenu] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,11 +142,183 @@ function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps
   return (
     <form onSubmit={handleSubmit}>
       <FormField label="Name" value={name} onChange={(v) => { setName(v); setNameIsAuto(false); }} placeholder="e.g. Core Router" />
-      <SelectField label="Type" value={type} onChange={(v) => {
-        const t = v as ContainerType;
-        setType(t);
-        if (nameIsAuto && existingNames) setName(getNextName(existingNames, typeLabel[t]));
-      }} options={typeOptions} />
+<div 
+        style={{ marginBottom: '16px', position: 'relative' }} 
+      >
+        <label style={{
+          display: 'block',
+          fontFamily: "var(--font-mono)",
+          fontSize: '13px',
+          color: 'var(--text-dim)',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          marginBottom: '6px',
+        }}>
+          Template (Category ➔ Type ➔ Version)
+        </label>
+        
+        <div
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '8px 12px',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '4px',
+            color: type ? 'var(--text-primary)' : 'var(--text-dim)',
+            fontFamily: "var(--font-mono)",
+            fontSize: '15px',
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}
+        >
+          {type && image ? `${typeDisplayNames[type]} (${image})` : type ? typeDisplayNames[type] : 'Select a template...'}
+          <span style={{ fontSize: '10px' }}>▼</span>
+        </div>
+
+        {isMenuOpen && (
+          <ul style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            width: '100%',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-color)',
+            borderTop: 'none',
+            borderRadius: '0 0 4px 4px',
+            margin: 0,
+            padding: 0,
+            listStyle: 'none',
+            zIndex: 100,
+            fontFamily: "var(--font-mono)",
+            fontSize: '14px',
+            maxHeight: '250px',
+            overflowY: 'auto'
+          }}>
+            {Object.keys(menuHierarchy).map((category) => (
+              <li 
+                key={category}
+                style={{ position: 'relative' }}
+              >
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (activeCategory === category) {
+                      setActiveCategory(null);
+                      setActiveTypeMenu(null);
+                    } else {
+                      setActiveCategory(category);
+                      setActiveTypeMenu(null);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    color: activeCategory === category ? 'var(--neon-cyan)' : 'var(--text-primary)',
+                    background: activeCategory === category ? 'rgba(0, 212, 255, 0.08)' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    textTransform: 'capitalize' 
+                  }}
+                >
+                  {category}
+                  <span style={{ 
+                    fontSize: '12px', 
+                    transform: activeCategory === category ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.15s ease'
+                  }}>▶</span>
+                </div>
+
+                {/* Tier 2 - Inline Expanding Menu */}
+                {activeCategory === category && (
+                  <ul style={{
+                    background: 'rgba(0,0,0,0.15)',
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    borderTop: '1px solid var(--border-color)',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    {Object.keys(menuHierarchy[category]).map((t) => (
+                      <li 
+                        key={t}
+                        style={{ position: 'relative' }}
+                      >
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveTypeMenu(activeTypeMenu === t ? null : t);
+                          }}
+                          style={{
+                            padding: '8px 12px 8px 24px',
+                            color: activeTypeMenu === t ? 'var(--neon-cyan)' : 'var(--text-primary)',
+                            background: activeTypeMenu === t ? 'rgba(0, 212, 255, 0.08)' : 'transparent',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between'
+                          }}
+                        >
+                          {typeDisplayNames[t]}
+                          <span style={{ 
+                            fontSize: '12px', 
+                            transform: activeTypeMenu === t ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.15s ease'
+                          }}>▶</span>
+                        </div>
+
+                        {activeTypeMenu === t && (
+                          <ul style={{
+                            background: 'rgba(0,0,0,0.25)',
+                            margin: 0,
+                            padding: 0,
+                            listStyle: 'none',
+                            borderTop: '1px solid var(--border-color)'
+                          }}>
+                            {menuHierarchy[category][t as ContainerType]?.map((tag) => (
+                              <li 
+                                key={tag}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const selectedType = t as ContainerType;
+                                  setType(selectedType);
+                                  setImage(tag); 
+                                  setIsMenuOpen(false);
+                                  
+                                  if (nameIsAuto && existingNames) {
+                                    setName(getNextName(existingNames, typeLabel[selectedType]));
+                                  }
+                                }}
+                                style={{
+                                  padding: '8px 12px 8px 36px',
+                                  color: 'var(--text-primary)',
+                                  cursor: 'pointer',
+                                  borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = 'var(--neon-green)';
+                                  e.currentTarget.style.background = 'rgba(0, 255, 159, 0.08)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = 'var(--text-primary)';
+                                  e.currentTarget.style.background = 'transparent';
+                                }}
+                              >
+                                {tag}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <FormField
         label="IP Address"
         value={ip}
