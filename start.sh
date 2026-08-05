@@ -8,4 +8,5 @@ if ! sudo -n containerlab version >/dev/null 2>&1; then
     ./scripts/setup-sudoers.sh
 fi
 
-docker compose up --build
+docker compose build --no-cache
+docker compose up
