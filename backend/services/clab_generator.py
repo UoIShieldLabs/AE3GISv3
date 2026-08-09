@@ -91,6 +91,7 @@ def getRepoNames():
 
 repos, tags = getRepoNames()
 
+
 def image_for_container_type(ctype: str) -> str:
     if ctype == "router":
         return "uiaegisv3/router"
@@ -100,9 +101,9 @@ def image_for_container_type(ctype: str) -> str:
         return "uiaegisv3/switch"
     if ctype == "web-server":
         return "uiaegisv3/nginx-webserver:1.0"
-    if ctype == "database":
+    if ctype == "database-server":
         return "uiaegisv3/debian-postgres:1.0"
-    if ctype == "directory":
+    if ctype == "directory-server":
         return "uiaegisv3/ubuntu-openldap"
     if ctype == "ids":
         return "uiaegisv3/ids"
@@ -116,32 +117,43 @@ def image_for_container_type(ctype: str) -> str:
         return "uiaegisv3/tcp-pcap"
     if ctype == "proxy":
         return "uiaegisv3/seproxy"
-    if ctype == "internal-dns":
+    if ctype == "internal-dns-server" or ctype == "internaldns-server":
         return "uiaegisv3/internaldns"
-    if ctype == "external-dns":
+    if ctype == "external-dns-server" or ctype == "externaldns-server":
         return "uiaegisv3/externaldns"
-    if ctype == "dhcp":
+    if ctype == "dhcp-server":
         return "uiaegisv3/dhcpserv"
     if ctype == "plc":
         return "uiaegisv3/plc" 
     if ctype == "hmi":
         return "uiaegisv3/hmi"
+    if ctype == "file-server":
+        return "uiaegisv3/ubuntu-samba"
+    if ctype == "honeypot":
+        return "uiaegisv3/honeypot-opencanary"
     return _IMAGE_HOST
 
 
 def resolve_container_image(container: dict | None = None, ctype: str | None = None) -> str:
     """Return the explicit container image when provided, else the type default."""
+    tag = ""
     if container:
         if ctype is None:
             ctype = str(container.get("type") or "").strip()
         tag = str(container.get("image") or "").strip()
+        
     repo_name = repos.get(ctype)
     if not repo_name:
         return image_for_container_type((ctype or "").strip())
-    if tag == "" or not repo_name or tag not in tags:
+        
+    # Get the specific list of valid tags for this container type
+    valid_tags = tags.get(ctype, [])
+    
+    # Check if the requested tag exists in that list
+    if tag == "" or not repo_name or tag not in valid_tags:
         return image_for_container_type((ctype or "").strip())
     else:
-        return DOCKERHUB_USER+"/"+repo_name+":"+tag
+        return f"{DOCKERHUB_USER}/{repo_name}:{tag}"
 
 
 def get_script_bind(ctype: str) -> str | None:

@@ -123,9 +123,10 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
     return '';
   }, [subnetCidr, takenIps, entries]);
 
-  const handleSubmit = () => {
+const handleSubmit = () => {
     const valid = entries.filter(isEntryValid);
     if (valid.length === 0) return;
+    
     const seen = new Set<string>();
     const deduped = valid.filter(e => {
       const ip = e.ip.trim();
@@ -133,8 +134,41 @@ function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, exi
       seen.add(ip);
       return true;
     });
+    
     if (deduped.length === 0) return;
-    onSubmit(deduped.map(e => ({ name: e.name.trim(), type: e.type, image: e.image, ip: e.ip.trim() })));
+
+    // Format the image string and apply defaults for every row
+    const finalEntries = deduped.map(e => {
+      // 1. Extract the tag if somehow there is a string with spaces
+      let extractedTag = e.image.trim() ? e.image.trim().split(/\s+/).pop() || '' : '';
+
+      // 2. If the tag is empty (user didn't open the menu for this row/generator),
+      // auto-assign the default tag from menuHierarchy based on the row's type.
+      if (!extractedTag) {
+        for (const category of Object.values(menuHierarchy)) {
+          // @ts-expect-error - category indexing is safe here based on how menuHierarchy is built
+          if (category[e.type] && category[e.type].length > 0) {
+            // @ts-expect-error
+            extractedTag = category[e.type][0]; 
+            break;
+          }
+        }
+        // Absolute fallback
+        if (!extractedTag) {
+          extractedTag = 'latest';
+        }
+      }
+
+      // Return the cleaned up row
+      return { 
+        name: e.name.trim(), 
+        type: e.type, 
+        image: extractedTag, 
+        ip: e.ip.trim() 
+      };
+    });
+
+    onSubmit(finalEntries);
     onClose();
   };
 

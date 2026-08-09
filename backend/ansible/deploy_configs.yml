@@ -1,0 +1,13 @@
+---
+# This playbook applies configurations dynamically sent from the AE3GIS frontend
+
+- name: Configure Web Servers
+  hosts: web_servers
+  gather_facts: false
+  tasks:
+    - name: Write custom index.html content and set permissions
+      ansible.builtin.raw: |
+        mkdir -p /usr/share/nginx/html /var/www/html /usr/local/apache2/htdocs
+        echo '{{ index_html | default("<h1>AE3GIS Web Server Active</h1>") }}' | tee /usr/share/nginx/html/index.html /var/www/html/index.html /usr/local/apache2/htdocs/index.html > /dev/null
+        chmod -R 755 /usr/share/nginx/html /var/www/html /usr/local/apache2/htdocs
+        chmod 644 /usr/share/nginx/html/index.html /var/www/html/index.html /usr/local/apache2/htdocs/index.html
