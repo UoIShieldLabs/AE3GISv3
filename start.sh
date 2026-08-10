@@ -8,5 +8,6 @@ if ! sudo -n containerlab version >/dev/null 2>&1; then
     ./scripts/setup-sudoers.sh
 fi
 
-docker compose build --no-cache
-docker compose up
+python3 frontend/src/components/dynamicFrontendGenerator.py
+
+docker compose up --build
