@@ -1,27 +1,27 @@
 {
   "name": "Enterprise Topology",
-  "description": "Exported topology from AE3GIS.",
+  "description": "Purdue Level 4-5 enterprise IT network (DMZ/Servers/Users/Mgmt-Sec VLANs, multihomed perimeter+internal firewalls, full node catalogue) per enterprise_topology.pdf.",
   "topology": {
     "name": "enterprise-topology",
     "sites": [
       {
-        "id": "e4a21b3d-8f92-411a-b325-1a8c9b56f7d2",
-        "name": "Enterprise Network",
-        "location": "",
+        "id": "477b9a72-db7c-4258-aed5-d0990e2a990d",
+        "name": "Enterprise",
+        "location": "Test",
         "position": {
-          "x": 150,
-          "y": 150
+          "x": 0.0,
+          "y": 0.0
         },
         "subnets": [
           {
-            "id": "150116a2-a4dd-4e1f-8f83-466d95c7d56d",
+            "id": "3e5b62a4-fb92-4a34-8ae1-9e02efb9aa05",
             "name": "ISP Transit",
             "cidr": "203.0.113.0/30",
-            "gateway": "203.0.113.1",
+            "gateway": null,
             "containers": [
               {
-                "id": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
-                "name": "ISP Transit Subnet Router",
+                "id": "29cde8fd-8777-462a-b009-555d99ac5f7c",
+                "name": "isp",
                 "type": "router",
                 "ip": "203.0.113.1",
                 "kind": null,
@@ -31,8 +31,8 @@
                 "persistencePaths": null
               },
               {
-                "id": "c15dac42-4973-40f2-919b-81e3b31a23c7",
-                "name": "Edge Router",
+                "id": "25d5d835-5563-4844-94d2-afb4e617da18",
+                "name": "edge-rtr",
                 "type": "router",
                 "ip": "203.0.113.2",
                 "kind": null,
@@ -44,25 +44,25 @@
             ],
             "connections": [
               {
-                "from": "c15dac42-4973-40f2-919b-81e3b31a23c7",
-                "to": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
+                "from": "29cde8fd-8777-462a-b009-555d99ac5f7c",
+                "to": "25d5d835-5563-4844-94d2-afb4e617da18",
                 "label": null,
                 "fromInterface": null,
                 "toInterface": null,
-                "fromContainer": null,
-                "toContainer": null
+                "fromContainer": "29cde8fd-8777-462a-b009-555d99ac5f7c",
+                "toContainer": "25d5d835-5563-4844-94d2-afb4e617da18"
               }
             ]
           },
           {
-            "id": "94a8a108-b419-4588-a3a2-289870ea9161",
-            "name": "Edge to Perimeter Transit",
+            "id": "261432a6-6467-42b2-92e6-3b3030c45b87",
+            "name": "Edge-Perimeter Transit",
             "cidr": "10.255.255.0/30",
-            "gateway": "10.255.255.1",
+            "gateway": null,
             "containers": [
               {
-                "id": "489a1184-827c-4948-9a6a-f64caab6eb29",
-                "name": "Edge Router",
+                "id": "25d5d835-5563-4844-94d2-afb4e617da18",
+                "name": "edge-rtr",
                 "type": "router",
                 "ip": "10.255.255.1",
                 "kind": null,
@@ -72,8 +72,8 @@
                 "persistencePaths": null
               },
               {
-                "id": "7b96a028-ac88-4567-8653-d1fb06d83a88",
-                "name": "Perimeter Firewall",
+                "id": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "name": "perim-fw",
                 "type": "firewall",
                 "ip": "10.255.255.2",
                 "kind": null,
@@ -85,26 +85,26 @@
             ],
             "connections": [
               {
-                "from": "7b96a028-ac88-4567-8653-d1fb06d83a88",
-                "to": "489a1184-827c-4948-9a6a-f64caab6eb29",
+                "from": "25d5d835-5563-4844-94d2-afb4e617da18",
+                "to": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
                 "label": null,
                 "fromInterface": null,
                 "toInterface": null,
-                "fromContainer": null,
-                "toContainer": null
+                "fromContainer": "25d5d835-5563-4844-94d2-afb4e617da18",
+                "toContainer": "36b1dc48-ed0a-4afa-9c40-084278212e3a"
               }
             ]
           },
           {
-            "id": "59a61e9f-14bf-4438-8893-7fa44aee6634",
-            "name": "Perimeter to Internal Firewall Transit",
+            "id": "88c85dac-e9eb-4005-9dd1-7c14b29c5ead",
+            "name": "Perimeter-Internal Transit",
             "cidr": "10.255.255.4/30",
-            "gateway": "10.255.255.5",
+            "gateway": null,
             "containers": [
               {
-                "id": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0",
-                "name": "Perimeter to Internal Firewall Transit Router",
-                "type": "router",
+                "id": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "name": "perim-fw",
+                "type": "firewall",
                 "ip": "10.255.255.5",
                 "kind": null,
                 "image": null,
@@ -113,9 +113,9 @@
                 "persistencePaths": null
               },
               {
-                "id": "8199ba90-9d63-4526-a8b3-96d6e99fa351",
-                "name": "Perimeter to Internal Firewall Transit Switch",
-                "type": "switch",
+                "id": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "name": "int-fw",
+                "type": "firewall",
                 "ip": "10.255.255.6",
                 "kind": null,
                 "image": null,
@@ -126,37 +126,662 @@
             ],
             "connections": [
               {
-                "from": "8199ba90-9d63-4526-a8b3-96d6e99fa351",
-                "to": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0",
+                "from": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "to": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
                 "label": null,
                 "fromInterface": null,
                 "toInterface": null,
-                "fromContainer": null,
-                "toContainer": null
+                "fromContainer": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "toContainer": "913f527e-1898-4b13-b5d8-9ead44c1e32d"
+              }
+            ]
+          },
+          {
+            "id": "6ed35579-42d4-431c-8058-038dc1cf0c59",
+            "name": "DMZ",
+            "cidr": "172.16.10.0/24",
+            "gateway": "172.16.10.1",
+            "containers": [
+              {
+                "id": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "name": "perim-fw",
+                "type": "firewall",
+                "ip": "172.16.10.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "2582ccbb-b04e-496b-a80c-5750f6a813c3",
+                "name": "dmz-web",
+                "type": "web-server",
+                "ip": "172.16.10.10",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "name": "dmz-sw",
+                "type": "switch",
+                "ip": "172.16.10.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "ea4d0d63-1d67-43f4-99d8-25a7095948ea",
+                "name": "external-dns",
+                "type": "external-dns-server",
+                "ip": "172.16.10.20",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "6e6f3238-a1be-4cd5-bf88-0ecd19b1057f",
+                "name": "ssh-bastion",
+                "type": "bastion",
+                "ip": "172.16.10.40",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "to": "36b1dc48-ed0a-4afa-9c40-084278212e3a",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "toContainer": "36b1dc48-ed0a-4afa-9c40-084278212e3a"
+              },
+              {
+                "from": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "to": "2582ccbb-b04e-496b-a80c-5750f6a813c3",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "toContainer": "2582ccbb-b04e-496b-a80c-5750f6a813c3"
+              },
+              {
+                "from": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "to": "ea4d0d63-1d67-43f4-99d8-25a7095948ea",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "toContainer": "ea4d0d63-1d67-43f4-99d8-25a7095948ea"
+              },
+              {
+                "from": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "to": "6e6f3238-a1be-4cd5-bf88-0ecd19b1057f",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "b183ebde-28fa-44fa-ad8c-014bc4f74e54",
+                "toContainer": "6e6f3238-a1be-4cd5-bf88-0ecd19b1057f"
+              }
+            ]
+          },
+          {
+            "id": "6bd4a242-c3ad-4499-a7b0-6b7f17106598",
+            "name": "Servers",
+            "cidr": "10.1.20.0/24",
+            "gateway": "10.1.20.1",
+            "containers": [
+              {
+                "id": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "name": "int-fw",
+                "type": "firewall",
+                "ip": "10.1.20.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "21c83ea6-6e16-4f83-87e3-012f2f48fa00",
+                "name": "squid",
+                "type": "proxy",
+                "ip": "10.1.20.60",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "name": "access-sw-srv",
+                "type": "switch",
+                "ip": "10.1.20.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "1b74918d-1173-4ac1-ab76-57548c13d290",
+                "name": "openldap",
+                "type": "directory-server",
+                "ip": "10.1.20.10",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "1e0c4c49-638c-48c9-bd02-304c2b26bce4",
+                "name": "internal-dns",
+                "type": "internal-dns-server",
+                "ip": "10.1.20.11",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "9d831030-b82f-43d6-8747-864084b8110d",
+                "name": "dhcp",
+                "type": "dhcp-server",
+                "ip": "10.1.20.12",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "df7dd435-6fa6-4897-9ff8-e5eebaea372a",
+                "name": "fileserver",
+                "type": "file-server",
+                "ip": "10.1.20.20",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "dce65dc8-82b1-4968-bc35-1b227c4e8ab8",
+                "name": "database",
+                "type": "database-server",
+                "ip": "10.1.20.30",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "2bbdb239-1a16-44f4-8a85-e98c94975d68",
+                "name": "intranet",
+                "type": "web-server",
+                "ip": "10.1.20.50",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "49de3311-ed9d-4960-98f5-eb3d8daee1d1",
+                "name": "honeypot",
+                "type": "honeypot",
+                "ip": "10.1.20.66",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "913f527e-1898-4b13-b5d8-9ead44c1e32d"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "21c83ea6-6e16-4f83-87e3-012f2f48fa00",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "21c83ea6-6e16-4f83-87e3-012f2f48fa00"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "1b74918d-1173-4ac1-ab76-57548c13d290",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "1b74918d-1173-4ac1-ab76-57548c13d290"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "1e0c4c49-638c-48c9-bd02-304c2b26bce4",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "1e0c4c49-638c-48c9-bd02-304c2b26bce4"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "9d831030-b82f-43d6-8747-864084b8110d",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "9d831030-b82f-43d6-8747-864084b8110d"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "df7dd435-6fa6-4897-9ff8-e5eebaea372a",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "df7dd435-6fa6-4897-9ff8-e5eebaea372a"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "dce65dc8-82b1-4968-bc35-1b227c4e8ab8",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "dce65dc8-82b1-4968-bc35-1b227c4e8ab8"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "2bbdb239-1a16-44f4-8a85-e98c94975d68",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "2bbdb239-1a16-44f4-8a85-e98c94975d68"
+              },
+              {
+                "from": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "to": "49de3311-ed9d-4960-98f5-eb3d8daee1d1",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "a1aba9ae-e6db-4e0a-b86e-9018fffa1653",
+                "toContainer": "49de3311-ed9d-4960-98f5-eb3d8daee1d1"
+              }
+            ]
+          },
+          {
+            "id": "b73604c6-b63b-4838-8714-8fbac77864db",
+            "name": "Users",
+            "cidr": "10.1.30.0/24",
+            "gateway": "10.1.30.1",
+            "containers": [
+              {
+                "id": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "name": "int-fw",
+                "type": "firewall",
+                "ip": "10.1.30.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "ca27fd83-fa89-468a-a07d-2b2c03c500c0",
+                "name": "ws-01",
+                "type": "workstation",
+                "ip": "10.1.30.101",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "name": "access-sw-user",
+                "type": "switch",
+                "ip": "10.1.30.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "2496065e-df80-4c7b-abcf-7f1a4844612c",
+                "name": "ws-02",
+                "type": "workstation",
+                "ip": "10.1.30.102",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "fc4f7406-715c-4122-9afa-e5ab0b331c9f",
+                "name": "ws-03",
+                "type": "workstation",
+                "ip": "10.1.30.103",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "6e6eb828-8663-44b5-b888-b79d139545d7",
+                "name": "ws-04",
+                "type": "workstation",
+                "ip": "10.1.30.104",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "0379ef49-7f17-48a8-9441-1a9452081735",
+                "name": "ws-05",
+                "type": "workstation",
+                "ip": "10.1.30.105",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "913f527e-1898-4b13-b5d8-9ead44c1e32d"
+              },
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "ca27fd83-fa89-468a-a07d-2b2c03c500c0",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "ca27fd83-fa89-468a-a07d-2b2c03c500c0"
+              },
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "2496065e-df80-4c7b-abcf-7f1a4844612c",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "2496065e-df80-4c7b-abcf-7f1a4844612c"
+              },
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "fc4f7406-715c-4122-9afa-e5ab0b331c9f",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "fc4f7406-715c-4122-9afa-e5ab0b331c9f"
+              },
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "6e6eb828-8663-44b5-b888-b79d139545d7",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "6e6eb828-8663-44b5-b888-b79d139545d7"
+              },
+              {
+                "from": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "to": "0379ef49-7f17-48a8-9441-1a9452081735",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "d933b099-9bfe-4462-9abf-ac75dfeef1c8",
+                "toContainer": "0379ef49-7f17-48a8-9441-1a9452081735"
+              }
+            ]
+          },
+          {
+            "id": "41d2edf8-7257-432a-9c1e-0a7e541fca49",
+            "name": "MgmtSec",
+            "cidr": "10.1.99.0/24",
+            "gateway": "10.1.99.1",
+            "containers": [
+              {
+                "id": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "name": "int-fw",
+                "type": "firewall",
+                "ip": "10.1.99.1",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "d1c35c02-43f0-41ce-8287-6d4e62296603",
+                "name": "jump",
+                "type": "bastion",
+                "ip": "10.1.99.10",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "name": "mgmt-sw",
+                "type": "switch",
+                "ip": "10.1.99.2",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "23b70a66-d51b-46bd-888e-502b26511a58",
+                "name": "wazuh-manager",
+                "type": "siem",
+                "ip": "10.1.99.20",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "c3f76034-e44a-4f0a-8941-37409ef2ac9b",
+                "name": "wazuh-indexer",
+                "type": "siem",
+                "ip": "10.1.99.21",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "c98ebdc5-465a-4eff-b3ed-6b459907defd",
+                "name": "wazuh-dashboard",
+                "type": "siem",
+                "ip": "10.1.99.22",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "c60c111c-358f-4ee3-922e-2e7dd6254407",
+                "name": "suricata",
+                "type": "ids",
+                "ip": "10.1.99.30",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "136980c1-640d-419f-b350-27de3d658b01",
+                "name": "zeek",
+                "type": "ids",
+                "ip": "10.1.99.31",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "92b5464c-07c1-4a78-b1c6-fa0903b07d3e",
+                "name": "snort",
+                "type": "ids",
+                "ip": "10.1.99.32",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              },
+              {
+                "id": "1f421b22-94a8-4920-90d4-c3406b99ebfa",
+                "name": "pcap",
+                "type": "pcap",
+                "ip": "10.1.99.40",
+                "kind": null,
+                "image": null,
+                "status": "stopped",
+                "metadata": null,
+                "persistencePaths": null
+              }
+            ],
+            "connections": [
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "913f527e-1898-4b13-b5d8-9ead44c1e32d",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "913f527e-1898-4b13-b5d8-9ead44c1e32d"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "d1c35c02-43f0-41ce-8287-6d4e62296603",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "d1c35c02-43f0-41ce-8287-6d4e62296603"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "23b70a66-d51b-46bd-888e-502b26511a58",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "23b70a66-d51b-46bd-888e-502b26511a58"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "c3f76034-e44a-4f0a-8941-37409ef2ac9b",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "c3f76034-e44a-4f0a-8941-37409ef2ac9b"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "c98ebdc5-465a-4eff-b3ed-6b459907defd",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "c98ebdc5-465a-4eff-b3ed-6b459907defd"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "c60c111c-358f-4ee3-922e-2e7dd6254407",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "c60c111c-358f-4ee3-922e-2e7dd6254407"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "136980c1-640d-419f-b350-27de3d658b01",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "136980c1-640d-419f-b350-27de3d658b01"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "92b5464c-07c1-4a78-b1c6-fa0903b07d3e",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "92b5464c-07c1-4a78-b1c6-fa0903b07d3e"
+              },
+              {
+                "from": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "to": "1f421b22-94a8-4920-90d4-c3406b99ebfa",
+                "label": null,
+                "fromInterface": null,
+                "toInterface": null,
+                "fromContainer": "c19c6d5f-8235-4c1f-b153-d85b3addc4ad",
+                "toContainer": "1f421b22-94a8-4920-90d4-c3406b99ebfa"
               }
             ]
           }
         ],
-        "subnetConnections": [
-          {
-            "from": "150116a2-a4dd-4e1f-8f83-466d95c7d56d",
-            "to": "94a8a108-b419-4588-a3a2-289870ea9161",
-            "label": null,
-            "fromInterface": null,
-            "toInterface": null,
-            "fromContainer": "1ab846b0-f8a4-4edd-b48c-2c7a95559245",
-            "toContainer": "489a1184-827c-4948-9a6a-f64caab6eb29"
-          },
-          {
-            "from": "94a8a108-b419-4588-a3a2-289870ea9161",
-            "to": "59a61e9f-14bf-4438-8893-7fa44aee6634",
-            "label": null,
-            "fromInterface": null,
-            "toInterface": null,
-            "fromContainer": "489a1184-827c-4948-9a6a-f64caab6eb29",
-            "toContainer": "fe5556a9-90f8-4e84-b8ee-3591301ec3e0"
-          }
-        ]
+        "subnetConnections": []
       }
     ],
     "siteConnections": [],
