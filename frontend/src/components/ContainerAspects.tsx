@@ -39,10 +39,12 @@ export const typeDisplayNames: Record<string, string> = {
 export const menuHierarchy: Record<string, Partial<Record<ContainerType, string[]>>> = {
   "server": {
     "database-server": [
-      "postgres 1.0"
+      "postgres 1.0",
+      "postgres latest"
     ],
     "web-server": [
-      "nginx 1.0"
+      "nginx 1.0",
+      "nginx latest"
     ],
     "directory-server": [
       "openldap latest"
@@ -62,7 +64,8 @@ export const menuHierarchy: Record<string, Partial<Record<ContainerType, string[
   },
   "management": {
     "siem": [
-      "wazuh 1.0"
+      "wazuh 1.0",
+      "wazuh latest"
     ],
     "router": [
       "frrouting latest"

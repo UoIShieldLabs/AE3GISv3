@@ -10,10 +10,8 @@ from config import CLAB_WORKDIR
 
 log = logging.getLogger(__name__)
 
-# We will store the inventory in the same workdir as ContainerLab
 ANSIBLE_DIR = CLAB_WORKDIR / "ansible"
 ANSIBLE_DIR.mkdir(parents=True, exist_ok=True)
-
 
 
 def generate_inventory(topology_id: str, topology_data: dict) -> Path:
@@ -23,6 +21,12 @@ def generate_inventory(topology_id: str, topology_data: dict) -> Path:
         "all": {
             "children": {
                 "web_servers": {"hosts": {}},
+                "directory_servers": {"hosts": {}},
+                "file_servers": {"hosts": {}},
+                "open_canary": {"hosts": {}},
+                "honeypots": {"hosts": {}},
+                "database_servers": {"hosts": {}},
+                "proxy_servers": {"hosts": {}},
             }
         }
     }
@@ -50,6 +54,17 @@ def generate_inventory(topology_id: str, topology_data: dict) -> Path:
                 # Route the host to the strictly correct Ansible group
                 if ctype == "web-server":
                     inventory["all"]["children"]["web_servers"]["hosts"][docker_name] = host_vars
+                elif ctype == "directory-server":
+                    inventory["all"]["children"]["directory_servers"]["hosts"][docker_name] = host_vars
+                elif ctype == "file-server": # <-- Route the file servers here
+                    inventory["all"]["children"]["file_servers"]["hosts"][docker_name] = host_vars
+                elif ctype == "opencanary" or ctype == "honeypot":
+                    inventory["all"]["children"]["honeypots"]["hosts"][docker_name] = host_vars
+                elif ctype == "database-server": 
+                    inventory["all"]["children"]["database_servers"]["hosts"][docker_name] = host_vars
+                elif ctype == "proxy":
+                    inventory["all"]["children"]["proxy_servers"]["hosts"][docker_name] = host_vars
+                
 
     # DIAGNOSTIC LOG: Prints the exact inventory so we can verify it!
     log.info(f"GENERATED ANSIBLE INVENTORY: {json.dumps(inventory, indent=2)}")
@@ -70,7 +85,6 @@ async def run_provisioning(topology_id: str, topology_data: dict) -> None:
     inventory_path = generate_inventory(topology_id, topology_data)
     
     # 2. Define the path to our static playbook 
-    # (We will create this file in Step 2)
     backend_root = Path(__file__).parent.parent
     playbook_path = backend_root / "ansible" / "deploy_configs.yml"
     
