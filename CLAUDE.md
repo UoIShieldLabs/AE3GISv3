@@ -9,8 +9,7 @@ AE3GIS v2 is an interactive network topology visualization and deployment platfo
 ## Development Commands
 
 ```bash
-# Docker (recommended) — frontend :3000, backend :8000
-docker compose up --build
+./start.sh
 
 # Frontend dev
 cd frontend && npm run dev        # :5173
@@ -61,6 +60,7 @@ Container types: `web-server`, `file-server`, `plc`, `firewall`, `switch`, `rout
 - `clab_generator.py` — TopologyData → ContainerLab YAML (see below)
 - `clab_importer.py` — `.clab.yml` → TopologyData; groups by CIDR into subnets, by `group` field into sites
 - `clab_manager.py` — `sudo containerlab deploy/destroy`; self-heals stale Docker bridge metadata on "Failed to lookup link" error
+- `ansible_manager.py` — pushes configurations to containers after topology is deemed healthy
 
 **Database:** SQLite (`/app/data/ae3gis.db` in Docker, `ae3gis.db` locally). Status lifecycle: `idle` → `deployed` → `idle`.
 
@@ -73,7 +73,7 @@ Container types: `web-server`, `file-server`, `plc`, `firewall`, `switch`, `rout
 3. **IPs & routes:** Same-subnet links use the container's primary IP. Cross-subnet router↔router links get /30 PtP IPs from `10.255.0.0/24` (sequential: .1/30, .5/30, …; ~63 links max). Each router gets a static route to the peer subnet.
 4. **Exec configs:** Switches — Linux bridge (`br0`), all non-home interfaces added, IP on bridge. Routers/Firewalls — `ip_forward=1`, IPs on all interfaces, static routes. Hosts — IP on home interface only, default route via subnet gateway (keeps PtP reply traffic working).
 
-**Images:** Router/Firewall → `frrouting/frr:latest`; everything else → `alpine:latest`.
+**Images:** Pulled dynamically from Docker Hub by a script executed during the start.sh script for container aspects and by clab_generator.py to mape ctype to container images.
 
 **Naming (must stay in sync across frontend + backend):**
 - Deployment: `{topology_name}-{first_8_chars_of_id}` (`utils/deploymentName.ts` ↔ `clab_manager.deployment_name()`)

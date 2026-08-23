@@ -21,48 +21,32 @@ Interactive network topology visualization and deployment platform. Design multi
 
 ## Getting Started
 
-Simply need to have Docker as well as ContainerLab installed on the hosting system. Then in the root level of the directory run 
-```bash
-docker compose up --build
-```
-To tear down the container run
-```bash
-docker compose down
-```
+Assumes all prerequisites are already installed on this machine.
+
+### 1. Clone this repository
 
 
-## Sudoers Configuration (Passwordless Operations)
-
-To allow the backend to run containerlab deployments and manage persistent data without requiring password prompts, you need to configure sudo access. This is essential for automated deployments and container lifecycle management.
-
-### Step 1: Add Sudoers Entry
-
-Run the following command to safely edit the sudoers file:
 
 ```bash
-sudo visudo
+git clone https://github.com/Blake-Mayers/working.git
+cd working
+```
+### 2. One-time sudoers setup
+
+The backend needs to run `containerlab deploy`/`destroy` without a password
+prompt. Run the setup script once per machine:
+
+```bash
+chmod +x scripts/setup-sudoers.sh
+sudo ./scripts/setup-sudoers.sh
 ```
 
-### Step 2: Add Permission Lines
+It writes `/etc/sudoers.d/ae3gis-containerlab` for your current user and
+verifies it at the end — you should see the containerlab version print with
+no password prompt. Safe to re-run any time (e.g. if `containerlab`'s install
+path ever changes).
 
-Add these lines to the end of the sudoers file to allow passwordless execution of containerlab and file cleanup commands:
-
-```sudoers
-# Allow running containerlab commands without password
-YOUR_USERNAME ALL=(ALL) NOPASSWD: /usr/bin/containerlab
-YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/rm
-
-# Alternatively, for more restrictive sudo (recommended for production):
-# Allow containerlab deploy/destroy only
-YOUR_USERNAME ALL=(ALL) NOPASSWD: /usr/bin/containerlab deploy, /usr/bin/containerlab destroy
-
-# Allow rm only for persistence directory cleanup
-YOUR_USERNAME ALL=(ALL) NOPASSWD: /bin/rm -rf /home/ae3gis/AE3GISv2/backend/clab-workdir/persistent/*
-```
-
-**Replace `YOUR_USERNAME`** with your actual Linux username (or the user running the backend process).
-
-### Step 3: Verify Configuration
+### 3: Verify Configuration
 
 To verify the sudoers configuration works, test these commands without entering a password:
 
@@ -73,15 +57,30 @@ sudo containerlab version
 # This should succeed without asking for password (creates an empty file then deletes it)
 touch /tmp/test_sudoers.txt && sudo rm /tmp/test_sudoers.txt
 ```
+### 4: Deploying the stack
 
-### Configuration Notes
+After installing all of the prerequisites, make the startup script executable by running the following in the root level of the directory. You will only need to do this once.
+```bash
+chmod +x start.sh
+```
 
-- **Security**: The restrictive configuration (second option) is better for production as it limits sudo access to specific commands only
-- **Path**: If you installed AE3GIS in a different location, update the path in the `rm` restriction accordingly
-- **User**: Make sure to replace `YOUR_USERNAME` with the actual user that runs the backend
-- **Verification**: After adding the configuration, the backend will:
-  - Run `sudo containerlab deploy/destroy` without password prompts
-  - Clean up persistent storage without password prompts
+Then, to start AE3GIS, in the root level of the directory, run 
+```bash
+./start.sh
+```
+To tear down AE3GIS, first destroy all active topologies through the UI (if you don't, you will have hanging containers from the deployed topologies), then run the following in the root level of the directory
+```bash
+docker compose down
+```
+If you run `docker compose down` before you destroy the topologies you have deployed through AE3GIS, run the following to get rid of all hanging containers left over
+```bash
+docker rm -f $(docker ps -a --filter "name=clab-ae3gis-*" -q)
+```
+
+### Notes:
+
+`test` is the default `AE3GIS_INSTRUCTOR_TOKEN`
+
 
 ## Available Scripts
 
@@ -98,41 +97,50 @@ touch /tmp/test_sudoers.txt && sudo rm /tmp/test_sudoers.txt
 
 ```
 frontend/src/
-├── App.tsx                     # Root component, view routing & state
-├── api/client.ts               # REST/WebSocket client
-├── data/sampleTopology.ts      # Type definitions & sample data
-├── store/                      # Immer-based state management
+├── App.tsx                          # Root component, view routing & state
+├── main.tsx                         # Bootstraps React and mounts App into the root element
+├── api/client.ts                    # REST/WebSocket client
+├── data/sampleTopology.ts           # Type definitions & sample data
+├── store/                           # Immer-based state management
 ├── components/
-│   ├── GeographicView.tsx      # Top-level site map
-│   ├── SubnetView.tsx          # Subnet graph for a site
-│   ├── LanView.tsx             # Device-level LAN graph
-│   ├── TerminalOverlay.tsx     # Multi-tab resizable terminal panel
-│   ├── NodeInfoPanel.tsx       # Detail panel for selected nodes
-│   ├── ControlBar.tsx          # Save/deploy/destroy controls
-│   ├── TopologyBrowser.tsx     # Load/manage saved topologies
-│   ├── LoginScreen.tsx         # Authentication gate
-│   ├── ClassroomPanel.tsx      # Instructor classroom management
-│   ├── Breadcrumb.tsx          # Navigation breadcrumb
-│   ├── Toolbar.tsx             # Per-view toolbar
-│   ├── dialogs/                # CRUD modal dialogs
-│   ├── nodes/                  # Custom ReactFlow node types
-│   ├── edges/                  # Custom ReactFlow edge types
-│   └── ui/                     # Reusable UI primitives
-└── utils/                      # Layout, validation, ID generation
+│   ├── GeographicView.tsx           # Top-level site map
+│   ├── SubnetView.tsx               # Subnet graph for a site
+│   ├── LanView.tsx                  # Device-level LAN graph
+│   ├── TerminalOverlay.tsx          # Multi-tab resizable terminal panel
+│   ├── NodeInfoPanel.tsx            # Detail panel for selected nodes
+│   ├── ControlBar.tsx               # Save/deploy/destroy controls
+│   ├── TopologyBrowser.tsx          # Load/manage saved topologies
+│   ├── LoginScreen.tsx              # Authentication gate
+│   ├── ClassroomPanel.tsx           # Instructor classroom management
+│   ├── Breadcrumb.tsx               # Navigation breadcrumb
+│   ├── Toolbar.tsx                  # Per-view toolbar
+│   ├── ContainerAspects.tsx         # Container types and GUI aspects
+│   ├── dynamicFrontendGenerator.py  # Dynamically populates ContainerAspects.tsx
+│   ├── PurdueView.tsx               # View of topology from Purdue Model
+│   ├── WiresharkOverlay.tsx         # Container connected Wireshark panel
+│   ├── dialogs/                     # CRUD modal dialogs
+│   ├── nodes/                       # Custom ReactFlow node types
+│   ├── edges/                       # Custom ReactFlow edge types
+│   └── ui/                          # Reusable UI primitives
+└── utils/                           # Layout, validation, ID generation
 
 backend/
-├── main.py                     # FastAPI entry point
-├── auth.py                     # JWT authentication
-├── models.py                   # SQLAlchemy ORM models
-├── schemas.py                  # Pydantic request/response schemas
-├── database.py                 # SQLite database setup
+├── main.py                          # FastAPI entry point
+├── auth.py                          # JWT authentication
+├── models.py                        # SQLAlchemy ORM models
+├── schemas.py                       # Pydantic request/response schemas
+├── database.py                      # SQLite database setup
+├── config.py                        # Loads env configuration for DB, workdir, auth, and LLM
 ├── routers/
-│   ├── topologies.py           # Topology CRUD endpoints
-│   ├── containerlab.py         # Deploy/destroy/status/exec/WebSocket
-│   └── classroom.py            # Classroom mode endpoints
+│   ├── topologies.py                # Topology CRUD endpoints
+│   ├── containerlab.py              # Deploy/destroy/status/exec/WebSocket
+│   └── classroom.py                 # Classroom mode endpoints
 └── services/
-    ├── clab_generator.py       # Topology JSON → ContainerLab YAML
-    └── clab_manager.py         # ContainerLab lifecycle management
+    ├── clab_generator.py            # Topology JSON → ContainerLab YAML
+    ├── clab_manager.py              # ContainerLab lifecycle management
+    ├── ansible_manager.py           # Ansible configuration provisioning
+    ├── capture_manager.py           # Wireshark sidecar containers
+    └── clab_importer.py             # Parses clab YAML into site/subnet topology model
 ```
 
 ## Tech Stack
@@ -147,3 +155,4 @@ backend/
 - FastAPI + Uvicorn
 - SQLAlchemy + SQLite
 - ContainerLab + Docker
+- Ansible

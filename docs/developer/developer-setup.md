@@ -74,10 +74,10 @@ export AE3GIS_HOST_SCRIPTS_DIR=$(pwd)/scripts  # for script bind-mounts
 
 ---
 
-## 4. Running Both via Docker Compose
+## 4. Running Both via Startup Script
 
 ```bash
-docker compose up --build
+./start.sh
 ```
 
 | Service | URL | Notes |
@@ -93,11 +93,29 @@ Changes to frontend code require a rebuild (`docker compose up --build`). Backen
 
 ### Adding a new container type
 
-1. **`frontend/src/types.ts`** — Add the type string to the `Container.type` union
-2. **`frontend/src/components/LanView.tsx`** — Add a node style/icon for the type
-3. **`backend/services/clab_generator.py`** — Add the type to `image_for_container_type()` and `_SCRIPT_TYPE_MAP`
-4. **`backend/scripts/`** — Create a subdirectory for the type's scripts (can be empty)
-5. **`docs/developer/codebase-structure.md`** — Update the container type → image table
+Add container image to the Docker Hub with appropriate formatting for the description.
+
+The following is how a Docker Hub image repository should be formatted:
+
+- Repository name: Container type (optional base os image is running) 
+- Description format: Category type software color label versions #
+ 
+- Category: Options at the moment are server, management, or other. these will change in the future
+- Type: What the container is acting as. e.g. dhcp, web, directory, etc\
+- Software: The software the container is running to make it act like it's type
+- Color: In hex prepended with a hashtag
+- Label: An all caps shortened version of the type shown in the UI when the container is part of the topology
+- Versions: Add as many as desired separated by spaces. These need to correspond to the tags that are in the repository. This is how it is possible to have multiple versions of the same software in the tags and be able to choose between them in AE3GIS.
+- #: This tells the script that it does not need to read any more data from the description. After this hashtag you can put anything in the rest of the description
+ 
+Separate each value in the description with a space. examples of the descriptions are below.
+ 
+Ex: server dhcp isc-dhcp #240177 DHCP 4.4.3 latest #
+ 
+Ex: other workstation ubuntu #4466ff WS latest #
+ 
+Ex: management switch open-vswitch #ffaa00 SW latest #
+ 
 
 ### Adding a new API endpoint
 

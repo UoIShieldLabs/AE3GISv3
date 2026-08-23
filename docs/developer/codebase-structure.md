@@ -29,15 +29,21 @@ AE3GISv2/
 │   ├── services/
 │   │   ├── clab_generator.py   # TopologyData dict → ContainerLab YAML string
 │   │   ├── clab_manager.py     # Deploy/destroy/inspect/firewall via subprocess
-│   │   └── clab_importer.py    # .clab.yml → TopologyData (import flow)
+│   │   ├── clab_importer.py    # .clab.yml → TopologyData (import flow)
+│   │   └── ansible_manager.py  # Pushes configs after topology is healthy
 │   ├── presets/
-│   │   └── stuxnet.json        # Stuxnet ICS attack scenario preset
-│   └── scripts/                # Shell scripts bind-mounted into containers
-│       ├── router/             # FRRouting config helpers
-│       ├── firewall/           # iptables helpers
-│       ├── server/             # Generic server scripts
-│       ├── workstation/        # Workstation scripts
-│       └── switch/             # Switch (bridge) scripts
+│   │   ├── stuxnet.json        # Stuxnet ICS attack scenario preset
+│   │   └── enterprise-topology.json  # Enterprise topology preset
+│   ├── scripts/                # Shell scripts bind-mounted into containers
+│   │   ├── router/             # FRRouting config helpers
+│   │   ├── firewall/           # iptables helpers
+│   │   ├── plc/                # PLC simulation scripts
+│   │   ├── server/             # Generic server scripts
+│   │   ├── workstation/        # Workstation scripts
+│   │   └── switch/             # Switch (bridge) scripts
+│   └── ansible/
+│       └── deploy_configs.yml  
+|
 └── frontend/
     ├── index.html
     ├── vite.config.ts          # Dev server proxy (:5173 → :8000)
@@ -58,6 +64,7 @@ AE3GISv2/
     │   │   ├── PurdueModelView.tsx  # Purdue model zone/level visualization
     │   │   ├── TerminalPanel.tsx    # xterm.js terminal tabs
     │   │   ├── FirewallRuleDialog.tsx  # Firewall rule editor
+    │   │   ├── dynamicFrontendGenerator.py # Pulls Docker Hub container aspects for frontend use every time startup script is run
     │   │   └── ...
     │   ├── utils/
     │   │   ├── autoLayout.ts       # Dagre/circle/zigzag/grid layout algorithms
@@ -144,9 +151,18 @@ interface TopologyState {
 | `ControlBar.tsx` | New/Save/Load/Export buttons + save dialog; lives in header bar left column |
 | `ScenarioPanel.tsx` | Scenario/phase builder, single-topology + batch execution (instructor only) |
 | `ClassroomPanel.tsx` | Session creation, slot instantiation, join code display, batch deploy |
-| `PurdueModelView.tsx` | Read-only Purdue model overlay (auto-classifies zones and levels) |
-| `TerminalPanel.tsx` | xterm.js tabs, one WebSocket per container, minimize/restore |
+| `PurdueView.tsx` | Read-only Purdue model overlay (auto-classifies zones and levels) |
+| `TerminalOverlay.tsx` | xterm.js tabs, one WebSocket per container, minimize/restore |
 | `FirewallRuleDialog.tsx` | iptables rule editor for router/firewall containers |
+| `WiresharkOverlay.tsx` | Wireshark view targeted a a specific container |
+| `TopologyBrowser.tsx` | Shows saved topologies and preset topologies |
+| `Toolbar.tsx` | Add container, bulk add, layout, and Purdue buttons; lives under control bar |
+| `PushedTerminalOverlay.tsx` | Automated, script-driven execution sessions |
+| `NodeInfoPanel.tsx` | Shows aspects of containers and houses the terminal and configure buttons |
+| `LoginScreen.tsx` | Basic login screen with instructor and student buttons |
+| `ContainerAspects.tsx` | Houses all of the aspects of all containers, rebuilt each time dynamicFrontendGenerator.py is run |
+| `AiChatPanel.tsx` | Interactive AI assistant chat interface (not currently functional) |
+| `Breadcrumb.tsx` | Provides current location within an AE3GIS topology's hierarchy |
 
 ### Auto-Layout Algorithms
 
@@ -182,6 +198,7 @@ All backend communication goes through `api/client.ts`.
 | SQLite | Embedded relational database |
 | Pydantic v2 | Request/response validation and serialization |
 | `pty` (stdlib) | Pseudo-terminal for WebSocket exec sessions |
+| Ansible | Push custom configurations to containers |
 
 ### SQLAlchemy Models (`models.py`)
 
@@ -266,15 +283,7 @@ ScriptExecution
 
 ### Container Type → Docker Image
 
-| Container type | Docker image |
-|----------------|-------------|
-| `router` | `frrouting/frr:latest` |
-| `firewall` | `frrouting/frr:latest` |
-| `switch` | `alpine:latest` |
-| `web-server` | `httpd:alpine` |
-| `workstation` | `alpine:latest` |
-| `file-server` | `alpine:latest` |
-| `plc` | `alpine:latest` |
+Currently all container images are pulled from Docker Hub every time clab_generator.py is run and auto sorted by ctype.
 
 ---
 
@@ -439,9 +448,10 @@ Scripts are shell scripts bind-mounted into containers at deploy time.
 backend/scripts/
 ├── router/          # FRRouting configuration helpers
 ├── firewall/        # iptables rule management
-├── server/          # Generic server-side scripts (used by web-server, file-server, plc)
+├── server/          # Generic server-side scripts (used by web-server, file-server)
 ├── workstation/     # Workstation scripts
-└── switch/          # Linux bridge / switch scripts
+├── switch/          # Linux bridge / switch scripts
+└── plc/             # PLC emulation scripts
 ```
 
 The `AE3GIS_HOST_SCRIPTS_DIR` env var must point to this directory on the **host** (not inside the container), because ContainerLab resolves bind mount paths against the host Docker daemon.
@@ -453,7 +463,7 @@ Container type → script subdirectory mapping:
 | `workstation` | `workstation/` |
 | `web-server` | `server/` |
 | `file-server` | `server/` |
-| `plc` | `server/` |
+| `plc` | `plc/` |
 | `router` | `router/` |
 | `firewall` | `firewall/` |
 | `switch` | `switch/` |

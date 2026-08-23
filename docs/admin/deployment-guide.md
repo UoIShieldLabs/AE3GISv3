@@ -22,8 +22,8 @@ ContainerLab must be installed on the **host** (not just inside Docker). The bac
 ## 2. Installation
 
 ```bash
-git clone https://github.com/your-org/AE3GISv2.git
-cd AE3GISv2
+git clone https://github.com/Blake-Mayers/working.git
+cd working
 cp .env.example .env   # if provided, or create .env manually
 ```
 
@@ -54,10 +54,11 @@ AE3GIS_HOST_SCRIPTS_DIR=/home/deploy/AE3GISv2/backend/scripts
 ## 4. Start the Stack
 
 ```bash
-docker compose up --build -d
+./start.sh
 ```
+The start script checks your sudo requirements and runs a frontend script that pulls all the container images from Docker Hub before building the stack.
 
-This starts two services:
+The script finishes by starting two services using `docker compose up --build`:
 
 | Service | Port | Description |
 |---------|------|-------------|
@@ -81,11 +82,17 @@ docker compose logs -f frontend
 
 ## 5. Sudoers Configuration
 
-The backend calls `sudo containerlab` to deploy and destroy topologies. The user running the backend container process must be allowed to do this without a password prompt.
+The backend calls `sudo containerlab` to deploy and destroy topologies. The user running the backend container process must be allowed to do this without a password prompt. You will be notified after running the start script if you do not have the correct permissions in place.
 
 ### Why this is needed
 
 ContainerLab requires root to create network namespaces, virtual interfaces, and manage Docker networks. The backend runs as a non-root user inside the container, escalating via `sudo`.
+
+**Note:** The configuration steps below can be done automatically by running these commands
+```bash
+chmod +x scripts/setup-sudoers.sh
+sudo ./scripts/setup-sudoers.sh
+```
 
 ### Configuration steps
 
@@ -105,7 +112,7 @@ ContainerLab requires root to create network namespaces, virtual interfaces, and
 3. Edit sudoers safely:
 
    ```bash
-   sudo visudo -f /etc/sudoers.d/ae3gis
+   sudo visudo -f /etc/sudoers.d/ae3gis-containerlab
    ```
 
 4. Add one of the following stanzas:
@@ -171,14 +178,14 @@ docker compose up -d
 
 Perform this smoke test after initial setup:
 
-1. **Open the UI:** Navigate to `http://<server-ip>:3000`
-2. **Log in:** Select the Instructor tab, enter your `AE3GIS_INSTRUCTOR_TOKEN`, click Log In
-3. **Create a topology:** Click New, give it a name, right-click the canvas to add a site
-4. **Save:** Click Save — the dirty indicator (pencil icon) should disappear
-5. **Deploy:** Click Deploy — the status pill should transition to `deploying` then `deployed`
-6. **Check status dots:** Container nodes should turn green within a few seconds
-7. **Open a terminal:** Click a running container node — a terminal tab should open at the bottom of the screen
-8. **Destroy:** Click Destroy — containers should turn red
+1. **Open the UI:** Navigate to `http://<server-ip>:3000`.
+2. **Log in:** Select the Instructor tab, enter your `AE3GIS_INSTRUCTOR_TOKEN`, click Log In.
+3. **Create a topology:** Click New, give it a name, right-click the canvas to add a site.
+4. **Save:** Click Save — the dirty indicator (pencil icon) should disappear.
+5. **Deploy:** Click Deploy — the status pill should transition to `deploying` then `deployed`.
+6. **Check status dots:** Container nodes should turn green within a few seconds.
+7. **Open a terminal:** Click a running container node — a terminal tab should open at the bottom of the screen.
+8. **Destroy:** Click Destroy — containers should turn red.
 
 If any step fails, check the [Troubleshooting](#9-troubleshooting) section.
 
@@ -243,7 +250,7 @@ Then ensure your sudoers entry uses `root ALL=(ALL) NOPASSWD: ...`.
 **Fix:** Stop conflicting services, or change the host port mapping in `docker-compose.yml`:
 ```yaml
 ports:
-  - "3001:80"   # frontend on 3001 instead
+  - "3001:80"   # frontend using 3001 on host machine mapped to the container's port 80
 ```
 
 ### Management subnet overlap

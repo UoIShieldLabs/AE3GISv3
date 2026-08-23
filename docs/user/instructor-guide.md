@@ -12,7 +12,7 @@
 4. Enter your instructor token (provided by your system administrator)
 5. Click **Log In**
 
-If you don't know your token, contact whoever set up the server. The token is configured via the `AE3GIS_INSTRUCTOR_TOKEN` environment variable.
+If you do not have an instructor token, contact your system administrator.
 
 ---
 
@@ -53,7 +53,7 @@ Use the breadcrumb at the top of the canvas to navigate back up.
 
 A *site* represents a physical or logical location (e.g., Corporate Office, OT Floor).
 
-1. Right-click the canvas → **Add Site**
+1. Right-click the canvas → **Add Site** or click the **+ Site** button in the top left
 2. Enter a name and optional location label
 3. Drag the site node to position it on the canvas
 4. To connect two sites (inter-site link), drag from the edge of one site node to another
@@ -63,7 +63,7 @@ A *site* represents a physical or logical location (e.g., Corporate Office, OT F
 A *subnet* represents a network segment within a site.
 
 1. Click a site to enter the Subnet view
-2. Right-click the canvas → **Add Subnet**
+2. Right-click the canvas → **Add Subnet** or click the **+ Subnet** button in the top left
 3. Enter a name and CIDR (e.g., `10.0.1.0/24`)
 4. Optionally set a gateway IP — if left blank, the first router or firewall in the subnet is used as the gateway automatically at deploy time
 
@@ -71,20 +71,10 @@ A *subnet* represents a network segment within a site.
 
 ### Adding devices
 
-1. In the LAN view (click a subnet cloud), right-click the canvas → **Add Device**
-2. Choose a device type and enter a name and IP address
+1. In the LAN view (click a subnet cloud), right-click the canvas → **Add Container** or click the **+ Container** button in the top left
+2. Choose a container type and enter a name and IP address
 
-Device types:
-
-| Type | Plain-language description |
-|------|---------------------------|
-| `workstation` | End-user PC or laptop |
-| `web-server` | HTTP server |
-| `file-server` | File sharing server |
-| `plc` | Programmable Logic Controller (industrial control) |
-| `firewall` | Packet-filtering firewall (also routes) |
-| `router` | Layer-3 router |
-| `switch` | Layer-2 switch (bridge) |
+   Device types are updated often and pulled dynamically from Docker Hub every time the project is started up.
 
 3. To connect two devices, drag from one node's edge handle to another
 4. For cross-subnet connections: in the Subnet view, drag from one subnet cloud to another — gateway routers are created automatically
@@ -189,7 +179,7 @@ Students navigate to the same URL and select the **Student** login tab.
 ### Deploying student topologies
 
 - **Individual deploy:** Click the Deploy button next to a single slot
-- **Batch Deploy:** Click **Batch Deploy** to deploy all slots simultaneously
+- **Batch deploy:** Click **Batch deploy** to deploy all slots simultaneously
 
 > **Note:** Batch deploy runs a maximum of **3 deployments concurrently** to avoid overloading the host. All slots are queued and processed in batches of 3.
 
