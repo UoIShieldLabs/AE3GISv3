@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import type { Container } from '../types/topology';
-import { wsUrl as buildWsUrl, getAuthToken } from '../api/client';
+import { wsUrl as buildWsUrl } from '../api/client';
 
 export interface TerminalOverlayProps {
   sessions: Container[];
@@ -125,30 +125,13 @@ function TerminalSession({ container, backendId, deployStatus, active }: Termina
     term.reset();
 
     const encodedId = encodeURIComponent(container.id);
-    const precheckUrl = `/api/topologies/${backendId}/exec/${encodedId}/precheck`;
     const wsUrlStr = buildWsUrl(`/api/topologies/ws/${backendId}/exec/${encodedId}`);
 
     const run = async () => {
       try {
-        const headers: Record<string, string> = {};
-        const token = getAuthToken();
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch(precheckUrl, { headers });
         if (closed) return;
-        if (!res.ok) {
-          term.writeln(`\r\n\x1b[31m[error] Precheck failed: HTTP ${res.status}\x1b[0m`);
-          return;
-        }
-
-        const precheck = await res.json() as { reason?: string; detail?: string };
-        if (closed) return;
-        if (precheck.reason !== 'ok') {
-          term.writeln(`\r\n\x1b[31m[error] ${precheck.reason ?? 'unknown'}\x1b[0m`);
-          if (precheck.detail) term.writeln(`\x1b[31m[detail] ${precheck.detail}\x1b[0m`);
-          return;
-        }
-
+        // Open the exec WebSocket directly; the backend reports any
+        // container/resolution error over the socket itself.
         const ws = new WebSocket(wsUrlStr);
         wsRef.current = ws;
 
