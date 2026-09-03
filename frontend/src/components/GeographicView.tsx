@@ -23,7 +23,7 @@ import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
 import { computeLayout } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
-import type { TopologyData, Site } from '../data/sampleTopology';
+import type { TopologyData, Site } from '../types/topology';
 
 const nodeTypes = { site: SiteNode };
 const edgeTypes = { neonStraight: NeonEdgeStraight };

@@ -3,9 +3,9 @@ import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
 import { SelectField } from '../ui/SelectField';
 import { isValidIp, isIpInCidr, getNextAvailableIp, getSubnetCapacity } from '../../utils/validation';
-import type { Container } from '../../data/sampleTopology';
-import { typeOptions, menuHierarchy, typeDisplayNames } from '../ContainerAspects';
-import type { ContainerType } from '../ContainerAspects';
+import type { Container } from '../../types/topology';
+import { typeOptions, menuHierarchy, typeDisplayNames } from '../../catalog/catalog';
+import type { ContainerType } from '../../catalog/catalog';
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
 

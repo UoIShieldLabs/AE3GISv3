@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
 import { isValidCidr } from '../../utils/validation';
-import type { Subnet } from '../../data/sampleTopology';
+import type { Subnet } from '../../types/topology';
 
 interface SubnetDialogProps {
   open: boolean;

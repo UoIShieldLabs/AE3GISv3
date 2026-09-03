@@ -1,90 +1,83 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Project Overview
 
-AE3GIS v2 is an interactive network topology visualization and deployment platform. Three-level drill-down: Geographic → Subnet → LAN. Integrates with **ContainerLab** to deploy Docker-based network simulations.
+AE3GIS v3 is an interactive network-topology editor and deployment platform.
+A React drill-down editor (Geographic → Subnet → LAN) drives a FastAPI backend
+that instantiates topologies as live containers via **Kathara** (multi-arch,
+unprivileged, Docker-SDK based — runs on Apple silicon). v3 is a ground-up
+rebuild; ContainerLab has been fully removed.
 
-## Development Commands
+## Commands
 
 ```bash
-./start.sh
-
-# Frontend dev
-cd frontend && npm run dev        # :5173
-
-# Backend dev
-cd backend && source .venv/bin/activate
-python -m uvicorn main:app --reload --port 8000
+./start.sh                                   # docker compose up (frontend :3000, backend :8000)
+cd frontend && npm run dev                   # :5173
+cd frontend && npm run build && npm run test # typecheck + vitest
+cd backend && python -m pytest               # backend tests
+cd backend && python -m uvicorn main:app --reload --port 8000
 ```
 
-Backend container requires `network_mode: host` + `privileged: true` for Docker socket and host netns access. Scripts are mounted at the same absolute host path inside the container (ContainerLab resolves paths at the host daemon level). CI/CD: push to `main` → SSH deploy via `.github/workflows/deploy.yml`.
+Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
+`privileged`, no host netns). Push to `main` → SSH deploy via `.github/workflows/deploy.yml`.
 
 ## Architecture
 
-### State Management
+### Deployment engine (the key seam)
+`backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
+resolve_container). Routers depend only on this and speak `TopologyData` + node
+ids. `engine/kathara/` implements it via the Kathara Python API. Re-homing a
+deferred feature = extend this interface, not the routers.
 
-Immer reducer (`store/topologyReducer.ts`). `dirty` flag tracks unsaved changes — `UPDATE_CONTAINER_STATUSES` is the only action that does NOT set it. Key side effects:
-- `ADD_SUBNET` auto-creates a router + switch, wired together
-- `ADD_INTER_SUBNET_CONNECTION` auto-creates gateway routers in both subnets
+- `engine/networking.py` — **pure, unit-tested** topology → `LabPlan` logic:
+  gateway detection, interface assignment, `/30` point-to-point router links
+  from `10.255.0.0/24`, BFS static-route propagation, and per-role startup
+  commands (router = ip_forward + routes; switch = linux bridge; host = IP +
+  default route). Emits plain iproute2/sysctl commands (engine-agnostic).
+- `engine/kathara/lab_builder.py` — `LabPlan` → Kathara `Lab`: one collision
+  domain per point-to-point link, image from the catalog, startup commands
+  written to `/ae3gis-init.sh` and run via the machine `exec` meta.
+- `engine/terminal.py` — engine-agnostic PTY↔WebSocket bridge (`docker exec`, no sudo).
 
-`handleDeploy()` in `App.tsx` auto-saves if `dirty` before deploying.
+### Node catalog (single source of truth)
+`backend/catalog/node_types.json` defines every node type: `role`
+(router|switch|host), `defaultImage`, `images`, `color`, `label`, `icon`,
+`category`, optional `webUiPort`/`purdueLevel`. **Images live here as data, never
+hardcoded in source.** Served at `GET /api/catalog`; the frontend consumes it via
+`src/catalog/`. `role` drives how the engine configures a node; unknown types
+default to `host`.
 
-### Data Model
+### Data model
+`Container { id, name, type, ip, image?, status?, metadata?, persistencePaths? }`
+→ `Subnet { cidr, gateway?, containers[], connections[] }` → `Site { subnets[],
+subnetConnections[] }` → `TopologyData { sites[], siteConnections[], scenarios? }`.
+Types: `frontend/src/types/topology.ts` (TS) mirrored by `backend/schemas.py`
+(Pydantic). `type` is a loose string validated against the catalog.
 
-```typescript
-Container { id, name, type, ip, kind?, image?, status?, metadata? }
-Connection { from, to, label?, fromInterface?, toInterface?, fromContainer?, toContainer? }
-Subnet { id, name, cidr, gateway?, containers[], connections[] }
-Site { id, name, location, position, subnets[], subnetConnections[] }
-TopologyData { name?, sites[], siteConnections[], scenarios? }
+**DB:** SQLite. `Topology.data` (JSON) holds the topology; `Topology.engine_state`
+(JSON) holds opaque per-deploy engine state (Kathara lab name + node map).
+Status lifecycle: `idle` → `deployed` → `idle`.
 
-ScriptExecution { containerId, script, args? }
-AttackPhase { id, name, description?, executions: ScriptExecution[] }
-Scenario { id, name, description?, phases: AttackPhase[] }
-```
+### Frontend
+`App.tsx` is thin: navigation + wiring. Orchestration lives in `hooks/`
+(`useDeployment`, `useStatusPolling`, `useTerminalSessions`). State is an Immer
+reducer (`store/topologyReducer.ts`); `dirty` tracks unsaved changes and every
+mutating action sets it except `UPDATE_CONTAINER_STATUSES`. `ADD_SUBNET`
+auto-creates a router + switch; `ADD_INTER_SUBNET_CONNECTION` auto-creates
+gateway routers. All REST/WS calls go through `api/client.ts`.
 
-Container types: `web-server`, `file-server`, `plc`, `firewall`, `switch`, `router`, `workstation`
+### Backend routers
+- `routers/topologies.py` — CRUD + JSON import (`/api/topologies`)
+- `routers/deployment.py` — deploy/destroy/status + exec-terminal WebSocket
+- `routers/catalog.py` — `GET /api/catalog`
+- `routers/presets.py` — templates from `backend/presets/*.json`
 
-### Backend Routers
+## Auth
+Instructor-only (bearer token vs `AE3GIS_INSTRUCTOR_TOKEN`, default `test`).
+WebSockets take the token as `?token=`. Student/classroom auth is deferred.
 
-- `routers/topologies.py` — CRUD (`/api/topologies`)
-- `routers/containerlab.py` — deploy/destroy/status/exec/WebSocket; `GET /scripts/available`; `POST /{id}/scenarios/{scenario_id}/phases/{phase_id}/execute`
-- `routers/classroom.py` — sessions + student slots (`/api/classroom`)
-- `routers/presets.py` — preset templates from `backend/presets/*.json` (`/api/presets`)
-- `routers/proxy.py` — HTTP reverse proxy to container management IPs (`/api/proxy/{topology_id}/{container_id}/{path}`)
-
-### Backend Services
-
-- `clab_generator.py` — TopologyData → ContainerLab YAML (see below)
-- `clab_importer.py` — `.clab.yml` → TopologyData; groups by CIDR into subnets, by `group` field into sites
-- `clab_manager.py` — `sudo containerlab deploy/destroy`; self-heals stale Docker bridge metadata on "Failed to lookup link" error
-- `ansible_manager.py` — pushes configurations to containers after topology is deemed healthy
-
-**Database:** SQLite (`/app/data/ae3gis.db` in Docker, `ae3gis.db` locally). Status lifecycle: `idle` → `deployed` → `idle`.
-
-**WebSocket — exec terminal:** PTY bridge via `pty.openpty()` + `docker exec -it`. Strips ANSI codes, normalizes CRLF→LF. `GET /precheck` validates access before opening (returns `docker_permission_denied`, `container_not_found`, etc.).
-
-### YAML Generation (`clab_generator.py`)
-
-1. **Metadata:** Auto-detect gateway — if `subnet.gateway` unset, uses first router/firewall IP in subnet. Builds subnet_id → gateway_router_id maps.
-2. **Interfaces:** Pre-registers explicit names to prevent collisions. Auto-assigns `eth{N}` via `_next_iface()`. Resolves subnet/site IDs in connections to container IDs via gateway routers.
-3. **IPs & routes:** Same-subnet links use the container's primary IP. Cross-subnet router↔router links get /30 PtP IPs from `10.255.0.0/24` (sequential: .1/30, .5/30, …; ~63 links max). Each router gets a static route to the peer subnet.
-4. **Exec configs:** Switches — Linux bridge (`br0`), all non-home interfaces added, IP on bridge. Routers/Firewalls — `ip_forward=1`, IPs on all interfaces, static routes. Hosts — IP on home interface only, default route via subnet gateway (keeps PtP reply traffic working).
-
-**Images:** Pulled dynamically from Docker Hub by a script executed during the start.sh script for container aspects and by clab_generator.py to mape ctype to container images.
-
-**Naming (must stay in sync across frontend + backend):**
-- Deployment: `{topology_name}-{first_8_chars_of_id}` (`utils/deploymentName.ts` ↔ `clab_manager.deployment_name()`)
-- Container: `clab-{topology_name}-{container_id}`
-
-## Authentication & Roles
-
-**Instructor** — Bearer token validated against `INSTRUCTOR_TOKEN` env var. Token sent on all requests.
-
-**Student** — UUID join code exchanged via `POST /api/classroom/login` for a token + `topology_id`. Join code doubles as bearer token. Students get read-only UI and are locked to their assigned topology (403 on any other).
-
-## Classroom Mode
-
-`ClassSession` groups `StudentSlot`s, each owning a deep-copied topology and a unique join code. Instantiation clones the template via `copy.deepcopy()`. `ScenarioPanel` (instructor-only) supports per-phase script execution and batch execution across all classroom slots.
+## Deferred (rebuild on the engine abstraction later)
+Firewall editor, scenarios/scripts, classroom mode, Wireshark capture, web-UI
+proxy, AI assistant. Keep the `DeploymentEngine` seam and the catalog when adding them back.

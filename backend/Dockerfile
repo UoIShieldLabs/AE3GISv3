@@ -1,27 +1,27 @@
 FROM python:3.12-slim
 
-# Install Docker CLI (to talk to host Docker via socket)
+# Docker CLI: Kathara talks to the daemon via the mounted socket, and the
+# interactive terminal bridge uses `docker exec`. No ContainerLab, no sudo.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        curl ca-certificates sudo bash iproute2 && \
-    curl -fsSL https://get.docker.com | sh && \
+        ca-certificates curl gnupg iproute2 && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce-cli && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install ContainerLab
-RUN bash -c "$(curl -sL https://get.containerlab.dev)"
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN ansible-galaxy collection install vyos.vyos community.docker community.general community.postgresql ansible.posix
-
 COPY . .
 
-# Ensure workdirs exist
-RUN mkdir -p /app/clab-workdir
+RUN mkdir -p /app/data
 
 EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000","--reload"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

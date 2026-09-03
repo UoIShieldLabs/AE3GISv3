@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from './ui/Dialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
-import { ImportClabDialog } from './dialogs/ImportClabDialog';
 import { ImportJsonDialog } from './dialogs/ImportJsonDialog';
 import { listTopologies, deleteTopology, listPresets, loadPreset, type TopologySummary, type PresetSummary } from '../api/client';
 import './TopologyBrowser.css';
@@ -27,7 +26,6 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
   const [topologies, setTopologies] = useState<TopologySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TopologySummary | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
   const [importJsonOpen, setImportJsonOpen] = useState(false);
 
   // Presets
@@ -65,7 +63,6 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
 
   const handleImported = (topo: TopologySummary) => {
     setTopologies((prev) => [topo, ...prev]);
-    setImportOpen(false);
     setImportJsonOpen(false);
   };
 
@@ -102,23 +99,6 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
             }}
           >
             Import JSON
-          </button>
-          <button
-            onClick={() => setImportOpen(true)}
-            style={{
-              padding: '5px 12px',
-              background: 'rgba(0, 212, 255, 0.06)',
-              border: '1px solid rgba(0, 212, 255, 0.4)',
-              borderRadius: '4px',
-              color: 'var(--neon-cyan)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '11px',
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Import .clab
           </button>
         </div>
 
@@ -251,12 +231,6 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
         message={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
-      />
-
-      <ImportClabDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onImported={handleImported}
       />
 
       <ImportJsonDialog

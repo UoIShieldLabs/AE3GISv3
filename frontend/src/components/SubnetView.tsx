@@ -23,7 +23,7 @@ import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { TopologyDispatchContext } from '../store/TopologyContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
-import type { Site, Subnet, Container } from '../data/sampleTopology';
+import type { Site, Subnet, Container } from '../types/topology';
 
 const nodeTypes = { subnetCloud: SubnetCloudNode, routerNode: RouterNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };

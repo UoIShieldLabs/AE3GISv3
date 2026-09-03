@@ -1,36 +1,47 @@
+"""AE3GIS backend — FastAPI application factory."""
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# ensure debug output is visible for troubleshooting
-logging.basicConfig(level=logging.DEBUG)
+import models  # noqa: F401 - register ORM metadata before create_all
+from config import CORS_ORIGINS
+from database import Base, engine as db_engine
+from engine.kathara.engine import engine as deployment_engine
+from routers import catalog, deployment, presets, topologies
 
-import models  # noqa: F401 — ensures ORM metadata is registered before create_all
-from database import Base, engine
-from routers import ai, classroom, containerlab, presets, proxy, topologies
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="ae3gis v2 API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=db_engine)
+    ok, detail = await deployment_engine.is_available()
+    if ok:
+        log.info("Deployment engine '%s' ready: %s", deployment_engine.name, detail)
+    else:
+        log.warning("Deployment engine '%s' unavailable: %s", deployment_engine.name, detail)
+    yield
+
+
+app = FastAPI(title="AE3GIS API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=CORS_ORIGINS != ["*"],  # credentials + wildcard is invalid per spec
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(containerlab.router)
 app.include_router(topologies.router)
-app.include_router(classroom.router)
+app.include_router(deployment.router)
+app.include_router(catalog.router)
 app.include_router(presets.router)
-app.include_router(proxy.router)
-app.include_router(ai.router)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "engine": deployment_engine.name}

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import type { TopologyData, Container } from '../data/sampleTopology';
+import type { TopologyData, Container } from '../types/topology';
 import './PurdueView.css';
-import { typeColors as TYPE_COLORS} from './ContainerAspects';
-import { typeLabels as TYPE_LABELS } from './ContainerAspects';
-import type { ContainerType } from './ContainerAspects';
+import { typeColors as TYPE_COLORS} from '../catalog/catalog';
+import { typeLabels as TYPE_LABELS } from '../catalog/catalog';
+import type { ContainerType } from '../catalog/catalog';
 
 interface PurdueViewProps {
   open: boolean;

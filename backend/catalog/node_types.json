@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "description": "Declarative catalog of node types. Single source of truth shared by the backend deployment engine and the frontend editor. Images are DATA, not code: change them here without touching source. `role` drives how the deployment engine configures the node (router = ip_forward + static routes, switch = linux bridge, host = single IP + default route).",
+  "defaults": {
+    "host_image": "kathara/base",
+    "router_image": "kathara/frr",
+    "switch_image": "kathara/base"
+  },
+  "types": {
+    "router": {
+      "displayName": "Router",
+      "role": "router",
+      "category": "infrastructure",
+      "defaultImage": "kathara/frr",
+      "images": [
+        "kathara/frr"
+      ],
+      "color": "#ff00ff",
+      "label": "RTR",
+      "icon": "router",
+      "purdueLevel": 3
+    },
+    "firewall": {
+      "displayName": "Firewall",
+      "role": "router",
+      "category": "infrastructure",
+      "defaultImage": "kathara/frr",
+      "images": [
+        "kathara/frr"
+      ],
+      "color": "#ff3344",
+      "label": "FW",
+      "icon": "firewall",
+      "purdueLevel": 3.5
+    },
+    "switch": {
+      "displayName": "Switch",
+      "role": "switch",
+      "category": "infrastructure",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#ffaa00",
+      "label": "SW",
+      "icon": "switch",
+      "purdueLevel": 2
+    },
+    "workstation": {
+      "displayName": "Workstation",
+      "role": "host",
+      "category": "endpoint",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#4466ff",
+      "label": "WS",
+      "icon": "workstation",
+      "purdueLevel": 4
+    },
+    "web-server": {
+      "displayName": "Web Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "httpd:alpine",
+      "images": [
+        "httpd:alpine"
+      ],
+      "color": "#00ff9f",
+      "label": "WEB",
+      "icon": "server",
+      "webUiPort": 80,
+      "purdueLevel": 4
+    },
+    "file-server": {
+      "displayName": "File Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#00d4ff",
+      "label": "FS",
+      "icon": "server",
+      "purdueLevel": 4
+    },
+    "database-server": {
+      "displayName": "Database Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "postgres:alpine",
+      "images": [
+        "postgres:alpine"
+      ],
+      "color": "#7744ff",
+      "label": "DB",
+      "icon": "server",
+      "purdueLevel": 4
+    },
+    "dns-server": {
+      "displayName": "DNS Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#22bbaa",
+      "label": "DNS",
+      "icon": "server",
+      "purdueLevel": 4
+    },
+    "plc": {
+      "displayName": "PLC",
+      "role": "host",
+      "category": "ics",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#ffcc00",
+      "label": "PLC",
+      "icon": "plc",
+      "webUiPort": 8080,
+      "purdueLevel": 1
+    },
+    "hmi": {
+      "displayName": "HMI",
+      "role": "host",
+      "category": "ics",
+      "defaultImage": "kathara/base",
+      "images": [
+        "kathara/base"
+      ],
+      "color": "#33ccff",
+      "label": "HMI",
+      "icon": "hmi",
+      "webUiPort": 8080,
+      "purdueLevel": 2
+    }
+  }
+}

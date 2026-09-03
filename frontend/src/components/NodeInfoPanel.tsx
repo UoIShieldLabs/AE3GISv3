@@ -1,19 +1,16 @@
-import { useContext, useEffect, useState } from 'react';
-import type { Container } from '../data/sampleTopology';
+import { useContext, useState } from 'react';
+import type { Container } from '../types/topology';
 import { TopologyDispatchContext } from '../store/TopologyContext';
-import { AuthContext } from '../store/AuthContext';
 import { ContainerDialog } from './dialogs/ContainerDialog';
 import { ConfirmDialog } from './dialogs/ConfirmDialog';
 import { ContainerConfigDialog } from './dialogs/ContainerConfigDialog';
-import { prewarmCapture } from '../api/client';
-import { typeDisplayNames } from './ContainerAspects';
-import type { ContainerType } from './ContainerAspects';
+import { typeDisplayNames } from '../catalog/catalog';
+import type { ContainerType } from '../catalog/catalog';
 
 interface NodeInfoPanelProps {
   container: Container | null;
   onClose: () => void;
   onOpenTerminal: (container: Container) => void;
-  onOpenWireshark?: (container: Container) => void;
   siteId: string | null;
   subnetId: string | null;
   topologyId: string | null;
@@ -21,41 +18,19 @@ interface NodeInfoPanelProps {
   deployStatus?: string;
 }
 
-function isHmiContainer(container: Container): boolean {
-  return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));
-}
-
-function webUiPort(container: Container): number {
-  const raw = container.metadata?.webUiPort;
-  const parsed = raw ? Number(raw) : NaN;
-  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
-  if (container.type === 'plc' || isHmiContainer(container)) return 8080;
-  return 80;
-}
-
 export function NodeInfoPanel({
   container,
   onClose,
   onOpenTerminal,
-  onOpenWireshark,
   siteId,
   subnetId,
-  topologyId,
   readOnly,
-  deployStatus,
 }: NodeInfoPanelProps) {
   const dispatch = useContext(TopologyDispatchContext);
-  const auth = useContext(AuthContext);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
 
-  // Pre-warm the Wireshark sidecar as soon as a deployed container is selected,
-  // so it's ready by the time the user clicks "Capture Traffic".
-  useEffect(() => {
-    if (!container || !topologyId || deployStatus !== 'deployed' || !onOpenWireshark) return;
-    prewarmCapture(topologyId, container.id).catch(() => {/* best-effort */});
-  }, [container?.id, topologyId, deployStatus]);
 
   const handleEdit = (data: {
     name: string; type: ContainerType; ip: string; image: string;
@@ -217,29 +192,6 @@ export function NodeInfoPanel({
             >
               Open Terminal
             </button>
-            {onOpenWireshark && deployStatus === 'deployed' && (
-              <button
-                className="btn-terminal"
-                style={{ marginTop: '8px', background: 'rgba(180, 77, 255, 0.1)', borderColor: 'var(--neon-purple, #b44dff)', color: 'var(--neon-purple, #b44dff)' }}
-                onClick={() => onOpenWireshark(container)}
-              >
-                Capture Traffic
-              </button>
-            )}
-            {(container.type === 'web-server' || container.type === 'plc' || container.type === 'hmi' || isHmiContainer(container)) && auth?.token && topologyId && (
-              <button
-                className="btn-terminal"
-                style={{ marginTop: '8px', background: 'rgba(0, 255, 159, 0.1)', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
-                onClick={() => {
-                  const base = `${window.location.origin}/api/proxy/${topologyId}/${container.id}`;
-                  const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '/';
-                  const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
-                  window.open(url, '_blank');
-                }}
-              >
-                🌐 Open Web UI
-              </button>
-            )}
             {!readOnly && (
               <>
                 {/* <-- ADDED CONFIGURE BUTTON HERE --> */}

@@ -1,37 +1,27 @@
+"""Pydantic request/response models mirroring the frontend topology types.
+
+`Container.type` is kept as a loose string (validated against the catalog on the
+frontend and by the engine's role lookup) so imported/AI-authored types never
+block a save.
+"""
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, Field
-
-
-# ── Topology data types (mirrors frontend TypeScript) ──────────────
-
-
-ContainerType = Literal[
-    "web-server",
-    "file-server",
-    "plc",
-    "firewall",
-    "switch",
-    "router",
-    "workstation",
-    "hmi",
-]
 
 
 class Container(BaseModel):
     id: str
     name: str
-    type: str  # validated as ContainerType on the frontend; kept loose here to survive LLM-generated values
-    ip: str
+    type: str
+    ip: str = ""
     kind: str | None = None
     image: str | None = None
-    status: str | None = None  # "running" | "stopped" | "paused" at runtime; loose for stored data
+    status: str | None = None
     metadata: dict | None = None
-    persistencePaths: list[str] | None = None
     config: dict | None = None
+    persistencePaths: list[str] | None = None
 
 
 class Connection(BaseModel):
@@ -96,9 +86,6 @@ class TopologyData(BaseModel):
     scenarios: list[Scenario] | None = None
 
 
-# ── API request/response models ────────────────────────────────────
-
-
 class TopologyCreate(BaseModel):
     name: str
     data: TopologyData
@@ -113,7 +100,7 @@ class TopologyRecord(BaseModel):
     id: str
     name: str
     data: TopologyData
-    clab_yaml: str | None = None
+    engine_state: dict | None = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -129,63 +116,3 @@ class TopologySummary(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class FirewallRule(BaseModel):
-    source: str
-    destination: str
-    protocol: Literal["any", "tcp", "udp", "icmp"]
-    port: str
-    action: Literal["accept", "drop"]
-
-
-class FirewallRulesUpdate(BaseModel):
-    rules: list[FirewallRule]
-
-
-class FirewallRulesResponse(BaseModel):
-    rules: list[FirewallRule]
-
-
-# ── Auth / Classroom ──────────────────────────────────────────────
-
-
-class StudentLoginRequest(BaseModel):
-    join_code: str
-
-
-class TokenResponse(BaseModel):
-    role: Literal["instructor", "student"]
-    token: str
-    topology_id: str | None = None
-
-
-class ClassSessionCreate(BaseModel):
-    name: str
-    template_id: str
-
-
-class ClassSessionRecord(BaseModel):
-    id: str
-    name: str
-    template_id: str
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class StudentSlotRecord(BaseModel):
-    id: str
-    session_id: str
-    topology_id: str
-    join_code: str
-    label: str | None = None
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class InstantiateRequest(BaseModel):
-    count: int = Field(ge=1, le=200)
-    label_prefix: str = "Student"

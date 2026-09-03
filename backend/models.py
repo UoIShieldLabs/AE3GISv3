@@ -1,7 +1,13 @@
+"""SQLAlchemy models.
+
+Classroom tables (ClassSession/StudentSlot) are intentionally omitted in this
+foundation pass — classroom mode is deferred and will be reintroduced on the
+engine abstraction later.
+"""
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, JSON, String, Text
+from sqlalchemy import Column, DateTime, JSON, String
 
 from database import Base
 
@@ -20,28 +26,8 @@ class Topology(Base):
     id = Column(String, primary_key=True, default=_new_id)
     name = Column(String, nullable=False)
     data = Column(JSON, nullable=False)
-    clab_yaml = Column(Text, nullable=True)
+    # Opaque per-engine deployment state (e.g. Kathara lab name + node map).
+    engine_state = Column(JSON, nullable=True)
     status = Column(String, default="idle")
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
-
-
-class ClassSession(Base):
-    __tablename__ = "class_sessions"
-
-    id = Column(String, primary_key=True, default=_new_id)
-    name = Column(String, nullable=False)
-    template_id = Column(String, ForeignKey("topologies.id"), nullable=False)
-    created_at = Column(DateTime, default=_utcnow)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
-
-
-class StudentSlot(Base):
-    __tablename__ = "student_slots"
-
-    id = Column(String, primary_key=True, default=_new_id)
-    session_id = Column(String, ForeignKey("class_sessions.id"), nullable=False)
-    topology_id = Column(String, ForeignKey("topologies.id"), nullable=False)
-    join_code = Column(String, unique=True, nullable=False, default=_new_id)
-    label = Column(String, nullable=True)
-    created_at = Column(DateTime, default=_utcnow)

@@ -1,32 +1,22 @@
-"""Simple token-based auth for instructor and student roles."""
+"""Instructor token auth.
 
+Student/classroom auth is deferred in this foundation pass; only the instructor
+bearer token is honoured. WebSocket routes accept the token via `?token=`
+because browsers cannot set headers on the upgrade request.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import Depends, Header, HTTPException, Request
-from sqlalchemy.orm import Session
+from fastapi import Header, HTTPException, Query, Request
 
 from config import INSTRUCTOR_TOKEN
-from database import get_db
-from models import StudentSlot
 
 
 @dataclass
 class InstructorIdentity:
     role: Literal["instructor"] = "instructor"
-
-
-@dataclass
-class StudentIdentity:
-    role: Literal["student"] = "student"
-    topology_id: str = ""
-    slot_id: str = ""
-
-
-AuthIdentity = InstructorIdentity | StudentIdentity
-PROXY_AUTH_COOKIE = "ae3gis_proxy_token"
 
 
 def _parse_bearer(authorization: str | None) -> str | None:
@@ -38,11 +28,8 @@ def _parse_bearer(authorization: str | None) -> str | None:
     return None
 
 
-def require_instructor(
-    authorization: str | None = Header(default=None),
-) -> InstructorIdentity:
-    token = _parse_bearer(authorization)
-    if token != INSTRUCTOR_TOKEN:
+def require_instructor(authorization: str | None = Header(default=None)) -> InstructorIdentity:
+    if _parse_bearer(authorization) != INSTRUCTOR_TOKEN:
         raise HTTPException(401, "Instructor token required")
     return InstructorIdentity()
 
@@ -50,29 +37,12 @@ def require_instructor(
 def require_any_auth(
     request: Request,
     authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-) -> AuthIdentity:
-    token = _parse_bearer(authorization)
-    
-    if not token:
-        token = request.query_params.get("token")
-
-    if not token:
-        token = request.cookies.get(PROXY_AUTH_COOKIE)
-
-    if not token:
-        raise HTTPException(401, "Authorization header, token query parameter, or auth cookie required")
-
-    if token == INSTRUCTOR_TOKEN:
-        return InstructorIdentity()
-
-    slot = db.query(StudentSlot).filter(StudentSlot.join_code == token).first()
-    if not slot:
-        raise HTTPException(401, "Invalid token")
-    return StudentIdentity(topology_id=slot.topology_id, slot_id=slot.id)
+) -> InstructorIdentity:
+    token = _parse_bearer(authorization) or request.query_params.get("token")
+    if token != INSTRUCTOR_TOKEN:
+        raise HTTPException(401, "Authorization required")
+    return InstructorIdentity()
 
 
-def validate_student_topology(identity: AuthIdentity, topology_id: str) -> None:
-    """Raise 403 if a student is trying to access a topology that isn't theirs."""
-    if isinstance(identity, StudentIdentity) and identity.topology_id != topology_id:
-        raise HTTPException(403, "Access denied")
+def valid_ws_token(token: str | None) -> bool:
+    return token == INSTRUCTOR_TOKEN

@@ -1,0 +1,51 @@
+{
+  "name": "Two-Subnet Demo",
+  "description": "Two routed subnets with a host each, connected router-to-router. A minimal example that deploys on the Kathara engine using default catalog images.",
+  "topology": {
+    "name": "Two-Subnet Demo",
+    "sites": [
+      {
+        "id": "site-1",
+        "name": "Lab Site",
+        "location": "Lab",
+        "position": { "x": 200, "y": 160 },
+        "subnets": [
+          {
+            "id": "sub-a",
+            "name": "Subnet A",
+            "cidr": "10.0.1.0/24",
+            "gateway": "10.0.1.1",
+            "containers": [
+              { "id": "router-a", "name": "Router A", "type": "router", "ip": "10.0.1.1" },
+              { "id": "switch-a", "name": "Switch A", "type": "switch", "ip": "10.0.1.2" },
+              { "id": "host-a", "name": "Host A", "type": "workstation", "ip": "10.0.1.5" }
+            ],
+            "connections": [
+              { "from": "switch-a", "to": "router-a" },
+              { "from": "switch-a", "to": "host-a" }
+            ]
+          },
+          {
+            "id": "sub-b",
+            "name": "Subnet B",
+            "cidr": "10.0.2.0/24",
+            "gateway": "10.0.2.1",
+            "containers": [
+              { "id": "router-b", "name": "Router B", "type": "router", "ip": "10.0.2.1" },
+              { "id": "switch-b", "name": "Switch B", "type": "switch", "ip": "10.0.2.2" },
+              { "id": "host-b", "name": "Host B", "type": "workstation", "ip": "10.0.2.5" }
+            ],
+            "connections": [
+              { "from": "switch-b", "to": "router-b" },
+              { "from": "switch-b", "to": "host-b" }
+            ]
+          }
+        ],
+        "subnetConnections": [
+          { "from": "sub-a", "to": "sub-b" }
+        ]
+      }
+    ],
+    "siteConnections": []
+  }
+}

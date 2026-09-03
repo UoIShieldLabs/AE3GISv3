@@ -1,4 +1,4 @@
-import type { TopologyData, Site, Subnet, Container, Connection, Scenario, AttackPhase } from '../data/sampleTopology';
+import type { TopologyData, Site, Subnet, Container, Connection, Scenario, AttackPhase } from '../types/topology';
 import { generateId } from '../utils/idGenerator';
 import { getNextAvailableIp } from '../utils/validation';
 

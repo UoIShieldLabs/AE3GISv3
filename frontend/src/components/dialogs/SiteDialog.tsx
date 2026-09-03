@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
-import type { Site } from '../../data/sampleTopology';
+import type { Site } from '../../types/topology';
 
 interface SiteDialogProps {
   open: boolean;

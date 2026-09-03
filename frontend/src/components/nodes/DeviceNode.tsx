@@ -1,10 +1,10 @@
 import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
-import type { Container } from '../../data/sampleTopology';
-import { typeColors } from '../ContainerAspects'
-import { typeLabels } from '../ContainerAspects'
-import type { ContainerType } from '../ContainerAspects';
+import type { Container } from '../../types/topology';
+import { typeColors } from '../../catalog/catalog'
+import { typeLabels } from '../../catalog/catalog'
+import type { ContainerType } from '../../catalog/catalog';
 
 export type DeviceNodeData = {
   container: Container;
@@ -99,6 +99,14 @@ function DeviceIcon({ type }: { type: ContainerType }) {
           <path d="M8 10h16" stroke={color} strokeWidth="1" opacity="0.7" />
           <rect x="12" y="18" width="8" height="2" fill={color} opacity="0.8" />
           <circle cx="16" cy="26" r="1.5" fill={color} opacity="0.8" />
+        </svg>
+      );
+
+    default:
+      return (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="7" y="9" width="18" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(156,163,175,0.10)" />
+          <circle cx="16" cy="16" r="3" stroke={color} strokeWidth="1.5" />
         </svg>
       );
   }

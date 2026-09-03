@@ -25,9 +25,9 @@ import { TopologyDispatchContext } from '../store/TopologyContext';
 import { AuthContext } from '../store/AuthContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
-import type { Subnet, Container } from '../data/sampleTopology';
-import { typeColors } from './ContainerAspects';
-import type { ContainerType } from './ContainerAspects';
+import type { Subnet, Container } from '../types/topology';
+import { typeColors } from '../catalog/catalog';
+import type { ContainerType } from '../catalog/catalog';
 
 const nodeTypes = { device: DeviceNode, hmi: HmiNode };
 const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
@@ -37,30 +37,17 @@ const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 const TYPE_RANK: Partial<Record<string, number>> = { router: 0, firewall: 1, switch: 2 };
 const getTypeRank = (type: string) => TYPE_RANK[type] ?? 3;
 
-function isHmiContainer(container: Container): boolean {
-  return container.type === 'hmi' || (container.type === 'workstation' && /hmi/i.test(container.name));
-}
-
-function webUiPort(container: Container): number {
-  const raw = container.metadata?.webUiPort;
-  const parsed = raw ? Number(raw) : NaN;
-  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
-  if (container.type === 'plc' || isHmiContainer(container)) return 8080;
-  return 80;
-}
-
 interface LanViewProps {
   subnet: Subnet;
   siteId: string;
   onSelectContainer: (container: Container) => void;
   onOpenTerminal: (container: Container) => void;
   onDeselect: () => void;
-  topologyId: string | null;
   readOnly?: boolean;
   onPurdue?: () => void;
 }
 
-export function LanView({ subnet, siteId, topologyId, onSelectContainer, onOpenTerminal, onDeselect, readOnly, onPurdue }: LanViewProps) {
+export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onDeselect, readOnly, onPurdue }: LanViewProps) {
   const dispatch = useContext(TopologyDispatchContext);
   const { fitView } = useReactFlow();
   const auth = useContext(AuthContext);
@@ -226,19 +213,6 @@ const visibleContainers = useMemo(
     if (!container) return;
 
     const items: ContextMenuItem[] = [];
-
-    // Allow Web UI access for appropriate types and HMI workstation
-    if ((['web-server', 'plc', 'hmi'].includes(container.type) || isHmiContainer(container)) && auth?.token && topologyId) {
-      items.push({
-        label: '🌐 Open Web UI',
-        onClick: () => {
-          const base = `${window.location.origin}/api/proxy/${topologyId}/${container.id}`;
-          const hmiPath = (container.type === 'hmi' || isHmiContainer(container)) ? '/ScadaBR' : '/';
-          const url = `${base}${hmiPath}?token=${auth.token}&port=${webUiPort(container)}`;
-          window.open(url, '_blank');
-        },
-      });
-    }
 
     if (!readOnly) {
       items.push(

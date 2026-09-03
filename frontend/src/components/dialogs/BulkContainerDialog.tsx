@@ -2,8 +2,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
 import { isValidIp, isIpInCidr, getAvailableIps, getSubnetCapacity } from '../../utils/validation';
-import { typeOptions, menuHierarchy, typeDisplayNames } from '../ContainerAspects';
-import type { ContainerType } from '../ContainerAspects';
+import { typeOptions, menuHierarchy, typeDisplayNames } from '../../catalog/catalog';
+import type { ContainerType } from '../../catalog/catalog';
 
 const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
 
@@ -146,9 +146,7 @@ const handleSubmit = () => {
       // auto-assign the default tag from menuHierarchy based on the row's type.
       if (!extractedTag) {
         for (const category of Object.values(menuHierarchy)) {
-          // @ts-expect-error - category indexing is safe here based on how menuHierarchy is built
           if (category[e.type] && category[e.type].length > 0) {
-            // @ts-expect-error
             extractedTag = category[e.type][0]; 
             break;
           }

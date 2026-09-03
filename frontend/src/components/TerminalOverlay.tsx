@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import type { Container } from '../data/sampleTopology';
+import type { Container } from '../types/topology';
 import { wsUrl as buildWsUrl, getAuthToken } from '../api/client';
 
 export interface TerminalOverlayProps {
@@ -12,7 +12,6 @@ export interface TerminalOverlayProps {
   onClose: (id: string) => void;
   backendId: string | null;
   deployStatus: string;
-  topoName: string;
   minimized: boolean;
   onMinimizedChange: (minimized: boolean) => void;
 }
@@ -23,7 +22,6 @@ interface TerminalSessionProps {
   container: Container;
   backendId: string | null;
   deployStatus: string;
-  topoName: string;
   active: boolean;
 }
 
@@ -235,7 +233,6 @@ export function TerminalOverlay({
   onClose,
   backendId,
   deployStatus,
-  topoName,
   minimized,
   onMinimizedChange,
 }: TerminalOverlayProps) {
@@ -322,7 +319,6 @@ export function TerminalOverlay({
           container={c}
           backendId={backendId}
           deployStatus={deployStatus}
-          topoName={topoName}
           active={c.id === activeId && !minimized}
         />
       ))}

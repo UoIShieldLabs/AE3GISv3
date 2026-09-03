@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
-import type { Container } from '../../data/sampleTopology';
+import type { Container } from '../../types/topology';
 
 interface ContainerConfigDialogProps {
   open: boolean;

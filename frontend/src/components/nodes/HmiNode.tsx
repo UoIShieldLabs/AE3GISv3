@@ -1,7 +1,7 @@
 import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
-import type { Container } from '../../data/sampleTopology';
+import type { Container } from '../../types/topology';
 
 export type HmiNodeData = {
   container: Container;
