@@ -4,10 +4,9 @@ import { FormField } from '../ui/FormField';
 import { SelectField } from '../ui/SelectField';
 import { isValidIp, isIpInCidr, getNextAvailableIp, getSubnetCapacity } from '../../utils/validation';
 import type { Container } from '../../types/topology';
-import { typeOptions, menuHierarchy, typeDisplayNames } from '../../catalog/catalog';
+import { menuHierarchy, typeDisplayNames, displayNameFor } from '../../catalog/catalog';
 import type { ContainerType } from '../../catalog/catalog';
 
-const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
 
 const statusOptions = [
   { value: 'running', label: 'Running' },
@@ -34,6 +33,7 @@ interface ContainerDialogProps {
 }
 
 function getNextName(existingNames: string[], base: string): string {
+  base = base || 'Node';
   const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`^${escaped}\\s*(\\d+)$`, 'i');
   let max = 0;
@@ -47,7 +47,7 @@ function getNextName(existingNames: string[], base: string): string {
 function ContainerDialogInner({ onClose, onSubmit, initial, subnetCidr, takenIps = [], existingNames }: Omit<ContainerDialogProps, 'open'>) {
   const defaultIp = initial?.ip ?? (subnetCidr ? getNextAvailableIp(subnetCidr, takenIps) ?? '' : '');
   const initialType: ContainerType = initial?.type ?? 'workstation';
-  const defaultName = initial?.name ?? (existingNames ? getNextName(existingNames, typeLabel[initialType]) : '');
+  const defaultName = initial?.name ?? (existingNames ? getNextName(existingNames, displayNameFor(initialType)) : '');
 
   const [name, setName] = useState(defaultName);
   const [nameIsAuto, setNameIsAuto] = useState(!initial);
@@ -307,7 +307,7 @@ const handleSubmit = (e: React.FormEvent) => {
                                   setIsMenuOpen(false);
                                   
                                   if (nameIsAuto && existingNames) {
-                                    setName(getNextName(existingNames, typeLabel[selectedType]));
+                                    setName(getNextName(existingNames, displayNameFor(selectedType)));
                                   }
                                 }}
                                 style={{

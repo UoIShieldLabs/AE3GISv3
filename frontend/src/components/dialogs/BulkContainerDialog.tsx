@@ -2,10 +2,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { FormField } from '../ui/FormField';
 import { isValidIp, isIpInCidr, getAvailableIps, getSubnetCapacity } from '../../utils/validation';
-import { typeOptions, menuHierarchy, typeDisplayNames } from '../../catalog/catalog';
+import { menuHierarchy, typeDisplayNames, displayNameFor } from '../../catalog/catalog';
 import type { ContainerType } from '../../catalog/catalog';
 
-const typeLabel = Object.fromEntries(typeOptions.map(o => [o.value, o.label])) as Record<ContainerType, string>;
 
 interface BulkEntry {
   key: number;
@@ -28,7 +27,7 @@ let nextKey = 0;
 
 function BulkContainerDialogInner({ onClose, onSubmit, subnetCidr, takenIps, existingNames = [] }: Omit<BulkContainerDialogProps, 'open'>) {
   // Generator fields
-  const [prefix, setPrefix] = useState(typeLabel['workstation']);
+  const [prefix, setPrefix] = useState(displayNameFor('workstation'));
   const [prefixIsAuto, setPrefixIsAuto] = useState(true);
   const [genType, setGenType] = useState<ContainerType>('workstation');
   const [genImage, setGenImage] = useState<string>('');
@@ -332,7 +331,7 @@ const handleSubmit = () => {
                                       setGenType(selectedType);
                                       setGenImage(tag); 
                                       setActiveMenu(null);
-                                      if (prefixIsAuto) setPrefix(typeLabel[selectedType]);
+                                      if (prefixIsAuto) setPrefix(displayNameFor(selectedType));
                                     }}
                                     style={{ padding: '8px 12px 8px 36px', color: 'var(--text-primary)', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                                     onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--neon-green)'; }}
