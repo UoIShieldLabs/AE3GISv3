@@ -92,3 +92,11 @@ export function displayNameFor(type: string): string {
 export function defaultImageFor(type: string): string {
   return _catalog?.types[type]?.defaultImage ?? (_catalog?.defaults?.host_image ?? '');
 }
+
+/** Layout rank for a type (routers on top, switches, then hosts). */
+export function rankFor(type: string): number {
+  const role = typeRoles[type];
+  if (role === 'router') return 0;
+  if (role === 'switch') return 1;
+  return 2;
+}

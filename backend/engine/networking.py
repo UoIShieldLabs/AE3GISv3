@@ -11,6 +11,7 @@ Ported from the original ContainerLab YAML generator, preserving its
 multi-homing-aware behaviour, but decoupled from image lookup (now catalog
 driven) and from clab node/exec schema.
 """
+
 from __future__ import annotations
 
 import ipaddress
@@ -29,10 +30,11 @@ _PTP_BASE = "10.255.0"
 @dataclass
 class Interface:
     """A single network interface on a node."""
-    name: str                       # e.g. "eth1"
-    collision_domain: str           # the L2 segment (Kathara link) this attaches to
-    ip: str | None = None           # host IP, no prefix
-    prefix_len: str | None = None   # e.g. "24"
+
+    name: str  # e.g. "eth1"
+    collision_domain: str  # the L2 segment (Kathara link) this attaches to
+    ip: str | None = None  # host IP, no prefix
+    prefix_len: str | None = None  # e.g. "24"
 
     @property
     def index(self) -> int:
@@ -42,10 +44,11 @@ class Interface:
 @dataclass
 class NodePlan:
     """A container to instantiate, with its interfaces and boot commands."""
+
     id: str
     name: str
     type: str
-    role: str                       # router | switch | host
+    role: str  # router | switch | host
     image: str
     interfaces: list[Interface] = field(default_factory=list)
     startup: list[str] = field(default_factory=list)
@@ -54,6 +57,7 @@ class NodePlan:
 @dataclass
 class LabPlan:
     """The full, engine-agnostic realisation of a topology."""
+
     name: str
     nodes: list[NodePlan] = field(default_factory=list)
 
@@ -121,7 +125,9 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
 
             if not gateway:
                 for c in containers:
-                    if catalog.role_for(c.get("type", "")) == "router" and _gateway_belongs_to_subnet(c.get("ip", ""), cidr):
+                    if catalog.role_for(
+                        c.get("type", "")
+                    ) == "router" and _gateway_belongs_to_subnet(c.get("ip", ""), cidr):
                         gateway = c.get("ip", "")
                         break
 
@@ -135,13 +141,15 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
                 container_role.setdefault(cid, catalog.role_for(ctype))
                 container_name.setdefault(cid, c.get("name") or cid)
                 container_image.setdefault(cid, catalog.resolve_image(ctype, c.get("image")))
-                container_memberships[cid].append({
-                    "subnet_id": sid,
-                    "cidr": cidr,
-                    "ip": c.get("ip", ""),
-                    "prefix_len": pfx,
-                    "gateway": gateway,
-                })
+                container_memberships[cid].append(
+                    {
+                        "subnet_id": sid,
+                        "cidr": cidr,
+                        "ip": c.get("ip", ""),
+                        "prefix_len": pfx,
+                        "gateway": gateway,
+                    }
+                )
 
     def _primary(cid: str) -> dict:
         return (container_memberships.get(cid) or [{}])[0]
@@ -203,8 +211,12 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
         return iface
 
     def _preregister(conn: dict) -> None:
-        from_id = _resolve_endpoint(conn.get("fromContainer") or conn.get("from")) or (conn.get("fromContainer") or conn.get("from"))
-        to_id = _resolve_endpoint(conn.get("toContainer") or conn.get("to")) or (conn.get("toContainer") or conn.get("to"))
+        from_id = _resolve_endpoint(conn.get("fromContainer") or conn.get("from")) or (
+            conn.get("fromContainer") or conn.get("from")
+        )
+        to_id = _resolve_endpoint(conn.get("toContainer") or conn.get("to")) or (
+            conn.get("toContainer") or conn.get("to")
+        )
         if from_id and conn.get("fromInterface"):
             iface_counter[from_id] = max(iface_counter[from_id], _eth_index(conn["fromInterface"]))
             container_ifaces[from_id].add(conn["fromInterface"])
@@ -317,9 +329,13 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
             routers_by_subnet[cidr].append(cid)
     for cidr, cids in routers_by_subnet.items():
         for i, cid_a in enumerate(cids):
-            for cid_b in cids[i + 1:]:
-                ip_a = next((m["ip"] for m in container_memberships[cid_a] if m["cidr"] == cidr), None)
-                ip_b = next((m["ip"] for m in container_memberships[cid_b] if m["cidr"] == cidr), None)
+            for cid_b in cids[i + 1 :]:
+                ip_a = next(
+                    (m["ip"] for m in container_memberships[cid_a] if m["cidr"] == cidr), None
+                )
+                ip_b = next(
+                    (m["ip"] for m in container_memberships[cid_b] if m["cidr"] == cidr), None
+                )
                 if ip_a and ip_b:
                     router_links[cid_a].append((cid_b, ip_b))
                     router_links[cid_b].append((cid_a, ip_a))
@@ -378,9 +394,13 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
         ]
 
         new_ifaces = [remap[o] for o in old_ifaces]
-        new_iface_ips = {remap[k[1]]: v for k, v in iface_ips.items() if k[0] == cid and k[1] in remap}
+        new_iface_ips = {
+            remap[k[1]]: v for k, v in iface_ips.items() if k[0] == cid and k[1] in remap
+        }
         old_home = home_iface.get(cid)
-        new_home = remap.get(old_home) if old_home in remap else (new_ifaces[0] if new_ifaces else None)
+        new_home = (
+            remap.get(old_home) if old_home in remap else (new_ifaces[0] if new_ifaces else None)
+        )
 
         startup = _startup_commands(
             role=role,
@@ -393,15 +413,17 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
             static_routes=router_static_routes.get(cid, []),
         )
 
-        plan.nodes.append(NodePlan(
-            id=cid,
-            name=container_name.get(cid, cid),
-            type=ctype,
-            role=role,
-            image=container_image.get(cid, catalog.default_image_for(ctype)),
-            interfaces=interfaces,
-            startup=startup,
-        ))
+        plan.nodes.append(
+            NodePlan(
+                id=cid,
+                name=container_name.get(cid, cid),
+                type=ctype,
+                role=role,
+                image=container_image.get(cid, catalog.default_image_for(ctype)),
+                interfaces=interfaces,
+                startup=startup,
+            )
+        )
     return plan
 
 
@@ -428,9 +450,9 @@ def _startup_commands(
             iface_list = " ".join(ifaces)
             first = ifaces[0]
             cmds.append(
-                f"for i in {iface_list}; do ip link set \"$i\" up 2>/dev/null || true; done; "
+                f'for i in {iface_list}; do ip link set "$i" up 2>/dev/null || true; done; '
                 "ip link show br0 >/dev/null 2>&1 || ip link add br0 type bridge || true; "
-                f"for i in {iface_list}; do ip link set \"$i\" master br0 2>/dev/null || true; done; "
+                f'for i in {iface_list}; do ip link set "$i" master br0 2>/dev/null || true; done; '
                 "ip link set br0 up 2>/dev/null || true"
             )
             if ip:

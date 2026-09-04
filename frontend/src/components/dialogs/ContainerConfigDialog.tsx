@@ -6,16 +6,16 @@ interface ContainerConfigDialogProps {
   open: boolean;
   onClose: () => void;
   container: Container | null;
-  onSave: (config: Record<string, any>) => void;
+  onSave: (config: Record<string, string>) => void;
 }
 
 function ContainerConfigDialogInner({ onClose, container, onSave }: Omit<ContainerConfigDialogProps, 'open'>) {
   // Initialize state directly from the container config
-  const [localConfig, setLocalConfig] = useState<Record<string, any>>(container?.config || {});
+  const [localConfig, setLocalConfig] = useState<Record<string, string>>((container?.config as Record<string, string>) || {});
 
   if (!container) return null;
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: string) => {
     // 1. Update the local text box immediately
     const updatedConfig = { ...localConfig, [key]: value };
     setLocalConfig(updatedConfig);

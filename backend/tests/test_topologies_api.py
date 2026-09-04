@@ -48,7 +48,57 @@ def test_crud_roundtrip():
 def test_import_json():
     with client() as c:
         payload = b'{"name":"Imp","topology":{"sites":[],"siteConnections":[]}}'
-        r = c.post("/api/topologies/import-json", headers=INSTR,
-                   files={"file": ("t.json", payload, "application/json")})
+        r = c.post(
+            "/api/topologies/import-json",
+            headers=INSTR,
+            files={"file": ("t.json", payload, "application/json")},
+        )
         assert r.status_code == 201
         assert r.json()["name"] == "Imp"
+
+
+def test_unknown_fields_round_trip():
+    """Backend stores topology data as opaque JSON: unknown fields survive verbatim,
+    proving the frontend is not coupled to a backend schema."""
+    with client() as c:
+        payload = {
+            "name": "Opaque",
+            "data": {
+                "name": "Opaque",
+                "sites": [
+                    {
+                        "id": "s1",
+                        "name": "S1",
+                        "subnets": [
+                            {
+                                "id": "sub1",
+                                "name": "N",
+                                "cidr": "10.0.0.0/24",
+                                "containers": [
+                                    {
+                                        "id": "c1",
+                                        "name": "c",
+                                        "type": "workstation",
+                                        "ip": "10.0.0.5",
+                                        "customField": 123,
+                                        "future": {"nested": True},
+                                    }
+                                ],
+                                "connections": [],
+                            }
+                        ],
+                        "subnetConnections": [],
+                    }
+                ],
+                "siteConnections": [],
+                "brandNewTopLevelKey": "kept",
+            },
+        }
+        r = c.post("/api/topologies", headers=INSTR, json=payload)
+        assert r.status_code == 201
+        tid = r.json()["id"]
+        got = c.get(f"/api/topologies/{tid}", headers=INSTR).json()["data"]
+        assert got["brandNewTopLevelKey"] == "kept"
+        container = got["sites"][0]["subnets"][0]["containers"][0]
+        assert container["customField"] == 123
+        assert container["future"] == {"nested": True}

@@ -2,6 +2,7 @@ import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
 import type { Container } from '../../types/topology';
+import { colorFor } from '../../catalog/catalog';
 
 export type HmiNodeData = {
   container: Container;
@@ -11,10 +12,10 @@ export type HmiNodeData = {
 
 export type HmiNodeType = Node<HmiNodeData, 'hmi'>;
 
-const HMI_COLOR = '#33ccff';
+
 
 function HmiIcon() {
-  const color = HMI_COLOR;
+  const color = colorFor('hmi');
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <rect x="6" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(51,204,255,0.08)" />
@@ -51,7 +52,7 @@ export const HmiNode = memo(function HmiNode({ data }: NodeProps<HmiNodeType>) {
         gap: '5px',
         padding: '14px 18px',
         background: '#14141e',
-        border: `1px solid ${HMI_COLOR}33`,
+        border: `1px solid ${colorFor('hmi')}33`,
         borderRadius: '6px',
         transition: 'all 0.2s ease',
         minWidth: '115px',
@@ -59,25 +60,25 @@ export const HmiNode = memo(function HmiNode({ data }: NodeProps<HmiNodeType>) {
       onClick={handleClick}
       onMouseEnter={(e) => {
         const el = e.currentTarget;
-        el.style.borderColor = `${HMI_COLOR}88`;
-        el.style.boxShadow = `0 0 15px ${HMI_COLOR}22`;
+        el.style.borderColor = `${colorFor('hmi')}88`;
+        el.style.boxShadow = `0 0 15px ${colorFor('hmi')}22`;
         el.style.background = '#1a1a28';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget;
-        el.style.borderColor = `${HMI_COLOR}33`;
+        el.style.borderColor = `${colorFor('hmi')}33`;
         el.style.boxShadow = 'none';
         el.style.background = '#14141e';
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: HMI_COLOR, width: 6, height: 6, border: 'none' }} />
+      <Handle type="target" position={Position.Top} style={{ background: colorFor('hmi'), width: 6, height: 6, border: 'none' }} />
 
       <HmiIcon />
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",
         fontSize: '14px',
-        color: HMI_COLOR,
+        color: colorFor('hmi'),
         letterSpacing: '1px',
         opacity: 0.8,
       }}>
@@ -119,7 +120,7 @@ export const HmiNode = memo(function HmiNode({ data }: NodeProps<HmiNodeType>) {
         }} />
       )}
 
-      <Handle type="source" position={Position.Bottom} style={{ background: HMI_COLOR, width: 6, height: 6, border: 'none' }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: colorFor('hmi'), width: 6, height: 6, border: 'none' }} />
     </div>
   );
 });

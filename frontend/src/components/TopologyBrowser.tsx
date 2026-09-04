@@ -38,7 +38,6 @@ export function TopologyBrowser({ open, onClose, onLoad, currentId }: TopologyBr
     void listTopologies()
       .then((topos) => { setLoading(false); setTopologies(topos); })
       .catch(() => { setLoading(false); setTopologies([]); });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     listPresets()
       .then(res => setPresets(res.presets))

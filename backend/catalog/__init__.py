@@ -5,6 +5,7 @@ container image and decide how to configure a node) and the frontend (served via
 ``GET /api/catalog``) consume this. Images are data here, never hardcoded in
 Python, so a new image set ships by editing the JSON only.
 """
+
 from __future__ import annotations
 
 import json

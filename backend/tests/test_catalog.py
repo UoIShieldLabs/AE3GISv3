@@ -14,7 +14,7 @@ def test_roles_are_valid():
 
 def test_router_and_switch_roles():
     assert catalog.role_for("router") == "router"
-    assert catalog.role_for("firewall") == "router"   # firewall behaves as a router in the core
+    assert catalog.role_for("firewall") == "router"  # firewall behaves as a router in the core
     assert catalog.role_for("switch") == "switch"
     assert catalog.role_for("workstation") == "host"
 

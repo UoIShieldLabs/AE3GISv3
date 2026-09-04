@@ -1,4 +1,5 @@
 """Serve the node-type catalog to the frontend (single source of truth)."""
+
 from fastapi import APIRouter
 
 import catalog

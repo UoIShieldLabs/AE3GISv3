@@ -26,7 +26,7 @@ import { AuthContext } from '../store/AuthContext';
 import { computeLayout, computeCircleLayout, computeGridLayout, type LayoutMode } from '../utils/autoLayout';
 import { generateId } from '../utils/idGenerator';
 import type { Subnet, Container } from '../types/topology';
-import { typeColors } from '../catalog/catalog';
+import { typeColors, rankFor } from '../catalog/catalog';
 import type { ContainerType } from '../catalog/catalog';
 
 const nodeTypes = { device: DeviceNode, hmi: HmiNode };
@@ -34,8 +34,7 @@ const edgeTypes = { neon: NeonEdge, neonDirect: NeonEdgeDirect };
 
 // Layout hierarchy: lower number = higher rank (router → switch → everything else)
 // Layout hierarchy: lower number = higher rank (router → firewall → switch → everything else)
-const TYPE_RANK: Partial<Record<string, number>> = { router: 0, firewall: 1, switch: 2 };
-const getTypeRank = (type: string) => TYPE_RANK[type] ?? 3;
+
 
 interface LanViewProps {
   subnet: Subnet;
@@ -75,7 +74,7 @@ export function LanView({ subnet, siteId, onSelectContainer, onOpenTerminal, onD
 
 const visibleContainers = useMemo(
   () => [...subnet.containers]
-    .sort((a, b) => getTypeRank(a.type) - getTypeRank(b.type)),
+    .sort((a, b) => rankFor(a.type) - rankFor(b.type)),
   [subnet.containers]
 );
   const visibleContainerIds = useMemo(
@@ -90,7 +89,7 @@ const visibleContainers = useMemo(
   );
   // Edges oriented to flow router→switch→devices for hierarchy-aware layouts
   const hierarchyEdges = useMemo(() => {
-    const idToRank = new Map(subnet.containers.map(c => [c.id, getTypeRank(c.type)]));
+    const idToRank = new Map(subnet.containers.map(c => [c.id, rankFor(c.type)]));
     return visibleConnections.map(c => {
       const fromRank = idToRank.get(c.from) ?? 2;
       const toRank = idToRank.get(c.to) ?? 2;
@@ -122,7 +121,7 @@ const visibleContainers = useMemo(
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
 
     if (layoutNodes.length > 0) {
-      const nodePriority = new Map(visibleContainers.map(c => [c.id, getTypeRank(c.type)]));
+      const nodePriority = new Map(visibleContainers.map(c => [c.id, rankFor(c.type)]));
       if (layoutMode === 'circle') {
         computedPositions = computeCircleLayout(
           layoutNodes,
@@ -382,7 +381,7 @@ const visibleContainers = useMemo(
     // Let's implement it to reset positions to the current layoutMode's computed positions.
 
     const layoutNodes = visibleContainers.map(c => ({ id: c.id, width: 110, height: 100 }));
-    const nodePriority = new Map(visibleContainers.map(c => [c.id, getTypeRank(c.type)]));
+    const nodePriority = new Map(visibleContainers.map(c => [c.id, rankFor(c.type)]));
     let computedPositions: Map<string, { x: number; y: number }> = new Map();
     if (layoutMode === 'circle') {
       computedPositions = computeCircleLayout(

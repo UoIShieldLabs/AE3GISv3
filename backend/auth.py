@@ -4,12 +4,13 @@ Student/classroom auth is deferred in this foundation pass; only the instructor
 bearer token is honoured. WebSocket routes accept the token via `?token=`
 because browsers cannot set headers on the upgrade request.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import Header, HTTPException, Query, Request
+from fastapi import Header, HTTPException, Request
 
 from config import INSTRUCTOR_TOKEN
 

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
-import type { ContainerType } from '../../catalog/catalog';
+import { colorFor, type ContainerType } from '../../catalog/catalog';
 
 export type RouterNodeData = {
   label: string;
@@ -11,15 +11,11 @@ export type RouterNodeData = {
 
 export type RouterNodeType = Node<RouterNodeData, 'routerNode'>;
 
-const COLOR_ROUTER   = '#ff00ff';
-const COLOR_FIREWALL = '#ff3344';
 
-function color(type: ContainerType): string {
-  return type === 'firewall' ? COLOR_FIREWALL : COLOR_ROUTER;
-}
+
 
 function RouterIcon({ type }: { type: ContainerType }) {
-  const c = color(type);
+  const c = colorFor(type);
   if (type === 'firewall') {
     return (
       <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
@@ -40,7 +36,7 @@ function RouterIcon({ type }: { type: ContainerType }) {
 }
 
 export const RouterNode = memo(function RouterNode({ data }: NodeProps<RouterNodeType>) {
-  const c = color(data.type);
+  const c = colorFor(data.type);
   const label = data.type === 'firewall' ? 'FW' : 'RTR';
 
   return (

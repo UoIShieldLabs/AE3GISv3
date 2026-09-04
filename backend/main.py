@@ -1,4 +1,5 @@
 """AE3GIS backend — FastAPI application factory."""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import models  # noqa: F401 - register ORM metadata before create_all
 from config import CORS_ORIGINS
-from database import Base, engine as db_engine
+from database import Base
+from database import engine as db_engine
 from engine.kathara.engine import engine as deployment_engine
 from routers import catalog, deployment, presets, topologies
 

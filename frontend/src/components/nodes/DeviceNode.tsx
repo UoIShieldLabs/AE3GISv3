@@ -2,9 +2,8 @@ import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps, Node } from '@xyflow/react';
 import type { Container } from '../../types/topology';
-import { typeColors } from '../../catalog/catalog'
-import { typeLabels } from '../../catalog/catalog'
-import type { ContainerType } from '../../catalog/catalog';
+import { typeLabels, colorFor } from '../../catalog/catalog'
+import { NodeGlyph } from '../../catalog/icons';
 
 export type DeviceNodeData = {
   container: Container;
@@ -14,107 +13,9 @@ export type DeviceNodeData = {
 
 export type DeviceNodeType = Node<DeviceNodeData, 'device'>;
 
-function DeviceIcon({ type }: { type: ContainerType }) {
-  const color = typeColors[type];
-
-  switch (type) {
-    case 'router':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="12" stroke={color} strokeWidth="1.5" fill="rgba(255,0,255,0.08)" />
-          <path d="M16 8v16M8 16h16" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M16 8l-3 3M16 8l3 3M16 24l-3-3M16 24l3-3M8 16l3-3M8 16l3 3M24 16l-3-3M24 16l-3 3"
-            stroke={color} strokeWidth="1" strokeLinecap="round" />
-        </svg>
-      );
-
-    case 'firewall':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M16 4L4 10v8c0 6.5 5.1 12.6 12 14 6.9-1.4 12-7.5 12-14v-8L16 4z"
-            stroke={color} strokeWidth="1.5" fill="rgba(255,51,68,0.08)" strokeLinejoin="round" />
-          <path d="M12 16h8M12 20h8" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      );
-
-    case 'switch':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="4" y="10" width="24" height="12" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(255,170,0,0.08)" />
-          <circle cx="10" cy="16" r="2" fill={color} opacity="0.6" />
-          <circle cx="16" cy="16" r="2" fill={color} opacity="0.6" />
-          <circle cx="22" cy="16" r="2" fill={color} opacity="0.6" />
-        </svg>
-      );
-
-    case 'web-server':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="6" y="4" width="20" height="24" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(0,255,159,0.08)" />
-          <line x1="10" y1="10" x2="22" y2="10" stroke={color} strokeWidth="1" opacity="0.6" />
-          <line x1="10" y1="14" x2="22" y2="14" stroke={color} strokeWidth="1" opacity="0.6" />
-          <line x1="10" y1="18" x2="22" y2="18" stroke={color} strokeWidth="1" opacity="0.6" />
-          <circle cx="16" cy="24" r="1.5" fill={color} opacity="0.4" />
-        </svg>
-      );
-
-    case 'file-server':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="6" y="4" width="20" height="24" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(0,212,255,0.08)" />
-          <path d="M10 4h6l2 4H10V4z" stroke={color} strokeWidth="1" fill="rgba(0,212,255,0.15)" />
-          <line x1="10" y1="14" x2="22" y2="14" stroke={color} strokeWidth="1" opacity="0.4" />
-          <line x1="10" y1="18" x2="22" y2="18" stroke={color} strokeWidth="1" opacity="0.4" />
-          <line x1="10" y1="22" x2="22" y2="22" stroke={color} strokeWidth="1" opacity="0.4" />
-        </svg>
-      );
-
-    case 'plc':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="5" y="6" width="22" height="20" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(255,170,0,0.08)" />
-          <rect x="8" y="9" width="4" height="4" rx="1" fill={color} opacity="0.4" />
-          <rect x="14" y="9" width="4" height="4" rx="1" fill={color} opacity="0.6" />
-          <rect x="20" y="9" width="4" height="4" rx="1" fill={color} opacity="0.3" />
-          <line x1="8" y1="18" x2="24" y2="18" stroke={color} strokeWidth="1" opacity="0.3" />
-          <line x1="8" y1="22" x2="24" y2="22" stroke={color} strokeWidth="1" opacity="0.3" />
-        </svg>
-      );
-
-    case 'workstation':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="6" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(68,102,255,0.08)" />
-          <line x1="12" y1="24" x2="20" y2="24" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="16" y1="20" x2="16" y2="24" stroke={color} strokeWidth="1.5" />
-          <line x1="10" y1="12" x2="14" y2="12" stroke={color} strokeWidth="1" opacity="0.5" />
-        </svg>
-      );
-
-    case 'hmi':
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="6" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(51,204,255,0.08)" />
-          <path d="M8 14h16" stroke={color} strokeWidth="1" opacity="0.7" />
-          <path d="M8 10h16" stroke={color} strokeWidth="1" opacity="0.7" />
-          <rect x="12" y="18" width="8" height="2" fill={color} opacity="0.8" />
-          <circle cx="16" cy="26" r="1.5" fill={color} opacity="0.8" />
-        </svg>
-      );
-
-    default:
-      return (
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect x="7" y="9" width="18" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(156,163,175,0.10)" />
-          <circle cx="16" cy="16" r="3" stroke={color} strokeWidth="1.5" />
-        </svg>
-      );
-  }
-}
-
 export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNodeType>) {
   const { container, onSelect, onOpenTerminal } = data;
-  const color = typeColors[container.type];
+  const color = colorFor(container.type);
   const typeLabel = typeLabels[container.type];
   const lastClickRef = useRef(0);
 
@@ -161,7 +62,7 @@ export const DeviceNode = memo(function DeviceNode({ data }: NodeProps<DeviceNod
     >
       <Handle type="target" position={Position.Top} style={{ background: color, width: 6, height: 6, border: 'none' }} />
 
-      <DeviceIcon type={container.type} />
+      <NodeGlyph type={container.type} />
 
       <div style={{
         fontFamily: "'Share Tech Mono', monospace",

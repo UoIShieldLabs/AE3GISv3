@@ -7,6 +7,16 @@ on:
     branches: [main]
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gitleaks secret scan
+        run: |
+          VER=8.18.4
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --no-git --redact --exit-code 1 --source .
+
   backend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -17,6 +27,12 @@ jobs:
       - name: Install backend deps
         working-directory: backend
         run: pip install -r requirements-dev.txt
+      - name: Ruff lint
+        working-directory: backend
+        run: ruff check .
+      - name: Ruff format check
+        working-directory: backend
+        run: ruff format --check .
       - name: Run backend tests
         working-directory: backend
         run: python -m pytest -q
@@ -33,6 +49,9 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
+      - name: ESLint
+        working-directory: frontend
+        run: npm run lint
       - name: Build (typecheck + bundle)
         working-directory: frontend
         run: npm run build
@@ -41,7 +60,7 @@ jobs:
         run: npm run test
 
   deploy:
-    needs: [backend-tests, frontend-checks]
+    needs: [secret-scan, backend-tests, frontend-checks]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
