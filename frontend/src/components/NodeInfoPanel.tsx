@@ -67,7 +67,7 @@ export function NodeInfoPanel({
     onClose();
   };
 
-  const handleConfigSave = (configData: Record<string, any>) => {
+  const handleConfigSave = (configData: Record<string, string>) => {
     if (!container || !siteId || !subnetId) return;
     dispatch({
       type: 'UPDATE_CONTAINER',

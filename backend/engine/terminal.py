@@ -5,6 +5,7 @@ to an interactive shell via `docker exec -it`. No `sudo` (the daemon is reached
 through the mounted socket). Adapted from the original ContainerLab exec
 handler, minus the clab naming.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,7 +26,8 @@ log = logging.getLogger(__name__)
 
 def _interactive_shell_command() -> list[str]:
     return [
-        "sh", "-lc",
+        "sh",
+        "-lc",
         (
             "mkdir -p /tmp; "
             "printf 'set horizontal-scroll-mode Off\\nset enable-bracketed-paste Off\\n' >/tmp/ae3gis.inputrc 2>/dev/null || true; "
@@ -59,11 +61,20 @@ async def bridge_terminal(websocket: WebSocket, container_name: str) -> None:
         _resize(80, 24)
         try:
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec",
-                "-e", "TERM=xterm-256color", "-e", "COLUMNS=80", "-e", "LINES=24",
-                "-it", container_name,
+                "docker",
+                "exec",
+                "-e",
+                "TERM=xterm-256color",
+                "-e",
+                "COLUMNS=80",
+                "-e",
+                "LINES=24",
+                "-it",
+                container_name,
                 *_interactive_shell_command(),
-                stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+                stdin=slave_fd,
+                stdout=slave_fd,
+                stderr=slave_fd,
             )
         finally:
             os.close(slave_fd)

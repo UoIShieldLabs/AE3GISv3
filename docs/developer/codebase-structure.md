@@ -58,3 +58,22 @@ Pure functions, no Kathara import, fully unit-tested (`tests/test_networking.py`
 ### Adding a deployment engine
 Implement `engine/base.DeploymentEngine` and swap the singleton in
 `routers/deployment.py`. Nothing else changes.
+
+## Frontend ↔ backend contract
+
+The frontend is deliberately **decoupled** from the backend's data schema:
+
+- The backend stores and serves topology `data` as **opaque JSON**. `schemas.py`
+  types only the API envelope (`TopologyCreate/Update/Record/Summary`, each with
+  `data: dict`); it does not model the topology internals and never strips unknown
+  fields. Round-trip is proven by `tests/test_topologies_api.py::test_unknown_fields_round_trip`.
+- The frontend owns its own view of the data in `src/types/topology.ts` (with an
+  index signature so unknown backend fields pass through the editor). Neither side
+  needs to change when the other adds a field.
+- The only shared contracts are the API envelope and the **node catalog**
+  (`GET /api/catalog`). Per-type display metadata — color, label, icon
+  (`src/catalog/icons.tsx`), layout rank (`rankFor`), Purdue level — is served by
+  the catalog, so adding a node type is ideally a single `node_types.json` edit.
+  The deployment engine reads whatever fields it needs from the stored JSON
+  defensively, so malformed topologies fail at deploy time (with a clear error)
+  rather than being rejected at save time.

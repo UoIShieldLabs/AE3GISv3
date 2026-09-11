@@ -1,105 +1,37 @@
-"""Pydantic request/response models mirroring the frontend topology types.
+"""API request/response envelope models.
 
-`Container.type` is kept as a loose string (validated against the catalog on the
-frontend and by the engine's role lookup) so imported/AI-authored types never
-block a save.
+The topology `data` payload is intentionally opaque JSON: the backend persists
+and serves whatever the frontend sends and does NOT model its internal shape.
+This keeps the frontend fully decoupled — it owns its own view of topology data
+(frontend/src/types/topology.ts) and can add, rename, or drop fields with no
+backend change. The deployment engine reads the fields it needs defensively.
+
+The only cross-tier contracts are these envelope models and the node catalog
+served at GET /api/catalog.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, Field
-
-
-class Container(BaseModel):
-    id: str
-    name: str
-    type: str
-    ip: str = ""
-    kind: str | None = None
-    image: str | None = None
-    status: str | None = None
-    metadata: dict | None = None
-    config: dict | None = None
-    persistencePaths: list[str] | None = None
-
-
-class Connection(BaseModel):
-    from_: str = Field(alias="from")
-    to: str
-    label: str | None = None
-    fromInterface: str | None = None
-    toInterface: str | None = None
-    fromContainer: str | None = None
-    toContainer: str | None = None
-
-    model_config = {"populate_by_name": True}
-
-
-class Subnet(BaseModel):
-    id: str
-    name: str
-    cidr: str
-    gateway: str | None = None
-    containers: list[Container] = Field(default_factory=list)
-    connections: list[Connection] = Field(default_factory=list)
-
-
-class Position(BaseModel):
-    x: float
-    y: float
-
-
-class Site(BaseModel):
-    id: str
-    name: str
-    location: str = ""
-    position: Position = Field(default_factory=lambda: Position(x=100, y=100))
-    subnets: list[Subnet] = Field(default_factory=list)
-    subnetConnections: list[Connection] = Field(default_factory=list)
-
-
-class ScriptExecution(BaseModel):
-    containerId: str
-    script: str
-    args: list[str] | None = None
-
-
-class AttackPhase(BaseModel):
-    id: str
-    name: str
-    description: str | None = None
-    executions: list[ScriptExecution] = Field(default_factory=list)
-
-
-class Scenario(BaseModel):
-    id: str
-    name: str
-    description: str | None = None
-    phases: list[AttackPhase] = Field(default_factory=list)
-
-
-class TopologyData(BaseModel):
-    name: str | None = None
-    sites: list[Site] = Field(default_factory=list)
-    siteConnections: list[Connection] = Field(default_factory=list)
-    scenarios: list[Scenario] | None = None
+from pydantic import BaseModel
 
 
 class TopologyCreate(BaseModel):
     name: str
-    data: TopologyData
+    data: dict[str, Any]
 
 
 class TopologyUpdate(BaseModel):
     name: str | None = None
-    data: TopologyData | None = None
+    data: dict[str, Any] | None = None
 
 
 class TopologyRecord(BaseModel):
     id: str
     name: str
-    data: TopologyData
+    data: dict[str, Any]
     engine_state: dict | None = None
     status: str
     created_at: datetime

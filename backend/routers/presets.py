@@ -40,13 +40,15 @@ def list_presets():
     for f in sorted(PRESETS_DIR.glob("*.json")):
         try:
             data = json.loads(f.read_text())
-            presets.append({
-                "id": f.stem,
-                "name": data.get("name") or f.stem,
-                "description": data.get("description", ""),
-                "scenario_count": len(data.get("topology", {}).get("scenarios", [])),
-                "site_count": len(data.get("topology", {}).get("sites", [])),
-            })
+            presets.append(
+                {
+                    "id": f.stem,
+                    "name": data.get("name") or f.stem,
+                    "description": data.get("description", ""),
+                    "scenario_count": len(data.get("topology", {}).get("scenarios", [])),
+                    "site_count": len(data.get("topology", {}).get("sites", [])),
+                }
+            )
         except (json.JSONDecodeError, KeyError):
             log.warning("Skipping invalid preset file: %s", f.name)
     return {"presets": presets}

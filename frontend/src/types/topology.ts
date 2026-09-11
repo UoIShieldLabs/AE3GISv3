@@ -1,6 +1,12 @@
-// Shared domain types — the single source of truth for topology shape.
-// (Moved out of the old types/topology.ts.) ContainerType is a plain
-// string: the set of valid types is data, served by the backend catalog.
+// Frontend-owned topology types.
+//
+// These are the FRONTEND's own view of topology data and are deliberately NOT
+// synced with the backend. The backend persists and serves topology `data` as
+// opaque JSON (it does not model these fields), so this file can add, rename,
+// or drop fields with no backend change. Container carries an index signature
+// so unknown fields coming from the backend round-trip through the editor
+// untouched. The set of valid container types is data, served by the backend
+// catalog (GET /api/catalog).
 
 export type ContainerType = string;
 
@@ -15,6 +21,8 @@ export interface Container {
   config?: Record<string, unknown>;
   metadata?: Record<string, string>;
   persistencePaths?: string[];
+  // Unknown fields from the backend pass through untouched (see header).
+  [key: string]: unknown;
 }
 
 export interface Connection {

@@ -3,6 +3,7 @@
 Because the mapping is deterministic, status/exec/destroy can be handled
 statelessly by rebuilding the lab plan from the stored topology.
 """
+
 from __future__ import annotations
 
 import re

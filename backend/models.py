@@ -4,16 +4,17 @@ Classroom tables (ClassSession/StudentSlot) are intentionally omitted in this
 foundation pass — classroom mode is deferred and will be reintroduced on the
 engine abstraction later.
 """
-import uuid
-from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, JSON, String
+import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Column, DateTime, String
 
 from database import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _new_id() -> str:

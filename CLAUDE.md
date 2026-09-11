@@ -46,15 +46,21 @@ deferred feature = extend this interface, not the routers.
 (router|switch|host), `defaultImage`, `images`, `color`, `label`, `icon`,
 `category`, optional `webUiPort`/`purdueLevel`. **Images live here as data, never
 hardcoded in source.** Served at `GET /api/catalog`; the frontend consumes it via
-`src/catalog/`. `role` drives how the engine configures a node; unknown types
-default to `host`.
+`src/catalog/` (colors, labels, icons via `catalog/icons.tsx`, layout rank via
+`rankFor`). `role` drives how the engine configures a node; unknown types default
+to `host`. Adding a node type should be a single `node_types.json` edit. (One
+holdout: `PurdueView` still classifies zones/levels with local logic.)
 
-### Data model
-`Container { id, name, type, ip, image?, status?, metadata?, persistencePaths? }`
-→ `Subnet { cidr, gateway?, containers[], connections[] }` → `Site { subnets[],
-subnetConnections[] }` → `TopologyData { sites[], siteConnections[], scenarios? }`.
-Types: `frontend/src/types/topology.ts` (TS) mirrored by `backend/schemas.py`
-(Pydantic). `type` is a loose string validated against the catalog.
+### Data model — the frontend is decoupled from the backend schema
+There is **no shared topology schema**. The backend persists and serves topology
+`data` as **opaque JSON** (`schemas.py` types only the API envelope:
+`TopologyCreate/Update/Record/Summary`, all with `data: dict`); it does NOT model
+the internal shape and never strips unknown fields. The frontend owns its own view
+of that data in `frontend/src/types/topology.ts` (with an index signature so
+unknown backend fields round-trip). Either side can add/rename/drop fields with no
+change to the other. The deployment engine reads the fields it needs defensively.
+The only cross-tier contracts are the API envelope and the catalog. Do not
+reintroduce a Pydantic mirror of the topology.
 
 **DB:** SQLite. `Topology.data` (JSON) holds the topology; `Topology.engine_state`
 (JSON) holds opaque per-deploy engine state (Kathara lab name + node map).

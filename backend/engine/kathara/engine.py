@@ -7,15 +7,16 @@ runs unprivileged on Linux and Apple silicon alike.
 All Kathara calls are blocking, so they run in a worker thread to keep the
 FastAPI event loop responsive.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 
 from engine.base import NodeStatus
-from engine.networking import build_lab_plan
 from engine.kathara.lab_builder import build_lab
 from engine.kathara.naming import lab_name, machine_name
+from engine.networking import build_lab_plan
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class KatharaEngine:
 
     def _manager(self):
         from Kathara.manager.Kathara import Kathara  # lazy import
+
         return Kathara.get_instance()
 
     async def is_available(self) -> tuple[bool, str]:
@@ -45,6 +47,7 @@ class KatharaEngine:
                 return True, "kathara ready"
             except Exception as exc:  # pragma: no cover - environment dependent
                 return False, f"{type(exc).__name__}: {exc}"
+
         return await asyncio.to_thread(_check)
 
     async def deploy(self, topology_id: str, topology_data: dict) -> dict:

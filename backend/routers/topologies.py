@@ -1,4 +1,5 @@
 """Topology CRUD + JSON import."""
+
 from __future__ import annotations
 
 import json
@@ -20,8 +21,10 @@ def list_topologies(db: Session = Depends(get_db), _=Depends(require_any_auth)):
 
 
 @router.post("", response_model=TopologyRecord, status_code=201)
-def create_topology(body: TopologyCreate, db: Session = Depends(get_db), _=Depends(require_instructor)):
-    topo = Topology(name=body.name, data=body.data.model_dump(by_alias=True))
+def create_topology(
+    body: TopologyCreate, db: Session = Depends(get_db), _=Depends(require_instructor)
+):
+    topo = Topology(name=body.name, data=body.data)
     db.add(topo)
     db.commit()
     db.refresh(topo)
@@ -37,7 +40,7 @@ async def import_json_topology(
     try:
         data = json.loads((await file.read()).decode("utf-8"))
     except Exception as exc:
-        raise HTTPException(400, f"Invalid JSON: {exc}")
+        raise HTTPException(400, f"Invalid JSON: {exc}") from exc
     if not isinstance(data, dict):
         raise HTTPException(400, "Invalid JSON: expected an object")
 
@@ -76,7 +79,7 @@ def update_topology(
     if body.name is not None:
         topo.name = body.name
     if body.data is not None:
-        topo.data = body.data.model_dump(by_alias=True)
+        topo.data = body.data
     db.commit()
     db.refresh(topo)
     return topo

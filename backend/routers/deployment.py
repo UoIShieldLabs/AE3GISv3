@@ -1,4 +1,5 @@
 """Deploy / destroy / status / exec-terminal, backed by the deployment engine."""
+
 from __future__ import annotations
 
 import contextlib
@@ -49,7 +50,7 @@ async def deploy(topology_id: str, db: Session = Depends(get_db), _=Depends(requ
         log.exception("Deploy failed for %s", topology_id)
         topo.status = "error"
         db.commit()
-        raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+        raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
 
 
 @router.post("/{topology_id}/destroy")
@@ -66,7 +67,7 @@ async def destroy(topology_id: str, db: Session = Depends(get_db), _=Depends(req
         log.exception("Destroy failed for %s", topology_id)
         topo.status = "error"
         db.commit()
-        raise HTTPException(500, f"{type(exc).__name__}: {exc}")
+        raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
 
 
 @router.get("/{topology_id}/status")
@@ -123,4 +124,3 @@ async def exec_terminal(
         pass
     finally:
         db.close()
-

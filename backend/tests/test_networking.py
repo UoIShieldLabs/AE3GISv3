@@ -4,24 +4,39 @@ from engine.networking import build_lab_plan
 def _two_subnet_topology():
     return {
         "name": "demo",
-        "sites": [{
-            "id": "s1", "name": "Site 1",
-            "subnets": [
-                {"id": "subA", "name": "A", "cidr": "10.0.1.0/24", "gateway": "10.0.1.1",
-                 "containers": [
-                     {"id": "rA", "name": "Router A", "type": "router", "ip": "10.0.1.1"},
-                     {"id": "swA", "name": "Switch A", "type": "switch", "ip": "10.0.1.2"},
-                     {"id": "hA", "name": "Host A", "type": "workstation", "ip": "10.0.1.5"}],
-                 "connections": [{"from": "swA", "to": "rA"}, {"from": "swA", "to": "hA"}]},
-                {"id": "subB", "name": "B", "cidr": "10.0.2.0/24", "gateway": "10.0.2.1",
-                 "containers": [
-                     {"id": "rB", "name": "Router B", "type": "router", "ip": "10.0.2.1"},
-                     {"id": "swB", "name": "Switch B", "type": "switch", "ip": "10.0.2.2"},
-                     {"id": "hB", "name": "Host B", "type": "workstation", "ip": "10.0.2.5"}],
-                 "connections": [{"from": "swB", "to": "rB"}, {"from": "swB", "to": "hB"}]},
-            ],
-            "subnetConnections": [{"from": "subA", "to": "subB"}],
-        }],
+        "sites": [
+            {
+                "id": "s1",
+                "name": "Site 1",
+                "subnets": [
+                    {
+                        "id": "subA",
+                        "name": "A",
+                        "cidr": "10.0.1.0/24",
+                        "gateway": "10.0.1.1",
+                        "containers": [
+                            {"id": "rA", "name": "Router A", "type": "router", "ip": "10.0.1.1"},
+                            {"id": "swA", "name": "Switch A", "type": "switch", "ip": "10.0.1.2"},
+                            {"id": "hA", "name": "Host A", "type": "workstation", "ip": "10.0.1.5"},
+                        ],
+                        "connections": [{"from": "swA", "to": "rA"}, {"from": "swA", "to": "hA"}],
+                    },
+                    {
+                        "id": "subB",
+                        "name": "B",
+                        "cidr": "10.0.2.0/24",
+                        "gateway": "10.0.2.1",
+                        "containers": [
+                            {"id": "rB", "name": "Router B", "type": "router", "ip": "10.0.2.1"},
+                            {"id": "swB", "name": "Switch B", "type": "switch", "ip": "10.0.2.2"},
+                            {"id": "hB", "name": "Host B", "type": "workstation", "ip": "10.0.2.5"},
+                        ],
+                        "connections": [{"from": "swB", "to": "rB"}, {"from": "swB", "to": "hB"}],
+                    },
+                ],
+                "subnetConnections": [{"from": "subA", "to": "subB"}],
+            }
+        ],
         "siteConnections": [],
     }
 
@@ -82,8 +97,16 @@ def test_point_to_point_collision_domains_have_two_endpoints():
 
 def test_wan_link_shared_between_routers():
     plan = build_lab_plan(_two_subnet_topology(), "demo-lab")
-    rA_wan = {i.collision_domain for i in _node(plan, "rA").interfaces if i.ip and i.ip.startswith("10.255")}
-    rB_wan = {i.collision_domain for i in _node(plan, "rB").interfaces if i.ip and i.ip.startswith("10.255")}
+    rA_wan = {
+        i.collision_domain
+        for i in _node(plan, "rA").interfaces
+        if i.ip and i.ip.startswith("10.255")
+    }
+    rB_wan = {
+        i.collision_domain
+        for i in _node(plan, "rB").interfaces
+        if i.ip and i.ip.startswith("10.255")
+    }
     assert rA_wan and rA_wan == rB_wan
 
 
