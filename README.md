@@ -12,7 +12,10 @@ deploy them as live containers via **Kathara**.
 
 ## Architecture
 
-- **Frontend** — React + TypeScript + Vite, React Flow canvas, Immer reducer.
+- **Frontend** — React + TypeScript + Vite, Tailwind v4 + Radix UI, Zustand
+  store with undo/redo, react-router URLs for the drill-down scope, one React Flow
+  canvas that projects the topology at any depth (sites/subnets can be expanded in
+  place). Light and dark themes.
 - **Backend** — FastAPI. A `DeploymentEngine` abstraction isolates the
   orchestrator; the only implementation today is `KatharaEngine`.
 - **Deployment** — Kathara talks to the Docker daemon via its SDK and models
@@ -34,11 +37,14 @@ backend/
   routers/                  # topologies (CRUD), deployment, catalog, presets
   tests/                    # pytest
 frontend/src/
-  types/topology.ts         # shared domain types
-  catalog/                  # fetches + exposes the node catalog
-  api/client.ts             # all REST + WebSocket calls
-  hooks/                    # deployment, status polling, terminal sessions
-  components/               # editor views, dialogs, nodes
+  app/                      # routes (login, library, editor), providers, theme
+  canvas/                   # TopologyCanvas, projection.ts (pure), layout/, nodes/, edges/
+  shell/                    # top bar, sidebar (palette/explorer), inspector, status bar, ⌘K
+  features/                 # topology dialogs, deployment actions, terminal dock, purdue, auth
+  store/                    # zustand slices + undo (zundo) + normalize.ts
+  ui/                       # design-system primitives (Tailwind + Radix)
+  styles/                   # tokens.css (light/dark), index.css, reactflow.css
+  catalog/  api/  types/    # catalog lookups, REST/WS client, frontend-owned types
 ```
 
 ## Prerequisites
@@ -54,8 +60,15 @@ development outside Docker.
 ./start.sh          # builds and starts frontend (:3000) and backend (:8000)
 ```
 
-Open http://localhost:3000. The default instructor token is `test` (override
-with `AE3GIS_INSTRUCTOR_TOKEN`). Tear down with `docker compose down`.
+Open http://localhost:3000. There is no sign-in screen: the API is open by
+default. Tear down with `docker compose down`.
+
+To require a token instead, set it for both services and rebuild — the frontend
+bakes it in at build time:
+
+```bash
+AE3GIS_INSTRUCTOR_TOKEN=your-token docker compose up --build
+```
 
 ## Develop
 
@@ -63,7 +76,8 @@ with `AE3GIS_INSTRUCTOR_TOKEN`). Tear down with `docker compose down`.
 # Frontend
 cd frontend && npm install && npm run dev      # :5173
 npm run build     # typecheck + production build
-npm run test      # vitest (reducer + IP/CIDR utils)
+npm run test      # vitest (store, canvas projection, layout, IP/CIDR utils)
+npm run lint      # eslint
 
 # Backend
 cd backend && python -m venv .venv && . .venv/bin/activate
