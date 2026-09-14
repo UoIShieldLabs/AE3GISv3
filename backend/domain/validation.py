@@ -68,12 +68,12 @@ def _valid_ip(ip: Any) -> ipaddress.IPv4Address | None:
 
 def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, many checks
     out: list[Diagnostic] = []
-    err = lambda code, msg, path="", node=None: out.append(
-        Diagnostic(code, "error", msg, path, node)
-    )  # noqa: E731
-    warn = lambda code, msg, path="", node=None: out.append(
-        Diagnostic(code, "warning", msg, path, node)
-    )  # noqa: E731
+
+    def err(code: str, msg: str, path: str = "", node: str | None = None) -> None:
+        out.append(Diagnostic(code, "error", msg, path, node))
+
+    def warn(code: str, msg: str, path: str = "", node: str | None = None) -> None:
+        out.append(Diagnostic(code, "warning", msg, path, node))
 
     if not isinstance(data, dict):
         err("topology.shape", "Topology must be a JSON object")
