@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAppStore } from '@/store';
 import { ROOT_SCOPE, defaultScopeFor, resolveScope, scopeEquals, scopePath, type Scope } from '@/lib/topology';
-import { createNewTopology, deployTopology, destroyTopology, exportTopologyJson, loadTopology, saveTopology } from '@/features/deployment/actions';
+import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson, loadTopology, saveTopology } from '@/features/deployment/actions';
+import { useServerValidation } from '@/features/deployment/useServerValidation';
 import { UnsavedChangesGuard } from '@/features/topology/UnsavedChangesGuard';
 import { AddEntityProvider } from '@/features/topology/AddEntityProvider';
 import { TerminalDock } from '@/features/terminal/TerminalDock';
@@ -23,6 +24,7 @@ export function EditorRoute() {
   const backendId = useAppStore((s) => s.backendId);
   const topology = useAppStore((s) => s.topology);
   const inflight = useRef<string | null>(null);
+  useServerValidation();
 
   const isDraft = topologyId === 'draft';
   const ready = isDraft ? backendId === null : backendId === topologyId;
@@ -86,6 +88,7 @@ export function EditorRoute() {
           <TopBar
             onSave={() => void save()}
             onExport={exportTopologyJson}
+            onExportLab={(f) => void exportLab(f)}
             onDeploy={() => void deployTopology()}
             onDestroy={() => void destroyTopology()}
             onLibrary={() => void navigate('/')}

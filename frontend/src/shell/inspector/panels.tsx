@@ -10,8 +10,9 @@ import { Badge, Button, Select, Textarea, toast } from '@/ui';
 import { DeviceTypePicker } from '@/features/topology/DeviceTypePicker';
 import { CommitInput } from './CommitInput';
 import { KeyValueEditor } from './KeyValueEditor';
-import { StringListEditor } from './StringListEditor';
 import { Row, Section, Stat } from './Section';
+import { IssuesSection } from './IssuesSection';
+import { DeploymentSection } from './DeploymentSection';
 
 export interface PanelContext {
   scope: Scope;
@@ -55,6 +56,7 @@ export function TopologyPanel() {
         {backendId ? <Stat label="Id" value={<span className="font-mono text-2xs text-fg-muted">{backendId.slice(0, 12)}…</span>} /> : <Stat label="Saved" value={<span className="text-warning">not yet</span>} />}
         {lastError ? <p className="rounded-md bg-danger-soft p-2 text-2xs text-danger">{lastError}</p> : null}
       </Section>
+      <IssuesSection />
       <Section title="Tips" defaultOpen={false}>
         <ul className="list-disc space-y-1 pl-4 text-2xs text-fg-muted">
           <li>Drag device types from the palette onto a subnet.</li>
@@ -199,22 +201,6 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
         <KeyValueEditor value={container.metadata ?? {}} onChange={(next) => updateContainer(container.id, { metadata: Object.keys(next).length ? next : undefined })} addLabel="Add metadata" />
       </Section>
 
-      <Section title="Persistent paths" defaultOpen={!!container.persistencePaths?.length}>
-        <p className="text-2xs text-fg-subtle">Absolute in-container directories kept across destroy/deploy.</p>
-        <StringListEditor
-          value={container.persistencePaths ?? []}
-          mono
-          placeholder="/var/lib/app"
-          parse={(raw) => {
-            if (!raw.startsWith('/')) return { error: 'Path must be absolute' };
-            const normalized = '/' + raw.split('/').filter(Boolean).join('/');
-            if (normalized === '/') return { error: 'Cannot persist the root directory' };
-            return { value: normalized };
-          }}
-          onChange={(next) => updateContainer(container.id, { persistencePaths: next.length ? next : undefined })}
-        />
-      </Section>
-
       <Section title="Configuration" defaultOpen={!!container.config && Object.keys(container.config).length > 0}>
         <p className="text-2xs text-fg-subtle">Free-form settings passed to the node at deploy time.</p>
         <KeyValueEditor
@@ -224,6 +210,8 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
           addLabel="Add setting"
         />
       </Section>
+
+      <DeploymentSection nodeId={container.id} />
 
       <Actions>
         <Button size="sm" onClick={() => openTerminal(container)} disabled={deployStatus !== 'deployed'} title={deployStatus !== 'deployed' ? 'Deploy to open a terminal' : undefined}><Terminal /> Terminal</Button>

@@ -5,17 +5,23 @@ const KNOWN: DeployStatus[] = ['idle', 'deploying', 'deployed', 'destroying', 'e
 export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
   backendId: null,
   backendName: null,
+  version: null,
   deployStatus: 'idle',
   containerStatus: {},
+  activeJob: null,
+  diagnostics: [],
   lastError: null,
   busy: false,
 
-  setBackendInfo: ({ id, name, status }) =>
+  setBackendInfo: ({ id, name, status, version }) =>
     set((s) => {
       s.backendId = id;
       s.backendName = name;
       s.deployStatus = KNOWN.includes(status as DeployStatus) ? (status as DeployStatus) : 'idle';
+      if (version !== undefined) s.version = version;
     }, false, 'setBackendInfo'),
+
+  setVersion: (version) => set({ version }, false, 'setVersion'),
 
   setDeployStatus: (status, error = null) =>
     set((s) => {
@@ -27,14 +33,21 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
 
   clearContainerStatuses: () => set({ containerStatus: {} }, false, 'clearContainerStatuses'),
 
+  setActiveJob: (activeJob) => set({ activeJob }, false, 'setActiveJob'),
+
+  setDiagnostics: (diagnostics) => set({ diagnostics }, false, 'setDiagnostics'),
+
   setBusy: (busy) => set({ busy }, false, 'setBusy'),
 
   clearBackend: () =>
     set((s) => {
       s.backendId = null;
       s.backendName = null;
+      s.version = null;
       s.deployStatus = 'idle';
       s.containerStatus = {};
+      s.activeJob = null;
+      s.diagnostics = [];
       s.lastError = null;
     }, false, 'clearBackend'),
 });
