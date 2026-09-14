@@ -1,8 +1,11 @@
-"""Instructor token auth.
+"""Optional instructor token auth.
 
-Student/classroom auth is deferred in this foundation pass; only the instructor
-bearer token is honoured. WebSocket routes accept the token via `?token=`
-because browsers cannot set headers on the upgrade request.
+Auth is opt-in: with no `AE3GIS_INSTRUCTOR_TOKEN` configured every request is
+allowed through, which is the default for a local lab. Setting the variable
+turns the checks below back on for the REST API and the exec WebSocket.
+Student/classroom auth is deferred.
+
+`config` is imported as a module (not its values) so tests can patch the token.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from typing import Literal
 
 from fastapi import Header, HTTPException, Request
 
-from config import INSTRUCTOR_TOKEN
+import config
 
 
 @dataclass
@@ -30,7 +33,9 @@ def _parse_bearer(authorization: str | None) -> str | None:
 
 
 def require_instructor(authorization: str | None = Header(default=None)) -> InstructorIdentity:
-    if _parse_bearer(authorization) != INSTRUCTOR_TOKEN:
+    if not config.auth_required():
+        return InstructorIdentity()
+    if _parse_bearer(authorization) != config.INSTRUCTOR_TOKEN:
         raise HTTPException(401, "Instructor token required")
     return InstructorIdentity()
 
@@ -39,11 +44,15 @@ def require_any_auth(
     request: Request,
     authorization: str | None = Header(default=None),
 ) -> InstructorIdentity:
+    if not config.auth_required():
+        return InstructorIdentity()
     token = _parse_bearer(authorization) or request.query_params.get("token")
-    if token != INSTRUCTOR_TOKEN:
+    if token != config.INSTRUCTOR_TOKEN:
         raise HTTPException(401, "Authorization required")
     return InstructorIdentity()
 
 
 def valid_ws_token(token: str | None) -> bool:
-    return token == INSTRUCTOR_TOKEN
+    if not config.auth_required():
+        return True
+    return token == config.INSTRUCTOR_TOKEN

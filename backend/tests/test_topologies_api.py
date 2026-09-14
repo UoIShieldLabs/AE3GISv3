@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import main  # noqa: E402
 
+# Auth is opt-in (no AE3GIS_INSTRUCTOR_TOKEN in the test env), so this header is
+# accepted but not required. See the auth tests at the bottom of this file.
 INSTR = {"Authorization": "Bearer test"}
 EMPTY = {"name": "T", "data": {"name": "T", "sites": [], "siteConnections": []}}
 
@@ -23,9 +25,9 @@ def test_health_and_catalog():
         assert "router" in cat["types"]
 
 
-def test_create_requires_instructor():
+def test_create_without_auth_when_no_token_configured():
     with client() as c:
-        assert c.post("/api/topologies", json=EMPTY).status_code == 401
+        assert c.post("/api/topologies", json=EMPTY).status_code == 201
 
 
 def test_crud_roundtrip():
@@ -102,3 +104,33 @@ def test_unknown_fields_round_trip():
         container = got["sites"][0]["subnets"][0]["containers"][0]
         assert container["customField"] == 123
         assert container["future"] == {"nested": True}
+
+
+def test_auth_open_by_default():
+    """No AE3GIS_INSTRUCTOR_TOKEN configured: reads and writes need no header."""
+    import auth
+
+    with client() as c:
+        assert c.get("/api/topologies").status_code == 200
+    assert auth.valid_ws_token(None) is True
+
+
+def test_auth_enforced_when_token_configured(monkeypatch):
+    """Setting a token turns the bearer check back on for REST and WebSockets."""
+    import auth
+    import config
+
+    monkeypatch.setattr(config, "INSTRUCTOR_TOKEN", "s3cret")
+
+    with client() as c:
+        assert c.get("/api/topologies").status_code == 401
+        assert c.post("/api/topologies", json=EMPTY).status_code == 401
+        bad = {"Authorization": "Bearer nope"}
+        assert c.get("/api/topologies", headers=bad).status_code == 401
+        good = {"Authorization": "Bearer s3cret"}
+        assert c.get("/api/topologies", headers=good).status_code == 200
+        # WebSockets pass the token as a query param.
+        assert c.get("/api/topologies?token=s3cret").status_code == 200
+
+    assert auth.valid_ws_token("s3cret") is True
+    assert auth.valid_ws_token(None) is False

@@ -77,3 +77,36 @@ The frontend is deliberately **decoupled** from the backend's data schema:
   The deployment engine reads whatever fields it needs from the stored JSON
   defensively, so malformed topologies fail at deploy time (with a clear error)
   rather than being rejected at save time.
+
+## Frontend architecture
+
+```
+URL (/t/:id/site/:siteId/subnet/:subnetId)  →  Scope
+                                                  │
+store.topology + store.expanded + status + selection
+                                                  │  canvas/projection.ts  project()   ← pure, unit-tested
+                                                  ▼
+                         React Flow nodes/edges (site | subnet | device | group)
+```
+
+- **Scope** is the drill-down focus and comes only from the URL (`lib/topology.ts`).
+  `resolveScope` falls back up the chain when a deep link is stale;
+  `defaultScopeFor` auto-opens single-site / single-subnet topologies deeper.
+- **Expanded** ids (view slice) are drawn as group nodes with their children
+  inside. That is how the same data shows one, two, or three levels: nothing is
+  nested in the data model, nesting is a rendering concern. When a group is
+  expanded the canvas nudges overlapping siblings; "Apply layout" is aware of
+  group sizes.
+- **Positions** are stored on the entities (`position`); container positions are
+  relative to their subnet so LAN scope and the in-place group share numbers.
+  `GroupNodeData.origin` converts rendered (parent-relative) coordinates back to
+  stored ones (`toStoredPosition`). Drag-stop writes through `moveNodes`.
+- **Mutations** are id-based store actions; `addConnection` decides the kind of
+  link from its endpoints (device↔device in a subnet, router↔router across
+  subnets/sites, subnet↔subnet, site↔site) and fills `fromContainer/toContainer`
+  the engine expects. `deleteItems` cascades and is one undo step.
+- **Runtime status** (`document.containerStatus`) is separate from the saved
+  topology; the projection merges it into node data for the status dots.
+- **Adding a feature panel:** put UI under `features/<name>/`, state in a new
+  slice (`store/slices/`), register a sidebar tab / dock tab / inspector section
+  in `shell/`, and expose commands in `shell/CommandPalette.tsx`.

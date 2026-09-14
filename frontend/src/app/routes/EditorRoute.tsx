@@ -1,0 +1,106 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { useAppStore } from '@/store';
+import { ROOT_SCOPE, defaultScopeFor, resolveScope, scopeEquals, scopePath, type Scope } from '@/lib/topology';
+import { createNewTopology, deployTopology, destroyTopology, exportTopologyJson, loadTopology, saveTopology } from '@/features/deployment/actions';
+import { UnsavedChangesGuard } from '@/features/topology/UnsavedChangesGuard';
+import { AddEntityProvider } from '@/features/topology/AddEntityProvider';
+import { TerminalDock } from '@/features/terminal/TerminalDock';
+import { PurdueSheet } from '@/features/purdue/PurdueSheet';
+import { TopologyCanvas } from '@/canvas/TopologyCanvas';
+import { EditorShell } from '@/shell/EditorShell';
+import { TopBar } from '@/shell/TopBar';
+import { Breadcrumb } from '@/shell/Breadcrumb';
+import { Sidebar } from '@/shell/Sidebar';
+import { Inspector } from '@/shell/Inspector';
+import { StatusBar } from '@/shell/StatusBar';
+import { CommandPalette } from '@/shell/CommandPalette';
+import { Spinner } from '@/ui';
+
+export function EditorRoute() {
+  const { topologyId = 'draft', siteId, subnetId } = useParams();
+  const navigate = useNavigate();
+  const backendId = useAppStore((s) => s.backendId);
+  const topology = useAppStore((s) => s.topology);
+  const inflight = useRef<string | null>(null);
+
+  const isDraft = topologyId === 'draft';
+  const ready = isDraft ? backendId === null : backendId === topologyId;
+
+  // Make sure the topology in the store matches the URL.
+  useEffect(() => {
+    if (ready || inflight.current === topologyId) return;
+    if (isDraft) {
+      createNewTopology();
+      return;
+    }
+    inflight.current = topologyId;
+    const openedAtRoot = !siteId;
+    void loadTopology(topologyId).then((ok) => {
+      if (inflight.current === topologyId) inflight.current = null;
+      if (!ok) {
+        void navigate('/', { replace: true });
+        return;
+      }
+      // Fresh open at the root URL: jump to the deepest single-child scope.
+      if (openedAtRoot) {
+        const def = defaultScopeFor(useAppStore.getState().topology);
+        if (def.level !== 'root') void navigate(scopePath(topologyId, def), { replace: true });
+      }
+    });
+    // `siteId` is only read at effect time to decide the auto-open; not a trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topologyId, isDraft, ready, navigate]);
+
+  const requested = useMemo<Scope>(
+    () => (siteId && subnetId ? { level: 'subnet', siteId, subnetId } : siteId ? { level: 'site', siteId } : ROOT_SCOPE),
+    [siteId, subnetId],
+  );
+  const scope = useMemo(() => (ready ? resolveScope(topology, requested) : requested), [ready, topology, requested]);
+
+  // A stale deep link (deleted site/subnet) falls back up the chain.
+  useEffect(() => {
+    if (ready && !scopeEquals(scope, requested)) void navigate(scopePath(topologyId, scope), { replace: true });
+  }, [ready, scope, requested, topologyId, navigate]);
+
+  const onNavigate = useCallback((s: Scope) => { void navigate(scopePath(topologyId, s)); }, [navigate, topologyId]);
+
+  const save = useCallback(async () => {
+    const id = await saveTopology();
+    if (id && isDraft) void navigate(scopePath(id, scope), { replace: true });
+    return !!id;
+  }, [isDraft, navigate, scope]);
+
+  if (!ready) {
+    return (
+      <div className="flex h-full items-center justify-center bg-app">
+        <Spinner />
+      </div>
+    );
+  }
+
+  return (
+    <AddEntityProvider>
+      <EditorShell
+        topBar={
+          <TopBar
+            onSave={() => void save()}
+            onExport={exportTopologyJson}
+            onDeploy={() => void deployTopology()}
+            onDestroy={() => void destroyTopology()}
+            onLibrary={() => void navigate('/')}
+          />
+        }
+        breadcrumb={<Breadcrumb scope={scope} onNavigate={onNavigate} />}
+        sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
+        canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
+        inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
+        dock={<TerminalDock />}
+        statusBar={<StatusBar scope={scope} />}
+      />
+      <PurdueSheet />
+      <CommandPalette scope={scope} onNavigate={onNavigate} onSave={() => void save()} />
+      <UnsavedChangesGuard onSave={save} />
+    </AddEntityProvider>
+  );
+}

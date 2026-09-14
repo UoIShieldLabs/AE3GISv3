@@ -1,0 +1,83 @@
+/* ── Design tokens ─────────────────────────────────────────────────────
+   Semantic variables only. Components never reference raw colors; the
+   catalog's per-type colors are used solely as device accents on the canvas.
+   Light is the default; dark is applied via <html data-theme="dark">.   */
+
+:root {
+  color-scheme: light;
+
+  --bg-app: #f6f7f9;
+  --bg-canvas: #eef0f3;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f2f3f6;
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(17, 20, 28, 0.045);
+  --bg-active: rgba(17, 20, 28, 0.08);
+
+  --border: #e3e6ec;
+  --border-strong: #c9ceD8;
+
+  --fg: #171a21;
+  --fg-muted: #5c6474;
+  --fg-subtle: #8a92a3;
+
+  --accent: #2f6df6;
+  --accent-hover: #245ce0;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(47, 109, 246, 0.12);
+
+  --success: #15803d;
+  --success-soft: rgba(21, 128, 61, 0.12);
+  --warning: #b45309;
+  --warning-soft: rgba(180, 83, 9, 0.12);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.12);
+  --info: #0e7490;
+  --info-soft: rgba(14, 116, 144, 0.12);
+
+  --ring: var(--accent);
+
+  --shadow-sm: 0 1px 2px rgba(17, 20, 28, 0.06), 0 1px 1px rgba(17, 20, 28, 0.04);
+  --shadow-md: 0 4px 12px rgba(17, 20, 28, 0.10), 0 1px 3px rgba(17, 20, 28, 0.06);
+  --shadow-lg: 0 12px 32px rgba(17, 20, 28, 0.16), 0 2px 6px rgba(17, 20, 28, 0.08);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-app: #0f1115;
+  --bg-canvas: #0b0d11;
+  --bg-surface: #15181e;
+  --bg-surface-2: #1b1f27;
+  --bg-elevated: #1e222b;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.09);
+
+  --border: #262b35;
+  --border-strong: #3a4150;
+
+  --fg: #e6e8ec;
+  --fg-muted: #9aa3b2;
+  --fg-subtle: #6b7484;
+
+  --accent: #5b8def;
+  --accent-hover: #74a0f5;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(91, 141, 239, 0.18);
+
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.16);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.16);
+  --info: #22d3ee;
+  --info-soft: rgba(34, 211, 238, 0.16);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+}

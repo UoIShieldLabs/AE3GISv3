@@ -2,6 +2,9 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # Must match AE3GIS_INSTRUCTOR_TOKEN when auth is turned on.
+        - VITE_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
     ports:
       - "3000:80"
     depends_on:
@@ -22,7 +25,9 @@ services:
       - ./backend:/app
     environment:
       - AE3GIS_DB_PATH=/app/data/ae3gis.db
-      - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-test}
+      # Empty by default: the API is open. Set AE3GIS_INSTRUCTOR_TOKEN (and the
+      # frontend's VITE_INSTRUCTOR_TOKEN) to require a bearer token.
+      - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
       - AE3GIS_CORS_ORIGINS=${AE3GIS_CORS_ORIGINS:-*}
     command: ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped

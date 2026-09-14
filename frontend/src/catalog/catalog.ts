@@ -100,3 +100,32 @@ export function rankFor(type: string): number {
   if (role === 'switch') return 1;
   return 2;
 }
+
+export type NodeRole = NodeTypeSpec['role'];
+
+/** Engine role for a type. Falls back to the conventional names when the
+ *  catalog has not loaded so gateway detection still works offline. */
+export function roleFor(type: string): NodeRole {
+  const role = typeRoles[type];
+  if (role === 'router' || role === 'switch' || role === 'host') return role;
+  if (type === 'router' || type === 'firewall') return 'router';
+  if (type === 'switch') return 'switch';
+  return 'host';
+}
+
+export function purdueLevelFor(type: string): number | undefined {
+  return _catalog?.types[type]?.purdueLevel;
+}
+
+export function categoryFor(type: string): string {
+  return _catalog?.types[type]?.category ?? 'other';
+}
+
+const CATEGORY_LABELS: Record<string, string> = { ics: 'ICS', ot: 'OT', it: 'IT', iot: 'IoT', dmz: 'DMZ' };
+
+/** Human label for a catalog category key. */
+export function categoryLabel(category: string): string {
+  const c = category.trim();
+  if (!c) return 'Other';
+  return CATEGORY_LABELS[c.toLowerCase()] ?? c[0].toUpperCase() + c.slice(1);
+}

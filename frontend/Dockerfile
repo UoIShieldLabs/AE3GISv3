@@ -8,6 +8,11 @@ RUN npm ci
 
 COPY . .
 
+# Optional: only needed when the backend sets AE3GIS_INSTRUCTOR_TOKEN. Baked in
+# at build time because the frontend has no sign-in screen.
+ARG VITE_INSTRUCTOR_TOKEN=""
+ENV VITE_INSTRUCTOR_TOKEN=$VITE_INSTRUCTOR_TOKEN
+
 RUN npm run build
 
 FROM nginx:alpine
