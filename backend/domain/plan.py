@@ -1,4 +1,4 @@
-"""Topology -> engine-agnostic lab plan.
+"""Topology -> engine-agnostic lab plan (domain logic, no engine imports).
 
 This module owns the network *domain logic* (interface assignment, gateway
 detection, point-to-point WAN links, static-route propagation, per-node boot
@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import re
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 import catalog
 
@@ -40,6 +42,15 @@ class Interface:
     def index(self) -> int:
         return _eth_index(self.name)
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def safe_name(node_id: str) -> str:
+    """Sanitize a node id into a name valid for Kathara/ContainerLab (alnum + underscore)."""
+    name = re.sub(r"[^a-z0-9_]+", "_", (node_id or "").lower()).strip("_")
+    return name or "node"
+
 
 @dataclass
 class NodePlan:
@@ -52,6 +63,22 @@ class NodePlan:
     image: str
     interfaces: list[Interface] = field(default_factory=list)
     startup: list[str] = field(default_factory=list)
+
+    @property
+    def machine_name(self) -> str:
+        return safe_name(self.id)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "machine_name": self.machine_name,
+            "type": self.type,
+            "role": self.role,
+            "image": self.image,
+            "interfaces": [i.to_dict() for i in self.interfaces],
+            "startup": list(self.startup),
+        }
 
 
 @dataclass
@@ -68,6 +95,37 @@ class LabPlan:
             for iface in node.interfaces:
                 seen.setdefault(iface.collision_domain, None)
         return list(seen)
+
+    def links(self) -> list[dict[str, Any]]:
+        """Collision domains with their endpoints (node id + interface)."""
+        by_cd: dict[str, list[dict[str, Any]]] = {}
+        for node in self.nodes:
+            for iface in node.interfaces:
+                by_cd.setdefault(iface.collision_domain, []).append(
+                    {
+                        "node": node.id,
+                        "machine_name": node.machine_name,
+                        "interface": iface.name,
+                        "ip": iface.ip,
+                        "prefix_len": iface.prefix_len,
+                    }
+                )
+        return [{"collision_domain": cd, "endpoints": eps} for cd, eps in by_cd.items()]
+
+    def images(self) -> list[str]:
+        seen: dict[str, None] = {}
+        for n in self.nodes:
+            seen.setdefault(n.image, None)
+        return list(seen)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "nodes": [n.to_dict() for n in self.nodes],
+            "collision_domains": self.collision_domains,
+            "links": self.links(),
+            "images": self.images(),
+        }
 
 
 def _eth_index(iface: str) -> int:
@@ -86,13 +144,16 @@ def _gateway_belongs_to_subnet(gateway: str, cidr: str) -> bool:
         return False
 
 
-def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
+def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> LabPlan:
     """Convert a TopologyData dict into a LabPlan.
 
     Cross-subnet routing is automatic: connections that reference subnet or site
     IDs are resolved to the gateway router of each side; router<->router links
     with no subnet context get a /30 PtP address pair and matching static
     routes; hosts get a default route via their subnet gateway.
+
+    ``iface_base`` is the first interface number: Kathara wants eth0, ContainerLab
+    reserves eth0 for management and wants eth1.
     """
     # Roles are resolved from the catalog. Unknown types default to "host".
     container_type: dict[str, str] = {}
@@ -381,7 +442,7 @@ def build_lab_plan(topology: dict, lab_name: str) -> LabPlan:
         pfx = info.get("prefix_len", "24")
 
         old_ifaces = sorted(container_ifaces.get(cid, set()), key=_eth_index)
-        remap = {old: f"eth{i}" for i, old in enumerate(old_ifaces)}
+        remap = {old: f"eth{i + iface_base}" for i, old in enumerate(old_ifaces)}
 
         interfaces = [
             Interface(

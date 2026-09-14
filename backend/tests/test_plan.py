@@ -1,4 +1,4 @@
-from engine.networking import build_lab_plan
+from domain.plan import build_lab_plan
 
 
 def _two_subnet_topology():
@@ -123,3 +123,21 @@ def test_empty_topology_yields_empty_plan():
     plan = build_lab_plan({"sites": [], "siteConnections": []}, "empty")
     assert plan.nodes == []
     assert plan.collision_domains == []
+
+
+def test_iface_base_shifts_interface_names_and_commands():
+    plan = build_lab_plan(_two_subnet_topology(), "demo-lab", iface_base=1)
+    names = {i.name for n in plan.nodes for i in n.interfaces}
+    assert "eth0" not in names and "eth1" in names
+    hA = _node(plan, "hA")
+    assert any("dev eth1" in c for c in hA.startup)
+
+
+def test_plan_serialises_with_links_and_images():
+    plan = build_lab_plan(_two_subnet_topology(), "demo-lab")
+    d = plan.to_dict()
+    assert d["name"] == "demo-lab"
+    assert {n["id"] for n in d["nodes"]} == {"rA", "swA", "hA", "rB", "swB", "hB"}
+    assert all(len(link["endpoints"]) == 2 for link in d["links"])
+    assert "kathara/frr" in d["images"]
+    assert _node(plan, "rA").machine_name == "ra"
