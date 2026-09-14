@@ -10,7 +10,8 @@ network.
 
 ```
 TopologyData (JSON in DB)
-        │  engine/networking.build_lab_plan()   ← pure, unit-tested
+        │  domain/validation.validate()         ← errors block deploy
+        │  domain/plan.build_lab_plan()         ← pure, unit-tested
         ▼
 LabPlan { nodes[], collision domains }
    node = { id, role, image, interfaces[], startup[] }
@@ -22,8 +23,10 @@ Kathara Lab  (machines + links + startup script per machine)
 Docker containers on bridge networks (one bridge per collision domain)
 ```
 
-### networking.py (the domain logic)
-Pure functions, no Kathara import, fully unit-tested (`tests/test_networking.py`):
+### domain/plan.py (the domain logic)
+Pure functions, no Kathara import, fully unit-tested (`tests/test_plan.py`). The same
+`LabPlan` feeds the exporters in `domain/export/` (lab-spec JSON, Kathara `lab.conf`,
+ContainerLab `topo.clab.yml`), so what you export is exactly what deploy runs:
 
 1. **Metadata + gateway detection.** Each container membership records its
    subnet/ip/prefix/gateway. If a subnet has no valid gateway, the first
@@ -44,20 +47,32 @@ Pure functions, no Kathara import, fully unit-tested (`tests/test_networking.py`
    iproute2/sysctl, so they are engine- and arch-agnostic.
 
 ### Kathara specifics (`engine/kathara/`)
-- `naming.py` — deterministic `lab_name(topology_id, data)` and
-  `machine_name(node_id)` so status/exec/destroy work statelessly by rebuilding
-  the plan.
+- `naming.py` — `lab_name(topology_id)` (id only, so renaming a topology never
+  breaks lookups) and `lab_hash(name)` computed the way Kathara does it.
+  Status/exec/destroy use the `EngineState` saved at deploy time and find
+  containers by Docker label (`lab_hash`, `name`), independent of Kathara's
+  per-user prefix — which is derived from the backend's hostname (pinned in
+  compose) and used to change on every container recreation.
 - `lab_builder.py` — one `get_or_new_link` per collision domain,
   `connect_machine_to_link(node, cd, iface_index)`, image from the catalog, and
   the node's startup commands written to `/ae3gis-init.sh` (run via the machine
   `exec` meta, since `add_meta('exec', …)` overwrites).
-- `engine.py` — wraps the Kathara singleton; all blocking calls run in a worker
-  thread. `resolve_container` returns the real Docker container name (via
-  `get_machine_api_object`) for the terminal bridge.
+- `engine.py` — deploys/undeploys through the Kathara singleton, observes via
+  the Docker SDK; all blocking calls run in a worker thread. `list_labs` and
+  `purge(lab_hash)` back the reconcile service; `images_present`/`pull_image`
+  back the deploy job's image step.
+
+### Jobs, runtime and reconcile
+Deploy and destroy are rows in `jobs` executed by `services/jobs.JobRunner`
+(steps: validate → images → plan → deploy → verify). `GET /runtime` returns
+status + active job + node states in one call; the UI polls it fast while a
+job runs and slowly while deployed. On startup, jobs left running are failed
+and `services/reconcile.apply` resets topologies whose lab is gone; orphan labs
+are listed under `GET /system/labs` and purged explicitly.
 
 ### Adding a deployment engine
-Implement `engine/base.DeploymentEngine` and swap the singleton in
-`routers/deployment.py`. Nothing else changes.
+Implement `engine/base.DeploymentEngine` and return it from
+`engine/fake.make_engine` for a new `AE3GIS_ENGINE` value. Nothing else changes.
 
 ## Frontend ↔ backend contract
 
