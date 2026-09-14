@@ -1,6 +1,29 @@
 import type { TopologyData } from '../types/topology';
 import type { Catalog } from '../catalog/catalog';
 
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/** Extract a readable message from a FastAPI error body or a thrown error. */
+export function errorMessage(err: unknown, fallback = 'Something went wrong'): string {
+  if (err instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(err.message) as { detail?: unknown };
+      if (typeof parsed.detail === 'string') return parsed.detail;
+      if (Array.isArray(parsed.detail)) return parsed.detail.map((d: { msg?: string }) => d.msg ?? String(d)).join('; ');
+    } catch { /* not JSON */ }
+    return err.message || fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
 // ── Types ──────────────────────────────────────────────────────────
 export interface TopologySummary {
   id: string;
@@ -22,17 +45,19 @@ export interface StatusContainer {
 }
 
 // ── Auth token ─────────────────────────────────────────────────────
-let _authToken: string | null = null;
+// There is no sign-in screen: the backend leaves its API open unless
+// AE3GIS_INSTRUCTOR_TOKEN is set. When it is, build/run the frontend with a
+// matching VITE_INSTRUCTOR_TOKEN and every request carries it automatically.
+const AUTH_TOKEN: string | null = import.meta.env.VITE_INSTRUCTOR_TOKEN?.trim() || null;
 
-export function setAuthToken(token: string | null) { _authToken = token; }
-export function getAuthToken(): string | null { return _authToken; }
+export function getAuthToken(): string | null { return AUTH_TOKEN; }
 
 /** WebSocket URL with the auth token as a query param (browsers can't set
  *  headers on WS upgrades). */
 export function wsUrl(path: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const base = `${protocol}//${window.location.host}${path}`;
-  return _authToken ? `${base}?token=${encodeURIComponent(_authToken)}` : base;
+  return AUTH_TOKEN ? `${base}?token=${encodeURIComponent(AUTH_TOKEN)}` : base;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -40,7 +65,7 @@ const BASE = '/api/topologies';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {};
-  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  if (AUTH_TOKEN) headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
   const initHeaders = init?.headers;
   if (initHeaders) {
     if (initHeaders instanceof Headers) initHeaders.forEach((v, k) => { headers[k] = v; });
@@ -50,7 +75,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status}: ${text}`);
+    throw new ApiError(res.status, text || res.statusText);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -88,9 +113,9 @@ export async function importJsonTopology(file: File): Promise<TopologySummary> {
   const form = new FormData();
   form.append('file', file);
   const headers: Record<string, string> = {};
-  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  if (AUTH_TOKEN) headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
   const res = await fetch(`${BASE}/import-json`, { method: 'POST', headers, body: form });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text().catch(() => res.statusText)}`);
+  if (!res.ok) throw new ApiError(res.status, await res.text().catch(() => res.statusText));
   return res.json();
 }
 
