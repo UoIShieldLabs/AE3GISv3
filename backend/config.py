@@ -25,6 +25,7 @@ def auth_required() -> bool:
     """True when a token is configured. Read at call time so tests can patch."""
     return bool(INSTRUCTOR_TOKEN)
 
+
 # CORS. Comma-separated origins, or "*" for any (dev default).
 _cors = os.getenv("AE3GIS_CORS_ORIGINS", "*").strip()
 CORS_ORIGINS = ["*"] if _cors == "*" else [o.strip() for o in _cors.split(",") if o.strip()]
