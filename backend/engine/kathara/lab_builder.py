@@ -1,14 +1,15 @@
 """Turn an engine-agnostic LabPlan into a Kathara Lab object.
 
 Kept import-light: the Kathara library is imported lazily so the backend (and
-its unit tests) import without Kathara installed. Only the deployment host/
-container needs Kathara present.
+its unit tests) import without Kathara installed.
+
+Not supported by this engine (reported by validation as warnings): per-node
+``persistencePaths`` and ``config``; Kathara machines have no bind mounts here.
 """
 
 from __future__ import annotations
 
-from engine.kathara.naming import machine_name
-from engine.networking import LabPlan
+from domain.plan import LabPlan
 
 # The startup commands are written to this guest path and executed at boot.
 _INIT_PATH = "/ae3gis-init.sh"
@@ -22,12 +23,11 @@ def build_lab(plan: LabPlan):
     name_map: dict[str, str] = {}
 
     for node in plan.nodes:
-        mname = machine_name(node.id)
+        mname = node.machine_name
         name_map[node.id] = mname
         machine = lab.new_machine(mname, image=node.image)
 
         for iface in node.interfaces:
-            # eth<index> attaches to the collision domain (a Kathara link).
             lab.connect_machine_to_link(
                 mname, iface.collision_domain, machine_iface_number=iface.index
             )
