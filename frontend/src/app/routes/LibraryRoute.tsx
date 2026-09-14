@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Clock, FilePlus2, FolderOpen, LayoutTemplate, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { Clock, FilePlus2, FolderOpen, LayoutTemplate, Plus, RefreshCw, Server, Trash2, Upload } from 'lucide-react';
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
 import { Badge, Button, Dialog, EmptyState, IconButton, Spinner, toast } from '@/ui';
 import { ThemeToggle } from '@/shell/ThemeToggle';
+import { LabsDialog } from '@/features/system/LabsDialog';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -20,6 +21,7 @@ export function LibraryRoute() {
   const [presets, setPresets] = useState<api.PresetSummary[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<api.TopologySummary | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [labsOpen, setLabsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -85,6 +87,7 @@ export function LibraryRoute() {
         <span className="text-sm font-semibold tracking-tight">AE3GIS</span>
         <span className="text-xs text-fg-muted">Topology library</span>
         <div className="ml-auto flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={() => setLabsOpen(true)}><Server /> Labs on this host</Button>
           <IconButton label="Refresh" size="icon-sm" onClick={() => { setTopologies(null); void refresh(); }}><RefreshCw /></IconButton>
           <ThemeToggle />
         </div>
@@ -156,6 +159,8 @@ export function LibraryRoute() {
           ) : null}
         </div>
       </div>
+
+      <LabsDialog open={labsOpen} onOpenChange={setLabsOpen} onChanged={() => void refresh()} />
 
       <Dialog
         open={!!deleteTarget}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import { wsUrl } from '@/api/client';
+import { execWsPath, wsUrl } from '@/api/client';
 import { useAppShallow } from '@/store/selectors';
 import { useResolvedTheme } from '@/app/theme';
 
@@ -82,7 +82,7 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
     }
     term.reset();
     let closed = false;
-    const ws = new WebSocket(wsUrl(`/api/topologies/ws/${backendId}/exec/${encodeURIComponent(containerId)}`));
+    const ws = new WebSocket(wsUrl(execWsPath(backendId, containerId)));
     wsRef.current = ws;
     ws.onopen = () => fitAndSync();
     ws.onmessage = (ev: MessageEvent<string | ArrayBuffer | Blob>) => {

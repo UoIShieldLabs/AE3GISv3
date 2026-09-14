@@ -1,3 +1,8 @@
+> **Status:** these directories are *not* mounted by the Kathara engine yet.
+> The mounting described below is how the retired ContainerLab engine worked.
+> `catalog.json` is kept as the input for the planned script runner (see
+> FUTURE_WORK.md), which will run scripts through Kathara's native `exec`.
+
 # Container Scripts Directory
 
 This directory contains scripts that containers can read and execute. Scripts are mounted as **read-only** volumes into containers.

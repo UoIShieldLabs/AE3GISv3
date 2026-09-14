@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 import catalog
 
-router = APIRouter(prefix="/api/catalog", tags=["catalog"])
+router = APIRouter(prefix="/api/v1/catalog", tags=["catalog"])
 
 
 @router.get("")

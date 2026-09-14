@@ -17,8 +17,10 @@ rebuild; ContainerLab has been fully removed.
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
-cd backend && python -m pytest               # backend tests
-cd backend && python -m uvicorn main:app --reload --port 8000
+cd backend && python -m pytest && ruff check . && ruff format --check .   # backend checks (CI)
+cd backend && python -m uvicorn main:create_app --factory --reload --port 8000
+cd backend && python scripts/export_openapi.py   # regenerate openapi.json after API changes
+cd frontend && npm run api:types                 # regenerate src/api/schema.d.ts from it
 ```
 
 Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
@@ -26,20 +28,58 @@ Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
 
 ## Architecture
 
+### Backend layout (`backend/`)
+`main.create_app(settings, engine)` is the only entry point (uvicorn runs it
+with `--factory`; tests build their own app with a temp SQLite file and a
+`FakeEngine`). Nothing happens at import time.
+
+- `config.py` — `Settings` (pydantic-settings, `AE3GIS_*` env). `api/deps.py`
+  resolves settings, DB session, engine and job runner from `app.state`.
+- `api/` — thin routers, **all under `/api/v1`**, one error envelope
+  `{detail, code, …}` (`api/errors.py`). `openapi.json` at the backend root is
+  generated from the app (`scripts/export_openapi.py`, checked in CI) and the
+  frontend's TypeScript API types are generated from that file. Change an
+  endpoint → regenerate both.
+- `domain/` — pure logic over the opaque topology dict: `topology.py` (typed
+  read helpers), `validation.py` (diagnostics; errors block deploy, warnings
+  inform, **saves are never rejected**), `plan.py` (topology → `LabPlan`:
+  gateway detection, `/30` router links from `10.255.0.0/24`, BFS static
+  routes, per-role startup commands as plain iproute2/sysctl), `export/`
+  (`LabPlan` → lab-spec JSON, Kathara `lab.conf` + startup files, ContainerLab
+  `topo.clab.yml`; ContainerLab uses `iface_base=1`).
+- `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
+  concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
+  **jobs** with steps validate → images → plan → deploy → verify; failures
+  clean up and leave `status=error`), `jobs` (`JobRunner`: in-process asyncio
+  tasks, one per topology at a time, steps persisted on the job row and
+  mirrored to events), `reconcile` (labs on the engine vs DB: tracked / orphan
+  / stale; purge by lab hash), `events` (append-only log per topology).
+- `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`) and **Alembic**
+  migrations run at startup (`db/migrations`). Add a migration for any schema
+  change; `0001` is a baseline that tolerates pre-migration databases.
+- `engine/` — the seam. `DeploymentEngine` takes a `LabPlan` and returns an
+  `EngineState` (`lab_name`, `lab_hash`, `user_prefix`, node→machine map)
+  stored in `Topology.engine_state`. `engine/kathara` deploys through the
+  Kathara API but **observes through Docker labels** (`app=kathara`,
+  `lab_hash`, `name`) so lookups don't depend on Kathara's per-user prefix.
+  `engine/fake.py` is the in-memory engine (`AE3GIS_ENGINE=fake`) for tests
+  and Docker-less UI work.
+
+**Runtime invariants worth knowing.** Kathara derives its per-user prefix from
+the backend's *hostname*; compose pins `hostname: ae3gis-backend` so labs stay
+visible across container recreation. Lab names depend only on the topology id
+(`ae3gis_<id[:12]>`), never the display name. Status polling is one
+`GET /runtime` call (status + active job + nodes). `persistencePaths` and
+`config` are stored but not applied by the Kathara engine (validation warns).
+
 ### Deployment engine (the key seam)
 `backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
-resolve_container). Routers depend only on this and speak `TopologyData` + node
-ids. `engine/kathara/` implements it via the Kathara Python API. Re-homing a
-deferred feature = extend this interface, not the routers.
+resolve_container/list_labs/purge/images_present/pull_image). Routers never
+import an engine; services get it from `app.state`. Re-homing a deferred
+feature (exec/script runner, packet capture, telemetry) = extend this
+interface. Kathara exposes `exec` natively, so a script runner is a thin
+wrapper over it.
 
-- `engine/networking.py` — **pure, unit-tested** topology → `LabPlan` logic:
-  gateway detection, interface assignment, `/30` point-to-point router links
-  from `10.255.0.0/24`, BFS static-route propagation, and per-role startup
-  commands (router = ip_forward + routes; switch = linux bridge; host = IP +
-  default route). Emits plain iproute2/sysctl commands (engine-agnostic).
-- `engine/kathara/lab_builder.py` — `LabPlan` → Kathara `Lab`: one collision
-  domain per point-to-point link, image from the catalog, startup commands
-  written to `/ae3gis-init.sh` and run via the machine `exec` meta.
 - `engine/terminal.py` — engine-agnostic PTY↔WebSocket bridge (`docker exec`, no sudo).
 
 ### Node catalog (single source of truth)
@@ -64,9 +104,11 @@ change to the other. The deployment engine reads the fields it needs defensively
 The only cross-tier contracts are the API envelope and the catalog. Do not
 reintroduce a Pydantic mirror of the topology.
 
-**DB:** SQLite. `Topology.data` (JSON) holds the topology; `Topology.engine_state`
-(JSON) holds opaque per-deploy engine state (Kathara lab name + node map).
-Status lifecycle: `idle` → `deployed` → `idle`.
+**DB:** SQLite via Alembic. `Topology.data` (JSON) holds the topology,
+`Topology.engine_state` the engine's bookkeeping, `Topology.version` the
+revision. Status lifecycle: `idle → deploying → deployed → destroying → idle`,
+any failure → `error` (destroy from `error` cleans up). `jobs` and `events`
+tables record every long operation.
 
 ### Frontend (`frontend/src`, feature-based)
 - **Design system.** Tailwind v4 + Radix primitives in `ui/` (Button, Dialog,
@@ -114,11 +156,14 @@ Status lifecycle: `idle` → `deployed` → `idle`.
   etc. for React Flow). Pure logic (store, projection, layout, validation) has
   unit tests; add one when touching `projection.ts` or a slice.
 
-### Backend routers
-- `routers/topologies.py` — CRUD + JSON import (`/api/topologies`)
-- `routers/deployment.py` — deploy/destroy/status + exec-terminal WebSocket
-- `routers/catalog.py` — `GET /api/catalog`
-- `routers/presets.py` — templates from `backend/presets/*.json`
+### API surface (`/api/v1`, see `backend/openapi.json`)
+- `topologies` — CRUD (+`version`), `import-json`, `validate` (body or stored),
+  `plan`, `export?format=labspec|kathara|containerlab`, `runtime`, `events`,
+  `context` (everything in one call: record, diagnostics, plan, runtime, events).
+- `topologies/{id}/deploy|destroy` → 202 with a job; `jobs/{id}`;
+  `topologies/{id}/jobs`; WebSocket `topologies/ws/{id}/exec/{container}`.
+- `system` — `health`, `labs` (reconcile report), `reconcile`, `labs/{hash}/purge`.
+- `catalog`, `presets` as before.
 
 ## Auth
 **Opt-in, and off by default.** There is no sign-in screen. `AE3GIS_INSTRUCTOR_TOKEN`

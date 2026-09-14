@@ -36,6 +36,9 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: python -m pytest -q
+      - name: OpenAPI spec is current
+        working-directory: backend
+        run: python scripts/export_openapi.py --check
 
   frontend-checks:
     runs-on: ubuntu-latest

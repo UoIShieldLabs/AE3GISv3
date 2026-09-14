@@ -1,9 +1,13 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+alembic
+pydantic-settings
 python-multipart
 websockets
+pyyaml
 # Deployment engine: Kathara (multi-arch, Docker-SDK based, no sudo/host-netns).
 kathara>=3.7.0,<4.0
-# Docker SDK — Kathara builds on it; pinned here so it is explicit.
+# Docker SDK — Kathara builds on it; the engine also uses it directly for
+# observation (status, listing, purge by label).
 docker

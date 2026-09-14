@@ -17,7 +17,7 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: ['ae3gis.wilsonops.com'],
     proxy: {
-      '/api/topologies/ws': {
+      '/api/v1/topologies/ws': {
         target: 'ws://localhost:8000',
         ws: true,
       },

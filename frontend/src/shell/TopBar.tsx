@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, Download, Layers3, Library, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Download, FileJson, Layers3, Library, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import type { ExportFormat } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { MOD } from '@/lib/keyboard';
 import { useAppStore, undo, redo, type DeployStatus } from '@/store';
@@ -13,6 +14,7 @@ import { ThemeToggle } from './ThemeToggle';
 export interface TopBarProps {
   onSave: () => void;
   onExport: () => void;
+  onExportLab: (format: ExportFormat) => void;
   onDeploy: () => void;
   onDestroy: () => void;
   onLibrary: () => void;
@@ -27,16 +29,19 @@ const STATUS: Record<DeployStatus, { label: string; tone: 'neutral' | 'success' 
   error: { label: 'Error', tone: 'danger', dot: true },
 };
 
-export function TopBar({ onSave, onExport, onDeploy, onDestroy, onLibrary, readOnly }: TopBarProps) {
-  const { name, dirty, backendId, deployStatus, busy, lastError, sidebarOpen, inspectorOpen } = useAppShallow((s) => ({
+export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onLibrary, readOnly }: TopBarProps) {
+  const { name, dirty, backendId, deployStatus, busy, lastError, sidebarOpen, inspectorOpen, activeJob, errorCount } = useAppShallow((s) => ({
     name: s.topology.name ?? '', dirty: s.dirty, backendId: s.backendId, deployStatus: s.deployStatus, busy: s.busy, lastError: s.lastError,
-    sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen,
+    sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, activeJob: s.activeJob,
+    errorCount: s.diagnostics.filter((d) => d.severity === 'error').length,
   }));
   const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen } = useAppStore.getState();
   const setMeta = useAppStore((s) => s.setTopologyMeta);
   const { canUndo, canRedo } = useUndoState();
   const status = STATUS[deployStatus];
   const transitioning = deployStatus === 'deploying' || deployStatus === 'destroying';
+  const runningStep = activeJob?.steps.find((st) => st.status === 'running');
+  const stepLabel = runningStep ? `${status.label.replace('…', '')} · ${runningStep.message ?? runningStep.name}` : status.label;
 
   return (
     <div className="flex w-full items-center gap-2">
@@ -82,23 +87,32 @@ export function TopBar({ onSave, onExport, onDeploy, onDestroy, onLibrary, readO
             <Button size="sm" variant="ghost">More <ChevronDown className="-mr-1 opacity-70" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onExport}><Download /> Export JSON</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onExport}><FileJson /> Export design (JSON)</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onExportLab('labspec')} disabled={!backendId}><Download /> Lab spec (JSON)</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onExportLab('kathara')} disabled={!backendId}><PackageOpen /> Kathara lab (zip)</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onExportLab('containerlab')} disabled={!backendId}><PackageOpen /> ContainerLab topology (zip)</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <Tooltip content={lastError ?? status.label}>
-          <Badge tone={status.tone} dot={status.dot} className="h-6 px-2">{status.label}</Badge>
+        <Tooltip content={lastError ?? stepLabel}>
+          <Badge tone={status.tone} dot={status.dot} className="h-6 max-w-64 px-2"><span className="truncate">{stepLabel}</span></Badge>
         </Tooltip>
+        {errorCount > 0 ? (
+          <Tooltip content={`${errorCount} issue${errorCount === 1 ? '' : 's'} block deployment — see Issues in the inspector`}>
+            <Badge tone="danger" className="h-6 px-2"><AlertTriangle className="size-3" /> {errorCount}</Badge>
+          </Tooltip>
+        ) : null}
         {deployStatus === 'deployed' || deployStatus === 'destroying' ? (
           <Button size="sm" variant="danger-soft" onClick={onDestroy} disabled={busy || transitioning} loading={deployStatus === 'destroying'}>
             <Square /> Destroy
           </Button>
         ) : (
-          <Tooltip content={!backendId ? 'Save the topology before deploying' : deployStatus === 'error' ? 'Retry deployment' : 'Deploy with Kathara'}>
-            <Button size="sm" variant="primary" onClick={onDeploy} disabled={busy || transitioning || !backendId || readOnly} loading={deployStatus === 'deploying'} className={cn(deployStatus !== 'deploying' && 'bg-success hover:bg-success/90')}>
+          <Tooltip content={!backendId ? 'Save the topology before deploying' : errorCount ? `Fix ${errorCount} issue${errorCount === 1 ? '' : 's'} before deploying` : deployStatus === 'error' ? 'Retry deployment' : 'Deploy with Kathara'}>
+            <Button size="sm" variant="primary" onClick={onDeploy} disabled={busy || transitioning || !backendId || readOnly || errorCount > 0} loading={deployStatus === 'deploying'} className={cn(deployStatus !== 'deploying' && 'bg-success hover:bg-success/90')}>
               <Play /> Deploy
             </Button>
           </Tooltip>

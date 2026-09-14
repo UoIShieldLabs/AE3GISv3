@@ -16,8 +16,12 @@ deploy them as live containers via **Kathara**.
   store with undo/redo, react-router URLs for the drill-down scope, one React Flow
   canvas that projects the topology at any depth (sites/subnets can be expanded in
   place). Light and dark themes.
-- **Backend** — FastAPI. A `DeploymentEngine` abstraction isolates the
-  orchestrator; the only implementation today is `KatharaEngine`.
+- **Backend** — FastAPI under `/api/v1` with a service layer, Alembic
+  migrations, persisted deploy/destroy jobs with step-by-step progress, backend
+  validation (diagnostics), a computed lab plan, lab export (JSON spec, Kathara
+  lab, ContainerLab topology) and reconcile/purge of labs on the host. A
+  `DeploymentEngine` abstraction isolates the orchestrator; `KatharaEngine`
+  is the real one, `FakeEngine` runs the UI without Docker.
 - **Deployment** — Kathara talks to the Docker daemon via its SDK and models
   each link as a Docker bridge network. No `sudo`, no host network namespace,
   no privileged container.
@@ -28,14 +32,15 @@ deploy them as live containers via **Kathara**.
 
 ```
 backend/
+  main.py                   # create_app() factory (uvicorn --factory)
+  api/                      # /api/v1 routers, schemas, error envelope
+  services/                 # topologies, deployment jobs, reconcile, events
+  domain/                   # validation, lab plan, exporters (pure, tested)
+  engine/                   # DeploymentEngine seam, Kathara + fake engines, terminal bridge
+  db/                       # models + Alembic migrations
   catalog/node_types.json   # node types + images (single source of truth)
-  engine/
-    base.py                 # DeploymentEngine interface
-    networking.py           # topology -> engine-agnostic lab plan (pure, tested)
-    terminal.py             # PTY <-> WebSocket bridge
-    kathara/                # Kathara implementation of the engine
-  routers/                  # topologies (CRUD), deployment, catalog, presets
-  tests/                    # pytest
+  openapi.json              # generated API spec (frontend types come from it)
+  tests/                    # pytest (fake engine)
 frontend/src/
   app/                      # routes (login, library, editor), providers, theme
   canvas/                   # TopologyCanvas, projection.ts (pure), layout/, nodes/, edges/
@@ -82,8 +87,9 @@ npm run lint      # eslint
 # Backend
 cd backend && python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest                                # networking + catalog + API tests
-python -m uvicorn main:app --reload --port 8000
+python -m pytest && ruff check .                # domain, jobs, reconcile, API tests
+python -m uvicorn main:create_app --factory --reload --port 8000
+AE3GIS_ENGINE=fake python -m uvicorn main:create_app --factory --port 8000   # no Docker needed
 ```
 
 ## Deferred features

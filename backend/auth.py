@@ -1,11 +1,12 @@
 """Optional instructor token auth.
 
-Auth is opt-in: with no `AE3GIS_INSTRUCTOR_TOKEN` configured every request is
+Auth is opt-in: with no ``AE3GIS_INSTRUCTOR_TOKEN`` configured every request is
 allowed through, which is the default for a local lab. Setting the variable
 turns the checks below back on for the REST API and the exec WebSocket.
 Student/classroom auth is deferred.
 
-`config` is imported as a module (not its values) so tests can patch the token.
+Settings are read from ``request.app.state.settings`` so an app built for tests
+can carry its own token.
 """
 
 from __future__ import annotations
@@ -13,9 +14,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Header, HTTPException, Request, WebSocket
 
-import config
+from config import Settings
 
 
 @dataclass
@@ -32,27 +33,35 @@ def _parse_bearer(authorization: str | None) -> str | None:
     return None
 
 
-def require_instructor(authorization: str | None = Header(default=None)) -> InstructorIdentity:
-    if not config.auth_required():
+def _settings(request: Request | WebSocket) -> Settings:
+    return request.app.state.settings
+
+
+def require_instructor(
+    request: Request, authorization: str | None = Header(default=None)
+) -> InstructorIdentity:
+    settings = _settings(request)
+    if not settings.auth_required:
         return InstructorIdentity()
-    if _parse_bearer(authorization) != config.INSTRUCTOR_TOKEN:
+    if _parse_bearer(authorization) != settings.instructor_token:
         raise HTTPException(401, "Instructor token required")
     return InstructorIdentity()
 
 
 def require_any_auth(
-    request: Request,
-    authorization: str | None = Header(default=None),
+    request: Request, authorization: str | None = Header(default=None)
 ) -> InstructorIdentity:
-    if not config.auth_required():
+    settings = _settings(request)
+    if not settings.auth_required:
         return InstructorIdentity()
     token = _parse_bearer(authorization) or request.query_params.get("token")
-    if token != config.INSTRUCTOR_TOKEN:
+    if token != settings.instructor_token:
         raise HTTPException(401, "Authorization required")
     return InstructorIdentity()
 
 
-def valid_ws_token(token: str | None) -> bool:
-    if not config.auth_required():
+def valid_ws_token(websocket: WebSocket, token: str | None) -> bool:
+    settings = _settings(websocket)
+    if not settings.auth_required:
         return True
-    return token == config.INSTRUCTOR_TOKEN
+    return token == settings.instructor_token

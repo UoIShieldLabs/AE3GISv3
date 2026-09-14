@@ -13,6 +13,9 @@ services:
 
   backend:
     build: ./backend
+    # Kathara derives its per-user prefix from the hostname; keep it fixed so the
+    # backend still sees its labs after the container is recreated.
+    hostname: ae3gis-backend
     ports:
       - "8000:8000"
     volumes:
@@ -29,7 +32,7 @@ services:
       # frontend's VITE_INSTRUCTOR_TOKEN) to require a bearer token.
       - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
       - AE3GIS_CORS_ORIGINS=${AE3GIS_CORS_ORIGINS:-*}
-    command: ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     restart: unless-stopped
 
 volumes:

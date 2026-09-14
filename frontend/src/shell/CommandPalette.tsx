@@ -10,7 +10,7 @@ import { NodeGlyph } from '@/catalog/icons';
 import { MOD } from '@/lib/keyboard';
 import type { Scope } from '@/lib/topology';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/ui';
-import { createNewTopology, deployTopology, destroyTopology, exportTopologyJson } from '@/features/deployment/actions';
+import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson } from '@/features/deployment/actions';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
 import { targetSiteFor, targetSubnetFor } from '@/features/topology/addTargets';
 
@@ -57,7 +57,9 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 {scope.level === 'root' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'site' }, {}))}><Plus /> Add site…</CommandItem> : null}
                 {scope.level !== 'subnet' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'subnet' }, { siteId: targetSiteFor(scope, selection.nodeIds) }))}><Plus /> Add subnet…</CommandItem> : null}
                 {scope.level !== 'root' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'device', type: 'workstation' }, { subnetId: targetSubnetFor(scope, selection.nodeIds) }))}><Plus /> Add device…</CommandItem> : null}
-                <CommandItem onSelect={run(exportTopologyJson)}><Download /> Export JSON</CommandItem>
+                <CommandItem onSelect={run(exportTopologyJson)}><Download /> Export design (JSON)</CommandItem>
+                <CommandItem onSelect={run(() => void exportLab('kathara'))} disabled={!backendId}><Download /> Export Kathara lab (zip)</CommandItem>
+                <CommandItem onSelect={run(() => void exportLab('containerlab'))} disabled={!backendId}><Download /> Export ContainerLab topology (zip)</CommandItem>
                 <CommandItem onSelect={run(() => st().setPurdueOpen(true))}><Layers3 /> Purdue model view</CommandItem>
               </CommandGroup>
 

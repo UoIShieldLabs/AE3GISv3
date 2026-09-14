@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
+import type { Diagnostic, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 
@@ -62,17 +63,26 @@ export interface TopologySlice {
 export interface DocumentSlice {
   backendId: string | null;
   backendName: string | null;
+  /** Server-side revision of the saved record; sent back on save for conflict detection. */
+  version: number | null;
   deployStatus: DeployStatus;
   /** Live container state from the engine, keyed by container id. Never persisted in the topology. */
   containerStatus: Record<string, RuntimeStatus>;
+  /** The deploy/destroy job currently running on the backend, with its steps. */
+  activeJob: Job | null;
+  /** Backend validation of the current design (errors block deploy). */
+  diagnostics: Diagnostic[];
   lastError: string | null;
   /** A save/load/deploy/destroy request is in flight. */
   busy: boolean;
 
-  setBackendInfo: (info: { id: string; name: string; status: string }) => void;
+  setBackendInfo: (info: { id: string; name: string; status: string; version?: number }) => void;
+  setVersion: (version: number) => void;
   setDeployStatus: (status: DeployStatus, error?: string | null) => void;
   setContainerStatuses: (statuses: Record<string, RuntimeStatus>) => void;
   clearContainerStatuses: () => void;
+  setActiveJob: (job: Job | null) => void;
+  setDiagnostics: (diagnostics: Diagnostic[]) => void;
   clearBackend: () => void;
   setBusy: (busy: boolean) => void;
 }
