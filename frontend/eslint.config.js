@@ -24,4 +24,10 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'warn',
     },
   },
+  {
+    // The UI kit re-exports Radix primitives and variant helpers alongside
+    // components; per-file fast refresh is not a concern there.
+    files: ['src/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])
