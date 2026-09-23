@@ -115,16 +115,10 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 raise RuntimeError(f"{summary['errors']} validation error(s)")
 
         async with runner.step(job_id, "images"):
-            images = images_in(data)
-            present = await engine.images_present(images)
-            missing = [i for i in images if not present.get(i)]
-            if not missing:
-                runner.progress(job_id, "images", f"{len(images)} image(s) present")
-            for i, image in enumerate(missing, 1):
-                runner.progress(job_id, "images", f"Pulling {image} ({i}/{len(missing)})")
-                await engine.pull_image(
-                    image, lambda m, jid=job_id: runner.progress(jid, "images", m)
-                )
+            # Builds what AE3GIS builds (waiting on builds already running),
+            # pulls the rest, and warns about out-of-date images.
+            assert runner.images is not None
+            await runner.images.prepare_for_deploy(runner, job_id, images_in(data))
 
         async with runner.step(job_id, "plan"):
             with runner.session_factory() as db:
