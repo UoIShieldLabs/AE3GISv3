@@ -5,10 +5,13 @@ Guidance for Claude Code when working in this repository.
 ## Project Overview
 
 AE3GIS v3 is an interactive network-topology editor and deployment platform.
-A React drill-down editor (Geographic → Subnet → LAN) drives a FastAPI backend
+A React drill-down editor (Network → Site → Subnet) drives a FastAPI backend
 that instantiates topologies as live containers via **Kathara** (multi-arch,
 unprivileged, Docker-SDK based — runs on Apple silicon). v3 is a ground-up
 rebuild; ContainerLab has been fully removed.
+
+Developer onboarding and the full architecture rationale live in
+`docs/ARCHITECTURE.md`; keep it current when you change a layer boundary.
 
 ## Commands
 
@@ -49,11 +52,14 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `topo.clab.yml`; ContainerLab uses `iface_base=1`).
 - `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
-  **jobs** with steps validate → images → plan → deploy → verify; failures
-  clean up and leave `status=error`), `jobs` (`JobRunner`: in-process asyncio
-  tasks, one per topology at a time, steps persisted on the job row and
-  mirrored to events), `reconcile` (labs on the engine vs DB: tracked / orphan
-  / stale; purge by lab hash), `events` (append-only log per topology).
+  **jobs** with steps validate → images → plan → deploy → verify; a provisional
+  `engine_state` is saved before the engine runs so failures clean up and leave
+  `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
+  **subject** — `topology:<id>`, `image:<ref>`, `source:<name>` — at a time;
+  steps on the job row mirrored to events; per-job log files via `joblogs`;
+  `wait`/`cancel`), `images` + `sources` (node images built from Dockerfiles,
+  see below), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
+  purge by lab hash), `events` (append-only log per topology).
 - `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`) and **Alembic**
   migrations run at startup (`db/migrations`). Add a migration for any schema
   change; `0001` is a baseline that tolerates pre-migration databases.
@@ -74,24 +80,47 @@ visible across container recreation. Lab names depend only on the topology id
 
 ### Deployment engine (the key seam)
 `backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
-resolve_container/list_labs/purge/images_present/pull_image). Routers never
+resolve_container/node_logs/list_labs/purge/images_present/pull_image/
+inspect_images/build_support/build_image). Routers never
 import an engine; services get it from `app.state`. Re-homing a deferred
 feature (exec/script runner, packet capture, telemetry) = extend this
 interface. Kathara exposes `exec` natively, so a script runner is a thin
 wrapper over it.
 
 - `engine/terminal.py` — engine-agnostic PTY↔WebSocket bridge (`docker exec`, no sudo).
+- `engine/docker_build.py` — `docker buildx build --load` (BuildKit) as a
+  cancellable subprocess; the backend image ships `docker-buildx-plugin` + `git`.
 
 ### Node catalog (single source of truth)
-`backend/catalog/node_types.json` defines every node type: `role`
-(router|switch|host), `defaultImage`, `images`, `color`, `label`, `icon`,
-`category`, optional `webUiPort`/`purdueLevel`. **Images live here as data, never
-hardcoded in source.** Served at `GET /api/catalog`; the frontend consumes it via
+`backend/catalog/node_types.json` (schema v2, validated by `catalog/models.py`
+and served typed at `GET /api/v1/catalog`) defines ordered `categories`, image
+`sources`, `images` (display name, `stability` stable|experimental|hidden,
+`source` registry|build, optional `platforms`) and every node type: `role`
+(router|switch|host), `defaultImage`, `images` (its **variants**), `color`,
+`label`, `icon`, `category`, optional `webUiPort`/`purdueLevel`. **Images live
+here as data, never hardcoded in source.** The frontend consumes it via
 `src/catalog/` (colors, labels, icons via `catalog/icons.tsx`, layout rank via
-`rankFor`, roles via `roleFor`, Purdue level via `purdueLevelFor`). `role` drives
-how the engine configures a node; unknown types default to `host`. Adding a node
-type is a single `node_types.json` edit (the palette, add menus, inspector type
-picker and Purdue view all read the catalog).
+`rankFor`, roles via `roleFor`, Purdue level via `purdueLevelFor`, and the one
+category → type → variant grouping in `catalog/tree.ts`). `role` drives how the
+engine configures a node; unknown types default to `host`. Adding a node type is
+a single `node_types.json` edit (the palette, add menus, inspector type picker
+and Purdue view all read the catalog). A container with no `image` follows its
+type's default.
+
+### Node images built from Dockerfiles
+Images with a `build` source (refs under `ae3gis.local/`, which fails closed
+rather than pulling from Docker Hub) are built by AE3GIS from a Dockerfile in a
+catalog `source`: a git repo cloned into `data/sources/<name>` on first use and
+refreshed by an explicit sync job (`AE3GIS_SOURCE_OVERRIDES` maps a source to a
+local checkout). Builds are jobs (`source → snapshot → build → verify`), deduped
+per image, limited by `AE3GIS_MAX_CONCURRENT_BUILDS`. Each image carries a
+fingerprint label (sha256 of its build context + Dockerfile path + args,
+`domain/images.py`); status = that label vs the current source (ready / stale /
+missing / building / failed / unmanaged / unavailable), computed on demand,
+never at startup. A deploy's `images` step builds missing images (joining
+running builds) and deploys stale ones with a `deploy.images_stale` warning.
+Kathara runs each image's own `CMD`; AE3GIS addressing follows from
+`/ae3gis-init.sh` (log: `/var/log/ae3gis-init.log`).
 
 ### Data model — the frontend is decoupled from the backend schema
 There is **no shared topology schema**. The backend persists and serves topology
@@ -123,7 +152,9 @@ tables record every long operation.
   like `updateContainer`, `addConnection`, `deleteItems`, `moveNodes`,
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
-  `expanded`, theme, tool, panels, zoom), `terminal`, `catalog`, `auth`.
+  `expanded`, theme, tool, panels, zoom, collapsed palette categories),
+  `terminal`, `catalog`, `images` (GET /images report, kept fresh by the
+  `features/images/imagePolling` singleton), `auth`.
   Undo/redo via zundo (`undo()`/`redo()` in `store/index.ts`; only `topology` is
   tracked; load/new reset history). UI prefs persist to `localStorage`
   (`ae3gis.ui`). `normalizeTopology()` (`store/normalize.ts`) runs on every
@@ -149,6 +180,10 @@ tables record every long operation.
   Breadcrumb. `features/topology/AddEntityProvider` owns every "add…" dialog so
   toolbar, palette, menus and drops share one flow. Deployment actions are plain
   functions in `features/deployment/actions.ts`; status polling is a singleton.
+  Images: `features/images` (ImagesSheet, variant `ImagePicker`, status line,
+  `RequiredImagesBanner` over the canvas, build/sync/cancel actions);
+  `features/jobs/JobLog` follows any job's log; the TopBar status badge opens
+  `JobDetailsPopover` (steps + deploy/build logs).
 - **Data model** (`types/topology.ts`) is frontend-owned; keep the index
   signatures so unknown backend fields round-trip. All REST/WS calls go through
   `api/client.ts`.
@@ -160,8 +195,11 @@ tables record every long operation.
 - `topologies` — CRUD (+`version`), `import-json`, `validate` (body or stored),
   `plan`, `export?format=labspec|kathara|containerlab`, `runtime`, `events`,
   `context` (everything in one call: record, diagnostics, plan, runtime, events).
-- `topologies/{id}/deploy|destroy` → 202 with a job; `jobs/{id}`;
-  `topologies/{id}/jobs`; WebSocket `topologies/ws/{id}/exec/{container}`.
+- `topologies/{id}/deploy|destroy` → 202 with a job; `jobs/{id}`,
+  `jobs/{id}/log?offset=`, `jobs/{id}/cancel`; `topologies/{id}/jobs`;
+  WebSocket `topologies/ws/{id}/exec/{container}`.
+- `images?topology_id=` (build support, sources, per-image status),
+  `images/builds` (202 + build jobs), `sources/{name}/sync` (202 + a job).
 - `system` — `health`, `labs` (reconcile report), `reconcile`, `labs/{hash}/purge`.
 - `catalog`, `presets` as before.
 
