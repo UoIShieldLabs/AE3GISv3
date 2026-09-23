@@ -19,7 +19,18 @@ import logging
 from typing import Any
 
 from domain.plan import LabPlan
-from engine.base import EngineState, LabRef, NodeStatus, Progress
+from engine.base import (
+    BuildSpec,
+    BuildSupport,
+    EngineState,
+    ImageInfo,
+    LabRef,
+    NodeLog,
+    NodeStatus,
+    Progress,
+    normalize_ref,
+)
+from engine.docker_build import buildx_available, docker_build
 from engine.kathara.lab_builder import build_lab
 from engine.kathara.naming import lab_hash as hash_for_name
 from engine.kathara.naming import machine_name
@@ -27,6 +38,9 @@ from engine.kathara.naming import machine_name
 log = logging.getLogger(__name__)
 
 _KATHARA_LABEL = "app=kathara"
+
+# Docker reports the daemon's machine; images are built for linux/<arch>.
+_ARCH = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
 
 
 def _map_state(raw: str) -> str:
@@ -136,6 +150,34 @@ class KatharaEngine:
 
         return await asyncio.to_thread(_resolve)
 
+    async def node_logs(self, state: EngineState, tail: int = 30) -> list[NodeLog]:
+        lab_hash = self._hash(state)
+        node_for = {m: nid for nid, m in state.nodes.items()}
+
+        def _logs() -> list[NodeLog]:
+            out: list[NodeLog] = []
+            for c in self._containers(lab_hash):
+                # "created" containers never ran (a deploy that stopped early);
+                # only exited ones have something to say.
+                if c.status not in ("exited", "dead"):
+                    continue
+                mname = c.labels.get("name", c.name)
+                try:
+                    text = c.logs(tail=tail).decode("utf-8", errors="replace")
+                except Exception as exc:  # pragma: no cover - environment dependent
+                    text = f"(logs unavailable: {exc})"
+                out.append(
+                    NodeLog(
+                        node_id=node_for.get(mname, mname),
+                        name=mname,
+                        exit_code=(c.attrs.get("State") or {}).get("ExitCode"),
+                        log=text,
+                    )
+                )
+            return out
+
+        return await asyncio.to_thread(_logs)
+
     async def list_labs(self) -> list[LabRef]:
         def _list() -> list[LabRef]:
             groups: dict[str, dict[str, Any]] = {}
@@ -180,16 +222,48 @@ class KatharaEngine:
                     n.remove()
 
     async def images_present(self, images: list[str]) -> dict[str, bool]:
-        def _present() -> dict[str, bool]:
-            tags: set[str] = set()
+        found = await self.inspect_images(images)
+        return {i: found.get(i) is not None for i in images}
+
+    async def inspect_images(self, refs: list[str]) -> dict[str, ImageInfo | None]:
+        def _inspect() -> dict[str, ImageInfo | None]:
+            by_tag: dict[str, Any] = {}
             for img in self._docker().images.list():
                 for t in img.tags or []:
-                    tags.add(t)
-                    if t.endswith(":latest"):
-                        tags.add(t[: -len(":latest")])
-            return {i: (i in tags or f"{i}:latest" in tags) for i in images}
+                    by_tag[t] = img
+            out: dict[str, ImageInfo | None] = {}
+            for ref in refs:
+                img = by_tag.get(normalize_ref(ref))
+                out[ref] = (
+                    ImageInfo(
+                        ref=ref,
+                        id=img.id,
+                        labels=dict(img.labels or {}),
+                        created=img.attrs.get("Created"),
+                        size=img.attrs.get("Size"),
+                        arch=img.attrs.get("Architecture"),
+                    )
+                    if img is not None
+                    else None
+                )
+            return out
 
-        return await asyncio.to_thread(_present)
+        return await asyncio.to_thread(_inspect)
+
+    async def build_support(self) -> BuildSupport:
+        def _arch() -> str:
+            raw = str(self._docker().info().get("Architecture", ""))
+            return _ARCH.get(raw, raw or "unknown")
+
+        try:
+            platform = f"linux/{await asyncio.to_thread(_arch)}"
+        except Exception as exc:  # pragma: no cover - environment dependent
+            return BuildSupport(False, f"Docker is not reachable: {exc}", "unknown")
+        ok, detail = await buildx_available()
+        return BuildSupport(ok, detail, platform)
+
+    async def build_image(self, spec: BuildSpec, on_line: Progress) -> None:
+        await docker_build(spec, on_line)
 
     async def pull_image(self, image: str, on_progress: Progress) -> None:
         def _pull() -> None:

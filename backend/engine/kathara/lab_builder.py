@@ -11,8 +11,10 @@ from __future__ import annotations
 
 from domain.plan import LabPlan
 
-# The startup commands are written to this guest path and executed at boot.
+# The startup commands are written to this guest path and executed at boot;
+# their output goes to _INIT_LOG (Kathara otherwise discards it).
 _INIT_PATH = "/ae3gis-init.sh"
+_INIT_LOG = "/var/log/ae3gis-init.log"
 
 
 def build_lab(plan: LabPlan):
@@ -33,10 +35,10 @@ def build_lab(plan: LabPlan):
             )
 
         if node.startup:
-            # add_meta('exec', ...) overwrites, so run everything from one script
-            # to guarantee ordered execution regardless of exec-meta semantics.
+            # One script (rather than one exec meta per command) keeps the
+            # commands ordered and lets us capture their output in one place.
             script = "#!/bin/sh\n" + "\n".join(node.startup) + "\n"
             machine.create_file_from_string(script, _INIT_PATH)
-            machine.add_meta("exec", f"sh {_INIT_PATH}")
+            machine.add_meta("exec", f"sh {_INIT_PATH} > {_INIT_LOG} 2>&1")
 
     return lab, name_map
