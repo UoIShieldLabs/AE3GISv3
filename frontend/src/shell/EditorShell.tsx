@@ -4,6 +4,8 @@ import { ResizableGroup, ResizableHandle, ResizablePanel } from '@/ui';
 export interface EditorShellProps {
   topBar: React.ReactNode;
   breadcrumb: React.ReactNode;
+  /** Optional strip under the breadcrumb (e.g. images that still need building). */
+  notice?: React.ReactNode;
   canvas: React.ReactNode;
   sidebar?: React.ReactNode;
   inspector?: React.ReactNode;
@@ -12,7 +14,7 @@ export interface EditorShellProps {
 }
 
 /** Fixed frame: top bar / [sidebar | breadcrumb + canvas + dock | inspector] / status bar. */
-export function EditorShell({ topBar, breadcrumb, canvas, sidebar, inspector, dock, statusBar }: EditorShellProps) {
+export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspector, dock, statusBar }: EditorShellProps) {
   const { sidebarOpen, inspectorOpen, dockMode } = useAppShallow((s) => ({
     sidebarOpen: s.sidebarOpen,
     inspectorOpen: s.inspectorOpen,
@@ -34,6 +36,7 @@ export function EditorShell({ topBar, breadcrumb, canvas, sidebar, inspector, do
         <ResizablePanel id="main" minSize={360}>
           <main className="flex h-full min-w-0 flex-col">
             <div className="flex h-9 shrink-0 items-center border-b border-border bg-surface px-2">{breadcrumb}</div>
+            {notice}
             <ResizableGroup orientation="vertical" className="min-h-0 flex-1">
               <ResizablePanel id="canvas" minSize={160}>{canvas}</ResizablePanel>
               {dock && dockMode === 'open' ? (

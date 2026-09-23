@@ -2,12 +2,14 @@ import { ArrowDownRight, Copy, Maximize2, Minimize2, Terminal, Trash2 } from 'lu
 import type { Container, Site, Subnet } from '@/types/topology';
 import { useAppStore, undo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
-import { colorFor, defaultImageFor, displayNameFor, getCatalog, labelFor } from '@/catalog/catalog';
+import { colorFor, displayNameFor, labelFor, variantsFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
 import { countContainers, countSubnets, gatewayOf, isRouterType, locate, locateConnection, type Scope } from '@/lib/topology';
 import { isIpInCidr, isValidCidr, isValidIp } from '@/utils/validation';
 import { Badge, Button, Select, Textarea, toast } from '@/ui';
 import { DeviceTypePicker } from '@/features/topology/DeviceTypePicker';
+import { ImagePicker } from '@/features/images/ImagePicker';
+import { ImageStatusLine } from '@/features/images/ImageStatusLine';
 import { CommitInput } from './CommitInput';
 import { KeyValueEditor } from './KeyValueEditor';
 import { Row, Section, Stat } from './Section';
@@ -148,7 +150,6 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
   const remove = useRemove();
   const color = colorFor(container.type);
   const isGateway = gatewayOf(subnet)?.id === container.id;
-  const images = getCatalog()?.types[container.type]?.images ?? [];
   const takenByOthers = subnet.containers.filter((c) => c.id !== container.id).map((c) => c.ip);
   void ctx;
 
@@ -178,7 +179,19 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
       <Section title="Identity">
         <Row label="Name"><CommitInput value={container.name} onCommit={(v) => updateContainer(container.id, { name: v })} validate={(v) => (v ? null : 'Name is required')} /></Row>
         <Row label="Type">
-          <DeviceTypePicker value={container.type} onValueChange={(type) => updateContainer(container.id, { type, image: container.image && container.image !== defaultImageFor(container.type) ? container.image : undefined })} />
+          <DeviceTypePicker
+            value={container.type}
+            onValueChange={(type) => {
+              // Variants belong to a type: keep a custom image, or a variant the new type shares.
+              const img = container.image;
+              const keep = img && (!variantsFor(container.type).includes(img) || variantsFor(type).includes(img)) ? img : undefined;
+              updateContainer(container.id, { type, image: keep });
+            }}
+          />
+        </Row>
+        <Row label="Variant">
+          <ImagePicker type={container.type} value={container.image} onChange={(image) => updateContainer(container.id, { image })} />
+          <ImageStatusLine container={container} />
         </Row>
       </Section>
 
@@ -190,10 +203,6 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
             onCommit={commitIp}
             validate={(v) => (!isValidIp(v) ? 'Enter a valid IPv4 address' : !isIpInCidr(v, subnet.cidr) ? `Must be inside ${subnet.cidr}` : takenByOthers.includes(v) ? 'Already used in this subnet' : null)}
           />
-        </Row>
-        <Row label="Image" hint={`Catalog default: ${defaultImageFor(container.type) || '—'}`}>
-          <CommitInput value={container.image ?? ''} mono placeholder={defaultImageFor(container.type)} list={`img-${container.id}`} onCommit={(v) => updateContainer(container.id, { image: v || undefined })} />
-          <datalist id={`img-${container.id}`}>{images.map((i) => <option key={i} value={i} />)}</datalist>
         </Row>
       </Section>
 

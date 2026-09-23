@@ -8,6 +8,7 @@ import { createDocumentSlice } from './slices/documentSlice';
 import { createViewSlice } from './slices/viewSlice';
 import { createTerminalSlice } from './slices/terminalSlice';
 import { createCatalogSlice } from './slices/catalogSlice';
+import { createImagesSlice } from './slices/imagesSlice';
 
 export type { AppState } from './types';
 export * from './types';
@@ -25,6 +26,7 @@ export const useAppStore = create<AppState>()(
           ...createViewSlice(...a),
           ...createTerminalSlice(...a),
           ...createCatalogSlice(...a),
+          ...createImagesSlice(...a),
         })),
         {
           partialize: (s): Tracked => ({ topology: s.topology }),
@@ -43,6 +45,7 @@ export const useAppStore = create<AppState>()(
           sidebarTab: s.sidebarTab,
           sidebarOpen: s.sidebarOpen,
           inspectorOpen: s.inspectorOpen,
+          collapsedCategories: s.collapsedCategories,
         }),
       },
     ),

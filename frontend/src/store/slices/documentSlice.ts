@@ -9,6 +9,7 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
   deployStatus: 'idle',
   containerStatus: {},
   activeJob: null,
+  lastJob: null,
   diagnostics: [],
   lastError: null,
   busy: false,
@@ -35,6 +36,8 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
 
   setActiveJob: (activeJob) => set({ activeJob }, false, 'setActiveJob'),
 
+  setLastJob: (lastJob) => set({ lastJob }, false, 'setLastJob'),
+
   setDiagnostics: (diagnostics) => set({ diagnostics }, false, 'setDiagnostics'),
 
   setBusy: (busy) => set({ busy }, false, 'setBusy'),
@@ -47,6 +50,7 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
       s.deployStatus = 'idle';
       s.containerStatus = {};
       s.activeJob = null;
+      s.lastJob = null;
       s.diagnostics = [];
       s.lastError = null;
     }, false, 'clearBackend'),

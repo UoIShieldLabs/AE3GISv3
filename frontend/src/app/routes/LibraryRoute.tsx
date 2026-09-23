@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Clock, FilePlus2, FolderOpen, LayoutTemplate, Plus, RefreshCw, Server, Trash2, Upload } from 'lucide-react';
+import { Boxes, Clock, FilePlus2, FolderOpen, LayoutTemplate, Plus, RefreshCw, Server, Trash2, Upload } from 'lucide-react';
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
 import { Badge, Button, Dialog, EmptyState, IconButton, Spinner, toast } from '@/ui';
 import { ThemeToggle } from '@/shell/ThemeToggle';
 import { LabsDialog } from '@/features/system/LabsDialog';
+import { ImagesSheet } from '@/features/images/ImagesSheet';
+import { useAppStore } from '@/store';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -87,6 +89,7 @@ export function LibraryRoute() {
         <span className="text-sm font-semibold tracking-tight">AE3GIS</span>
         <span className="text-xs text-fg-muted">Topology library</span>
         <div className="ml-auto flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={() => useAppStore.getState().openImages()}><Boxes /> Images</Button>
           <Button size="sm" variant="ghost" onClick={() => setLabsOpen(true)}><Server /> Labs on this host</Button>
           <IconButton label="Refresh" size="icon-sm" onClick={() => { setTopologies(null); void refresh(); }}><RefreshCw /></IconButton>
           <ThemeToggle />
@@ -161,6 +164,7 @@ export function LibraryRoute() {
       </div>
 
       <LabsDialog open={labsOpen} onOpenChange={setLabsOpen} onChanged={() => void refresh()} />
+      <ImagesSheet />
 
       <Dialog
         open={!!deleteTarget}

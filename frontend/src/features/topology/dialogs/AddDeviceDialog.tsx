@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Dialog, DialogClose, Field, Input } from '@/ui';
-import { defaultImageFor, displayNameFor, getCatalog } from '@/catalog/catalog';
+import { displayNameFor } from '@/catalog/catalog';
+import { ImagePicker } from '@/features/images/ImagePicker';
 import { getNextAvailableIp, getSubnetCapacity } from '@/utils/validation';
 import { nextName } from '@/lib/topology';
 import type { Subnet } from '@/types/topology';
@@ -15,9 +16,11 @@ export interface AddDeviceDialogProps {
   subnet: Subnet | null;
   onSubmit: (values: DeviceFormValues) => void;
   presetType?: string;
+  /** A specific variant picked in the palette (empty: the type's default). */
+  presetImage?: string;
 }
 
-export function AddDeviceDialog({ open, onOpenChange, subnet, onSubmit, presetType }: AddDeviceDialogProps) {
+export function AddDeviceDialog({ open, onOpenChange, subnet, onSubmit, presetType, presetImage }: AddDeviceDialogProps) {
   return (
     <Dialog
       open={open}
@@ -26,12 +29,12 @@ export function AddDeviceDialog({ open, onOpenChange, subnet, onSubmit, presetTy
       description={subnet ? <>Into <span className="font-medium text-fg">{subnet.name}</span> <span className="font-mono">{subnet.cidr}</span></> : undefined}
       size="md"
     >
-      {open && subnet ? <DeviceForm subnet={subnet} presetType={presetType} onSubmit={(v) => { onSubmit(v); onOpenChange(false); }} /> : null}
+      {open && subnet ? <DeviceForm subnet={subnet} presetType={presetType} presetImage={presetImage} onSubmit={(v) => { onSubmit(v); onOpenChange(false); }} /> : null}
     </Dialog>
   );
 }
 
-function DeviceForm({ subnet, presetType, onSubmit }: { subnet: Subnet; presetType?: string; onSubmit: (v: DeviceFormValues) => void }) {
+function DeviceForm({ subnet, presetType, presetImage, onSubmit }: { subnet: Subnet; presetType?: string; presetImage?: string; onSubmit: (v: DeviceFormValues) => void }) {
   const takenIps = useMemo(() => subnet.containers.map((c) => c.ip).filter(Boolean), [subnet]);
   const names = useMemo(() => subnet.containers.map((c) => c.name), [subnet]);
   const initialType = presetType ?? 'workstation';
@@ -42,19 +45,23 @@ function DeviceForm({ subnet, presetType, onSubmit }: { subnet: Subnet; presetTy
     defaultValues: {
       name: nextName(names, displayNameFor(initialType)),
       type: initialType,
-      image: defaultImageFor(initialType),
+      image: presetImage ?? '',
       ip: getNextAvailableIp(subnet.cidr, takenIps) ?? '',
     },
   });
 
   const type = watch('type');
-  // Follow the type with an auto name/image until the user edits them.
+  const image = watch('image');
+  // Follow the type with an auto name until the user edits it. The image
+  // resets to the new type's default: variants belong to a type.
+  const lastType = useRef(type);
   useEffect(() => {
     if (!dirtyFields.name) setValue('name', nextName(names, displayNameFor(type)));
-    if (!dirtyFields.image) setValue('image', defaultImageFor(type));
-  }, [type, names, dirtyFields.name, dirtyFields.image, setValue]);
-
-  const images = getCatalog()?.types[type]?.images ?? [];
+    if (lastType.current !== type) {
+      lastType.current = type;
+      setValue('image', '');
+    }
+  }, [type, names, dirtyFields.name, setValue]);
   const capacity = getSubnetCapacity(subnet.cidr);
   const free = Math.max(0, capacity - takenIps.length);
 
@@ -69,10 +76,13 @@ function DeviceForm({ subnet, presetType, onSubmit }: { subnet: Subnet; presetTy
           />
         )}
       </Field>
-      <Field label="Name" error={errors.name?.message} required>
-        {(ctl) => <Input {...ctl} {...register('name')} placeholder="e.g. PLC 1" />}
+      <Field label="Variant" error={errors.image?.message} hint="The image this device runs.">
+        {(ctl) => <ImagePicker id={ctl.id} type={type} value={image} onChange={(v) => setValue('image', v ?? '', { shouldDirty: true })} />}
       </Field>
       <div className="grid grid-cols-2 gap-3">
+        <Field label="Name" error={errors.name?.message} required>
+          {(ctl) => <Input {...ctl} {...register('name')} placeholder="e.g. PLC 1" />}
+        </Field>
         <Field
           label="IP address"
           error={errors.ip?.message}
@@ -85,16 +95,6 @@ function DeviceForm({ subnet, presetType, onSubmit }: { subnet: Subnet; presetTy
           }
         >
           {(ctl) => <Input {...ctl} {...register('ip')} mono placeholder="10.0.1.10" />}
-        </Field>
-        <Field label="Image" error={errors.image?.message} hint="Catalog default unless changed.">
-          {(ctl) => (
-            <>
-              <Input {...ctl} {...register('image')} mono list={`${ctl.id}-images`} placeholder={defaultImageFor(type)} />
-              <datalist id={`${ctl.id}-images`}>
-                {images.map((img) => <option key={img} value={img} />)}
-              </datalist>
-            </>
-          )}
         </Field>
       </div>
       <div className="flex justify-end gap-2 pt-1">
