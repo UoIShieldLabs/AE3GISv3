@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Combobox, type ComboboxOption } from '@/ui';
-import { colorFor, displayNameFor, categoryLabel } from '@/catalog/catalog';
+import { colorFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
-import { useAppStore } from '@/store';
+import { useCatalogTree } from '@/catalog/useCatalogTree';
 
 export interface DeviceTypePickerProps {
   value: string | undefined;
@@ -14,17 +14,20 @@ export interface DeviceTypePickerProps {
 
 /** Searchable, category-grouped catalog picker. */
 export function DeviceTypePicker({ value, onValueChange, ...rest }: DeviceTypePickerProps) {
-  const catalog = useAppStore((s) => s.catalog);
-  const options = useMemo<ComboboxOption[]>(() => {
-    if (!catalog) return [];
-    return Object.entries(catalog.types).map(([type, spec]) => ({
-      value: type,
-      label: spec.displayName || displayNameFor(type),
-      group: categoryLabel(spec.category ?? ''),
-      keywords: [type, spec.category, spec.label, spec.role].filter(Boolean) as string[],
-      description: spec.defaultImage,
-      icon: <NodeGlyph type={type} size={16} color={colorFor(type)} />,
-    }));
-  }, [catalog]);
+  const tree = useCatalogTree();
+  const options = useMemo<ComboboxOption[]>(
+    () =>
+      tree.flatMap((cat) =>
+        cat.types.map(({ type, spec, name, variants }) => ({
+          value: type,
+          label: name,
+          group: cat.label,
+          keywords: [type, spec.category, spec.label, spec.role, ...variants.map((v) => v.name)].filter(Boolean) as string[],
+          description: variants.length > 1 ? `${variants.map((v) => v.name).join(' · ')}` : variants[0]?.name,
+          icon: <NodeGlyph type={type} size={16} color={colorFor(type)} />,
+        })),
+      ),
+    [tree],
+  );
   return <Combobox value={value} onValueChange={onValueChange} options={options} placeholder="Choose a type…" searchPlaceholder="Search types…" {...rest} />;
 }
