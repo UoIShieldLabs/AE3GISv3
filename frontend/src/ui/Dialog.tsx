@@ -2,6 +2,7 @@ import { Dialog as RDialog } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { IconButton } from './IconButton';
+import { LAYER } from './layers';
 
 export const DialogRoot = RDialog.Root;
 export const DialogTrigger = RDialog.Trigger;
@@ -24,10 +25,11 @@ export function DialogContent({ title, description, size = 'md', hideClose, foot
   const width = sizes[size] ?? size;
   return (
     <RDialog.Portal>
-      <RDialog.Overlay className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-[1px] animate-fade" />
+      <RDialog.Overlay className={cn("fixed inset-0 bg-black/50 backdrop-blur-[1px] animate-fade", LAYER.overlay)} />
       <RDialog.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-[81] flex max-h-[85vh] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col',
+          'fixed left-1/2 top-1/2 flex max-h-[85vh] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col',
+            LAYER.modal,
           'rounded-xl border border-border bg-surface text-fg shadow-lg outline-none animate-pop',
           className,
         )}

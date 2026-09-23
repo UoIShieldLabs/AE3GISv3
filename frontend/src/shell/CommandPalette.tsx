@@ -11,6 +11,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson } from '@/features/deployment/actions';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
 import { targetSiteFor, targetSubnetFor } from '@/features/topology/addTargets';
+import { cn } from '@/lib/cn';
+import { LAYER } from '@/ui/layers';
 
 export interface CommandPaletteProps {
   scope: Scope;
@@ -35,8 +37,8 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
   return (
     <RDialog.Root open={open} onOpenChange={(o) => st().setCommandPaletteOpen(o)}>
       <RDialog.Portal>
-        <RDialog.Overlay className="fixed inset-0 z-[85] bg-black/40 animate-fade" />
-        <RDialog.Content className="fixed left-1/2 top-[12vh] z-[86] w-[calc(100vw-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-elevated shadow-lg outline-none animate-pop">
+        <RDialog.Overlay className={cn('fixed inset-0 bg-black/40 animate-fade', LAYER.overlay)} />
+        <RDialog.Content className={cn('fixed left-1/2 top-[12vh] w-[calc(100vw-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-elevated shadow-lg outline-none animate-pop', LAYER.palette)}>
           <RDialog.Title className="sr-only">Command palette</RDialog.Title>
           <RDialog.Description className="sr-only">Search entities and actions</RDialog.Description>
           <Command loop>

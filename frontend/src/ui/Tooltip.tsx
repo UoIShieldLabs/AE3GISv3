@@ -1,5 +1,6 @@
 import { Tooltip as RTooltip } from 'radix-ui';
 import { cn } from '@/lib/cn';
+import { LAYER } from './layers';
 
 export const TooltipProvider = RTooltip.Provider;
 
@@ -26,7 +27,8 @@ export function Tooltip({ content, children, side = 'bottom', align = 'center', 
           sideOffset={6}
           collisionPadding={8}
           className={cn(
-            'z-[70] flex items-center gap-2 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-fg shadow-md',
+            'flex items-center gap-2 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-fg shadow-md',
+            LAYER.tooltip,
             'animate-pop',
             className,
           )}

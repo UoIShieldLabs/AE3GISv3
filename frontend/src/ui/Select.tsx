@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { inputClassName } from './Input';
 import { menuItemClass, menuLabelClass, menuSeparatorClass } from './menu-styles';
+import { LAYER } from './layers';
 
 export interface SelectOption<T extends string = string> {
   value: T;
@@ -53,7 +54,10 @@ export function Select<T extends string = string>({ value, onValueChange, option
         <R.Content
           position="popper"
           sideOffset={4}
-          className="z-[90] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-elevated p-1 text-fg shadow-lg animate-pop"
+          className={cn(
+            "max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-elevated p-1 text-fg shadow-lg animate-pop",
+            LAYER.floating,
+          )}
         >
           <R.ScrollUpButton className="flex justify-center py-1 text-fg-subtle"><ChevronUp className="size-3.5" /></R.ScrollUpButton>
           <R.Viewport>

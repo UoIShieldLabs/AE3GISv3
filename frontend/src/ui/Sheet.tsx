@@ -2,6 +2,7 @@ import { Dialog as RDialog } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { IconButton } from './IconButton';
+import { LAYER } from './layers';
 
 export interface SheetProps extends Omit<React.ComponentProps<typeof RDialog.Content>, 'title'> {
   open: boolean;
@@ -29,10 +30,11 @@ export function Sheet({ open, onOpenChange, title, description, side = 'right', 
   return (
     <RDialog.Root open={open} onOpenChange={onOpenChange}>
       <RDialog.Portal>
-        <RDialog.Overlay className="fixed inset-0 z-[80] bg-black/50 animate-fade" />
+        <RDialog.Overlay className={cn("fixed inset-0 bg-black/50 animate-fade", LAYER.overlay)} />
         <RDialog.Content
           className={cn(
-            'fixed z-[81] flex max-w-full flex-col border-border bg-surface text-fg shadow-lg outline-none',
+            'fixed flex max-w-full flex-col border-border bg-surface text-fg shadow-lg outline-none',
+            LAYER.modal,
             sideClass[side],
             className,
           )}
