@@ -1,62 +1,201 @@
 {
-  "version": 1,
-  "description": "Declarative catalog of node types. Single source of truth shared by the backend deployment engine and the frontend editor. Images are DATA, not code: change them here without touching source. `role` drives how the deployment engine configures the node (router = ip_forward + static routes, switch = linux bridge, host = single IP + default route).",
+  "version": 2,
+  "description": "Declarative catalog of node types. Single source of truth shared by the backend deployment engine and the frontend editor. Images are DATA, not code: change them here without touching source. `role` drives how the deployment engine configures the node (router = ip_forward + static routes, switch = linux bridge, host = single IP + default route). A type's `images` are its interchangeable variants; `images` at the top level describes them, and one with a `build` source is built by AE3GIS from a Dockerfile in one of the `sources`.",
   "defaults": {
     "host_image": "kathara/base",
     "router_image": "kathara/frr",
     "switch_image": "kathara/base"
   },
+  "categories": [
+    { "id": "network", "label": "Network" },
+    { "id": "security", "label": "Security" },
+    { "id": "server", "label": "Servers" },
+    { "id": "endpoint", "label": "Endpoints" },
+    { "id": "ics", "label": "ICS / OT" }
+  ],
+  "sources": {
+    "ae3gis-containers": {
+      "kind": "git",
+      "url": "https://github.com/UoIShieldLabs/ae3gis-containers.git",
+      "ref": "main"
+    }
+  },
+  "images": {
+    "kathara/frr": {
+      "displayName": "FRRouting",
+      "description": "Kathará's FRR image: a Linux router with the FRR routing suite."
+    },
+    "kathara/base": {
+      "displayName": "Plain Linux",
+      "description": "Kathará's base image: a minimal Debian host with networking tools."
+    },
+    "httpd:alpine": {
+      "displayName": "httpd (Alpine)",
+      "description": "The official Apache httpd image on Alpine."
+    },
+    "postgres:alpine": {
+      "displayName": "PostgreSQL (Alpine)",
+      "description": "The official PostgreSQL image on Alpine."
+    },
+    "ae3gis.local/apache": {
+      "displayName": "Apache",
+      "description": "Ubuntu 24.04 + Apache 2 serving /var/www/html; SSH root/pass.",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "apache-server", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/nginx": {
+      "displayName": "Nginx",
+      "description": "Ubuntu 24.04 + Nginx serving /var/www/html; SSH root/pass.",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "nginx-server", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/vsftpd": {
+      "displayName": "vsftpd",
+      "description": "Ubuntu 24.04 + vsftpd; user ftpuser/ftppass, chrooted; SSH root/pass.",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "ftp-server", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/samba": {
+      "displayName": "Samba 4.5.9 (vulnerable)",
+      "description": "Deliberately vulnerable Samba 4.5.9 compiled from source on Ubuntu 16.04. Long build.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "smb", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/isc-dhcp": {
+      "displayName": "ISC DHCP server",
+      "description": "Ubuntu 24.04 + isc-dhcp-server. The DHCP service is started by hand (see /usr/local/bin/start.sh).",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "isc-dhcp-server", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/benign-client": {
+      "displayName": "Benign client",
+      "description": "Ubuntu 24.04 client with traffic generators (run_ping.sh, run_http.sh, run_ftp.sh, run_nmap.sh).",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "benign-client", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/wazuh-agent": {
+      "displayName": "Wazuh agent",
+      "description": "Ubuntu 24.04 host with the Wazuh agent installed (point it at a Wazuh manager).",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "wazuh/wazuh-agent", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/malicious-client": {
+      "displayName": "Attack toolkit",
+      "description": "Ubuntu 24.04 with nmap, hydra, john, netcat and aircrack-ng. amd64 only: aircrack-ng is not packaged for arm64.",
+      "platforms": ["linux/amd64"],
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "malicious-client", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/iptables": {
+      "displayName": "iptables",
+      "description": "Ubuntu 24.04 + iptables, forwarding enabled, no rules loaded.",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "iptables", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/nftables": {
+      "displayName": "nftables",
+      "description": "Ubuntu 24.04 + nftables. Ships a default-drop ruleset: forwarded traffic is blocked until you add rules.",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "nftables", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/firehol": {
+      "displayName": "FireHOL",
+      "description": "Ubuntu 24.04 + FireHOL with the package's default-drop ruleset.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "firehol", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/suricata": {
+      "displayName": "Suricata",
+      "description": "Ubuntu 24.04 + Suricata watching eth0, with local rules for ping and Nmap SYN scans.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "suricata", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/snort3": {
+      "displayName": "Snort 3",
+      "description": "Snort 3 and libdaq compiled from source. Long build.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "snort3", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/snort2": {
+      "displayName": "Snort 2",
+      "description": "Ubuntu 24.04 + the packaged Snort 2 with its default rules.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "snort2", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/zeek": {
+      "displayName": "Zeek",
+      "description": "Ubuntu 24.04 + Zeek 6.0 network security monitor.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "zeek", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/wazuh-manager": {
+      "displayName": "Wazuh manager",
+      "description": "Ubuntu 24.04 + the Wazuh manager (agents enrol on 1514/1515).",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "wazuh/wazuh-manager", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/openplc": {
+      "displayName": "OpenPLC",
+      "description": "OpenPLC v3 runtime: web editor on 8080, Modbus TCP on 502. Long build.",
+      "stability": "experimental",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "openplc", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/scadabr": {
+      "displayName": "ScadaBR",
+      "description": "ScadaBR installer only; needs a manual install inside the container.",
+      "stability": "hidden",
+      "source": { "kind": "build", "repo": "ae3gis-containers", "context": "scadabr", "dockerfile": "dockerfile" }
+    }
+  },
   "types": {
     "router": {
       "displayName": "Router",
       "role": "router",
-      "category": "infrastructure",
+      "category": "network",
       "defaultImage": "kathara/frr",
-      "images": [
-        "kathara/frr"
-      ],
+      "images": ["kathara/frr"],
       "color": "#ff00ff",
       "label": "RTR",
       "icon": "router",
       "purdueLevel": 3
     },
-    "firewall": {
-      "displayName": "Firewall",
-      "role": "router",
-      "category": "infrastructure",
-      "defaultImage": "kathara/frr",
-      "images": [
-        "kathara/frr"
-      ],
-      "color": "#ff3344",
-      "label": "FW",
-      "icon": "firewall",
-      "purdueLevel": 3.5
-    },
     "switch": {
       "displayName": "Switch",
       "role": "switch",
-      "category": "infrastructure",
+      "category": "network",
       "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
+      "images": ["kathara/base"],
       "color": "#ffaa00",
       "label": "SW",
       "icon": "switch",
       "purdueLevel": 2
     },
-    "workstation": {
-      "displayName": "Workstation",
+    "firewall": {
+      "displayName": "Firewall",
+      "role": "router",
+      "category": "security",
+      "defaultImage": "kathara/frr",
+      "images": ["kathara/frr", "ae3gis.local/iptables", "ae3gis.local/nftables", "ae3gis.local/firehol"],
+      "color": "#ff3344",
+      "label": "FW",
+      "icon": "firewall",
+      "purdueLevel": 3.5
+    },
+    "ids": {
+      "displayName": "IDS / Network Monitor",
+      "description": "Watches traffic on its link and raises alerts.",
       "role": "host",
-      "category": "endpoint",
-      "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
-      "color": "#4466ff",
-      "label": "WS",
-      "icon": "workstation",
+      "category": "security",
+      "defaultImage": "ae3gis.local/suricata",
+      "images": ["ae3gis.local/suricata", "ae3gis.local/snort3", "ae3gis.local/snort2", "ae3gis.local/zeek"],
+      "color": "#ff8800",
+      "label": "IDS",
+      "icon": "ids",
+      "purdueLevel": 3.5
+    },
+    "siem": {
+      "displayName": "SIEM",
+      "description": "Collects and correlates logs from agents.",
+      "role": "host",
+      "category": "security",
+      "defaultImage": "ae3gis.local/wazuh-manager",
+      "images": ["ae3gis.local/wazuh-manager"],
+      "color": "#b04dff",
+      "label": "SIEM",
+      "icon": "siem",
       "purdueLevel": 4
     },
     "web-server": {
@@ -64,9 +203,7 @@
       "role": "host",
       "category": "server",
       "defaultImage": "httpd:alpine",
-      "images": [
-        "httpd:alpine"
-      ],
+      "images": ["httpd:alpine", "ae3gis.local/apache", "ae3gis.local/nginx"],
       "color": "#00ff9f",
       "label": "WEB",
       "icon": "server",
@@ -78,11 +215,20 @@
       "role": "host",
       "category": "server",
       "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
+      "images": ["kathara/base", "ae3gis.local/samba"],
       "color": "#00d4ff",
       "label": "FS",
+      "icon": "server",
+      "purdueLevel": 4
+    },
+    "ftp-server": {
+      "displayName": "FTP Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "ae3gis.local/vsftpd",
+      "images": ["ae3gis.local/vsftpd"],
+      "color": "#00b894",
+      "label": "FTP",
       "icon": "server",
       "purdueLevel": 4
     },
@@ -91,9 +237,7 @@
       "role": "host",
       "category": "server",
       "defaultImage": "postgres:alpine",
-      "images": [
-        "postgres:alpine"
-      ],
+      "images": ["postgres:alpine"],
       "color": "#7744ff",
       "label": "DB",
       "icon": "server",
@@ -104,22 +248,52 @@
       "role": "host",
       "category": "server",
       "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
+      "images": ["kathara/base"],
       "color": "#22bbaa",
       "label": "DNS",
       "icon": "server",
       "purdueLevel": 4
+    },
+    "dhcp-server": {
+      "displayName": "DHCP Server",
+      "role": "host",
+      "category": "server",
+      "defaultImage": "ae3gis.local/isc-dhcp",
+      "images": ["ae3gis.local/isc-dhcp"],
+      "color": "#66ccff",
+      "label": "DHCP",
+      "icon": "server",
+      "purdueLevel": 4
+    },
+    "workstation": {
+      "displayName": "Workstation",
+      "role": "host",
+      "category": "endpoint",
+      "defaultImage": "kathara/base",
+      "images": ["kathara/base", "ae3gis.local/benign-client", "ae3gis.local/wazuh-agent"],
+      "color": "#4466ff",
+      "label": "WS",
+      "icon": "workstation",
+      "purdueLevel": 4
+    },
+    "attacker": {
+      "displayName": "Attacker",
+      "description": "An adversary's machine with offensive tooling.",
+      "role": "host",
+      "category": "endpoint",
+      "defaultImage": "ae3gis.local/malicious-client",
+      "images": ["ae3gis.local/malicious-client"],
+      "color": "#ff2266",
+      "label": "ATK",
+      "icon": "attacker",
+      "purdueLevel": 5
     },
     "plc": {
       "displayName": "PLC",
       "role": "host",
       "category": "ics",
       "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
+      "images": ["kathara/base", "ae3gis.local/openplc"],
       "color": "#ffcc00",
       "label": "PLC",
       "icon": "plc",
@@ -131,9 +305,7 @@
       "role": "host",
       "category": "ics",
       "defaultImage": "kathara/base",
-      "images": [
-        "kathara/base"
-      ],
+      "images": ["kathara/base", "ae3gis.local/scadabr"],
       "color": "#33ccff",
       "label": "HMI",
       "icon": "hmi",

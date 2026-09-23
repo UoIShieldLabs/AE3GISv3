@@ -15,6 +15,130 @@
         "title": "Body_import_json_api_v1_topologies_import_json_post",
         "type": "object"
       },
+      "BuildSource": {
+        "description": "Build the image from ``<source>/<context>/<dockerfile>``.",
+        "properties": {
+          "args": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Args",
+            "type": "object"
+          },
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "dockerfile": {
+            "default": "Dockerfile",
+            "title": "Dockerfile",
+            "type": "string"
+          },
+          "kind": {
+            "const": "build",
+            "title": "Kind",
+            "type": "string"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "repo",
+          "context"
+        ],
+        "title": "BuildSource",
+        "type": "object"
+      },
+      "Catalog": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategorySpec"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "defaults": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Defaults",
+            "type": "object"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "images": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ImageSpec"
+            },
+            "title": "Images",
+            "type": "object"
+          },
+          "sources": {
+            "additionalProperties": {
+              "discriminator": {
+                "mapping": {
+                  "git": "#/components/schemas/GitSource",
+                  "path": "#/components/schemas/PathSource"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/GitSource"
+                },
+                {
+                  "$ref": "#/components/schemas/PathSource"
+                }
+              ]
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "types": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NodeTypeSpec"
+            },
+            "title": "Types",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "defaults",
+          "types"
+        ],
+        "title": "Catalog",
+        "type": "object"
+      },
+      "CategorySpec": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CategorySpec",
+        "type": "object"
+      },
       "ContextOut": {
         "properties": {
           "events": {
@@ -176,6 +300,31 @@
         "title": "EventOut",
         "type": "object"
       },
+      "GitSource": {
+        "description": "A git repository the backend clones (and syncs on demand).",
+        "properties": {
+          "kind": {
+            "const": "git",
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "default": "main",
+            "title": "Ref",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "GitSource",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -230,6 +379,66 @@
           "topologies"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "ImageSpec": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "platforms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platforms"
+          },
+          "source": {
+            "discriminator": {
+              "mapping": {
+                "build": "#/components/schemas/BuildSource",
+                "registry": "#/components/schemas/RegistrySource"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BuildSource"
+              },
+              {
+                "$ref": "#/components/schemas/RegistrySource"
+              }
+            ],
+            "title": "Source"
+          },
+          "stability": {
+            "default": "stable",
+            "enum": [
+              "stable",
+              "experimental",
+              "hidden"
+            ],
+            "title": "Stability",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "title": "ImageSpec",
         "type": "object"
       },
       "JobLogOut": {
@@ -532,6 +741,109 @@
         "title": "NodeState",
         "type": "object"
       },
+      "NodeTypeSpec": {
+        "additionalProperties": true,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "defaultImage": {
+            "title": "Defaultimage",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "images": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "purdueLevel": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purduelevel"
+          },
+          "role": {
+            "enum": [
+              "router",
+              "switch",
+              "host"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "webUiPort": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webuiport"
+          }
+        },
+        "required": [
+          "displayName",
+          "role",
+          "category",
+          "defaultImage",
+          "color",
+          "label",
+          "icon"
+        ],
+        "title": "NodeTypeSpec",
+        "type": "object"
+      },
+      "PathSource": {
+        "description": "A directory on the backend's filesystem (e.g. a mounted checkout).",
+        "properties": {
+          "kind": {
+            "const": "path",
+            "title": "Kind",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "path"
+        ],
+        "title": "PathSource",
+        "type": "object"
+      },
       "PlanOut": {
         "properties": {
           "diagnostics": {
@@ -643,6 +955,19 @@
           "orphans"
         ],
         "title": "ReconcileResult",
+        "type": "object"
+      },
+      "RegistrySource": {
+        "description": "Pull the image by ref from a registry (the default).",
+        "properties": {
+          "kind": {
+            "const": "registry",
+            "default": "registry",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "RegistrySource",
         "type": "object"
       },
       "RuntimeOut": {
@@ -957,16 +1282,14 @@
   "paths": {
     "/api/v1/catalog": {
       "get": {
-        "description": "Return the full node-type catalog (types, defaults, metadata).",
+        "description": "Return the full node-type catalog (categories, types, images, sources).",
         "operationId": "get_catalog_api_v1_catalog_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Catalog Api V1 Catalog Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/Catalog"
                 }
               }
             },
