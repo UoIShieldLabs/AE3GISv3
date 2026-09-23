@@ -69,11 +69,16 @@ class JobStep(BaseModel):
     message: str | None = None
     started_at: str | None = None
     ended_at: str | None = None
+    # Other jobs this step waits on (a deploy's images step lists its builds).
+    jobs: list[str] = Field(default_factory=list)
 
 
 class JobOut(BaseModel):
     id: str
-    topology_id: str
+    # Set for topology jobs (deploy/destroy); None for image builds and syncs.
+    topology_id: str | None = None
+    # What the job serialises on: topology:<id> | image:<ref> | source:<name>.
+    subject: str | None = None
     kind: str
     status: str
     steps: list[JobStep]
@@ -81,6 +86,70 @@ class JobOut(BaseModel):
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
+
+
+class JobLogOut(BaseModel):
+    """A line-aligned slice of a job's log. Poll again from ``next_offset``."""
+
+    offset: int
+    next_offset: int
+    size: int
+    text: str
+    done: bool
+
+
+ImageStatus = Literal["ready", "missing", "stale", "unmanaged", "unavailable", "building", "failed"]
+
+
+class HostBuildOut(BaseModel):
+    platform: str
+    can_build: bool
+    detail: str
+
+
+class SourceOut(BaseModel):
+    name: str
+    kind: Literal["git", "path"]
+    url: str | None = None
+    ref: str | None = None
+    path: str
+    available: bool
+    can_sync: bool
+    revision: str | None = None
+    detail: str
+    active_job: JobOut | None = None
+    last_job: JobOut | None = None
+
+
+class ImageStatusOut(BaseModel):
+    ref: str
+    display_name: str
+    description: str = ""
+    stability: Literal["stable", "experimental", "hidden"]
+    kind: Literal["build", "registry"]
+    source: str | None = None
+    status: ImageStatus
+    reason: str
+    expected_fingerprint: str | None = None
+    built_fingerprint: str | None = None
+    built_revision: str | None = None
+    created: str | None = None
+    size: int | None = None
+    platforms: list[str] | None = None
+    active_job: JobOut | None = None
+    last_job: JobOut | None = None
+
+
+class ImagesReport(BaseModel):
+    host: HostBuildOut
+    sources: list[SourceOut]
+    images: list[ImageStatusOut]
+
+
+class BuildRequest(BaseModel):
+    refs: list[str] = Field(min_length=1)
+    # Rebuild from scratch: refresh the base image and skip the build cache.
+    fresh: bool = False
 
 
 class NodeState(BaseModel):

@@ -5,9 +5,11 @@ strips or reshapes it. ``engine_state`` holds the deployment engine's own
 bookkeeping (see ``engine.base.EngineState``). ``version`` increments on every
 content change and backs optimistic concurrency on PUT.
 
-Jobs record every long-running operation (deploy/destroy/purge) with ordered
-steps; events are an append-only log per topology that the UI, reconcile, and
-a future agent can read.
+Jobs record every long-running operation with ordered steps. A job's
+``subject`` is what it serialises on (``topology:<id>``, ``image:<ref>``,
+``source:<name>``); ``topology_id`` is set only for topology jobs. Events are
+an append-only log per topology that the UI, reconcile, and a future agent can
+read.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ def new_id() -> str:
 
 
 TOPOLOGY_STATUSES = ("idle", "deploying", "deployed", "destroying", "error")
-JOB_KINDS = ("deploy", "destroy", "purge")
+JOB_KINDS = ("deploy", "destroy", "purge", "build", "sync_source")
 JOB_STATUSES = ("queued", "running", "succeeded", "failed", "cancelled")
 
 
@@ -50,8 +52,13 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(String, primary_key=True, default=new_id)
-    topology_id = Column(String, ForeignKey("topologies.id", ondelete="CASCADE"), nullable=False)
+    topology_id = Column(String, ForeignKey("topologies.id", ondelete="CASCADE"), nullable=True)
+    # What the job serialises on; see the module docstring. Always set by
+    # services.jobs.create_job (nullable only for rows older than 0003).
+    subject = Column(String, nullable=True)
     kind = Column(String, nullable=False)
+    # The job's inputs, e.g. {"ref": ..., "fresh": false} for a build.
+    params = Column(JSON, nullable=True)
     status = Column(String, default="queued", nullable=False)
     # [{name, status, message, started_at, ended_at}]
     steps = Column(JSON, default=list, nullable=False)
@@ -60,7 +67,10 @@ class Job(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
 
-    __table_args__ = (Index("ix_jobs_topology_created", "topology_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_jobs_topology_created", "topology_id", "created_at"),
+        Index("ix_jobs_subject_created", "subject", "created_at"),
+    )
 
     @property
     def is_active(self) -> bool:
