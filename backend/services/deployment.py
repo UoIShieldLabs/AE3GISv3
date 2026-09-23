@@ -11,7 +11,7 @@ from api.errors import Conflict, Invalid
 from db.models import Job, Topology
 from domain import validation
 from domain.topology import images_in
-from engine.base import DeploymentEngine, EngineState
+from engine.base import DeploymentEngine, EngineState, NodeLog
 from services import events, jobs, topologies
 from services.jobs import JobRunner
 
@@ -138,6 +138,14 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
         # (the engine call runs in a worker thread and cannot be interrupted).
         runner.point_of_no_return(job_id)
         async with runner.step(job_id, "deploy"):
+            # Record where the lab will be *before* creating it, so a deploy that
+            # dies part-way (or a restart) can still find and remove what it made.
+            provisional = EngineState(
+                engine=engine.name,
+                lab_name=plan.name,
+                nodes={n.id: n.machine_name for n in plan.nodes},
+            )
+            _set_topology(runner, topology_id, engine_state=provisional.to_dict())
             state = await engine.deploy(
                 plan, lambda m, jid=job_id: runner.progress(jid, "deploy", m)
             )
@@ -152,13 +160,21 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                     runner.progress(job_id, "verify", f"All {len(statuses)} nodes running")
                     break
                 if asyncio.get_running_loop().time() > deadline:
-                    runner.progress(job_id, "verify", f"Not running: {', '.join(not_running)}")
+                    crashed = await _crashed_nodes(runner, job_id, state)
+                    detail = "; ".join(c.summary() for c in crashed)
+                    runner.progress(
+                        job_id, "verify", detail or f"Not running: {', '.join(not_running)}"
+                    )
                     runner.event(
                         job_id,
                         "deploy.partial",
-                        f"{len(not_running)} node(s) not running after deploy",
+                        f"{len(not_running)} node(s) not running after deploy"
+                        + (f" — {detail}" if detail else ""),
                         level="warning",
-                        data={"nodes": not_running},
+                        data={
+                            "nodes": not_running,
+                            "logs": {c.node_id: c.log for c in crashed},
+                        },
                     )
                     break
                 await asyncio.sleep(VERIFY_POLL_S)
@@ -167,7 +183,9 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
         with runner.session_factory() as db:
             topo = db.get(Topology, topology_id)
             state = EngineState.from_dict(topo.engine_state) if topo else None
+        crashed = []
         if state:
+            crashed = await _crashed_nodes(runner, job_id, state)
             try:
                 await engine.destroy(state)
             except Exception as cleanup_exc:  # pragma: no cover - best effort
@@ -182,7 +200,24 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
         _set_topology(
             runner, topology_id, status="idle" if cancelled else "error", engine_state=None
         )
+        if crashed and not cancelled:
+            detail = "; ".join(c.summary() for c in crashed)
+            raise RuntimeError(f"{type(exc).__name__}: {exc} — {detail}") from exc
         raise
+
+
+async def _crashed_nodes(runner: JobRunner, job_id: str, state: EngineState) -> list[NodeLog]:
+    """Nodes whose container exited, with their output written to the job log."""
+    try:
+        crashed = await runner.engine.node_logs(state)
+    except Exception as exc:  # pragma: no cover - best effort
+        runner.log(job_id, f"Could not read node logs: {exc}")
+        return []
+    for c in crashed:
+        runner.log(job_id, f"── {c.summary()}")
+        for line in c.log.splitlines():
+            runner.log(job_id, f"   {c.name} | {line}")
+    return crashed
 
 
 async def run_destroy(runner: JobRunner, job_id: str) -> None:

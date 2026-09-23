@@ -155,6 +155,45 @@ def test_destroy_cannot_be_cancelled(client, topology, wait_jobs):
     assert client.get(f"/api/v1/jobs/{job_id}").json()["status"] == "succeeded"
 
 
+def test_deploy_that_dies_part_way_is_cleaned_up_and_explained(
+    client, topology, wait_jobs, fake_engine
+):
+    fake_engine.fail_after_create = RuntimeError("409 container is not running")
+    fake_engine.crash_nodes = {"hA": "sysctl: setting key: Read-only file system"}
+    tid = topology["id"]
+    job_id = client.post(f"/api/v1/topologies/{tid}/deploy").json()["id"]
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "failed"
+    assert "409 container is not running" in job["error"]
+    assert "ha exited (1): sysctl: setting key: Read-only file system" in job["error"]
+    assert fake_engine.labs == {}  # the half-created lab was removed
+    rec = client.get(f"/api/v1/topologies/{tid}").json()
+    assert rec["status"] == "error" and rec["engine_state"] is None
+    text = client.get(f"/api/v1/jobs/{job_id}/log", params={"offset": 0}).json()["text"]
+    assert "ha | sysctl: setting key" in text
+
+
+def test_verify_reports_crashed_nodes(client, topology, wait_jobs, fake_engine, monkeypatch):
+    from services import deployment
+
+    monkeypatch.setattr(deployment, "VERIFY_TIMEOUT_S", 0.0)
+    fake_engine.crash_nodes = {"hA": "nft: No such file or directory"}
+    tid = topology["id"]
+    job_id = client.post(f"/api/v1/topologies/{tid}/deploy").json()["id"]
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "succeeded"
+    verify = next(s for s in job["steps"] if s["name"] == "verify")
+    assert "ha exited (1): nft: No such file" in verify["message"]
+    partial = [
+        e
+        for e in client.get(f"/api/v1/topologies/{tid}/events").json()
+        if e["type"] == "deploy.partial"
+    ]
+    assert partial and partial[0]["data"]["logs"] == {"hA": "nft: No such file or directory"}
+
+
 def test_restart_recovery_unsticks_topologies(app, client, topology):
     from db.models import Topology
 
