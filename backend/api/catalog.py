@@ -3,11 +3,12 @@
 from fastapi import APIRouter
 
 import catalog
+from catalog.models import Catalog
 
 router = APIRouter(prefix="/api/v1/catalog", tags=["catalog"])
 
 
-@router.get("")
+@router.get("", response_model=Catalog)
 def get_catalog() -> dict:
-    """Return the full node-type catalog (types, defaults, metadata)."""
+    """Return the full node-type catalog (categories, types, images, sources)."""
     return catalog.load_catalog()

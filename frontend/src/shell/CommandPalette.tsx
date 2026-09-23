@@ -1,8 +1,6 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import {
-  Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Save, Sparkles, Square, Sun,
-} from 'lucide-react';
+import { Boxes, Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Save, Sparkles, Square, Sun } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
@@ -13,6 +11,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson } from '@/features/deployment/actions';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
 import { targetSiteFor, targetSubnetFor } from '@/features/topology/addTargets';
+import { cn } from '@/lib/cn';
+import { LAYER } from '@/ui/layers';
 
 export interface CommandPaletteProps {
   scope: Scope;
@@ -37,8 +37,8 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
   return (
     <RDialog.Root open={open} onOpenChange={(o) => st().setCommandPaletteOpen(o)}>
       <RDialog.Portal>
-        <RDialog.Overlay className="fixed inset-0 z-[85] bg-black/40 animate-fade" />
-        <RDialog.Content className="fixed left-1/2 top-[12vh] z-[86] w-[calc(100vw-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-elevated shadow-lg outline-none animate-pop">
+        <RDialog.Overlay className={cn('fixed inset-0 bg-black/40 animate-fade', LAYER.overlay)} />
+        <RDialog.Content className={cn('fixed left-1/2 top-[12vh] w-[calc(100vw-32px)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-elevated shadow-lg outline-none animate-pop', LAYER.palette)}>
           <RDialog.Title className="sr-only">Command palette</RDialog.Title>
           <RDialog.Description className="sr-only">Search entities and actions</RDialog.Description>
           <Command loop>
@@ -61,6 +61,7 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 <CommandItem onSelect={run(() => void exportLab('kathara'))} disabled={!backendId}><Download /> Export Kathara lab (zip)</CommandItem>
                 <CommandItem onSelect={run(() => void exportLab('containerlab'))} disabled={!backendId}><Download /> Export ContainerLab topology (zip)</CommandItem>
                 <CommandItem onSelect={run(() => st().setPurdueOpen(true))}><Layers3 /> Purdue model view</CommandItem>
+                <CommandItem onSelect={run(() => st().openImages())} keywords={['images', 'build', 'dockerfile', 'containers']}><Boxes /> Images</CommandItem>
               </CommandGroup>
 
               <CommandSeparator />

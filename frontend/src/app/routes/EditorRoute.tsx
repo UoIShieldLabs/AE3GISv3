@@ -8,6 +8,8 @@ import { UnsavedChangesGuard } from '@/features/topology/UnsavedChangesGuard';
 import { AddEntityProvider } from '@/features/topology/AddEntityProvider';
 import { TerminalDock } from '@/features/terminal/TerminalDock';
 import { PurdueSheet } from '@/features/purdue/PurdueSheet';
+import { ImagesSheet } from '@/features/images/ImagesSheet';
+import { RequiredImagesBanner } from '@/features/images/RequiredImagesBanner';
 import { TopologyCanvas } from '@/canvas/TopologyCanvas';
 import { EditorShell } from '@/shell/EditorShell';
 import { TopBar } from '@/shell/TopBar';
@@ -95,6 +97,7 @@ export function EditorRoute() {
           />
         }
         breadcrumb={<Breadcrumb scope={scope} onNavigate={onNavigate} />}
+        notice={<RequiredImagesBanner />}
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
         canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
@@ -102,6 +105,7 @@ export function EditorRoute() {
         statusBar={<StatusBar scope={scope} />}
       />
       <PurdueSheet />
+      <ImagesSheet />
       <CommandPalette scope={scope} onNavigate={onNavigate} onSave={() => void save()} />
       <UnsavedChangesGuard onSave={save} />
     </AddEntityProvider>

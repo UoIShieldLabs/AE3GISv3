@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ChevronDown, Download, FileJson, Layers3, Library, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import { AlertTriangle, Boxes, ChevronDown, Download, FileJson, Layers3, Library, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
 import type { ExportFormat } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { MOD } from '@/lib/keyboard';
@@ -9,6 +9,7 @@ import {
   Badge, Button, IconButton, Separator, Tooltip,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/ui';
+import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
 import { ThemeToggle } from './ThemeToggle';
 
 export interface TopBarProps {
@@ -35,7 +36,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, activeJob: s.activeJob,
     errorCount: s.diagnostics.filter((d) => d.severity === 'error').length,
   }));
-  const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen } = useAppStore.getState();
+  const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen, openImages } = useAppStore.getState();
   const setMeta = useAppStore((s) => s.setTopologyMeta);
   const { canUndo, canRedo } = useUndoState();
   const status = STATUS[deployStatus];
@@ -93,14 +94,17 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <DropdownMenuItem onSelect={() => onExportLab('kathara')} disabled={!backendId}><PackageOpen /> Kathara lab (zip)</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExportLab('containerlab')} disabled={!backendId}><PackageOpen /> ContainerLab topology (zip)</DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        <Tooltip content={lastError ?? stepLabel}>
-          <Badge tone={status.tone} dot={status.dot} className="h-6 max-w-64 px-2"><span className="truncate">{stepLabel}</span></Badge>
-        </Tooltip>
+        <JobDetailsPopover>
+          <button type="button" title={lastError ?? `${stepLabel} — click for details`} className="rounded-full focus-visible:outline-2 focus-visible:outline-ring">
+            <Badge tone={status.tone} dot={status.dot} className="h-6 max-w-64 cursor-pointer px-2 hover:brightness-110"><span className="truncate">{stepLabel}</span></Badge>
+          </button>
+        </JobDetailsPopover>
         {errorCount > 0 ? (
           <Tooltip content={`${errorCount} issue${errorCount === 1 ? '' : 's'} block deployment — see Issues in the inspector`}>
             <Badge tone="danger" className="h-6 px-2"><AlertTriangle className="size-3" /> {errorCount}</Badge>

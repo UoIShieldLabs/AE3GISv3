@@ -11,7 +11,7 @@ from api.errors import Conflict, Invalid
 from db.models import Job, Topology
 from domain import validation
 from domain.topology import images_in
-from engine.base import DeploymentEngine, EngineState
+from engine.base import DeploymentEngine, EngineState, NodeLog
 from services import events, jobs, topologies
 from services.jobs import JobRunner
 
@@ -23,49 +23,63 @@ VERIFY_POLL_S = 1.0
 
 
 def start_deploy(db: Session, runner: JobRunner, topo: Topology) -> Job:
-    if jobs.active_job(db, topo.id):
-        raise Conflict("A job is already running for this topology", code="job_active")
-    if topo.status not in ("idle", "error"):
-        raise Conflict(
-            f"Cannot deploy while status is '{topo.status}'", code="bad_state", status=topo.status
+    with runner.admission:
+        db.refresh(topo)
+        if jobs.active_job(db, topo.id):
+            raise Conflict("A job is already running for this topology", code="job_active")
+        if topo.status not in ("idle", "error"):
+            raise Conflict(
+                f"Cannot deploy while status is '{topo.status}'",
+                code="bad_state",
+                status=topo.status,
+            )
+        diags = validation.validate(topo.data)
+        if validation.has_errors(diags):
+            raise Invalid(
+                "The topology has errors that must be fixed before deploying",
+                code="validation_failed",
+                diagnostics=[d.to_dict() for d in diags],
+            )
+        topo.status = "deploying"
+        job = jobs.create_job(
+            db, "deploy", subject=jobs.topology_subject(topo.id), topology_id=topo.id
         )
-    diags = validation.validate(topo.data)
-    if validation.has_errors(diags):
-        raise Invalid(
-            "The topology has errors that must be fixed before deploying",
-            code="validation_failed",
-            diagnostics=[d.to_dict() for d in diags],
+        events.record(
+            db,
+            type="deploy.requested",
+            message="Deploy requested",
+            topology_id=topo.id,
+            job_id=job.id,
         )
-    topo.status = "deploying"
-    job = jobs.create_job(db, topo.id, "deploy")
-    events.record(
-        db, type="deploy.requested", message="Deploy requested", topology_id=topo.id, job_id=job.id
-    )
-    db.commit()
+        db.commit()
     db.refresh(job)
-    runner.submit(job.id, topo.id)
+    runner.submit(job.id)
     return job
 
 
 def start_destroy(db: Session, runner: JobRunner, topo: Topology) -> Job:
-    if jobs.active_job(db, topo.id):
-        raise Conflict("A job is already running for this topology", code="job_active")
-    if topo.status not in ("deployed", "error") or not topo.engine_state:
-        raise Conflict(
-            "Nothing is deployed for this topology", code="bad_state", status=topo.status
+    with runner.admission:
+        db.refresh(topo)
+        if jobs.active_job(db, topo.id):
+            raise Conflict("A job is already running for this topology", code="job_active")
+        if topo.status not in ("deployed", "error") or not topo.engine_state:
+            raise Conflict(
+                "Nothing is deployed for this topology", code="bad_state", status=topo.status
+            )
+        topo.status = "destroying"
+        job = jobs.create_job(
+            db, "destroy", subject=jobs.topology_subject(topo.id), topology_id=topo.id
         )
-    topo.status = "destroying"
-    job = jobs.create_job(db, topo.id, "destroy")
-    events.record(
-        db,
-        type="destroy.requested",
-        message="Destroy requested",
-        topology_id=topo.id,
-        job_id=job.id,
-    )
-    db.commit()
+        events.record(
+            db,
+            type="destroy.requested",
+            message="Destroy requested",
+            topology_id=topo.id,
+            job_id=job.id,
+        )
+        db.commit()
     db.refresh(job)
-    runner.submit(job.id, topo.id)
+    runner.submit(job.id)
     return job
 
 
@@ -101,16 +115,10 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 raise RuntimeError(f"{summary['errors']} validation error(s)")
 
         async with runner.step(job_id, "images"):
-            images = images_in(data)
-            present = await engine.images_present(images)
-            missing = [i for i in images if not present.get(i)]
-            if not missing:
-                runner.progress(job_id, "images", f"{len(images)} image(s) present")
-            for i, image in enumerate(missing, 1):
-                runner.progress(job_id, "images", f"Pulling {image} ({i}/{len(missing)})")
-                await engine.pull_image(
-                    image, lambda m, jid=job_id: runner.progress(jid, "images", m)
-                )
+            # Builds what AE3GIS builds (waiting on builds already running),
+            # pulls the rest, and warns about out-of-date images.
+            assert runner.images is not None
+            await runner.images.prepare_for_deploy(runner, job_id, images_in(data))
 
         async with runner.step(job_id, "plan"):
             with runner.session_factory() as db:
@@ -120,7 +128,18 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 job_id, "plan", f"{len(plan.nodes)} nodes, {len(plan.collision_domains)} links"
             )
 
+        # Once the engine starts creating containers the job runs to completion
+        # (the engine call runs in a worker thread and cannot be interrupted).
+        runner.point_of_no_return(job_id)
         async with runner.step(job_id, "deploy"):
+            # Record where the lab will be *before* creating it, so a deploy that
+            # dies part-way (or a restart) can still find and remove what it made.
+            provisional = EngineState(
+                engine=engine.name,
+                lab_name=plan.name,
+                nodes={n.id: n.machine_name for n in plan.nodes},
+            )
+            _set_topology(runner, topology_id, engine_state=provisional.to_dict())
             state = await engine.deploy(
                 plan, lambda m, jid=job_id: runner.progress(jid, "deploy", m)
             )
@@ -135,30 +154,64 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                     runner.progress(job_id, "verify", f"All {len(statuses)} nodes running")
                     break
                 if asyncio.get_running_loop().time() > deadline:
-                    runner.progress(job_id, "verify", f"Not running: {', '.join(not_running)}")
+                    crashed = await _crashed_nodes(runner, job_id, state)
+                    detail = "; ".join(c.summary() for c in crashed)
+                    runner.progress(
+                        job_id, "verify", detail or f"Not running: {', '.join(not_running)}"
+                    )
                     runner.event(
                         job_id,
                         "deploy.partial",
-                        f"{len(not_running)} node(s) not running after deploy",
+                        f"{len(not_running)} node(s) not running after deploy"
+                        + (f" — {detail}" if detail else ""),
                         level="warning",
-                        data={"nodes": not_running},
+                        data={
+                            "nodes": not_running,
+                            "logs": {c.node_id: c.log for c in crashed},
+                        },
                     )
                     break
                 await asyncio.sleep(VERIFY_POLL_S)
-    except Exception:
+    except (Exception, asyncio.CancelledError) as exc:
         # Leave nothing half-deployed behind; the user sees status=error and can retry.
         with runner.session_factory() as db:
             topo = db.get(Topology, topology_id)
             state = EngineState.from_dict(topo.engine_state) if topo else None
+        crashed = []
         if state:
+            crashed = await _crashed_nodes(runner, job_id, state)
             try:
                 await engine.destroy(state)
-            except Exception as exc:  # pragma: no cover - best effort
+            except Exception as cleanup_exc:  # pragma: no cover - best effort
                 runner.event(
-                    job_id, "deploy.cleanup_failed", f"Cleanup failed: {exc}", level="error"
+                    job_id,
+                    "deploy.cleanup_failed",
+                    f"Cleanup failed: {cleanup_exc}",
+                    level="error",
                 )
-        _set_topology(runner, topology_id, status="error", engine_state=None)
+        cancelled = isinstance(exc, asyncio.CancelledError)
+        # A cancel can only land before the engine created anything: back to idle.
+        _set_topology(
+            runner, topology_id, status="idle" if cancelled else "error", engine_state=None
+        )
+        if crashed and not cancelled:
+            detail = "; ".join(c.summary() for c in crashed)
+            raise RuntimeError(f"{type(exc).__name__}: {exc} — {detail}") from exc
         raise
+
+
+async def _crashed_nodes(runner: JobRunner, job_id: str, state: EngineState) -> list[NodeLog]:
+    """Nodes whose container exited, with their output written to the job log."""
+    try:
+        crashed = await runner.engine.node_logs(state)
+    except Exception as exc:  # pragma: no cover - best effort
+        runner.log(job_id, f"Could not read node logs: {exc}")
+        return []
+    for c in crashed:
+        runner.log(job_id, f"── {c.summary()}")
+        for line in c.log.splitlines():
+            runner.log(job_id, f"   {c.name} | {line}")
+    return crashed
 
 
 async def run_destroy(runner: JobRunner, job_id: str) -> None:
@@ -183,7 +236,8 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
 
 
 def register_handlers(runner: JobRunner) -> None:
-    runner.register("deploy", run_deploy)
+    # Deploys can be cancelled until the engine starts creating containers.
+    runner.register("deploy", run_deploy, cancellable=True)
     runner.register("destroy", run_destroy)
 
 

@@ -28,6 +28,9 @@ Backend services designed for but not built yet (seams exist in
   agent tools and rely on `version`/409 for safe concurrent edits.
 
 Cross-cutting:
-- Build multi-arch node images and register them in `catalog/node_types.json`.
+- Prebuilt node images: CI in `ae3gis-containers` builds multi-arch images and
+  pushes them to GHCR tagged by fingerprint; image resolution becomes "local
+  image with a matching fingerprint → pull the prebuilt one → build locally"
+  (the fingerprint labels AE3GIS already stamps make this a drop-in).
 - Make the catalog env-overridable so image sets ship without editing the repo.
 - CI: run backend pytest + frontend build/test/lint before deploy.

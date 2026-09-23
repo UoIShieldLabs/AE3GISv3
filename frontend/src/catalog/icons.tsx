@@ -66,6 +66,32 @@ const GLYPHS: Record<string, (p: GlyphProps) => React.ReactElement> = {
       <circle cx="16" cy="26" r="1.5" fill={color} opacity="0.8" />
     </svg>
   ),
+  ids: ({ color, size }) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M16 4L5 9v7c0 6 4.7 11.6 11 13 6.3-1.4 11-7 11-13V9L16 4z"
+        stroke={color} strokeWidth="1.5" fill="rgba(255,136,0,0.08)" strokeLinejoin="round" />
+      <path d="M9.5 16.5c1.8-3 4-4.5 6.5-4.5s4.7 1.5 6.5 4.5c-1.8 3-4 4.5-6.5 4.5s-4.7-1.5-6.5-4.5z"
+        stroke={color} strokeWidth="1.2" strokeLinejoin="round" />
+      <circle cx="16" cy="16.5" r="1.8" fill={color} />
+    </svg>
+  ),
+  siem: ({ color, size }) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <rect x="5" y="6" width="22" height="16" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(176,77,255,0.08)" />
+      <path d="M8 18l4-4 3 2 4-5 3 3" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="12" y1="26" x2="20" y2="26" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="16" y1="22" x2="16" y2="26" stroke={color} strokeWidth="1.5" />
+    </svg>
+  ),
+  attacker: ({ color, size }) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <rect x="6" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(255,34,102,0.08)" />
+      <path d="M10 11l3 2-3 2" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="15" y1="15.5" x2="20" y2="15.5" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="12" y1="24" x2="20" y2="24" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="16" y1="20" x2="16" y2="24" stroke={color} strokeWidth="1.5" />
+    </svg>
+  ),
   default: ({ color, size }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <rect x="7" y="9" width="18" height="14" rx="2" stroke={color} strokeWidth="1.5" fill="rgba(156,163,175,0.10)" />

@@ -93,3 +93,114 @@ def test_restart_recovery_fails_stale_jobs(app, client, topology):
     assert recover_stale_jobs(app.state.session_factory) == 1
     jobs = client.get(f"/api/v1/topologies/{topology['id']}/jobs").json()
     assert jobs[0]["status"] == "failed" and "restarted" in jobs[0]["error"]
+
+
+def _wait_for_step(client, job_id, name, timeout=5.0):
+    import time
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        job = client.get(f"/api/v1/jobs/{job_id}").json()
+        if any(s["name"] == name and s["status"] == "running" for s in job["steps"]):
+            return job
+        time.sleep(0.02)
+    raise AssertionError(f"step {name} never started: {job}")
+
+
+def test_job_log_records_steps(client, topology, wait_jobs):
+    job_id = client.post(f"/api/v1/topologies/{topology['id']}/deploy").json()["id"]
+    wait_jobs()
+    first = client.get(f"/api/v1/jobs/{job_id}/log", params={"offset": 0}).json()
+    assert "── validate" in first["text"] and "── verify" in first["text"]
+    assert first["text"].rstrip().endswith("succeeded")
+    assert first["done"] is True and first["next_offset"] == first["size"]
+    rest = client.get(f"/api/v1/jobs/{job_id}/log", params={"offset": first["next_offset"]})
+    assert rest.json()["text"] == ""
+    assert client.get("/api/v1/jobs/nope/log").status_code == 404
+
+
+def test_cancel_deploy_while_pulling_images(client, topology, wait_jobs, fake_engine):
+    import asyncio
+
+    fake_engine.present_images = {"kathara/base"}
+    fake_engine.pull_gate = asyncio.Event()
+    tid = topology["id"]
+    job_id = client.post(f"/api/v1/topologies/{tid}/deploy").json()["id"]
+    _wait_for_step(client, job_id, "images")
+
+    r = client.post(f"/api/v1/jobs/{job_id}/cancel")
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "cancelled"
+    assert next(s for s in job["steps"] if s["name"] == "images")["status"] == "cancelled"
+    assert _runtime(client, tid)["status"] == "idle"
+    assert fake_engine.labs == {} and fake_engine.pulled == []
+    # Finished jobs can't be cancelled; a new deploy works.
+    assert client.post(f"/api/v1/jobs/{job_id}/cancel").status_code == 409
+    fake_engine.pull_gate = None
+    assert client.post(f"/api/v1/topologies/{tid}/deploy").status_code == 202
+    wait_jobs()
+    assert _runtime(client, tid)["status"] == "deployed"
+
+
+def test_destroy_cannot_be_cancelled(client, topology, wait_jobs):
+    tid = topology["id"]
+    client.post(f"/api/v1/topologies/{tid}/deploy")
+    wait_jobs()
+    job_id = client.post(f"/api/v1/topologies/{tid}/destroy").json()["id"]
+    r = client.post(f"/api/v1/jobs/{job_id}/cancel")
+    wait_jobs()
+    assert r.status_code == 409 and r.json()["code"] == "not_cancellable"
+    assert client.get(f"/api/v1/jobs/{job_id}").json()["status"] == "succeeded"
+
+
+def test_deploy_that_dies_part_way_is_cleaned_up_and_explained(
+    client, topology, wait_jobs, fake_engine
+):
+    fake_engine.fail_after_create = RuntimeError("409 container is not running")
+    fake_engine.crash_nodes = {"hA": "sysctl: setting key: Read-only file system"}
+    tid = topology["id"]
+    job_id = client.post(f"/api/v1/topologies/{tid}/deploy").json()["id"]
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "failed"
+    assert "409 container is not running" in job["error"]
+    assert "ha exited (1): sysctl: setting key: Read-only file system" in job["error"]
+    assert fake_engine.labs == {}  # the half-created lab was removed
+    rec = client.get(f"/api/v1/topologies/{tid}").json()
+    assert rec["status"] == "error" and rec["engine_state"] is None
+    text = client.get(f"/api/v1/jobs/{job_id}/log", params={"offset": 0}).json()["text"]
+    assert "ha | sysctl: setting key" in text
+
+
+def test_verify_reports_crashed_nodes(client, topology, wait_jobs, fake_engine, monkeypatch):
+    from services import deployment
+
+    monkeypatch.setattr(deployment, "VERIFY_TIMEOUT_S", 0.0)
+    fake_engine.crash_nodes = {"hA": "nft: No such file or directory"}
+    tid = topology["id"]
+    job_id = client.post(f"/api/v1/topologies/{tid}/deploy").json()["id"]
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "succeeded"
+    verify = next(s for s in job["steps"] if s["name"] == "verify")
+    assert "ha exited (1): nft: No such file" in verify["message"]
+    partial = [
+        e
+        for e in client.get(f"/api/v1/topologies/{tid}/events").json()
+        if e["type"] == "deploy.partial"
+    ]
+    assert partial and partial[0]["data"]["logs"] == {"hA": "nft: No such file or directory"}
+
+
+def test_restart_recovery_unsticks_topologies(app, client, topology):
+    from db.models import Topology
+
+    with app.state.session_factory() as db:
+        db.get(Topology, topology["id"]).status = "deploying"
+        db.commit()
+    recover_stale_jobs(app.state.session_factory)
+    assert _runtime(client, topology["id"])["status"] == "error"
+    types = [e["type"] for e in client.get(f"/api/v1/topologies/{topology['id']}/events").json()]
+    assert "topology.recovered" in types

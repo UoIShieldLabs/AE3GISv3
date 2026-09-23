@@ -42,9 +42,13 @@ async function tick(topologyId: string) {
       // The job we were watching finished: report how it ended.
       const finished = await api.getJob(lastJobId).catch(() => null);
       lastJobId = null;
+      if (finished) useAppStore.getState().setLastJob(finished);
+      const details = { label: 'Details', onClick: () => useAppStore.getState().setJobDetailsOpen(true) };
       if (finished?.status === 'failed') {
         useAppStore.getState().setDeployStatus(rt.status as typeof st.deployStatus, finished.error ?? 'Job failed');
-        toast.error(finished.kind === 'deploy' ? 'Deploy failed' : 'Destroy failed', { description: finished.error ?? undefined, duration: 8000 });
+        toast.error(finished.kind === 'deploy' ? 'Deploy failed' : 'Destroy failed', { description: finished.error ?? undefined, duration: 10000, action: details });
+      } else if (finished?.status === 'cancelled') {
+        toast.info(finished.kind === 'deploy' ? 'Deploy cancelled' : 'Destroy cancelled', { action: details });
       } else if (finished?.status === 'succeeded') {
         if (finished.kind === 'deploy') toast.success('Deployed', { description: `${rt.nodes.length} nodes running` });
         else toast.success('Destroyed', { description: 'All containers were removed.' });

@@ -13,7 +13,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import catalog, deployment, jobs, presets, system, topologies
+import catalog as node_catalog
+from api import catalog, deployment, images, jobs, presets, system, topologies
 from api.errors import install_error_handlers
 from config import Settings, get_settings
 from db.migrations import run_migrations
@@ -22,9 +23,15 @@ from engine.base import DeploymentEngine
 from engine.fake import make_engine as make_deployment_engine
 from services import reconcile
 from services.deployment import register_handlers
+from services.images import ImageManager
+from services.joblogs import JobLogStore
 from services.jobs import JobRunner, recover_stale_jobs
+from services.sources import Sources
 
 API_VERSION = "3.1.0"
+
+# Job kinds cancelled (rather than awaited) at shutdown.
+SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source")
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +44,12 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     run_migrations(settings.database_url)
     session_factory = make_session_factory(make_engine(settings.database_url))
     engine = engine or make_deployment_engine(settings.engine)
-    runner = JobRunner(session_factory, engine)
+    logs = JobLogStore(settings.job_logs_dir, max_bytes=settings.job_log_max_bytes)
+    runner = JobRunner(session_factory, engine, logs)
     register_handlers(runner)
+    image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
+    image_manager.register()
+    runner.images = image_manager
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -48,6 +59,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         stale = recover_stale_jobs(session_factory)
         if stale:
             log.warning("Failed %d job(s) left running by a previous process", stale)
+        logs.gc(settings.job_log_retention_days)
         if ok:
             try:
                 with session_factory() as db:
@@ -57,7 +69,9 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
             except Exception as exc:  # pragma: no cover - environment dependent
                 log.warning("Startup reconcile skipped: %s", exc)
         yield
-        await runner.wait_idle()
+        # Long builds are cancelled rather than awaited, so a restart (or a dev
+        # reload) does not hang on them; everything else finishes.
+        await runner.shutdown(cancel_kinds=SHUTDOWN_CANCEL_KINDS)
 
     app = FastAPI(
         title="AE3GIS API",
@@ -71,6 +85,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     app.state.session_factory = session_factory
     app.state.engine = engine
     app.state.runner = runner
+    app.state.images = image_manager
 
     app.add_middleware(
         CORSMiddleware,
@@ -84,6 +99,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         topologies.router,
         deployment.router,
         jobs.router,
+        images.router,
         system.router,
         catalog.router,
         presets.router,

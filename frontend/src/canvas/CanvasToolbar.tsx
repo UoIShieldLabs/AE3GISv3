@@ -3,7 +3,8 @@ import { Cable, ChevronDown, Grid3X3, Hand, LayoutGrid, ListPlus, Map as MapIcon
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { LAYOUT_MODES } from './layout';
-import { menuHierarchy, displayNameFor, colorFor, categoryLabel } from '@/catalog/catalog';
+import { colorFor } from '@/catalog/catalog';
+import { useCatalogTree } from '@/catalog/useCatalogTree';
 import { NodeGlyph } from '@/catalog/icons';
 import type { Scope } from '@/lib/topology';
 import {
@@ -28,6 +29,7 @@ export interface CanvasToolbarProps {
 
 export function CanvasToolbar({ scope, readOnly, onAdd, onBulkDevices, onBulkConnections, onAutoLayout, expandableCount, expandedCount, onExpandAll, onCollapseAll }: CanvasToolbarProps) {
   const { fitView } = useReactFlow();
+  const tree = useCatalogTree();
   const { tool, snapToGrid, showMinimap, layoutMode } = useAppShallow((s) => ({
     tool: s.tool, snapToGrid: s.snapToGrid, showMinimap: s.showMinimap, layoutMode: s.layoutMode,
   }));
@@ -57,14 +59,14 @@ export function CanvasToolbar({ scope, readOnly, onAdd, onBulkDevices, onBulkCon
                   <>
                     {scope.level === 'site' ? <DropdownMenuSeparator /> : null}
                     <DropdownMenuLabel>Devices</DropdownMenuLabel>
-                    {Object.entries(menuHierarchy).map(([category, types]) => (
-                      <DropdownMenuSub key={category}>
-                        <DropdownMenuSubTrigger>{categoryLabel(category)}</DropdownMenuSubTrigger>
+                    {tree.map((cat) => (
+                      <DropdownMenuSub key={cat.id}>
+                        <DropdownMenuSubTrigger>{cat.label}</DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
-                          {Object.keys(types).map((type) => (
+                          {cat.types.map(({ type, name }) => (
                             <DropdownMenuItem key={type} onSelect={() => onAdd({ kind: 'device', type })}>
                               <NodeGlyph type={type} size={14} color={colorFor(type)} />
-                              {displayNameFor(type)}
+                              {name}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuSubContent>

@@ -22,7 +22,11 @@ export type Lab = S['LabOut'];
 export type Health = S['HealthOut'];
 export type PresetSummary = S['PresetSummary'];
 export type ContextOut = S['ContextOut'];
-export type Catalog = import('../catalog/catalog').Catalog;
+export type Catalog = S['Catalog'];
+export type JobLog = S['JobLogOut'];
+export type ImagesReport = S['ImagesReport'];
+export type ImageStatus = S['ImageStatusOut'];
+export type ImageSource = S['SourceOut'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -165,8 +169,33 @@ export function getRuntime(id: string): Promise<Runtime> {
 export function getJob(jobId: string): Promise<Job> {
   return request(`${V1}/jobs/${encodeURIComponent(jobId)}`);
 }
+/** A line-aligned slice of a job's log; omit `offset` to read the tail. */
+export function getJobLog(jobId: string, offset?: number, limit?: number): Promise<JobLog> {
+  const q = new URLSearchParams();
+  if (offset !== undefined) q.set('offset', String(offset));
+  if (limit !== undefined) q.set('limit', String(limit));
+  const qs = q.toString();
+  return request(`${V1}/jobs/${encodeURIComponent(jobId)}/log${qs ? `?${qs}` : ''}`);
+}
+export function cancelJob(jobId: string): Promise<Job> {
+  return request(`${V1}/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' });
+}
 export function execWsPath(id: string, containerId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(id)}/exec/${encodeURIComponent(containerId)}`;
+}
+
+// ── Images ─────────────────────────────────────────────────────────
+/** Build support, image sources, and the status of every catalog image
+ *  (or only those a topology uses). */
+export function getImages(topologyId?: string): Promise<ImagesReport> {
+  return request(`${V1}/images${topologyId ? `?topology_id=${encodeURIComponent(topologyId)}` : ''}`);
+}
+/** Start builds (an image already building returns its running job). */
+export function buildImages(refs: string[], fresh = false): Promise<Job[]> {
+  return request(`${V1}/images/builds`, json({ refs, fresh }));
+}
+export function syncSource(name: string): Promise<Job> {
+  return request(`${V1}/sources/${encodeURIComponent(name)}/sync`, { method: 'POST' });
 }
 
 // ── Presets ────────────────────────────────────────────────────────

@@ -13,11 +13,53 @@ export interface paths {
         };
         /**
          * Get Catalog
-         * @description Return the full node-type catalog (types, defaults, metadata).
+         * @description Return the full node-type catalog (categories, types, images, sources).
          */
         get: operations["get_catalog_api_v1_catalog_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Images
+         * @description Host build support, image sources, and the status of each image.
+         *
+         *     Without ``topology_id``: every image the catalog describes.
+         */
+        get: operations["list_images_api_v1_images_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/images/builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build Images
+         * @description Start a build job per image (an image already building returns its job).
+         */
+        post: operations["build_images_api_v1_images_builds_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33,6 +75,48 @@ export interface paths {
         };
         /** Get Job */
         get: operations["get_job_api_v1_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Job
+         * @description Cancel a queued or running job. Deploys can only be cancelled before the
+         *     engine starts creating containers; destroys cannot be cancelled.
+         */
+        post: operations["cancel_job_api_v1_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Log
+         * @description A slice of the job's log. ``done`` turns true once the job has finished
+         *     and the slice reaches the end of the log.
+         */
+        get: operations["get_job_log_api_v1_jobs__job_id__log_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -89,6 +173,26 @@ export interface paths {
          * @description Create a new topology from a preset template.
          */
         post: operations["load_preset_api_v1_presets__preset_id__load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sources/{name}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Source
+         * @description Fetch a git source's configured ref; the job reports which images changed.
+         */
+        post: operations["sync_source_api_v1_sources__name__sync_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -423,6 +527,75 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BuildRequest */
+        BuildRequest: {
+            /**
+             * Fresh
+             * @default false
+             */
+            fresh: boolean;
+            /** Refs */
+            refs: string[];
+        };
+        /**
+         * BuildSource
+         * @description Build the image from ``<source>/<context>/<dockerfile>``.
+         */
+        BuildSource: {
+            /** Args */
+            args?: {
+                [key: string]: string;
+            };
+            /** Context */
+            context: string;
+            /**
+             * Dockerfile
+             * @default Dockerfile
+             */
+            dockerfile: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "build";
+            /** Repo */
+            repo: string;
+        };
+        /** Catalog */
+        Catalog: {
+            /** Categories */
+            categories?: components["schemas"]["CategorySpec"][];
+            /** Defaults */
+            defaults: {
+                [key: string]: string;
+            };
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Images */
+            images?: {
+                [key: string]: components["schemas"]["ImageSpec"];
+            };
+            /** Sources */
+            sources?: {
+                [key: string]: components["schemas"]["GitSource"] | components["schemas"]["PathSource"];
+            };
+            /** Types */
+            types: {
+                [key: string]: components["schemas"]["NodeTypeSpec"];
+            };
+            /** Version */
+            version: number;
+        };
+        /** CategorySpec */
+        CategorySpec: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
         /** ContextOut */
         ContextOut: {
             /** Events */
@@ -484,6 +657,24 @@ export interface components {
             /** Type */
             type: string;
         };
+        /**
+         * GitSource
+         * @description A git repository the backend clones (and syncs on demand).
+         */
+        GitSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "git";
+            /**
+             * Ref
+             * @default main
+             */
+            ref: string;
+            /** Url */
+            url: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -506,6 +697,104 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** HostBuildOut */
+        HostBuildOut: {
+            /** Can Build */
+            can_build: boolean;
+            /** Detail */
+            detail: string;
+            /** Platform */
+            platform: string;
+        };
+        /** ImageSpec */
+        ImageSpec: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Displayname */
+            displayName: string;
+            /** Platforms */
+            platforms?: string[] | null;
+            /** Source */
+            source?: components["schemas"]["BuildSource"] | components["schemas"]["RegistrySource"];
+            /**
+             * Stability
+             * @default stable
+             * @enum {string}
+             */
+            stability: "stable" | "experimental" | "hidden";
+        };
+        /** ImageStatusOut */
+        ImageStatusOut: {
+            active_job?: components["schemas"]["JobOut"] | null;
+            /** Built Fingerprint */
+            built_fingerprint?: string | null;
+            /** Built Revision */
+            built_revision?: string | null;
+            /** Created */
+            created?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Display Name */
+            display_name: string;
+            /** Expected Fingerprint */
+            expected_fingerprint?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "build" | "registry";
+            last_job?: components["schemas"]["JobOut"] | null;
+            /** Platforms */
+            platforms?: string[] | null;
+            /** Reason */
+            reason: string;
+            /** Ref */
+            ref: string;
+            /** Size */
+            size?: number | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Stability
+             * @enum {string}
+             */
+            stability: "stable" | "experimental" | "hidden";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "missing" | "stale" | "unmanaged" | "unavailable" | "building" | "failed";
+        };
+        /** ImagesReport */
+        ImagesReport: {
+            host: components["schemas"]["HostBuildOut"];
+            /** Images */
+            images: components["schemas"]["ImageStatusOut"][];
+            /** Sources */
+            sources: components["schemas"]["SourceOut"][];
+        };
+        /**
+         * JobLogOut
+         * @description A line-aligned slice of a job's log. Poll again from ``next_offset``.
+         */
+        JobLogOut: {
+            /** Done */
+            done: boolean;
+            /** Next Offset */
+            next_offset: number;
+            /** Offset */
+            offset: number;
+            /** Size */
+            size: number;
+            /** Text */
+            text: string;
+        };
         /** JobOut */
         JobOut: {
             /**
@@ -527,13 +816,17 @@ export interface components {
             status: string;
             /** Steps */
             steps: components["schemas"]["JobStep"][];
+            /** Subject */
+            subject?: string | null;
             /** Topology Id */
-            topology_id: string;
+            topology_id?: string | null;
         };
         /** JobStep */
         JobStep: {
             /** Ended At */
             ended_at?: string | null;
+            /** Jobs */
+            jobs?: string[];
             /** Message */
             message?: string | null;
             /** Name */
@@ -580,6 +873,52 @@ export interface components {
             name: string;
             /** State */
             state: string;
+        };
+        /** NodeTypeSpec */
+        NodeTypeSpec: {
+            /** Category */
+            category: string;
+            /** Color */
+            color: string;
+            /** Defaultimage */
+            defaultImage: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Displayname */
+            displayName: string;
+            /** Icon */
+            icon: string;
+            /** Images */
+            images?: string[];
+            /** Label */
+            label: string;
+            /** Purduelevel */
+            purdueLevel?: number | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "router" | "switch" | "host";
+            /** Webuiport */
+            webUiPort?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * PathSource
+         * @description A directory on the backend's filesystem (e.g. a mounted checkout).
+         */
+        PathSource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "path";
+            /** Path */
+            path: string;
         };
         /** PlanOut */
         PlanOut: {
@@ -631,6 +970,17 @@ export interface components {
             /** Reset */
             reset: number;
         };
+        /**
+         * RegistrySource
+         * @description Pull the image by ref from a registry (the default).
+         */
+        RegistrySource: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "registry";
+        };
         /** RuntimeOut */
         RuntimeOut: {
             active_job?: components["schemas"]["JobOut"] | null;
@@ -642,6 +992,32 @@ export interface components {
             topology_id: string;
             /** Version */
             version: number;
+        };
+        /** SourceOut */
+        SourceOut: {
+            active_job?: components["schemas"]["JobOut"] | null;
+            /** Available */
+            available: boolean;
+            /** Can Sync */
+            can_sync: boolean;
+            /** Detail */
+            detail: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "git" | "path";
+            last_job?: components["schemas"]["JobOut"] | null;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /** Ref */
+            ref?: string | null;
+            /** Revision */
+            revision?: string | null;
+            /** Url */
+            url?: string | null;
         };
         /** StaleOut */
         StaleOut: {
@@ -774,9 +1150,76 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Catalog"];
+                };
+            };
+        };
+    };
+    list_images_api_v1_images_get: {
+        parameters: {
+            query?: {
+                /** @description Only the images this topology's nodes use */
+                topology_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImagesReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    build_images_api_v1_images_builds_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuildRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -801,6 +1244,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_api_v1_jobs__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_log_api_v1_jobs__job_id__log_get: {
+        parameters: {
+            query?: {
+                /** @description Omit to read the tail */
+                offset?: number | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobLogOut"];
                 };
             };
             /** @description Validation Error */
@@ -887,6 +1400,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_source_api_v1_sources__name__sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Validation Error */

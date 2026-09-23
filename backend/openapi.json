@@ -15,6 +15,152 @@
         "title": "Body_import_json_api_v1_topologies_import_json_post",
         "type": "object"
       },
+      "BuildRequest": {
+        "properties": {
+          "fresh": {
+            "default": false,
+            "title": "Fresh",
+            "type": "boolean"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "refs"
+        ],
+        "title": "BuildRequest",
+        "type": "object"
+      },
+      "BuildSource": {
+        "description": "Build the image from ``<source>/<context>/<dockerfile>``.",
+        "properties": {
+          "args": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Args",
+            "type": "object"
+          },
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "dockerfile": {
+            "default": "Dockerfile",
+            "title": "Dockerfile",
+            "type": "string"
+          },
+          "kind": {
+            "const": "build",
+            "title": "Kind",
+            "type": "string"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "repo",
+          "context"
+        ],
+        "title": "BuildSource",
+        "type": "object"
+      },
+      "Catalog": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategorySpec"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "defaults": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Defaults",
+            "type": "object"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "images": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ImageSpec"
+            },
+            "title": "Images",
+            "type": "object"
+          },
+          "sources": {
+            "additionalProperties": {
+              "discriminator": {
+                "mapping": {
+                  "git": "#/components/schemas/GitSource",
+                  "path": "#/components/schemas/PathSource"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/GitSource"
+                },
+                {
+                  "$ref": "#/components/schemas/PathSource"
+                }
+              ]
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "types": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NodeTypeSpec"
+            },
+            "title": "Types",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "defaults",
+          "types"
+        ],
+        "title": "Catalog",
+        "type": "object"
+      },
+      "CategorySpec": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CategorySpec",
+        "type": "object"
+      },
       "ContextOut": {
         "properties": {
           "events": {
@@ -176,6 +322,31 @@
         "title": "EventOut",
         "type": "object"
       },
+      "GitSource": {
+        "description": "A git repository the backend clones (and syncs on demand).",
+        "properties": {
+          "kind": {
+            "const": "git",
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "default": "main",
+            "title": "Ref",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "GitSource",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -230,6 +401,312 @@
           "topologies"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "HostBuildOut": {
+        "properties": {
+          "can_build": {
+            "title": "Can Build",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "can_build",
+          "detail"
+        ],
+        "title": "HostBuildOut",
+        "type": "object"
+      },
+      "ImageSpec": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "platforms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platforms"
+          },
+          "source": {
+            "discriminator": {
+              "mapping": {
+                "build": "#/components/schemas/BuildSource",
+                "registry": "#/components/schemas/RegistrySource"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BuildSource"
+              },
+              {
+                "$ref": "#/components/schemas/RegistrySource"
+              }
+            ],
+            "title": "Source"
+          },
+          "stability": {
+            "default": "stable",
+            "enum": [
+              "stable",
+              "experimental",
+              "hidden"
+            ],
+            "title": "Stability",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "title": "ImageSpec",
+        "type": "object"
+      },
+      "ImageStatusOut": {
+        "properties": {
+          "active_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "built_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Fingerprint"
+          },
+          "built_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Revision"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "expected_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Fingerprint"
+          },
+          "kind": {
+            "enum": [
+              "build",
+              "registry"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "platforms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platforms"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "stability": {
+            "enum": [
+              "stable",
+              "experimental",
+              "hidden"
+            ],
+            "title": "Stability",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "missing",
+              "stale",
+              "unmanaged",
+              "unavailable",
+              "building",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "display_name",
+          "stability",
+          "kind",
+          "status",
+          "reason"
+        ],
+        "title": "ImageStatusOut",
+        "type": "object"
+      },
+      "ImagesReport": {
+        "properties": {
+          "host": {
+            "$ref": "#/components/schemas/HostBuildOut"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageStatusOut"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "host",
+          "sources",
+          "images"
+        ],
+        "title": "ImagesReport",
+        "type": "object"
+      },
+      "JobLogOut": {
+        "description": "A line-aligned slice of a job's log. Poll again from ``next_offset``.",
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "next_offset": {
+            "title": "Next Offset",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offset",
+          "next_offset",
+          "size",
+          "text",
+          "done"
+        ],
+        "title": "JobLogOut",
         "type": "object"
       },
       "JobOut": {
@@ -293,14 +770,31 @@
             "title": "Steps",
             "type": "array"
           },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
           "topology_id": {
-            "title": "Topology Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topology Id"
           }
         },
         "required": [
           "id",
-          "topology_id",
           "kind",
           "status",
           "steps",
@@ -321,6 +815,13 @@
               }
             ],
             "title": "Ended At"
+          },
+          "jobs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Jobs",
+            "type": "array"
           },
           "message": {
             "anyOf": [
@@ -474,6 +975,109 @@
         "title": "NodeState",
         "type": "object"
       },
+      "NodeTypeSpec": {
+        "additionalProperties": true,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "defaultImage": {
+            "title": "Defaultimage",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "icon": {
+            "title": "Icon",
+            "type": "string"
+          },
+          "images": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "purdueLevel": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purduelevel"
+          },
+          "role": {
+            "enum": [
+              "router",
+              "switch",
+              "host"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "webUiPort": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webuiport"
+          }
+        },
+        "required": [
+          "displayName",
+          "role",
+          "category",
+          "defaultImage",
+          "color",
+          "label",
+          "icon"
+        ],
+        "title": "NodeTypeSpec",
+        "type": "object"
+      },
+      "PathSource": {
+        "description": "A directory on the backend's filesystem (e.g. a mounted checkout).",
+        "properties": {
+          "kind": {
+            "const": "path",
+            "title": "Kind",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "path"
+        ],
+        "title": "PathSource",
+        "type": "object"
+      },
       "PlanOut": {
         "properties": {
           "diagnostics": {
@@ -587,6 +1191,19 @@
         "title": "ReconcileResult",
         "type": "object"
       },
+      "RegistrySource": {
+        "description": "Pull the image by ref from a registry (the default).",
+        "properties": {
+          "kind": {
+            "const": "registry",
+            "default": "registry",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "RegistrySource",
+        "type": "object"
+      },
       "RuntimeOut": {
         "properties": {
           "active_job": {
@@ -626,6 +1243,101 @@
           "nodes"
         ],
         "title": "RuntimeOut",
+        "type": "object"
+      },
+      "SourceOut": {
+        "properties": {
+          "active_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "can_sync": {
+            "title": "Can Sync",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "git",
+              "path"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "path",
+          "available",
+          "can_sync",
+          "detail"
+        ],
+        "title": "SourceOut",
         "type": "object"
       },
       "StaleOut": {
@@ -899,16 +1611,14 @@
   "paths": {
     "/api/v1/catalog": {
       "get": {
-        "description": "Return the full node-type catalog (types, defaults, metadata).",
+        "description": "Return the full node-type catalog (categories, types, images, sources).",
         "operationId": "get_catalog_api_v1_catalog_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Catalog Api V1 Catalog Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/Catalog"
                 }
               }
             },
@@ -918,6 +1628,138 @@
         "summary": "Get Catalog",
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/api/v1/images": {
+      "get": {
+        "description": "Host build support, image sources, and the status of each image.\n\nWithout ``topology_id``: every image the catalog describes.",
+        "operationId": "list_images_api_v1_images_get",
+        "parameters": [
+          {
+            "description": "Only the images this topology's nodes use",
+            "in": "query",
+            "name": "topology_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the images this topology's nodes use",
+              "title": "Topology Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImagesReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Images",
+        "tags": [
+          "images"
+        ]
+      }
+    },
+    "/api/v1/images/builds": {
+      "post": {
+        "description": "Start a build job per image (an image already building returns its job).",
+        "operationId": "build_images_api_v1_images_builds_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobOut"
+                  },
+                  "title": "Response Build Images Api V1 Images Builds Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Build Images",
+        "tags": [
+          "images"
         ]
       }
     },
@@ -974,6 +1816,155 @@
           }
         },
         "summary": "Get Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Cancel a queued or running job. Deploys can only be cancelled before the\nengine starts creating containers; destroys cannot be cancelled.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/log": {
+      "get": {
+        "description": "A slice of the job's log. ``done`` turns true once the job has finished\nand the slice reaches the end of the log.",
+        "operationId": "get_job_log_api_v1_jobs__job_id__log_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Omit to read the tail",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Omit to read the tail",
+              "title": "Offset"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 65536,
+              "maximum": 1048576,
+              "minimum": 1024,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobLogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Job Log",
         "tags": [
           "jobs"
         ]
@@ -1100,6 +2091,65 @@
         "summary": "Load Preset",
         "tags": [
           "presets"
+        ]
+      }
+    },
+    "/api/v1/sources/{name}/sync": {
+      "post": {
+        "description": "Fetch a git source's configured ref; the job reports which images changed.",
+        "operationId": "sync_source_api_v1_sources__name__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Source",
+        "tags": [
+          "images"
         ]
       }
     },

@@ -32,7 +32,11 @@ services:
       # frontend's VITE_INSTRUCTOR_TOKEN) to require a bearer token.
       - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
       - AE3GIS_CORS_ORIGINS=${AE3GIS_CORS_ORIGINS:-*}
-    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+      # To build node images from a local checkout instead of the git source
+      # in the catalog, mount it and add (JSON):
+      #   - AE3GIS_SOURCE_OVERRIDES={"ae3gis-containers": "/sources/ae3gis-containers"}
+    # Reload on code changes, but not on cloned image sources and build contexts.
+    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "/app/data"]
     restart: unless-stopped
 
 volumes:

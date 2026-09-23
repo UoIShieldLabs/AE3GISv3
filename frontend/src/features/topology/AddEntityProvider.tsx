@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { Position } from '@/types/topology';
 import { findSite, locate, suggestCidr, type Scope } from '@/lib/topology';
+import { defaultImageFor } from '@/catalog/catalog';
 import { useAppStore } from '@/store';
 import { toast } from '@/ui';
 import { AddEntityContext, type AddEntityApi } from './AddEntityContext';
@@ -13,7 +14,7 @@ import { BulkConnectionsDialog } from './dialogs/BulkConnectionsDialog';
 type DialogState =
   | { kind: 'site'; at?: Position }
   | { kind: 'subnet'; siteId: string; at?: Position }
-  | { kind: 'device'; subnetId: string; type?: string; at?: Position }
+  | { kind: 'device'; subnetId: string; type?: string; image?: string; at?: Position }
   | { kind: 'bulk-devices'; subnetId: string }
   | { kind: 'bulk-connections'; scope: Scope };
 
@@ -36,7 +37,7 @@ export function AddEntityProvider({ children }: { children: React.ReactNode }) {
         const id = st.addContainer({ subnetId: target.subnetId, type: item.type, image: item.image, position: target.at });
         if (id) st.selectNodes([id]);
       } else {
-        setDialog({ kind: 'device', subnetId: target.subnetId, type: item.type, at: target.at });
+        setDialog({ kind: 'device', subnetId: target.subnetId, type: item.type, image: item.image, at: target.at });
       }
     }
   }, []);
@@ -80,10 +81,13 @@ export function AddEntityProvider({ children }: { children: React.ReactNode }) {
         onOpenChange={close}
         subnet={dialog?.kind === 'device' ? subnetFor(dialog.subnetId) : null}
         presetType={dialog?.kind === 'device' ? dialog.type : undefined}
+        presetImage={dialog?.kind === 'device' ? dialog.image : undefined}
         onSubmit={(v) => {
           if (dialog?.kind !== 'device') return;
           const st = useAppStore.getState();
-          const id = st.addContainer({ subnetId: dialog.subnetId, name: v.name, type: v.type, ip: v.ip, image: v.image || undefined, position: dialog.at });
+          // No image = follow the type's default (as the inspector does).
+          const image = v.image && v.image !== defaultImageFor(v.type) ? v.image : undefined;
+          const id = st.addContainer({ subnetId: dialog.subnetId, name: v.name, type: v.type, ip: v.ip, image, position: dialog.at });
           if (id) st.selectNodes([id]);
         }}
       />

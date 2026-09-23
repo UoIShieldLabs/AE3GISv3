@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from config import Settings
 from engine.base import DeploymentEngine
+from services.images import ImageManager
 from services.jobs import JobRunner
 
 
@@ -30,3 +31,7 @@ def get_engine(request: Request) -> DeploymentEngine:
 
 def get_runner(request: Request) -> JobRunner:
     return request.app.state.runner
+
+
+def get_images(request: Request) -> ImageManager:
+    return request.app.state.images

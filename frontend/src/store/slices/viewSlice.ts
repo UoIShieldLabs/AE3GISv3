@@ -14,10 +14,23 @@ export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
   zoom: 1,
   purdueOpen: false,
   commandPaletteOpen: false,
+  imagesOpen: false,
+  imagesFocus: null,
+  collapsedCategories: [],
+  jobDetailsOpen: false,
 
   setZoom: (zoom) => set((s) => { if (Math.abs(s.zoom - zoom) > 0.004) s.zoom = zoom; }, false, 'setZoom'),
   setPurdueOpen: (purdueOpen) => set({ purdueOpen }, false, 'setPurdueOpen'),
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }, false, 'setCommandPaletteOpen'),
+  openImages: (imagesFocus = null) => set({ imagesOpen: true, imagesFocus }, false, 'openImages'),
+  setImagesOpen: (imagesOpen) => set((s) => { s.imagesOpen = imagesOpen; if (!imagesOpen) s.imagesFocus = null; }, false, 'setImagesOpen'),
+  setJobDetailsOpen: (jobDetailsOpen) => set({ jobDetailsOpen }, false, 'setJobDetailsOpen'),
+  toggleCategory: (id) =>
+    set((s) => {
+      s.collapsedCategories = s.collapsedCategories.includes(id)
+        ? s.collapsedCategories.filter((c) => c !== id)
+        : [...s.collapsedCategories, id];
+    }, false, 'toggleCategory'),
 
   setTheme: (theme) => set({ theme }, false, 'setTheme'),
   setTool: (tool) => set({ tool }, false, 'setTool'),

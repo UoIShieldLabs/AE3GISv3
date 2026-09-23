@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
-import type { Diagnostic, Job } from '@/api/client';
+import type { Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 
@@ -70,6 +70,8 @@ export interface DocumentSlice {
   containerStatus: Record<string, RuntimeStatus>;
   /** The deploy/destroy job currently running on the backend, with its steps. */
   activeJob: Job | null;
+  /** The most recent deploy/destroy job once it finished (for its log and steps). */
+  lastJob: Job | null;
   /** Backend validation of the current design (errors block deploy). */
   diagnostics: Diagnostic[];
   lastError: string | null;
@@ -82,6 +84,7 @@ export interface DocumentSlice {
   setContainerStatuses: (statuses: Record<string, RuntimeStatus>) => void;
   clearContainerStatuses: () => void;
   setActiveJob: (job: Job | null) => void;
+  setLastJob: (job: Job | null) => void;
   setDiagnostics: (diagnostics: Diagnostic[]) => void;
   clearBackend: () => void;
   setBusy: (busy: boolean) => void;
@@ -103,10 +106,21 @@ export interface ViewSlice {
   zoom: number;
   purdueOpen: boolean;
   commandPaletteOpen: boolean;
+  imagesOpen: boolean;
+  /** Image ref to select when the Images sheet opens. */
+  imagesFocus: string | null;
+  /** Palette categories the user collapsed (persisted). */
+  collapsedCategories: string[];
+  /** The deploy/destroy job details popover (top bar). */
+  jobDetailsOpen: boolean;
 
   setZoom: (zoom: number) => void;
   setPurdueOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  openImages: (focusRef?: string | null) => void;
+  setImagesOpen: (open: boolean) => void;
+  toggleCategory: (id: string) => void;
+  setJobDetailsOpen: (open: boolean) => void;
   setTheme: (theme: Theme) => void;
   setTool: (tool: Tool) => void;
   setSnapToGrid: (on: boolean) => void;
@@ -145,7 +159,14 @@ export interface CatalogSlice {
   loadCatalog: () => Promise<void>;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & TerminalSlice & CatalogSlice;
+export interface ImagesSlice {
+  /** Build support, sources and per-image status (null until first fetched). */
+  images: ImagesReport | null;
+  imagesError: string | null;
+  setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
+}
+
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & TerminalSlice & CatalogSlice & ImagesSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 

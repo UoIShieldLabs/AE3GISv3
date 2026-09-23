@@ -46,3 +46,8 @@ if (!window.matchMedia) {
     }),
   });
 }
+
+// cmdk (Combobox, command palette) scrolls the highlighted item into view.
+if (!HTMLElement.prototype.scrollIntoView) {
+  HTMLElement.prototype.scrollIntoView = function scrollIntoView() {};
+}

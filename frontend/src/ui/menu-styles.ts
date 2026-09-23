@@ -1,6 +1,8 @@
 // Shared class lists for dropdown / context menus so both feel identical.
+import { LAYER } from './layers';
+
 export const menuContentClass =
-  'z-[60] min-w-[176px] overflow-hidden rounded-lg border border-border bg-elevated p-1 text-fg shadow-lg animate-pop';
+  `${LAYER.floating} min-w-[176px] overflow-hidden rounded-lg border border-border bg-elevated p-1 text-fg shadow-lg animate-pop`;
 
 export const menuItemClass =
   'relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-[13px] outline-none ' +

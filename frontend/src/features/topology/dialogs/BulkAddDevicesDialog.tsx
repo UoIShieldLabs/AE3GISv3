@@ -80,7 +80,8 @@ function BulkForm({ subnet, onDone }: { subnet: Subnet; onDone: () => void }) {
     const st = useAppStore.getState();
     const ids: string[] = [];
     for (const r of rows) {
-      const id = st.addContainer({ subnetId: subnet.id, name: r.name.trim(), type: r.type, ip: r.ip, image: r.image || undefined });
+      const image = r.image.trim() && r.image.trim() !== defaultImageFor(r.type) ? r.image.trim() : undefined;
+      const id = st.addContainer({ subnetId: subnet.id, name: r.name.trim(), type: r.type, ip: r.ip, image });
       if (id) ids.push(id);
     }
     if (ids.length) st.selectNodes(ids);

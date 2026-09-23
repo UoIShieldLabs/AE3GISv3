@@ -1,8 +1,12 @@
 # AE3GIS v3
 
 Interactive network-topology editor and deployment platform. Design multi-site
-topologies through a three-level drill-down (Geographic → Subnet → LAN) and
+topologies through a three-level drill-down (Network → Site → Subnet) and
 deploy them as live containers via **Kathara**.
+
+> **New here?** Read the [Architecture Guide](docs/ARCHITECTURE.md) — a
+> quickstart, the system's three core contracts, and how a drawing becomes
+> running containers.
 
 > **v3 foundation.** This is a ground-up rebuild. ContainerLab has been removed
 > and deployment re-implemented on Kathara, which runs unprivileged and

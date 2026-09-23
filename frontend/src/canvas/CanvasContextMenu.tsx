@@ -2,7 +2,8 @@ import { ArrowDownRight, Cable, Copy, ListPlus, Maximize2, Minimize2, MousePoint
 import { useReactFlow } from '@xyflow/react';
 import type { Position } from '@/types/topology';
 import type { Scope } from '@/lib/topology';
-import { menuHierarchy, displayNameFor, colorFor, categoryLabel } from '@/catalog/catalog';
+import { colorFor } from '@/catalog/catalog';
+import { useCatalogTree } from '@/catalog/useCatalogTree';
 import { NodeGlyph } from '@/catalog/icons';
 import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuSub,
@@ -41,6 +42,7 @@ export function CanvasContextMenu({
   onAdd, onDrill, onToggleExpand, onTerminal, onDuplicate, onDelete, onSelectAll, onAutoLayout, onBulkDevices, onBulkConnections,
 }: CanvasContextMenuProps) {
   const { fitView } = useReactFlow();
+  const tree = useCatalogTree();
 
   const addItems = (at?: Position) => {
     const items: React.ReactNode[] = [];
@@ -51,14 +53,14 @@ export function CanvasContextMenu({
         <ContextMenuSub key="device">
           <ContextMenuSubTrigger><Plus /> Add device</ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            {Object.entries(menuHierarchy).map(([category, types]) => (
-              <ContextMenuSub key={category}>
-                <ContextMenuSubTrigger>{categoryLabel(category)}</ContextMenuSubTrigger>
+            {tree.map((cat) => (
+              <ContextMenuSub key={cat.id}>
+                <ContextMenuSubTrigger>{cat.label}</ContextMenuSubTrigger>
                 <ContextMenuSubContent>
-                  {Object.keys(types).map((type) => (
+                  {cat.types.map(({ type, name }) => (
                     <ContextMenuItem key={type} onSelect={() => onAdd({ kind: 'device', type }, at)}>
                       <NodeGlyph type={type} size={14} color={colorFor(type)} />
-                      {displayNameFor(type)}
+                      {name}
                     </ContextMenuItem>
                   ))}
                 </ContextMenuSubContent>

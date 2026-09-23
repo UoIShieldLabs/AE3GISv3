@@ -1,30 +1,17 @@
 // Node-type catalog — the frontend view of the backend's single source of
-// truth (GET /api/catalog). Replaces the old Docker-Hub-scraped, codegenerated
-// ContainerAspects.tsx. Values are populated once at startup by applyCatalog();
+// truth (GET /api/v1/catalog). Its types are generated from the backend's
+// OpenAPI document. Values are populated once at startup by applyCatalog();
 // the objects are mutated in place so existing imports keep a stable reference.
 
+import type { components } from '@/api/schema';
 import type { ContainerType } from '../types/topology';
 
 export type { ContainerType };
 
-export interface NodeTypeSpec {
-  displayName: string;
-  role: 'router' | 'switch' | 'host';
-  category: string;
-  defaultImage: string;
-  images: string[];
-  color: string;
-  label: string;
-  icon: string;
-  webUiPort?: number;
-  purdueLevel?: number;
-}
-
-export interface Catalog {
-  version: number;
-  defaults: Record<string, string>;
-  types: Record<string, NodeTypeSpec>;
-}
+export type Catalog = components['schemas']['Catalog'];
+export type NodeTypeSpec = components['schemas']['NodeTypeSpec'];
+export type ImageSpec = components['schemas']['ImageSpec'];
+export type Stability = ImageSpec['stability'];
 
 // ── Live, catalog-backed lookup maps (filled by applyCatalog) ──────────────
 export const typeColors: Record<string, string> = {};
@@ -34,8 +21,6 @@ export const typeIcons: Record<string, string> = {};
 export const typeRoles: Record<string, string> = {};
 export const typeWebUiPorts: Record<string, number> = {};
 export let typeOptions: { value: string; label: string }[] = [];
-// category -> type -> available full image refs
-export const menuHierarchy: Record<string, Record<string, string[]>> = {};
 
 const DEFAULT_COLOR = '#9ca3af';
 const DEFAULT_LABEL = 'UNK';
@@ -52,7 +37,6 @@ export function applyCatalog(catalog: Catalog): void {
   for (const k of Object.keys(typeIcons)) delete typeIcons[k];
   for (const k of Object.keys(typeRoles)) delete typeRoles[k];
   for (const k of Object.keys(typeWebUiPorts)) delete typeWebUiPorts[k];
-  for (const k of Object.keys(menuHierarchy)) delete menuHierarchy[k];
   const options: { value: string; label: string }[] = [];
 
   for (const [type, spec] of Object.entries(catalog.types)) {
@@ -63,8 +47,6 @@ export function applyCatalog(catalog: Catalog): void {
     typeRoles[type] = spec.role;
     if (typeof spec.webUiPort === 'number') typeWebUiPorts[type] = spec.webUiPort;
     options.push({ value: type, label: spec.displayName || type });
-    const cat = spec.category || 'other';
-    (menuHierarchy[cat] ??= {})[type] = spec.images && spec.images.length ? spec.images : [spec.defaultImage];
   }
   typeOptions = options;
 }
@@ -93,6 +75,33 @@ export function defaultImageFor(type: string): string {
   return _catalog?.types[type]?.defaultImage ?? (_catalog?.defaults?.host_image ?? '');
 }
 
+/** The image refs a type offers (its variants), default first as listed. */
+export function variantsFor(type: string): string[] {
+  const spec = _catalog?.types[type];
+  if (!spec) return [];
+  return spec.images?.length ? spec.images : [spec.defaultImage];
+}
+
+/** What the catalog says about an image ref (undefined: a plain registry image). */
+export function imageSpecFor(ref: string): ImageSpec | undefined {
+  return _catalog?.images?.[ref];
+}
+
+/** Friendly name for an image ref (its catalog name, else the ref itself). */
+export function imageNameFor(ref: string): string {
+  return imageSpecFor(ref)?.displayName ?? ref;
+}
+
+/** True when AE3GIS builds this image from a Dockerfile (vs pulling it). */
+export function isBuiltImage(ref: string): boolean {
+  return imageSpecFor(ref)?.source?.kind === 'build';
+}
+
+/** The image a container deploys with: its own, else its type's default. */
+export function effectiveImage(container: { type: string; image?: string }): string {
+  return container.image?.trim() || defaultImageFor(container.type);
+}
+
 /** Layout rank for a type (routers on top, switches, then hosts). */
 export function rankFor(type: string): number {
   const role = typeRoles[type];
@@ -114,7 +123,7 @@ export function roleFor(type: string): NodeRole {
 }
 
 export function purdueLevelFor(type: string): number | undefined {
-  return _catalog?.types[type]?.purdueLevel;
+  return _catalog?.types[type]?.purdueLevel ?? undefined;
 }
 
 export function categoryFor(type: string): string {
@@ -123,9 +132,11 @@ export function categoryFor(type: string): string {
 
 const CATEGORY_LABELS: Record<string, string> = { ics: 'ICS', ot: 'OT', it: 'IT', iot: 'IoT', dmz: 'DMZ' };
 
-/** Human label for a catalog category key. */
-export function categoryLabel(category: string): string {
+/** Human label for a catalog category id (declared label first). */
+export function categoryLabel(category: string, catalog: Catalog | null = _catalog): string {
   const c = category.trim();
+  const declared = catalog?.categories?.find((x) => x.id === c)?.label;
+  if (declared) return declared;
   if (!c) return 'Other';
   return CATEGORY_LABELS[c.toLowerCase()] ?? c[0].toUpperCase() + c.slice(1);
 }
