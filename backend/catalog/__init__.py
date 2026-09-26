@@ -99,3 +99,11 @@ def image_spec(ref: str) -> ImageSpec | None:
 
 def sources() -> dict[str, SourceSpec]:
     return load_model().sources
+
+
+def tool_image(role: str) -> str:
+    """The image AE3GIS runs for a tool role ("capture", "iperf3")."""
+    tools = load_model().tools
+    if role not in tools:
+        raise KeyError(f"The catalog names no image for tool {role!r}")
+    return tools[role]

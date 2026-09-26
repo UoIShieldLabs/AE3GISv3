@@ -37,6 +37,8 @@ class Interface:
     collision_domain: str  # the L2 segment (Kathara link) this attaches to
     ip: str | None = None  # host IP, no prefix
     prefix_len: str | None = None  # e.g. "24"
+    # The topology connection this interface realises (its ``id``), if any.
+    connection_id: str | None = None
 
     @property
     def index(self) -> int:
@@ -87,6 +89,10 @@ class LabPlan:
 
     name: str
     nodes: list[NodePlan] = field(default_factory=list)
+    # Per collision domain: the connection it came from ("connection_id"),
+    # where it was drawn ("kind": container | subnet | site) and its resolved
+    # end nodes ("from", "to").
+    link_meta: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def collision_domains(self) -> list[str]:
@@ -110,7 +116,17 @@ class LabPlan:
                         "prefix_len": iface.prefix_len,
                     }
                 )
-        return [{"collision_domain": cd, "endpoints": eps} for cd, eps in by_cd.items()]
+        return [
+            {
+                "collision_domain": cd,
+                "connection_id": self.link_meta.get(cd, {}).get("connection_id"),
+                "kind": self.link_meta.get(cd, {}).get("kind"),
+                "from": self.link_meta.get(cd, {}).get("from"),
+                "to": self.link_meta.get(cd, {}).get("to"),
+                "endpoints": eps,
+            }
+            for cd, eps in by_cd.items()
+        ]
 
     def images(self) -> list[str]:
         seen: dict[str, None] = {}
@@ -309,9 +325,10 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
 
     # (from_id, from_iface, to_id, to_iface, subnet_id, collision_domain)
     link_registry: list[tuple[str, str, str, str, str | None, str]] = []
+    link_meta: dict[str, dict[str, Any]] = {}
     cd_seq = [0]
 
-    def _add_link(conn: dict, subnet_id: str | None) -> None:
+    def _add_link(conn: dict, subnet_id: str | None, kind: str) -> None:
         from_id = _resolve_endpoint(conn.get("fromContainer") or conn.get("from"))
         to_id = _resolve_endpoint(conn.get("toContainer") or conn.get("to"))
         if not from_id or not to_id:
@@ -323,15 +340,23 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
         cd = f"cd{cd_seq[0]}"
         cd_seq[0] += 1
         link_registry.append((from_id, fi, to_id, ti, subnet_id, cd))
+        conn_id = conn.get("id")
+        link_meta[cd] = {
+            "connection_id": conn_id if isinstance(conn_id, str) and conn_id else None,
+            "kind": kind,
+            # Resolved node ids (a subnet/site end becomes its gateway router).
+            "from": from_id,
+            "to": to_id,
+        }
 
     for site in topology.get("sites", []):
         for subnet in site.get("subnets", []):
             for conn in subnet.get("connections", []):
-                _add_link(conn, subnet.get("id"))
+                _add_link(conn, subnet.get("id"), "container")
         for conn in site.get("subnetConnections", []):
-            _add_link(conn, None)
+            _add_link(conn, None, "subnet")
     for conn in topology.get("siteConnections", []):
-        _add_link(conn, None)
+        _add_link(conn, None, "site")
 
     # ── Step 3: per-interface IPs + static routes ─────────────────────────
     iface_ips: dict[tuple[str, str], tuple[str, str]] = {}
@@ -433,7 +458,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
     # each device's interfaces to be sequential from eth0. Renumbering here —
     # before startup commands are generated — keeps the device references in
     # those commands consistent with the attached collision domains.
-    plan = LabPlan(name=lab_name)
+    plan = LabPlan(name=lab_name, link_meta=link_meta)
     for cid in container_memberships:
         info = container_info.get(cid, {})
         ctype = container_type.get(cid, "")
@@ -444,15 +469,18 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
         old_ifaces = sorted(container_ifaces.get(cid, set()), key=_eth_index)
         remap = {old: f"eth{i + iface_base}" for i, old in enumerate(old_ifaces)}
 
-        interfaces = [
-            Interface(
-                name=remap[old],
-                collision_domain=iface_cd.get((cid, old), f"cd_{cid}_{old}"),
-                ip=iface_ips.get((cid, old), (None, None))[0],
-                prefix_len=iface_ips.get((cid, old), (None, None))[1],
+        interfaces = []
+        for old in old_ifaces:
+            cd = iface_cd.get((cid, old), f"cd_{cid}_{old}")
+            interfaces.append(
+                Interface(
+                    name=remap[old],
+                    collision_domain=cd,
+                    ip=iface_ips.get((cid, old), (None, None))[0],
+                    prefix_len=iface_ips.get((cid, old), (None, None))[1],
+                    connection_id=link_meta.get(cd, {}).get("connection_id"),
+                )
             )
-            for old in old_ifaces
-        ]
 
         new_ifaces = [remap[o] for o in old_ifaces]
         new_iface_ips = {

@@ -70,9 +70,13 @@ def test_report_lists_catalog_images_with_status(client, tmp_path):
         "can_build": True,
         "detail": "fake builder",
     }
-    [source] = report["sources"]
-    assert source["name"] == "ae3gis-containers" and source["available"]
+    sources = {s["name"]: s for s in report["sources"]}
+    source = sources["ae3gis-containers"]
+    assert source["available"]
     assert source["can_sync"] is False and source["detail"] == "Local override"
+    # The tools source is a directory in this repository, whatever the cwd.
+    tools = sources["ae3gis-tools"]
+    assert tools["kind"] == "path" and tools["available"] and tools["path"].endswith("tools")
     by_ref = {i["ref"]: i for i in report["images"]}
     assert by_ref[NGINX]["status"] == "missing" and by_ref[NGINX]["kind"] == "build"
     assert by_ref[NGINX]["expected_fingerprint"]
@@ -83,6 +87,21 @@ def test_report_lists_catalog_images_with_status(client, tmp_path):
     assert by_ref["ae3gis.local/apache"]["status"] == "unavailable"
     assert "not found" in by_ref["ae3gis.local/apache"]["reason"]
     assert by_ref["ae3gis.local/scadabr"]["stability"] == "hidden"
+    # The sidecar tool image is described (and buildable) like any node image.
+    assert by_ref["ae3gis.local/nettools"]["kind"] == "build"
+    assert by_ref["ae3gis.local/nettools"]["status"] == "missing"
+
+
+def test_tool_image_builds_from_the_repo(client, wait_jobs, fake_engine):
+    import catalog
+
+    ref = catalog.tool_image("capture")
+    assert ref == catalog.tool_image("iperf3") == "ae3gis.local/nettools"
+    [job] = client.post("/api/v1/images/builds", json={"refs": [ref]}).json()
+    wait_jobs()
+    assert client.get(f"/api/v1/jobs/{job['id']}").json()["status"] == "succeeded"
+    [spec] = fake_engine.builds
+    assert spec.ref == ref and spec.dockerfile == "Dockerfile"
 
 
 def test_build_then_stale_then_fresh_rebuild(client, wait_jobs, fake_engine, src, tmp_path):

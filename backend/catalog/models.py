@@ -124,6 +124,9 @@ class Catalog(BaseModel):
     sources: dict[str, SourceSpec] = Field(default_factory=dict)
     images: dict[str, ImageSpec] = Field(default_factory=dict)
     types: dict[str, NodeTypeSpec]
+    # Images AE3GIS itself runs, by role: e.g. "capture" and "iperf3" name the
+    # image of the sidecars that capture packets or generate traffic.
+    tools: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _consistent(self) -> Catalog:
@@ -135,6 +138,9 @@ class Catalog(BaseModel):
         for ref, image in self.images.items():
             if isinstance(image.source, BuildSource) and image.source.repo not in self.sources:
                 raise ValueError(f"image {ref!r} builds from unknown source {image.source.repo!r}")
+        for role, ref in self.tools.items():
+            if ref not in self.images:
+                raise ValueError(f"tool {role!r} uses {ref!r}, which is not in images")
         for name, spec in self.types.items():
             if category_ids and spec.category not in category_ids:
                 raise ValueError(f"type {name!r} has unknown category {spec.category!r}")

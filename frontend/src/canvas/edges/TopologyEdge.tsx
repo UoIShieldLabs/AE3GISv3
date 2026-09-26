@@ -1,6 +1,9 @@
 import { memo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getStraightPath, useInternalNode, type EdgeProps } from '@xyflow/react';
+import { Radio } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Tooltip } from '@/ui';
+import { openCaptureTab } from '@/features/capture/actions';
 import type { CanvasEdge, EdgeVariant } from '../projection';
 import { floatingEdgeParams } from './geometry';
 
@@ -34,6 +37,22 @@ export const TopologyEdge = memo(function TopologyEdge({ id, source, target, dat
         }}
         interactionWidth={16}
       />
+      {data?.captureJobId ? (
+        <EdgeLabelRenderer>
+          <Tooltip content="Capturing: click to view" side="top">
+            <button
+              type="button"
+              aria-label="View capture"
+              onClick={() => openCaptureTab(data.captureJobId!)}
+              className="nodrag nopan pointer-events-auto absolute flex items-center gap-1 rounded-full border border-danger/40 bg-surface px-1.5 py-0.5 text-2xs font-medium text-danger shadow-sm hover:bg-danger-soft"
+              style={{ transform: `translate(-50%, ${data.label ? '-160%' : '-50%'}) translate(${labelX}px, ${labelY}px)` }}
+            >
+              <span className="size-1.5 animate-pulse rounded-full bg-danger" />
+              <Radio className="size-3" aria-hidden />
+            </button>
+          </Tooltip>
+        </EdgeLabelRenderer>
+      ) : null}
       {data?.label ? (
         <EdgeLabelRenderer>
           <div

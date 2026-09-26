@@ -49,16 +49,26 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   gateway detection, `/30` router links from `10.255.0.0/24`, BFS static
   routes, per-role startup commands as plain iproute2/sysctl), `export/`
   (`LabPlan` → lab-spec JSON, Kathara `lab.conf` + startup files, ContainerLab
-  `topo.clab.yml`; ContainerLab uses `iface_base=1`).
+  `topo.clab.yml`; ContainerLab uses `iface_base=1`). Plan links carry their
+  `connection_id`; `links.py` resolves capture targets against them. Also
+  `pcap.py`/`packets.py` (pcap framing, packet summaries), `traffic/` (iperf3
+  argv + json-stream parser, run summaries), `telemetry.py` (stats → rates),
+  `environment.py` (run environment + fingerprint).
 - `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
   **jobs** with steps validate → images → plan → deploy → verify; a provisional
   `engine_state` is saved before the engine runs so failures clean up and leave
   `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
-  **subject** — `topology:<id>`, `image:<ref>`, `source:<name>` — at a time;
-  steps on the job row mirrored to events; per-job log files via `joblogs`;
-  `wait`/`cancel`), `images` + `sources` (node images built from Dockerfiles,
-  see below), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
+  **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
+  `capture:<topo>:<node>:<iface>`, `traffic:<topo>` — at a time; steps on the
+  job row mirrored to events; per-job log files via `joblogs`; `wait`/`cancel`,
+  and `request_stop` for `stoppable` kinds (winds down, keeps output, ends
+  `succeeded`); `set_result` → `Job.result`; bulk output in `artifacts`
+  (`data/artifacts/<job>/`)), `images` + `sources` (node images built from
+  Dockerfiles, see below), `capture` + `traffic` (+ `traffic_generators`):
+  sidecar jobs, see below; `live` (per-job WebSocket fan-out), `activity`
+  (running captures/runs; destroy stops them first), `environment` (run
+  metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
   purge by lab hash), `events` (append-only log per topology).
 - `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`) and **Alembic**
   migrations run at startup (`db/migrations`). Add a migration for any schema
@@ -81,13 +91,21 @@ visible across container recreation. Lab names depend only on the topology id
 ### Deployment engine (the key seam)
 `backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
 resolve_container/node_logs/list_labs/purge/images_present/pull_image/
-inspect_images/build_support/build_image). Routers never
+inspect_images/build_support/build_image, plus node_interfaces/start_sidecar/
+list_sidecars/remove_sidecars/sample_stats/node_runtime_info/environment for
+captures and traffic). Routers never
 import an engine; services get it from `app.state`. Re-homing a deferred
 feature (exec/script runner, packet capture, telemetry) = extend this
-interface. Kathara exposes `exec` natively, so a script runner is a thin
-wrapper over it.
+interface. Kathara's own `exec`/stats filter by its hostname-derived user
+prefix, so new engine methods resolve containers by Docker labels (like
+`resolve_container`) and call the Docker SDK directly.
 
 - `engine/terminal.py` — engine-agnostic PTY↔WebSocket bridge (`docker exec`, no sudo).
+- `engine/docker_sidecar.py` — sidecars: containers in a node's netns
+  (`network_mode=container:`), log driver `none`, attached **before** start,
+  labelled `ae3gis.sidecar/owner/lab_hash/node/job/purpose` (never
+  `app=kathara`); Docker stats → `RawStats`. The tools image is
+  `ae3gis.local/nettools` (`backend/tools/nettools/`, catalog `tools` map).
 - `engine/docker_build.py` — `docker buildx build --load` (BuildKit) as a
   cancellable subprocess; the backend image ships `docker-buildx-plugin` + `git`.
 
@@ -153,12 +171,16 @@ tables record every long operation.
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
   `expanded`, theme, tool, panels, zoom, collapsed palette categories),
-  `terminal`, `catalog`, `images` (GET /images report, kept fresh by the
-  `features/images/imagePolling` singleton), `auth`.
+  `dock` (typed dock tabs: terminal | capture | traffic; `openTerminal` wraps
+  it), `activity` (running captures/traffic runs from `/runtime`), `catalog`,
+  `images` (GET /images report, kept fresh by the
+  `features/images/imagePolling` singleton).
   Undo/redo via zundo (`undo()`/`redo()` in `store/index.ts`; only `topology` is
   tracked; load/new reset history). UI prefs persist to `localStorage`
   (`ae3gis.ui`). `normalizeTopology()` (`store/normalize.ts`) runs on every
-  load/import: fills connection ids and node positions so old JSON keeps working.
+  load/import: fills connection ids and node positions so old JSON keeps working;
+  a load that had to fill connection ids starts dirty (deployed links are
+  addressed by id).
 - **Routing.** react-router: `/login`, `/` (library), `/t/draft`,
   `/t/:id`, `/t/:id/site/:siteId`, `/t/:id/site/:siteId/subnet/:subnetId`. The
   URL is the single source of truth for the drill-down **scope**
@@ -175,8 +197,9 @@ tables record every long operation.
   Interactions: `interactions/useCanvasHotkeys.ts`, DnD payload in
   `interactions/dnd.ts`, context menu in `CanvasContextMenu.tsx`.
 - **Shell** (`shell/`): TopBar, Sidebar (Palette with drag-and-drop, Explorer
-  tree), Inspector (context-sensitive forms that commit on blur), TerminalDock
-  (`features/terminal`, xterm lazy-loaded), StatusBar, CommandPalette (⌘K),
+  tree), Inspector (context-sensitive forms that commit on blur), Dock
+  (`features/dock`: terminal / capture / traffic tabs, bodies lazy-loaded and kept
+  mounted), StatusBar, CommandPalette (⌘K),
   Breadcrumb. `features/topology/AddEntityProvider` owns every "add…" dialog so
   toolbar, palette, menus and drops share one flow. Deployment actions are plain
   functions in `features/deployment/actions.ts`; status polling is a singleton.
@@ -184,6 +207,14 @@ tables record every long operation.
   `RequiredImagesBanner` over the canvas, build/sync/cancel actions);
   `features/jobs/JobLog` follows any job's log; the TopBar status badge opens
   `JobDetailsPopover` (steps + deploy/build logs).
+  Capture: `features/capture` (StartCaptureDialog from edge/device menus and the
+  inspector, CaptureView = live windowed packet table over the capture
+  WebSocket, pcap download, "Open in Wireshark" curl commands). Traffic:
+  `features/traffic` (flow form, flows saved in `topology.traffic.flows`, live
+  charts via `ui/charts/TimeSeriesChart` on uPlot with `--chart-N` tokens, run
+  summary + environment). `features/runs/RunsSheet` lists captures and runs.
+  The canvas badges captured links / busy nodes from the `activity` slice via
+  `project({… activity})`.
 - **Data model** (`types/topology.ts`) is frontend-owned; keep the index
   signatures so unknown backend fields round-trip. All REST/WS calls go through
   `api/client.ts`.
@@ -196,11 +227,19 @@ tables record every long operation.
   `plan`, `export?format=labspec|kathara|containerlab`, `runtime`, `events`,
   `context` (everything in one call: record, diagnostics, plan, runtime, events).
 - `topologies/{id}/deploy|destroy` → 202 with a job; `jobs/{id}`,
-  `jobs/{id}/log?offset=`, `jobs/{id}/cancel`; `topologies/{id}/jobs`;
+  `jobs/{id}/log?offset=`, `jobs/{id}/cancel`, `jobs/{id}/stop`,
+  `jobs/{id}/artifacts[/{name}]`; `topologies/{id}/jobs`, `topologies/{id}/interfaces`;
   WebSocket `topologies/ws/{id}/exec/{container}`.
+- `topologies/{id}/captures`, `captures/{id}`, `captures/{id}/pcap?follow=`
+  (whole-record pcap, live for `curl … | wireshark -k -i -`), `captures/{id}/packets`;
+  `topologies/{id}/traffic/runs`, `traffic/runs/{id}[/samples|/export]`;
+  WebSockets `topologies/ws/{id}/captures/{job}` and `…/traffic/{job}`
+  (under the WS prefix so nginx/vite upgrade them; handlers race every wait
+  against client disconnect, see `api/live_ws.py`).
 - `images?topology_id=` (build support, sources, per-image status),
   `images/builds` (202 + build jobs), `sources/{name}/sync` (202 + a job).
-- `system` — `health`, `labs` (reconcile report), `reconcile`, `labs/{hash}/purge`.
+- `system` — `health`, `labs` (reconcile report), `environment`, `reconcile`,
+  `labs/{hash}/purge`.
 - `catalog`, `presets` as before.
 
 ## Auth
@@ -210,9 +249,9 @@ unsafe on a shared or reachable host, since the API creates and destroys
 containers. Setting it re-enables the bearer check on every REST route and on the
 exec WebSocket (which takes the token as `?token=`); the frontend then needs a
 matching `VITE_INSTRUCTOR_TOKEN` at build time (a compose build arg). `auth.py`
-reads `config.INSTRUCTOR_TOKEN` at call time so tests can patch it.
+reads the token from `app.state.settings`, so a test app carries its own.
 Student/classroom auth is still deferred.
 
 ## Deferred (rebuild on the engine abstraction later)
-Firewall editor, scenarios/scripts, classroom mode, Wireshark capture, web-UI
-proxy, AI assistant. Keep the `DeploymentEngine` seam and the catalog when adding them back.
+Firewall editor, scenarios/scripts, classroom mode, web-UI proxy, AI assistant,
+more traffic generators (Locust, Modbus) and comparison views. Keep the `DeploymentEngine` seam and the catalog when adding them back.

@@ -18,6 +18,10 @@
       "kind": "git",
       "url": "https://github.com/UoIShieldLabs/ae3gis-containers.git",
       "ref": "main"
+    },
+    "ae3gis-tools": {
+      "kind": "path",
+      "path": "tools"
     }
   },
   "images": {
@@ -138,7 +142,16 @@
       "description": "ScadaBR installer only; needs a manual install inside the container.",
       "stability": "hidden",
       "source": { "kind": "build", "repo": "ae3gis-containers", "context": "scadabr", "dockerfile": "dockerfile" }
+    },
+    "ae3gis.local/nettools": {
+      "displayName": "Network tools",
+      "description": "tcpdump and iperf3 for packet capture and traffic sidecars (not a node image).",
+      "source": { "kind": "build", "repo": "ae3gis-tools", "context": "nettools" }
     }
+  },
+  "tools": {
+    "capture": "ae3gis.local/nettools",
+    "iperf3": "ae3gis.local/nettools"
   },
   "types": {
     "router": {

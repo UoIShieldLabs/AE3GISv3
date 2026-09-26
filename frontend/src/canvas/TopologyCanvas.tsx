@@ -14,7 +14,9 @@ import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
 import { useResolvedTheme } from '@/app/theme';
 import { Button, EmptyState, toast } from '@/ui';
-import { project, expandableIds, toStoredPosition, type CanvasEdge, type CanvasNode, type GroupNodeData } from './projection';
+import { openCaptureTab, stopCapture } from '@/features/capture/actions';
+import { openTrafficPanel } from '@/features/traffic/actions';
+import { activityIndex, project, expandableIds, toStoredPosition, type CanvasEdge, type CanvasNode, type GroupNodeData } from './projection';
 import { nodeTypes } from './nodes';
 import { edgeTypes, ConnectionLine } from './edges';
 import { CanvasActionsContext, type CanvasActions } from './CanvasContext';
@@ -53,10 +55,17 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
     tool: s.tool, snapToGrid: s.snapToGrid, showMinimap: s.showMinimap, deployStatus: s.deployStatus,
   }));
 
+  // Captures/traffic in progress. /runtime returns a new array every poll, so
+  // re-index only when what the canvas shows changes.
+  const activityList = useAppStore((s) => s.activity);
+  const activityKey = activityList.map((a) => `${a.kind}:${a.job_id}:${(a.node_ids ?? []).join(',')}:${(a.connection_ids ?? []).join(',')}`).join('|');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const activity = useMemo(() => activityIndex(activityList), [activityKey]);
+
   // ── Projection → local React Flow state (local keeps in-flight drags) ──
   const projection = useMemo(
-    () => project({ topology, scope, expanded, containerStatus, selection }),
-    [topology, scope, expanded, containerStatus, selection],
+    () => project({ topology, scope, expanded, containerStatus, selection, activity }),
+    [topology, scope, expanded, containerStatus, selection, activity],
   );
   const [nodes, setNodes] = useState<CanvasNode[]>(projection.nodes);
   const [edges, setEdges] = useState<CanvasEdge[]>(projection.edges);
@@ -307,6 +316,13 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
         readOnly={readOnly}
         isExpanded={(id) => !!expanded[id]}
         canOpenTerminal={deployStatus === 'deployed'}
+        canCapture={deployStatus === 'deployed'}
+        captureOf={(kind, id) => (kind === 'edge' ? activity.captureConnections.get(id) : activity.captureNodes.get(id))}
+        onCaptureLink={(connectionId) => useAppStore.getState().openCaptureDialog({ kind: 'link', connectionId })}
+        onCaptureNode={(nodeId) => useAppStore.getState().openCaptureDialog({ kind: 'interface', nodeId })}
+        onOpenCapture={(jobId) => openCaptureTab(jobId)}
+        onStopCapture={(jobId) => void stopCapture(jobId)}
+        onTraffic={(nodeId) => openTrafficPanel({ client: nodeId })}
         onAdd={(item, at) => handleAdd(item, at)}
         onDrill={drillInto}
         onToggleExpand={actions.toggleExpand}

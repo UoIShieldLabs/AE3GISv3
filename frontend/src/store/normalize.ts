@@ -16,13 +16,22 @@ function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function ensureConnections(list: unknown): Connection[] {
+/** What normalisation had to change (so a caller can offer to save it). */
+export interface NormalizeReport {
+  /** Connections that had no id and got a new one. */
+  filledConnectionIds: number;
+}
+
+function ensureConnections(list: unknown, report?: NormalizeReport): Connection[] {
   if (!Array.isArray(list)) return [];
   const out: Connection[] = [];
   for (const raw of list) {
     if (!isObj(raw) || typeof raw.from !== 'string' || typeof raw.to !== 'string') continue;
     const c = raw as Connection;
-    if (typeof c.id !== 'string' || !c.id) c.id = generateId('c');
+    if (typeof c.id !== 'string' || !c.id) {
+      c.id = generateId('c');
+      if (report) report.filledConnectionIds += 1;
+    }
     out.push(c);
   }
   return out;
@@ -56,10 +65,10 @@ function scopeIds(topology: TopologyData, scope: Scope): string[] {
 }
 
 /** Normalise in place and return the same object (typed). Safe to call repeatedly. */
-export function normalizeTopology(input: unknown): TopologyData {
+export function normalizeTopology(input: unknown, report?: NormalizeReport): TopologyData {
   const t = (isObj(input) ? input : {}) as TopologyData;
   if (!Array.isArray(t.sites)) t.sites = [];
-  t.siteConnections = ensureConnections(t.siteConnections);
+  t.siteConnections = ensureConnections(t.siteConnections, report);
   const version = typeof t.view?.version === 'number' ? t.view.version : 1;
 
   for (const site of t.sites as Site[]) {
@@ -67,7 +76,7 @@ export function normalizeTopology(input: unknown): TopologyData {
     if (typeof site.name !== 'string') site.name = 'Site';
     if (typeof site.location !== 'string') site.location = '';
     if (!Array.isArray(site.subnets)) site.subnets = [];
-    site.subnetConnections = ensureConnections(site.subnetConnections);
+    site.subnetConnections = ensureConnections(site.subnetConnections, report);
     if (version < 2 && site.position && typeof site.position.x === 'number') {
       site.position = { x: site.position.x * V1_SITE_SCALE.x, y: site.position.y * V1_SITE_SCALE.y };
     }
@@ -76,7 +85,7 @@ export function normalizeTopology(input: unknown): TopologyData {
       if (typeof subnet.name !== 'string') subnet.name = 'Subnet';
       if (typeof subnet.cidr !== 'string') subnet.cidr = '';
       if (!Array.isArray(subnet.containers)) subnet.containers = [];
-      subnet.connections = ensureConnections(subnet.connections);
+      subnet.connections = ensureConnections(subnet.connections, report);
       for (const c of subnet.containers) {
         if (typeof c.id !== 'string') c.id = generateId('node');
         if (typeof c.name !== 'string') c.name = c.id;

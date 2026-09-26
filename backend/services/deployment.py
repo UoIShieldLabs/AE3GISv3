@@ -12,7 +12,7 @@ from db.models import Job, Topology
 from domain import validation
 from domain.topology import images_in
 from engine.base import DeploymentEngine, EngineState, NodeLog
-from services import events, jobs, topologies
+from services import activity, events, jobs, topologies
 from services.jobs import JobRunner
 
 VERIFY_TIMEOUT_S = 15.0
@@ -124,6 +124,7 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
             with runner.session_factory() as db:
                 topo = db.get(Topology, topology_id)
                 plan = topologies.plan_for(topo)
+                deployed_version = topo.version
             runner.progress(
                 job_id, "plan", f"{len(plan.nodes)} nodes, {len(plan.collision_domains)} links"
             )
@@ -138,11 +139,15 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 engine=engine.name,
                 lab_name=plan.name,
                 nodes={n.id: n.machine_name for n in plan.nodes},
+                links=plan.links(),
+                deployed_version=deployed_version,
             )
             _set_topology(runner, topology_id, engine_state=provisional.to_dict())
             state = await engine.deploy(
                 plan, lambda m, jid=job_id: runner.progress(jid, "deploy", m)
             )
+            state.links = plan.links()
+            state.deployed_version = deployed_version
             _set_topology(runner, topology_id, engine_state=state.to_dict(), status="deployed")
 
         async with runner.step(job_id, "verify"):
@@ -219,6 +224,15 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
     topology_id, _, raw_state, _ = _load(runner, job_id)
     state = EngineState.from_dict(raw_state)
     try:
+        async with runner.step(job_id, "stop"):
+            # Captures and traffic runs keep what they recorded; their sidecars
+            # go before the lab does.
+            stopped = await activity.stop_all(runner, topology_id)
+            runner.progress(
+                job_id,
+                "stop",
+                f"Stopped {stopped} capture/traffic job(s)" if stopped else "Nothing running",
+            )
         async with runner.step(job_id, "undeploy"):
             if state:
                 await engine.destroy(state)
@@ -261,5 +275,21 @@ async def runtime_view(db: Session, engine: DeploymentEngine, topo: Topology) ->
         "status": topo.status,
         "version": topo.version,
         "active_job": jobs.job_to_dict(job) if job else None,
+        "activity": activity.active_for_topology(db, topo.id),
         "nodes": nodes,
     }
+
+
+def deployed_links(topo: Topology) -> tuple[list[dict[str, Any]], str]:
+    """The deployed lab's links and where they came from.
+
+    ``deployed``: saved at deploy time. ``recomputed``: a lab deployed before
+    links were saved, so the plan is rebuilt from the current data (right
+    unless the topology was edited since). ``none``: nothing is deployed.
+    """
+    state = EngineState.from_dict(topo.engine_state)
+    if topo.status != "deployed" or not state:
+        return [], "none"
+    if state.links:
+        return state.links, "deployed"
+    return topologies.plan_for(topo).links(), "recomputed"

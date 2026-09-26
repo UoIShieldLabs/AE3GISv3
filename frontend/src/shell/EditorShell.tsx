@@ -18,7 +18,7 @@ export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspe
   const { sidebarOpen, inspectorOpen, dockMode } = useAppShallow((s) => ({
     sidebarOpen: s.sidebarOpen,
     inspectorOpen: s.inspectorOpen,
-    dockMode: s.terminals.length === 0 ? 'hidden' : s.terminalMinimized ? 'minimized' : 'open',
+    dockMode: s.dockTabs.length === 0 ? 'hidden' : s.dockMinimized ? 'minimized' : 'open',
   }));
   const showSidebar = !!sidebar && sidebarOpen;
   const showInspector = !!inspector && inspectorOpen;

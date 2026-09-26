@@ -1,4 +1,4 @@
-import { ArrowDownRight, Cable, Copy, ListPlus, Maximize2, Minimize2, MousePointerSquareDashed, Plus, Sparkles, Terminal, Trash2, Maximize } from 'lucide-react';
+import { Activity, ArrowDownRight, Cable, Copy, ListPlus, Maximize2, Minimize2, MousePointerSquareDashed, Plus, Radio, Sparkles, Square, Terminal, Trash2, Maximize } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import type { Position } from '@/types/topology';
 import type { Scope } from '@/lib/topology';
@@ -24,11 +24,20 @@ export interface CanvasContextMenuProps {
   readOnly?: boolean;
   isExpanded: (id: string) => boolean;
   canOpenTerminal: boolean;
+  /** Captures and traffic need a deployed lab. */
+  canCapture: boolean;
+  /** The capture running on this connection / node, if any (job id). */
+  captureOf: (kind: 'edge' | 'node', id: string) => string | undefined;
   children: React.ReactNode;
   onAdd: (item: PaletteItem, at?: Position) => void;
   onDrill: (id: string) => void;
   onToggleExpand: (id: string) => void;
   onTerminal: (nodeId: string) => void;
+  onCaptureLink: (connectionId: string) => void;
+  onCaptureNode: (nodeId: string) => void;
+  onOpenCapture: (jobId: string) => void;
+  onStopCapture: (jobId: string) => void;
+  onTraffic: (nodeId: string) => void;
   onDuplicate: (ids: string[]) => void;
   onDelete: (nodeIds: string[], edgeIds: string[]) => void;
   onSelectAll: () => void;
@@ -38,8 +47,9 @@ export interface CanvasContextMenuProps {
 }
 
 export function CanvasContextMenu({
-  scope, target, readOnly, isExpanded, canOpenTerminal, children,
-  onAdd, onDrill, onToggleExpand, onTerminal, onDuplicate, onDelete, onSelectAll, onAutoLayout, onBulkDevices, onBulkConnections,
+  scope, target, readOnly, isExpanded, canOpenTerminal, canCapture, captureOf, children,
+  onAdd, onDrill, onToggleExpand, onTerminal, onCaptureLink, onCaptureNode, onOpenCapture, onStopCapture, onTraffic,
+  onDuplicate, onDelete, onSelectAll, onAutoLayout, onBulkDevices, onBulkConnections,
 }: CanvasContextMenuProps) {
   const { fitView } = useReactFlow();
   const tree = useCatalogTree();
@@ -103,7 +113,14 @@ export function CanvasContextMenu({
           </ContextMenuItem>
         ) : null}
         {isContainerNode ? (
-          <ContextMenuItem onSelect={() => onTerminal(n.id)} disabled={!canOpenTerminal}><Terminal /> Open terminal</ContextMenuItem>
+          <>
+            <ContextMenuItem onSelect={() => onTerminal(n.id)} disabled={!canOpenTerminal}><Terminal /> Open terminal</ContextMenuItem>
+            {captureOf('node', n.id) ? (
+              <ContextMenuItem onSelect={() => onOpenCapture(captureOf('node', n.id)!)}><Radio /> View capture</ContextMenuItem>
+            ) : null}
+            <ContextMenuItem onSelect={() => onCaptureNode(n.id)} disabled={!canCapture}><Radio /> Capture packets…</ContextMenuItem>
+            <ContextMenuItem onSelect={() => onTraffic(n.id)} disabled={!canCapture}><Activity /> Generate traffic from here…</ContextMenuItem>
+          </>
         ) : null}
         {!readOnly ? (
           <>
@@ -115,10 +132,25 @@ export function CanvasContextMenu({
       </>
     );
   } else if (target?.kind === 'edge') {
-    content = !readOnly ? (
-      <ContextMenuItem variant="danger" onSelect={() => onDelete([], [target.id])} shortcut="⌫"><Trash2 /> Delete connection</ContextMenuItem>
-    ) : (
-      <ContextMenuLabel>Connection</ContextMenuLabel>
+    const capture = captureOf('edge', target.id);
+    content = (
+      <>
+        <ContextMenuLabel>Connection</ContextMenuLabel>
+        {capture ? (
+          <>
+            <ContextMenuItem onSelect={() => onOpenCapture(capture)}><Radio /> View capture</ContextMenuItem>
+            <ContextMenuItem onSelect={() => onStopCapture(capture)}><Square /> Stop capture</ContextMenuItem>
+          </>
+        ) : (
+          <ContextMenuItem onSelect={() => onCaptureLink(target.id)} disabled={!canCapture}><Radio /> Capture packets…</ContextMenuItem>
+        )}
+        {!readOnly ? (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="danger" onSelect={() => onDelete([], [target.id])} shortcut="⌫"><Trash2 /> Delete connection</ContextMenuItem>
+          </>
+        ) : null}
+      </>
     );
   } else if (target?.kind === 'selection') {
     content = (

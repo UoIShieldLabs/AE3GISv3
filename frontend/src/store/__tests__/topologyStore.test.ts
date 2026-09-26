@@ -132,7 +132,7 @@ describe('topology store — connections', () => {
 });
 
 describe('topology store — load, dirty, undo', () => {
-  it('loadTopology normalises ids/positions, preserves unknown fields and is clean', () => {
+  it('loadTopology normalises ids/positions and preserves unknown fields', () => {
     S().loadTopology({
       name: 'X',
       sites: [{ id: 's1', name: 'S', location: '', position: { x: 10, y: 10 }, subnets: [
@@ -142,7 +142,8 @@ describe('topology store — load, dirty, undo', () => {
       customTopLevel: { a: 1 },
     });
     const t = S().topology;
-    expect(S().dirty).toBe(false);
+    // The connection had no id: it got one, which has to be saved.
+    expect(S().dirty).toBe(true);
     expect(t.customTopLevel).toEqual({ a: 1 });
     expect(t.sites[0].subnets[0].containers[0].extra).toBe('keep');
     expect(t.sites[0].subnets[0].containers[0].position).toBeDefined();
@@ -201,5 +202,34 @@ describe('document / runtime status', () => {
     expect(S().dirty).toBe(before);
     const hit = locate(S().topology, c);
     expect(hit?.kind === 'container' && hit.container.status).toBeUndefined();
+  });
+});
+
+describe('topology store — loading', () => {
+  const data = {
+    name: 'T',
+    sites: [{ id: 's', name: 'S', location: '', subnets: [{ id: 'n', name: 'N', cidr: '10.0.0.0/24', containers: [], connections: [{ from: 'a', to: 'b' }] }], subnetConnections: [] }],
+    siteConnections: [],
+  };
+
+  it('a load that had to invent connection ids starts dirty (they must be saved)', () => {
+    S().loadTopology(data);
+    expect(S().dirty).toBe(true);
+    expect(S().topology.sites[0].subnets[0].connections[0].id).toBeTruthy();
+  });
+
+  it('a load with ids already in place is clean', () => {
+    const withIds = JSON.parse(JSON.stringify(data));
+    withIds.sites[0].subnets[0].connections[0].id = 'c1';
+    S().loadTopology(withIds);
+    expect(S().dirty).toBe(false);
+  });
+
+  it('saved traffic flows are part of the design (undoable, dirty)', () => {
+    S().setTrafficFlows([{ id: 'f1', client: 'a', server: 'b', protocol: 'tcp', direction: 'forward' }]);
+    expect(S().topology.traffic?.flows?.[0].id).toBe('f1');
+    expect(S().dirty).toBe(true);
+    undo();
+    expect(S().topology.traffic?.flows).toBeUndefined();
   });
 });

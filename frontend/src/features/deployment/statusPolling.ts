@@ -1,5 +1,5 @@
 // One poller app-wide for GET /runtime: deployment status, the active job
-// (with steps), and per-node state. Polls fast while a job runs, slowly while
+// (with steps), per-node state, and running captures/traffic runs. Polls fast while a job runs, slowly while
 // deployed, and stops when there is nothing to watch.
 import * as api from '@/api/client';
 import { useAppStore, type RuntimeStatus } from '@/store';
@@ -17,6 +17,7 @@ export function stopPolling() {
   timer = null;
   current = null;
   lastJobId = null;
+  useAppStore.getState().setActivity([]);
 }
 
 async function tick(topologyId: string) {
@@ -32,6 +33,9 @@ async function tick(topologyId: string) {
     st.setContainerStatuses(statuses);
     st.setDeployStatus(rt.status as typeof st.deployStatus, st.lastError);
     st.setActiveJob(rt.active_job ?? null);
+    st.setActivity(rt.activity ?? []);
+    // Captures and traffic runs: poll briskly so their badges come and go on time.
+    if (rt.activity?.length) delay = FAST_MS;
     if (rt.version !== st.version) st.setVersion(rt.version);
 
     const job = rt.active_job;

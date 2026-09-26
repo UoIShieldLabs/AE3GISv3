@@ -1,6 +1,103 @@
 {
   "components": {
     "schemas": {
+      "ActivityOut": {
+        "description": "A capture or traffic run in progress on the topology.",
+        "properties": {
+          "connection_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Connection Ids",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "node_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "kind",
+          "status"
+        ],
+        "title": "ActivityOut",
+        "type": "object"
+      },
+      "ArtifactOut": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "modified_at": {
+            "format": "date-time",
+            "title": "Modified At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "modified_at",
+          "content_type"
+        ],
+        "title": "ArtifactOut",
+        "type": "object"
+      },
       "Body_import_json_api_v1_topologies_import_json_post": {
         "properties": {
           "file": {
@@ -74,6 +171,285 @@
         "title": "BuildSource",
         "type": "object"
       },
+      "CaptureEndpointOut": {
+        "properties": {
+          "collision_domain": {
+            "title": "Collision Domain",
+            "type": "string"
+          },
+          "connection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
+          "interface": {
+            "title": "Interface",
+            "type": "string"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "machine": {
+            "title": "Machine",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "peer_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peer Node Id"
+          }
+        },
+        "required": [
+          "node_id",
+          "machine",
+          "interface",
+          "collision_domain"
+        ],
+        "title": "CaptureEndpointOut",
+        "type": "object"
+      },
+      "CaptureOut": {
+        "properties": {
+          "endpoint": {
+            "$ref": "#/components/schemas/CaptureEndpointOut"
+          },
+          "filter": {
+            "title": "Filter",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "title": "Limits",
+            "type": "object"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "pcap_url": {
+            "title": "Pcap Url",
+            "type": "string"
+          },
+          "snaplen": {
+            "title": "Snaplen",
+            "type": "integer"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CaptureStatsOut"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": true,
+            "title": "Target",
+            "type": "object"
+          },
+          "topology_id": {
+            "title": "Topology Id",
+            "type": "string"
+          },
+          "ws_path": {
+            "title": "Ws Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topology_id",
+          "label",
+          "status",
+          "live",
+          "target",
+          "endpoint",
+          "filter",
+          "snaplen",
+          "limits",
+          "stats",
+          "job",
+          "pcap_url",
+          "ws_path"
+        ],
+        "title": "CaptureOut",
+        "type": "object"
+      },
+      "CaptureRequest": {
+        "properties": {
+          "filter": {
+            "default": "",
+            "maxLength": 512,
+            "title": "Filter",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "max_bytes": {
+            "anyOf": [
+              {
+                "minimum": 10000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Bytes"
+          },
+          "max_packets": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Packets"
+          },
+          "max_seconds": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Seconds"
+          },
+          "snaplen": {
+            "default": 0,
+            "maximum": 262144.0,
+            "minimum": 0.0,
+            "title": "Snaplen",
+            "type": "integer"
+          },
+          "target": {
+            "discriminator": {
+              "mapping": {
+                "interface": "#/components/schemas/InterfaceTarget",
+                "link": "#/components/schemas/LinkTarget"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LinkTarget"
+              },
+              {
+                "$ref": "#/components/schemas/InterfaceTarget"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "CaptureRequest",
+        "type": "object"
+      },
+      "CaptureStatsOut": {
+        "properties": {
+          "bytes": {
+            "default": 0,
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "dropped_by_kernel": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped By Kernel"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "file_bytes": {
+            "default": 0,
+            "title": "File Bytes",
+            "type": "integer"
+          },
+          "packets": {
+            "default": 0,
+            "title": "Packets",
+            "type": "integer"
+          },
+          "stopped_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped By"
+          },
+          "undecoded": {
+            "default": 0,
+            "title": "Undecoded",
+            "type": "integer"
+          }
+        },
+        "title": "CaptureStatsOut",
+        "type": "object"
+      },
       "Catalog": {
         "properties": {
           "categories": {
@@ -121,6 +497,13 @@
               ]
             },
             "title": "Sources",
+            "type": "object"
+          },
+          "tools": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tools",
             "type": "object"
           },
           "types": {
@@ -189,6 +572,49 @@
           "events"
         ],
         "title": "ContextOut",
+        "type": "object"
+      },
+      "DeployedInterfacesOut": {
+        "description": "The deployed lab's interfaces: what captures can target.",
+        "properties": {
+          "deployed": {
+            "title": "Deployed",
+            "type": "boolean"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/LinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "mapping": {
+            "enum": [
+              "deployed",
+              "recomputed",
+              "none"
+            ],
+            "title": "Mapping",
+            "type": "string"
+          },
+          "nodes": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/InterfaceOut"
+              },
+              "type": "array"
+            },
+            "title": "Nodes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "deployed",
+          "mapping",
+          "nodes",
+          "links"
+        ],
+        "title": "DeployedInterfacesOut",
         "type": "object"
       },
       "Diagnostic": {
@@ -322,6 +748,128 @@
         "title": "EventOut",
         "type": "object"
       },
+      "FlowSampleOut": {
+        "properties": {
+          "bps": {
+            "title": "Bps",
+            "type": "number"
+          },
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "fwd",
+              "rev"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "flow_id": {
+            "title": "Flow Id",
+            "type": "string"
+          },
+          "jitter_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jitter Ms"
+          },
+          "lost_packets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Packets"
+          },
+          "lost_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Percent"
+          },
+          "omitted": {
+            "default": false,
+            "title": "Omitted",
+            "type": "boolean"
+          },
+          "packets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packets"
+          },
+          "retransmits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retransmits"
+          },
+          "rtt_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rtt Ms"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "sender",
+              "receiver"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "t": {
+            "title": "T",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t",
+          "flow_id",
+          "direction",
+          "side",
+          "bps",
+          "bytes",
+          "seconds"
+        ],
+        "title": "FlowSampleOut",
+        "type": "object"
+      },
       "GitSource": {
         "description": "A git repository the backend clones (and syncs on demand).",
         "properties": {
@@ -424,6 +972,49 @@
           "detail"
         ],
         "title": "HostBuildOut",
+        "type": "object"
+      },
+      "IfaceRatesOut": {
+        "properties": {
+          "errors": {
+            "default": 0,
+            "title": "Errors",
+            "type": "integer"
+          },
+          "rx_bps": {
+            "title": "Rx Bps",
+            "type": "number"
+          },
+          "rx_dropped": {
+            "default": 0,
+            "title": "Rx Dropped",
+            "type": "integer"
+          },
+          "rx_pps": {
+            "title": "Rx Pps",
+            "type": "number"
+          },
+          "tx_bps": {
+            "title": "Tx Bps",
+            "type": "number"
+          },
+          "tx_dropped": {
+            "default": 0,
+            "title": "Tx Dropped",
+            "type": "integer"
+          },
+          "tx_pps": {
+            "title": "Tx Pps",
+            "type": "number"
+          }
+        },
+        "required": [
+          "rx_bps",
+          "tx_bps",
+          "rx_pps",
+          "tx_pps"
+        ],
+        "title": "IfaceRatesOut",
         "type": "object"
       },
       "ImageSpec": {
@@ -675,6 +1266,190 @@
         "title": "ImagesReport",
         "type": "object"
       },
+      "InterfaceOut": {
+        "properties": {
+          "collision_domain": {
+            "title": "Collision Domain",
+            "type": "string"
+          },
+          "connection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "peer_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peer Node Id"
+          }
+        },
+        "required": [
+          "name",
+          "collision_domain"
+        ],
+        "title": "InterfaceOut",
+        "type": "object"
+      },
+      "InterfaceTarget": {
+        "description": "Capture one interface of a node.",
+        "properties": {
+          "interface": {
+            "pattern": "^eth\\d{1,3}$",
+            "title": "Interface",
+            "type": "string"
+          },
+          "kind": {
+            "const": "interface",
+            "title": "Kind",
+            "type": "string"
+          },
+          "node_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "node_id",
+          "interface"
+        ],
+        "title": "InterfaceTarget",
+        "type": "object"
+      },
+      "Iperf3Flow": {
+        "description": "One iperf3 flow: ``client`` sends to ``server`` (reverse: the other way).",
+        "properties": {
+          "bitrate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bitrate"
+          },
+          "client": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Client",
+            "type": "string"
+          },
+          "direction": {
+            "default": "forward",
+            "enum": [
+              "forward",
+              "reverse",
+              "bidir"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "generator": {
+            "const": "iperf3",
+            "default": "iperf3",
+            "title": "Generator",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "maximum": 65507.0,
+                "minimum": 16.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "omit_s": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Omit S",
+            "type": "integer"
+          },
+          "parallel": {
+            "default": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Parallel",
+            "type": "integer"
+          },
+          "protocol": {
+            "default": "tcp",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          },
+          "server": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Server",
+            "type": "string"
+          },
+          "server_address": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Address"
+          }
+        },
+        "required": [
+          "id",
+          "client",
+          "server"
+        ],
+        "title": "Iperf3Flow",
+        "type": "object"
+      },
       "JobLogOut": {
         "description": "A line-aligned slice of a job's log. Poll again from ``next_offset``.",
         "properties": {
@@ -746,6 +1521,30 @@
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
           },
           "started_at": {
             "anyOf": [
@@ -952,6 +1751,226 @@
         "title": "LabsReport",
         "type": "object"
       },
+      "LinkEndpointOut": {
+        "properties": {
+          "interface": {
+            "title": "Interface",
+            "type": "string"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "machine_name": {
+            "title": "Machine Name",
+            "type": "string"
+          },
+          "node": {
+            "title": "Node",
+            "type": "string"
+          },
+          "prefix_len": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefix Len"
+          }
+        },
+        "required": [
+          "node",
+          "machine_name",
+          "interface"
+        ],
+        "title": "LinkEndpointOut",
+        "type": "object"
+      },
+      "LinkOut": {
+        "properties": {
+          "collision_domain": {
+            "title": "Collision Domain",
+            "type": "string"
+          },
+          "connection_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
+          "endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/LinkEndpointOut"
+            },
+            "title": "Endpoints",
+            "type": "array"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "required": [
+          "collision_domain",
+          "endpoints"
+        ],
+        "title": "LinkOut",
+        "type": "object"
+      },
+      "LinkTarget": {
+        "description": "Capture a whole link (a topology connection) from one of its ends.",
+        "properties": {
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "enum": [
+                  "from",
+                  "to"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "kind": {
+            "const": "link",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "connection_id"
+        ],
+        "title": "LinkTarget",
+        "type": "object"
+      },
+      "NodeSampleOut": {
+        "properties": {
+          "cpu_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpu Percent"
+          },
+          "ifaces": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IfaceRatesOut"
+            },
+            "default": {},
+            "title": "Ifaces",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "node",
+              "sidecar"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mem_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mem Limit"
+          },
+          "mem_used": {
+            "title": "Mem Used",
+            "type": "integer"
+          },
+          "pids": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pids"
+          },
+          "t": {
+            "title": "T",
+            "type": "number"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t",
+          "target",
+          "kind",
+          "mem_used"
+        ],
+        "title": "NodeSampleOut",
+        "type": "object"
+      },
       "NodeState": {
         "properties": {
           "id": {
@@ -1056,6 +2075,102 @@
           "icon"
         ],
         "title": "NodeTypeSpec",
+        "type": "object"
+      },
+      "PacketPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PacketSummaryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "title": "Next After",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_after",
+          "total"
+        ],
+        "title": "PacketPageOut",
+        "type": "object"
+      },
+      "PacketSummaryOut": {
+        "properties": {
+          "caplen": {
+            "title": "Caplen",
+            "type": "integer"
+          },
+          "dport": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dport"
+          },
+          "dst": {
+            "default": "",
+            "title": "Dst",
+            "type": "string"
+          },
+          "info": {
+            "default": "",
+            "title": "Info",
+            "type": "string"
+          },
+          "len": {
+            "title": "Len",
+            "type": "integer"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "proto": {
+            "default": "",
+            "title": "Proto",
+            "type": "string"
+          },
+          "sport": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport"
+          },
+          "src": {
+            "default": "",
+            "title": "Src",
+            "type": "string"
+          },
+          "ts": {
+            "title": "Ts",
+            "type": "number"
+          }
+        },
+        "required": [
+          "n",
+          "ts",
+          "len",
+          "caplen"
+        ],
+        "title": "PacketSummaryOut",
         "type": "object"
       },
       "PathSource": {
@@ -1216,6 +2331,14 @@
               }
             ]
           },
+          "activity": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ActivityOut"
+            },
+            "title": "Activity",
+            "type": "array"
+          },
           "nodes": {
             "items": {
               "$ref": "#/components/schemas/NodeState"
@@ -1243,6 +2366,33 @@
           "nodes"
         ],
         "title": "RuntimeOut",
+        "type": "object"
+      },
+      "SidecarRoleOut": {
+        "properties": {
+          "flow_id": {
+            "title": "Flow Id",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "client",
+              "server"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flow_id",
+          "role",
+          "node_id"
+        ],
+        "title": "SidecarRoleOut",
         "type": "object"
       },
       "SourceOut": {
@@ -1527,6 +2677,195 @@
         "title": "TopologyUpdate",
         "type": "object"
       },
+      "TrafficRunOut": {
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "flows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Flows",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "interval_s": {
+            "title": "Interval S",
+            "type": "number"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "monitored": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Monitored",
+            "type": "array"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "sidecars": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SidecarRoleOut"
+            },
+            "default": {},
+            "title": "Sidecars",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topology_id": {
+            "title": "Topology Id",
+            "type": "string"
+          },
+          "ws_path": {
+            "title": "Ws Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topology_id",
+          "label",
+          "status",
+          "live",
+          "flows",
+          "duration_s",
+          "interval_s",
+          "monitored",
+          "job",
+          "ws_path"
+        ],
+        "title": "TrafficRunOut",
+        "type": "object"
+      },
+      "TrafficRunRequest": {
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 30,
+            "title": "Duration S"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/Iperf3Flow"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Flows",
+            "type": "array"
+          },
+          "interval_s": {
+            "default": 1.0,
+            "maximum": 10.0,
+            "minimum": 0.5,
+            "title": "Interval S",
+            "type": "number"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "monitor_nodes": {
+            "anyOf": [
+              {
+                "enum": [
+                  "all",
+                  "flows"
+                ],
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "default": "all",
+            "title": "Monitor Nodes"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flows"
+        ],
+        "title": "TrafficRunRequest",
+        "type": "object"
+      },
+      "TrafficSamplesOut": {
+        "properties": {
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowSampleOut"
+            },
+            "title": "Flows",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeSampleOut"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "flows",
+          "nodes"
+        ],
+        "title": "TrafficSamplesOut",
+        "type": "object"
+      },
       "ValidateBody": {
         "properties": {
           "data": {
@@ -1609,6 +2948,215 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/captures/{job_id}": {
+      "get": {
+        "operationId": "get_capture_api_v1_captures__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Capture",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/v1/captures/{job_id}/packets": {
+      "get": {
+        "description": "Summaries of the captured packets, read from the pcap (any capture).",
+        "operationId": "get_packets_api_v1_captures__job_id__packets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Packet number to start after",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Packet number to start after",
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PacketPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Packets",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
+    "/api/v1/captures/{job_id}/pcap": {
+      "get": {
+        "description": "The capture as a pcap file. Valid at any moment, even mid-capture.\nAccepts ``?token=`` so curl and plain links work with auth on.",
+        "operationId": "get_pcap_api_v1_captures__job_id__pcap_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Keep streaming new packets until the capture ends (pipe into `wireshark -k -i -`)",
+            "in": "query",
+            "name": "follow",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Keep streaming new packets until the capture ends (pipe into `wireshark -k -i -`)",
+              "title": "Follow",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.tcpdump.pcap": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pcap",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
     "/api/v1/catalog": {
       "get": {
         "description": "Return the full node-type catalog (categories, types, images, sources).",
@@ -1821,6 +3369,133 @@
         ]
       }
     },
+    "/api/v1/jobs/{job_id}/artifacts": {
+      "get": {
+        "description": "Files the job produced (a capture's pcap, a traffic run's time series).",
+        "operationId": "list_artifacts_api_v1_jobs__job_id__artifacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ArtifactOut"
+                  },
+                  "title": "Response List Artifacts Api V1 Jobs  Job Id  Artifacts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Artifacts",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/artifacts/{name}": {
+      "get": {
+        "description": "Download one artifact. Accepts ``?token=`` so it works as a plain link.",
+        "operationId": "download_artifact_api_v1_jobs__job_id__artifacts__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Artifact",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/api/v1/jobs/{job_id}/cancel": {
       "post": {
         "description": "Cancel a queued or running job. Deploys can only be cancelled before the\nengine starts creating containers; destroys cannot be cancelled.",
@@ -1965,6 +3640,65 @@
           }
         },
         "summary": "Get Job Log",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/stop": {
+      "post": {
+        "description": "Stop an open-ended job (a capture or traffic run): it winds down, keeps\nwhat it recorded, and finishes as ``succeeded``. Use cancel to abort.",
+        "operationId": "stop_job_api_v1_jobs__job_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop Job",
         "tags": [
           "jobs"
         ]
@@ -2150,6 +3884,58 @@
         "summary": "Sync Source",
         "tags": [
           "images"
+        ]
+      }
+    },
+    "/api/v1/system/environment": {
+      "get": {
+        "description": "The host, Docker, Kathara and AE3GIS versions every run records.",
+        "operationId": "get_environment_api_v1_system_environment_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Environment Api V1 System Environment Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Environment",
+        "tags": [
+          "system"
         ]
       }
     },
@@ -2751,6 +4537,157 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/captures": {
+      "get": {
+        "operationId": "list_captures_api_v1_topologies__topology_id__captures_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaptureOut"
+                  },
+                  "title": "Response List Captures Api V1 Topologies  Topology Id  Captures Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Captures",
+        "tags": [
+          "captures"
+        ]
+      },
+      "post": {
+        "description": "Start capturing on a link or a node interface of a deployed topology.\n\nA capture of an interface that is already being captured returns that\ncapture (200). Stop it with ``POST /jobs/{id}/stop``: the pcap is kept.",
+        "operationId": "start_capture_api_v1_topologies__topology_id__captures_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureOut"
+                }
+              }
+            },
+            "description": "Already capturing there"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Capture",
+        "tags": [
+          "captures"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/context": {
       "get": {
         "description": "Everything about a topology in one response: record + diagnostics, plan, runtime, recent events.",
@@ -3080,6 +5017,65 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/interfaces": {
+      "get": {
+        "description": "Every deployed interface by node, and the links between them: what a\ncapture can target. Reads the saved deploy state; no engine call.",
+        "operationId": "get_interfaces_api_v1_topologies__topology_id__interfaces_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployedInterfacesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Interfaces",
+        "tags": [
+          "deployment"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/jobs": {
       "get": {
         "operationId": "list_topology_jobs_api_v1_topologies__topology_id__jobs_get",
@@ -3260,6 +5256,147 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/traffic/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_topologies__topology_id__traffic_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrafficRunOut"
+                  },
+                  "title": "Response List Runs Api V1 Topologies  Topology Id  Traffic Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "traffic"
+        ]
+      },
+      "post": {
+        "description": "Start generating traffic between deployed nodes. One run at a time per\ntopology (409 ``traffic_active``). Results and samples are kept.",
+        "operationId": "start_run_api_v1_topologies__topology_id__traffic_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrafficRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Run",
+        "tags": [
+          "traffic"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/validate": {
       "post": {
         "operationId": "validate_topology_api_v1_topologies__topology_id__validate_post",
@@ -3315,6 +5452,190 @@
         "summary": "Validate Topology",
         "tags": [
           "topologies"
+        ]
+      }
+    },
+    "/api/v1/traffic/runs/{job_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_traffic_runs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "traffic"
+        ]
+      }
+    },
+    "/api/v1/traffic/runs/{job_id}/export": {
+      "get": {
+        "description": "The run as a zip: run.json (request, environment, summary), the samples,\niperf3's raw output and the job log.",
+        "operationId": "export_run_api_v1_traffic_runs__job_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Run",
+        "tags": [
+          "traffic"
+        ]
+      }
+    },
+    "/api/v1/traffic/runs/{job_id}/samples": {
+      "get": {
+        "description": "Every flow and node sample of a run (live or finished).",
+        "operationId": "get_samples_api_v1_traffic_runs__job_id__samples_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only samples after this run time (s)",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": -1.0,
+              "description": "Only samples after this run time (s)",
+              "title": "Since",
+              "type": "number"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrafficSamplesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Samples",
+        "tags": [
+          "traffic"
         ]
       }
     }

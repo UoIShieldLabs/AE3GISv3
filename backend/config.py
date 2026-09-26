@@ -7,12 +7,15 @@ their own without touching the process environment.
 
 from __future__ import annotations
 
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
+
+API_VERSION = "3.1.0"
 
 
 class Settings(BaseSettings):
@@ -48,6 +51,28 @@ class Settings(BaseSettings):
     max_concurrent_builds: int = 2
     source_overrides: dict[str, Path] = {}
 
+    # Captures and traffic runs keep their output (pcaps, time series, run.json)
+    # under data_dir/artifacts/<job id>/, deleted after the retention period.
+    artifact_retention_days: float = 30
+    capture_max_bytes: int = 256_000_000
+    capture_max_seconds: int = 3600
+    max_active_captures: int = 8
+    # Packet summaries streamed to the browser per capture; the rest are counted.
+    capture_ui_max_pps: int = 500
+    traffic_max_seconds: int = 4 * 3600
+
+    # Recorded with every capture and traffic run so results from different
+    # machines and code versions can be told apart. ``host_label`` names the
+    # real machine (Docker Desktop only reports its VM); ``git_commit`` is set
+    # at image build time. ``instance_id`` tags the sidecars this backend
+    # starts; empty = generated once and kept in data_dir/instance-id.
+    host_label: str = ""
+    git_commit: str = ""
+    git_dirty: bool = False
+    instance_id: str = ""
+    # "dev" (compose: source mounted, uvicorn --reload) or "prod"; recorded too.
+    mode: str = ""
+
     @property
     def database_url(self) -> str:
         path = self.db_path or (self.data_dir / "ae3gis.db")
@@ -76,12 +101,29 @@ class Settings(BaseSettings):
     def build_ctx_dir(self) -> Path:
         return self.data_dir / "build-ctx"
 
+    @property
+    def artifacts_dir(self) -> Path:
+        return self.data_dir / "artifacts"
+
     def ensure_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        for d in (self.job_logs_dir, self.sources_dir, self.build_ctx_dir):
+        for d in (self.job_logs_dir, self.sources_dir, self.build_ctx_dir, self.artifacts_dir):
             d.mkdir(parents=True, exist_ok=True)
         if self.db_path:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def ensure_instance_id(self) -> str:
+        """This backend's id (tags its sidecars), persisted across restarts."""
+        if not self.instance_id:
+            path = self.data_dir / "instance-id"
+            try:
+                self.instance_id = path.read_text().strip()
+            except OSError:
+                self.instance_id = ""
+            if not self.instance_id:
+                self.instance_id = uuid.uuid4().hex[:12]
+                path.write_text(self.instance_id + "\n")
+        return self.instance_id
 
 
 @lru_cache(maxsize=1)

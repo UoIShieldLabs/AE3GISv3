@@ -1,6 +1,7 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Boxes, Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Save, Sparkles, Square, Sun } from 'lucide-react';
+import { Activity, Boxes, Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square, Sun } from 'lucide-react';
+import { openTrafficPanel } from '@/features/traffic/actions';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
@@ -62,6 +63,8 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 <CommandItem onSelect={run(() => void exportLab('containerlab'))} disabled={!backendId}><Download /> Export ContainerLab topology (zip)</CommandItem>
                 <CommandItem onSelect={run(() => st().setPurdueOpen(true))}><Layers3 /> Purdue model view</CommandItem>
                 <CommandItem onSelect={run(() => st().openImages())} keywords={['images', 'build', 'dockerfile', 'containers']}><Boxes /> Images</CommandItem>
+                <CommandItem onSelect={run(() => openTrafficPanel())} disabled={deployStatus !== 'deployed'} keywords={['iperf', 'traffic', 'load', 'throughput', 'performance']}><Activity /> New traffic run…</CommandItem>
+                <CommandItem onSelect={run(() => st().setRunsOpen(true))} disabled={!backendId} keywords={['capture', 'pcap', 'wireshark', 'traffic', 'runs']}><Radio /> Captures & traffic runs</CommandItem>
               </CommandGroup>
 
               <CommandSeparator />

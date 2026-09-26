@@ -27,8 +27,17 @@ deploy them as live containers via **Kathara**.
   `DeploymentEngine` abstraction isolates the orchestrator; `KatharaEngine`
   is the real one, `FakeEngine` runs the UI without Docker.
 - **Deployment** — Kathara talks to the Docker daemon via its SDK and models
-  each link as a Docker bridge network. No `sudo`, no host network namespace,
-  no privileged container.
+  each link as a network of its plugin (`kathara/katharanp_vde` by default: a
+  userspace VDE switch per link). No `sudo`, no host network namespace, no
+  privileged container.
+- **Capture & traffic** — capture packets on any deployed link or interface
+  (live packet list in the browser, pcap download, or stream straight into
+  Wireshark with `curl -N …/pcap?follow=true | wireshark -k -i -`), and run
+  iperf3 traffic between nodes with live throughput and per-node CPU, memory
+  and interface charts. Both run as sidecar containers in a node's network
+  namespace, so they work with any node image. Every run records its
+  environment for before/after comparisons (`backend/scripts/run_baseline.py`,
+  `docs/baselines/`).
 - **Node catalog** — `backend/catalog/node_types.json` is the single source of
   truth for node types, their default images, colours, labels, and icons.
   Images are **data**, served to the frontend at `GET /api/catalog`. Change the

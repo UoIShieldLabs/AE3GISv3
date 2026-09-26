@@ -52,6 +52,9 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
+      - name: API types are current
+        working-directory: frontend
+        run: npm run api:types && git diff --exit-code src/api/schema.d.ts
       - name: ESLint
         working-directory: frontend
         run: npm run lint

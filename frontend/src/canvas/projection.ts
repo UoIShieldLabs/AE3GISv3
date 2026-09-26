@@ -5,6 +5,7 @@ import type { Connection, Container, Position, Site, Subnet, TopologyData } from
 import { roleFor, type NodeRole } from '@/catalog/catalog';
 import { countContainers, gatewayOf, type ConnectionKind, type Scope } from '@/lib/topology';
 import type { RuntimeStatus, Selection } from '@/store/types';
+import type { Activity } from '@/api/client';
 import { GROUP_HEADER, GROUP_PADDING, NODE_SIZE } from './constants';
 import { boundsOf, type Rect } from './layout/placement';
 
@@ -35,6 +36,10 @@ export interface DeviceNodeData extends Record<string, unknown> {
   role: NodeRole;
   isGateway: boolean;
   status?: RuntimeStatus;
+  /** The capture running on one of its interfaces (its job id). */
+  captureJobId?: string;
+  /** It sends or receives generated traffic right now. */
+  traffic?: boolean;
 }
 
 export interface GroupNodeData extends Record<string, unknown> {
@@ -65,6 +70,8 @@ export interface CanvasEdgeData extends Record<string, unknown> {
   label?: string;
   /** Both endpoint containers are running (drives the animated style). */
   active: boolean;
+  /** The capture watching this link (its job id). */
+  captureJobId?: string;
 }
 
 export type CanvasEdge = Edge<CanvasEdgeData, 'topology'>;
@@ -75,6 +82,34 @@ export interface ProjectionInput {
   expanded: Record<string, true>;
   containerStatus?: Record<string, RuntimeStatus>;
   selection?: Selection;
+  /** Captures and traffic runs in progress (see `activityIndex`). */
+  activity?: CanvasActivity;
+}
+
+/** Runtime activity indexed for the canvas. */
+export interface CanvasActivity {
+  /** Connection id → the capture (job id) watching it. */
+  captureConnections: ReadonlyMap<string, string>;
+  /** Node id → a capture (job id) running on it (its sidecar shares the node's network). */
+  captureNodes: ReadonlyMap<string, string>;
+  /** Nodes that send or receive generated traffic. */
+  trafficNodes: ReadonlySet<string>;
+}
+
+export function activityIndex(activity: readonly Activity[]): CanvasActivity {
+  const captureConnections = new Map<string, string>();
+  const captureNodes = new Map<string, string>();
+  const trafficNodes = new Set<string>();
+  for (const a of activity) {
+    if (a.kind === 'capture') {
+      for (const id of a.connection_ids ?? []) captureConnections.set(id, a.job_id);
+      // node_ids = [the capturing node, its peer on the link]
+      if (a.node_ids?.[0]) captureNodes.set(a.node_ids[0], a.job_id);
+    } else if (a.kind === 'traffic') {
+      for (const id of a.node_ids ?? []) trafficNodes.add(id);
+    }
+  }
+  return { captureConnections, captureNodes, trafficNodes };
 }
 
 export interface Projection {
@@ -140,7 +175,14 @@ class Projector {
       target,
       type: 'topology',
       selected: this.selectedEdges.has(conn.id),
-      data: { variant, kind, connectionId: conn.id, label: conn.label, active },
+      data: {
+        variant,
+        kind,
+        connectionId: conn.id,
+        label: conn.label,
+        active,
+        captureJobId: this.input.activity?.captureConnections.get(conn.id),
+      },
     });
   }
 
@@ -163,6 +205,8 @@ class Projector {
         role: roleFor(c.type),
         isGateway: gatewayOf(subnet)?.id === c.id,
         status: this.status(c.id),
+        captureJobId: this.input.activity?.captureNodes.get(c.id),
+        traffic: this.input.activity?.trafficNodes.has(c.id) || undefined,
       },
     };
   }

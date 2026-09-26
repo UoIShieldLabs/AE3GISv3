@@ -16,8 +16,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from domain.images import LABEL_FINGERPRINT
 from domain.plan import LabPlan
 from engine.base import (
     BuildSpec,
@@ -25,12 +27,28 @@ from engine.base import (
     EngineState,
     ImageInfo,
     LabRef,
+    NodeInterface,
     NodeLog,
+    NodeRuntimeInfo,
     NodeStatus,
     Progress,
+    RawStats,
+    SidecarInfo,
+    SidecarSpec,
     normalize_ref,
 )
 from engine.docker_build import buildx_available, docker_build
+from engine.docker_sidecar import (
+    LABEL_JOB,
+    LABEL_LAB,
+    LABEL_NODE,
+    LABEL_OWNER,
+    LABEL_PURPOSE,
+    DockerSidecar,
+    parse_stats,
+    sidecar_filters,
+    sidecar_labels,
+)
 from engine.kathara.lab_builder import build_lab
 from engine.kathara.naming import lab_hash as hash_for_name
 from engine.kathara.naming import machine_name
@@ -112,6 +130,8 @@ class KatharaEngine:
         lab_hash = self._hash(state)
 
         def _destroy() -> None:
+            # Sidecars share node network namespaces: remove them first.
+            self._remove_sidecars_sync(sidecar_filters(lab_hash=lab_hash))
             # Kathara's own undeploy only sees the current user prefix; the label
             # purge below catches anything it cannot.
             with contextlib.suppress(Exception):
@@ -207,6 +227,7 @@ class KatharaEngine:
 
     def _purge_sync(self, lab_hash: str) -> None:
         client = self._docker()
+        self._remove_sidecars_sync(sidecar_filters(lab_hash=lab_hash))
         for c in client.containers.list(
             all=True, filters={"label": [_KATHARA_LABEL, f"lab_hash={lab_hash}"]}
         ):
@@ -278,3 +299,182 @@ class KatharaEngine:
                     on_progress(f"{image}: {status}")
 
         await asyncio.to_thread(_pull)
+
+    # ── sidecars ──
+    def _node_container(self, state: EngineState, node_id: str) -> Any:
+        mname = state.nodes.get(node_id) or machine_name(node_id)
+        for c in self._containers(self._hash(state)):
+            if c.labels.get("name") == mname:
+                return c
+        raise LookupError(f"Device '{mname}' is not running in this lab")
+
+    async def node_interfaces(self, state: EngineState, node_id: str) -> list[NodeInterface]:
+        def _ifaces() -> list[NodeInterface]:
+            c = self._node_container(state, node_id)
+            out = []
+            for net in (c.attrs.get("NetworkSettings") or {}).get("Networks", {}).values():
+                opts = net.get("DriverOpts") or {}
+                if "kathara.iface" in opts:
+                    out.append(
+                        NodeInterface(
+                            name=f"eth{opts['kathara.iface']}",
+                            collision_domain=opts.get("kathara.link", ""),
+                        )
+                    )
+            return sorted(out, key=lambda i: (len(i.name), i.name))
+
+        return await asyncio.to_thread(_ifaces)
+
+    async def start_sidecar(self, state: EngineState, spec: SidecarSpec) -> DockerSidecar:
+        lab_hash = self._hash(state)
+
+        def _start() -> DockerSidecar:
+            node = self._node_container(state, spec.node_id)
+            if node.status != "running":
+                raise LookupError(f"Device '{node.labels.get('name')}' is not running")
+            return DockerSidecar.start(self._docker(), node, spec, sidecar_labels(spec, lab_hash))
+
+        return await asyncio.to_thread(_start)
+
+    async def list_sidecars(
+        self, *, lab_hash: str | None = None, owner: str | None = None
+    ) -> list[SidecarInfo]:
+        def _list() -> list[SidecarInfo]:
+            flt = sidecar_filters(lab_hash=lab_hash, owner=owner)
+            return [
+                SidecarInfo(
+                    name=c.name,
+                    node_id=c.labels.get(LABEL_NODE, ""),
+                    job_id=c.labels.get(LABEL_JOB, ""),
+                    purpose=c.labels.get(LABEL_PURPOSE, ""),
+                    lab_hash=c.labels.get(LABEL_LAB, ""),
+                    owner=c.labels.get(LABEL_OWNER, ""),
+                    status=c.status,
+                )
+                for c in self._docker().containers.list(all=True, filters={"label": flt})
+            ]
+
+        return await asyncio.to_thread(_list)
+
+    def _remove_sidecars_sync(self, labels: list[str]) -> int:
+        removed = 0
+        for c in self._docker().containers.list(all=True, filters={"label": labels}):
+            with contextlib.suppress(Exception):
+                c.remove(force=True)
+                removed += 1
+        return removed
+
+    async def remove_sidecars(
+        self, *, lab_hash: str | None = None, job_id: str | None = None, owner: str | None = None
+    ) -> int:
+        if not (lab_hash or job_id or owner):
+            raise ValueError("remove_sidecars needs a filter")
+        flt = sidecar_filters(lab_hash=lab_hash, job_id=job_id, owner=owner)
+        return await asyncio.to_thread(self._remove_sidecars_sync, flt)
+
+    # ── telemetry ──
+    async def sample_stats(
+        self, state: EngineState, node_ids: list[str], sidecars: list[str] = ()
+    ) -> list[RawStats]:
+        lab_hash = self._hash(state)
+
+        def _sample() -> list[RawStats]:
+            client = self._docker()
+            by_machine = {
+                c.labels.get("name", ""): c
+                for c in self._containers(lab_hash)
+                if c.status == "running"
+            }
+            targets: list[tuple[str, str, Any]] = []
+            for nid in node_ids:
+                c = by_machine.get(state.nodes.get(nid) or machine_name(nid))
+                if c is not None:
+                    targets.append((nid, "node", c))
+            for name in sidecars:
+                with contextlib.suppress(Exception):
+                    targets.append((name, "sidecar", client.containers.get(name)))
+
+            def one(t: tuple[str, str, Any]) -> RawStats | None:
+                try:
+                    return parse_stats(t[2].stats(stream=False, one_shot=True), t[0], t[1])
+                except Exception:
+                    return None
+
+            if not targets:
+                return []
+            with ThreadPoolExecutor(max_workers=min(8, len(targets))) as pool:
+                return [r for r in pool.map(one, targets) if r is not None]
+
+        return await asyncio.to_thread(_sample)
+
+    async def node_runtime_info(self, state: EngineState) -> list[NodeRuntimeInfo]:
+        lab_hash = self._hash(state)
+        node_for = {m: nid for nid, m in state.nodes.items()}
+
+        def _info() -> list[NodeRuntimeInfo]:
+            client = self._docker()
+            images: dict[str, Any] = {}
+            out = []
+            for c in self._containers(lab_hash):
+                image_id = c.attrs.get("Image", "")
+                if image_id not in images:
+                    try:
+                        images[image_id] = client.images.get(image_id)
+                    except Exception:
+                        images[image_id] = None
+                img = images[image_id]
+                host = c.attrs.get("HostConfig") or {}
+                mname = c.labels.get("name", c.name)
+                out.append(
+                    NodeRuntimeInfo(
+                        node_id=node_for.get(mname, mname),
+                        machine=mname,
+                        container=c.name,
+                        image_ref=(c.attrs.get("Config") or {}).get("Image", ""),
+                        image_id=image_id,
+                        fingerprint=(img.labels or {}).get(LABEL_FINGERPRINT) if img else None,
+                        arch=img.attrs.get("Architecture") if img else None,
+                        nano_cpus=host.get("NanoCpus") or None,
+                        mem_limit=host.get("Memory") or None,
+                        cpuset=host.get("CpusetCpus") or None,
+                    )
+                )
+            return sorted(out, key=lambda i: i.node_id)
+
+        return await asyncio.to_thread(_info)
+
+    async def environment(self) -> dict[str, Any]:
+        def _env() -> dict[str, Any]:
+            from Kathara.setting.Setting import Setting
+            from Kathara.version import CURRENT_VERSION
+
+            client = self._docker()
+            info = client.info()
+            version = client.version()
+            plugin_name = Setting.get_instance().network_plugin
+            arch = _ARCH.get(str(info.get("Architecture", "")), info.get("Architecture"))
+            plugin: dict[str, Any] = {"name": plugin_name}
+            with contextlib.suppress(Exception):
+                p = client.plugins.get(f"{plugin_name}:{arch}")
+                plugin.update(id=p.id, enabled=p.enabled, reference=p.attrs.get("PluginReference"))
+            return {
+                "engine": self.name,
+                "kathara": {"version": CURRENT_VERSION, "network_plugin": plugin},
+                "docker": {
+                    "server_version": version.get("Version"),
+                    "api_version": version.get("ApiVersion"),
+                    "os": info.get("OperatingSystem"),
+                    "os_type": info.get("OSType"),
+                    "kernel": info.get("KernelVersion"),
+                    "arch": info.get("Architecture"),
+                    "ncpu": info.get("NCPU"),
+                    "mem_total": info.get("MemTotal"),
+                    "cgroup_version": info.get("CgroupVersion"),
+                    "cgroup_driver": info.get("CgroupDriver"),
+                    "storage_driver": info.get("Driver"),
+                    "default_runtime": info.get("DefaultRuntime"),
+                    "name": info.get("Name"),
+                },
+            }
+
+        return await asyncio.to_thread(_env)

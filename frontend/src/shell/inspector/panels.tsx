@@ -1,4 +1,4 @@
-import { ArrowDownRight, Copy, Maximize2, Minimize2, Terminal, Trash2 } from 'lucide-react';
+import { Activity, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2 } from 'lucide-react';
 import type { Container, Site, Subnet } from '@/types/topology';
 import { useAppStore, undo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
@@ -15,6 +15,8 @@ import { KeyValueEditor } from './KeyValueEditor';
 import { Row, Section, Stat } from './Section';
 import { IssuesSection } from './IssuesSection';
 import { DeploymentSection } from './DeploymentSection';
+import { openCaptureTab, stopCapture } from '@/features/capture/actions';
+import { openTrafficPanel } from '@/features/traffic/actions';
 
 export interface PanelContext {
   scope: Scope;
@@ -227,6 +229,12 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
         <Button size="sm" variant="ghost" onClick={() => { const ids = duplicateNodes([container.id]); if (ids.length) selectNodes(ids); }}><Copy /> Duplicate</Button>
         <Button size="sm" variant="danger-soft" className="ml-auto" onClick={() => remove([container.id])}><Trash2 /> Delete</Button>
       </Actions>
+      {deployStatus === 'deployed' ? (
+        <Actions>
+          <Button size="sm" variant="ghost" onClick={() => useAppStore.getState().openCaptureDialog({ kind: 'interface', nodeId: container.id })}><Radio /> Capture…</Button>
+          <Button size="sm" variant="ghost" onClick={() => openTrafficPanel({ client: container.id })}><Activity /> Traffic…</Button>
+        </Actions>
+      ) : null}
     </>
   );
 }
@@ -235,6 +243,8 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
 
 export function ConnectionPanel({ id }: { id: string }) {
   const topology = useAppStore((s) => s.topology);
+  const deployStatus = useAppStore((s) => s.deployStatus);
+  const capture = useAppStore((s) => s.activity.find((a) => a.kind === 'capture' && a.connection_ids?.includes(id)));
   const { updateConnection } = useAppStore.getState();
   const remove = useRemove();
   const hit = locateConnection(topology, id);
@@ -255,6 +265,21 @@ export function ConnectionPanel({ id }: { id: string }) {
         <Row label="Label"><CommitInput value={connection.label ?? ''} placeholder="Optional label" onCommit={(v) => updateConnection(id, { label: v || undefined })} /></Row>
       </Section>
       <Actions>
+        {capture ? (
+          <>
+            <Button size="sm" onClick={() => openCaptureTab(capture.job_id, capture.label || 'Capture')}><Radio /> View capture</Button>
+            <Button size="sm" variant="ghost" onClick={() => void stopCapture(capture.job_id)}>Stop</Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => useAppStore.getState().openCaptureDialog({ kind: 'link', connectionId: id })}
+            disabled={deployStatus !== 'deployed'}
+            title={deployStatus !== 'deployed' ? 'Deploy to capture packets' : undefined}
+          >
+            <Radio /> Capture packets
+          </Button>
+        )}
         <Button size="sm" variant="danger-soft" className="ml-auto" onClick={() => remove([], [id])}><Trash2 /> Delete connection</Button>
       </Actions>
     </>
