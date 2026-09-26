@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from catalog.models import GitSource, PathSource, SourceSpec
-from config import Settings
+from config import BASE_DIR, Settings
 from domain.images import SKIPPED_NAMES, ContextFile
 from engine.base import Progress
 
@@ -70,7 +70,10 @@ class Sources:
         if override is not None:
             return Path(override)
         if isinstance(spec, PathSource):
-            return Path(spec.path)
+            # Relative paths are relative to the backend (e.g. "tools"), not
+            # to wherever the process was started.
+            path = Path(spec.path)
+            return path if path.is_absolute() else BASE_DIR / path
         return self.settings.sources_dir / name
 
     def state(self, name: str) -> SourceState:

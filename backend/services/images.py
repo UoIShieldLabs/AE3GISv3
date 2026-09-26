@@ -385,9 +385,22 @@ class ImageManager:
                 summary = "None of its images are built yet"
             runner.progress(job_id, "compare", summary)
 
-    # ── deploy ──
+    # ── deploy (and any job that runs images) ──
     async def prepare_for_deploy(self, runner: JobRunner, job_id: str, refs: list[str]) -> None:
         """Run inside a deploy's ``images`` step: make every image available."""
+        await self.ensure_images(runner, job_id, refs)
+
+    async def ensure_images(
+        self,
+        runner: JobRunner,
+        job_id: str,
+        refs: list[str],
+        *,
+        step: str = "images",
+        stale_event: str = "deploy.images_stale",
+    ) -> None:
+        """Inside a job's ``step``: build (or join the running build of) what
+        AE3GIS builds, pull the rest, and warn about out-of-date images."""
         rows = await self.statuses(refs)
         unavailable = [r for r in rows if r["status"] == "unavailable"]
         if unavailable:
@@ -408,20 +421,18 @@ class ImageManager:
         if to_build:
             with runner.session_factory() as db:
                 builds = self.start_builds(db, to_build)
-            runner.patch_step(job_id, "images", jobs=[j.id for j in builds])
+            runner.patch_step(job_id, step, jobs=[j.id for j in builds])
             runner.log(job_id, "Building " + ", ".join(names[r] for r in to_build))
 
         for i, image in enumerate(to_pull, 1):
-            runner.progress(job_id, "images", f"Pulling {image} ({i}/{len(to_pull)})")
-            await self.engine.pull_image(
-                image, lambda m, jid=job_id: runner.progress(jid, "images", m)
-            )
+            runner.progress(job_id, step, f"Pulling {image} ({i}/{len(to_pull)})")
+            await self.engine.pull_image(image, lambda m, jid=job_id: runner.progress(jid, step, m))
 
         for i, build in enumerate(builds, 1):
             ref = str((build.params or {}).get("ref", ""))
             label = f"Building {names.get(ref, ref)} ({i}/{len(builds)})"
-            runner.progress(job_id, "images", label)
-            final = await self._wait_relaying(runner, job_id, build.id, label)
+            runner.progress(job_id, step, label)
+            final = await self._wait_relaying(runner, job_id, build.id, label, step)
             if final is None or final.status != "succeeded":
                 status = final.status if final else "vanished"
                 error = f": {final.error}" if final and final.error else ""
@@ -431,8 +442,8 @@ class ImageManager:
             listed = ", ".join(r["display_name"] for r in stale)
             runner.event(
                 job_id,
-                "deploy.images_stale",
-                f"Deploying {len(stale)} out-of-date image(s): {listed}. Rebuild them to pick up "
+                stale_event,
+                f"Using {len(stale)} out-of-date image(s): {listed}. Rebuild them to pick up "
                 "their source changes.",
                 level="warning",
                 data={"refs": [r["ref"] for r in stale]},
@@ -446,12 +457,12 @@ class ImageManager:
             parts.append(f"{len(stale)} out of date")
         runner.progress(
             job_id,
-            "images",
+            step,
             f"{len(rows)} image(s) ready" + (f" ({', '.join(parts)})" if parts else ""),
         )
 
     async def _wait_relaying(
-        self, runner: JobRunner, job_id: str, build_id: str, label: str
+        self, runner: JobRunner, job_id: str, build_id: str, label: str, step: str = "images"
     ) -> Job | None:
         """Wait for a build, mirroring its current step into the deploy's step message."""
         waiter = asyncio.ensure_future(runner.wait(build_id))
@@ -462,12 +473,12 @@ class ImageManager:
                     return waiter.result()
                 with runner.session_factory() as db:
                     job = db.get(Job, build_id)
-                    step = next(
+                    running = next(
                         (s for s in (job.steps if job else []) or [] if s["status"] == "running"),
                         None,
                     )
-                if step and step.get("message"):
-                    runner.patch_step(job_id, "images", message=f"{label} · {step['message']}")
+                if running and running.get("message"):
+                    runner.patch_step(job_id, step, message=f"{label} · {running['message']}")
         finally:
             if not waiter.done():
                 waiter.cancel()

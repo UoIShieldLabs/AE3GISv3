@@ -98,3 +98,19 @@ def test_type_without_images_lists_its_default():
     raw = _minimal()
     del raw["types"]["box"]["images"]
     assert catalog.parse_catalog(raw).types["box"].images == ["kathara/base"]
+
+
+def test_tools_must_name_catalog_images():
+    import copy
+    import json
+
+    import pytest
+
+    from catalog import _CATALOG_PATH, CatalogError, parse_catalog
+
+    raw = json.loads(_CATALOG_PATH.read_text())
+    assert parse_catalog(raw).tools["capture"] == "ae3gis.local/nettools"
+    bad = copy.deepcopy(raw)
+    bad["tools"]["capture"] = "not/in-images"
+    with pytest.raises(CatalogError):
+        parse_catalog(bad)
