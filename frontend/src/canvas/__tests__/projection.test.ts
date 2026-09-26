@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { project, toStoredPosition } from '../projection';
+import { activityIndex, project, toStoredPosition } from '../projection';
 import type { TopologyData } from '@/types/topology';
 
 function fixture(): TopologyData {
@@ -108,5 +108,31 @@ describe('project()', () => {
     expect(nodes.find((n) => n.id === 'r1')?.selected).toBe(false);
     expect(edges.find((e) => e.id === 'c-up')).toMatchObject({ selected: true, data: { active: true } });
     expect(edges.find((e) => e.id === 'c-h')?.data?.active).toBe(false);
+  });
+});
+
+describe('project() — runtime activity', () => {
+  const activity = activityIndex([
+    { job_id: 'cap1', kind: 'capture', status: 'running', label: '', node_ids: ['r1', 'r2'], connection_ids: ['c-wan'] },
+    { job_id: 'run1', kind: 'traffic', status: 'running', label: '', node_ids: ['h1', 'r2'], connection_ids: [] },
+  ]);
+
+  it('badges the captured link and the capturing node, and traffic endpoints', () => {
+    const { nodes, edges } = project({ topology: fixture(), scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true, 'sub-2': true }, activity });
+    // The subnet link is drawn between the expanded gateways and still carries the capture.
+    const wan = edges.find((e) => e.id === 'c-wan')!;
+    expect(wan).toMatchObject({ source: 'r1', target: 'r2', data: { captureJobId: 'cap1' } });
+    expect(edges.find((e) => e.id === 'c-h')!.data!.captureJobId).toBeUndefined();
+    const device = (id: string) => nodes.find((n) => n.id === id)!.data as Record<string, unknown>;
+    expect(device('r1').captureJobId).toBe('cap1');
+    expect(device('r2').captureJobId).toBeUndefined(); // the peer, not where the sidecar runs
+    expect(device('h1').traffic).toBe(true);
+    expect(device('r2').traffic).toBe(true);
+    expect(device('sw1').traffic).toBeUndefined();
+  });
+
+  it('collapsed subnets still carry the link badge', () => {
+    const { edges } = project({ topology: fixture(), scope: { level: 'site', siteId: 'site-a' }, expanded: {}, activity });
+    expect(edges[0]).toMatchObject({ id: 'c-wan', source: 'sub-1', target: 'sub-2', data: { captureJobId: 'cap1' } });
   });
 });

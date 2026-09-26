@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
+import { Activity, Radio } from 'lucide-react';
 import { colorFor, labelFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
 import { cn } from '@/lib/cn';
@@ -18,7 +19,7 @@ const STATUS_CLASS = {
 } as const;
 
 export const DeviceNode = memo(function DeviceNode({ id, data, selected, dragging }: NodeProps<DeviceNodeType>) {
-  const { container, status, isGateway } = data;
+  const { container, status, isGateway, captureJobId, traffic } = data;
   const color = colorFor(container.type);
   const zoom = useZoomLevel();
   const compact = zoom !== 'full';
@@ -58,6 +59,20 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
         ) : null}
       </div>
 
+      {captureJobId || traffic ? (
+        <div className="absolute bottom-1 right-1.5 flex items-center gap-1">
+          {captureJobId ? (
+            <Tooltip content="A capture runs here" side="bottom">
+              <Radio className="size-3 text-danger" aria-label="capturing" />
+            </Tooltip>
+          ) : null}
+          {traffic ? (
+            <Tooltip content="Generating traffic" side="bottom">
+              <Activity className="size-3 animate-pulse text-accent" aria-label="traffic" />
+            </Tooltip>
+          ) : null}
+        </div>
+      ) : null}
       {status ? (
         <Tooltip content={status[0].toUpperCase() + status.slice(1)} side="top">
           <span className={cn('absolute right-1.5 top-1.5 size-2 rounded-full', STATUS_CLASS[status])} />
