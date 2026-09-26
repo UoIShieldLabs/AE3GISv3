@@ -8,7 +8,7 @@
 // untouched. The set of valid container types is data, served by the backend
 // catalog (GET /api/catalog).
 //
-// Fields the deployment engine reads (backend/engine/networking.py): site/subnet/
+// Fields the deployment engine reads (backend/domain/plan.py): site/subnet/
 // container `id`, container `name`/`type`/`ip`/`image`, subnet `cidr`/`gateway`,
 // connection `from`/`to`/`fromContainer`/`toContainer`/`fromInterface`/
 // `toInterface`, and topology `name`. Everything else is editor-only.
@@ -100,6 +100,20 @@ export interface TopologyView {
   version?: number;
 }
 
+/** A traffic flow saved with the design (editor-only: the backend's run API
+ *  takes flows inline). */
+export interface SavedFlow {
+  id: string;
+  client: string; // node id
+  server: string; // node id
+  protocol: 'tcp' | 'udp';
+  direction: 'forward' | 'reverse' | 'bidir';
+  bitrate?: string | null;
+  parallel?: number;
+  length?: number | null;
+  [key: string]: unknown;
+}
+
 export interface TopologyData {
   name?: string;
   description?: string;
@@ -107,6 +121,8 @@ export interface TopologyData {
   siteConnections: Connection[];
   scenarios?: Scenario[];
   view?: TopologyView;
+  /** Traffic flows kept with the design (run from the Traffic panel). */
+  traffic?: { flows?: SavedFlow[]; [key: string]: unknown };
   [key: string]: unknown;
 }
 
