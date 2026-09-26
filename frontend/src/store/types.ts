@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
-import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
+import type { Connection, Container, Position, SavedFlow, Site, Subnet, TopologyData } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
-import type { Diagnostic, ImagesReport, Job } from '@/api/client';
+import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 
@@ -10,6 +10,11 @@ export type RuntimeStatus = 'running' | 'stopped' | 'paused';
 export type Theme = 'system' | 'light' | 'dark';
 export type Tool = 'select' | 'pan';
 export type SidebarTab = 'palette' | 'explorer';
+
+/** A link (by connection id) or a node (optionally one interface of it). */
+export type CaptureDialogTarget =
+  | { kind: 'link'; connectionId: string }
+  | { kind: 'interface'; nodeId: string; interface?: string };
 
 export interface Selection {
   nodeIds: string[];
@@ -58,6 +63,8 @@ export interface TopologySlice {
   duplicateNodes: (ids: string[]) => string[];
   moveNodes: (moves: NodeMove[]) => void;
   applyLayout: (scope: Scope, mode: LayoutMode, sizes?: ReadonlyMap<string, { width: number; height: number }>) => void;
+  /** Replace the traffic flows saved with the design (undoable). */
+  setTrafficFlows: (flows: SavedFlow[]) => void;
 }
 
 export interface DocumentSlice {
@@ -113,6 +120,10 @@ export interface ViewSlice {
   collapsedCategories: string[];
   /** The deploy/destroy job details popover (top bar). */
   jobDetailsOpen: boolean;
+  /** What the "Capture packets" dialog is about to capture (null: closed). */
+  captureDialog: CaptureDialogTarget | null;
+  /** The captures & traffic runs sheet. */
+  runsOpen: boolean;
 
   setZoom: (zoom: number) => void;
   setPurdueOpen: (open: boolean) => void;
@@ -121,6 +132,9 @@ export interface ViewSlice {
   setImagesOpen: (open: boolean) => void;
   toggleCategory: (id: string) => void;
   setJobDetailsOpen: (open: boolean) => void;
+  openCaptureDialog: (target: CaptureDialogTarget) => void;
+  closeCaptureDialog: () => void;
+  setRunsOpen: (open: boolean) => void;
   setTheme: (theme: Theme) => void;
   setTool: (tool: Tool) => void;
   setSnapToGrid: (on: boolean) => void;
@@ -137,20 +151,31 @@ export interface ViewSlice {
   clearSelection: () => void;
 }
 
-export interface TerminalSession {
-  id: string;
-  name: string;
-  ip?: string;
+/** A tab in the bottom dock. Ids are namespaced: term:<container>, cap:<job>, traffic:<job>|traffic:new. */
+export type DockTab =
+  | { kind: 'terminal'; id: string; containerId: string; name: string; ip?: string }
+  | { kind: 'capture'; id: string; jobId: string; title: string }
+  | { kind: 'traffic'; id: string; jobId: string | null; title: string; seed?: { client?: string; nonce: number } };
+
+export interface DockSlice {
+  dockTabs: DockTab[];
+  activeDockTabId: string | null;
+  dockMinimized: boolean;
+  /** Open (or focus, updating it) a tab and show the dock. */
+  openDockTab: (tab: DockTab) => void;
+  /** Swap a tab for another in place (e.g. a new traffic run once it has a job). */
+  replaceDockTab: (id: string, tab: DockTab) => void;
+  closeDockTab: (id: string) => void;
+  setActiveDockTab: (id: string) => void;
+  setDockMinimized: (minimized: boolean) => void;
+  openTerminal: (container: { id: string; name: string; ip?: string }) => void;
+  closeTerminal: (containerId: string) => void;
 }
 
-export interface TerminalSlice {
-  terminals: TerminalSession[];
-  activeTerminalId: string | null;
-  terminalMinimized: boolean;
-  openTerminal: (container: { id: string; name: string; ip?: string }) => void;
-  closeTerminal: (id: string) => void;
-  setActiveTerminal: (id: string) => void;
-  setTerminalMinimized: (minimized: boolean) => void;
+export interface ActivitySlice {
+  /** Captures and traffic runs running on the loaded topology (from /runtime). */
+  activity: Activity[];
+  setActivity: (activity: Activity[]) => void;
 }
 
 export interface CatalogSlice {
@@ -166,7 +191,7 @@ export interface ImagesSlice {
   setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & TerminalSlice & CatalogSlice & ImagesSlice;
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & ActivitySlice & CatalogSlice & ImagesSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 

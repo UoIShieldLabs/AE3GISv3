@@ -6,7 +6,8 @@ import type { AppState } from './types';
 import { createTopologySlice } from './slices/topologySlice';
 import { createDocumentSlice } from './slices/documentSlice';
 import { createViewSlice } from './slices/viewSlice';
-import { createTerminalSlice } from './slices/terminalSlice';
+import { createDockSlice } from './slices/dockSlice';
+import { createActivitySlice } from './slices/activitySlice';
 import { createCatalogSlice } from './slices/catalogSlice';
 import { createImagesSlice } from './slices/imagesSlice';
 
@@ -24,7 +25,8 @@ export const useAppStore = create<AppState>()(
           ...createTopologySlice(...a),
           ...createDocumentSlice(...a),
           ...createViewSlice(...a),
-          ...createTerminalSlice(...a),
+          ...createDockSlice(...a),
+          ...createActivitySlice(...a),
           ...createCatalogSlice(...a),
           ...createImagesSlice(...a),
         })),
