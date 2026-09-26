@@ -1,4 +1,4 @@
-import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
+import type { Connection, Container, Position, Site, Subnet, TopologyData, SavedFlow } from '@/types/topology';
 import { createEmptyTopology } from '@/types/topology';
 import { generateId } from '@/lib/ids';
 import { getNextAvailableIp } from '@/utils/validation';
@@ -8,7 +8,7 @@ import {
 } from '@/lib/topology';
 import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
-import { cloneTopology, normalizeTopology } from '../normalize';
+import { cloneTopology, normalizeTopology, type NormalizeReport } from '../normalize';
 import type { SliceCreator, TopologySlice } from '../types';
 
 const rects = (items: { position?: Position }[], size: { width: number; height: number }): Rect[] =>
@@ -90,10 +90,14 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
 
   loadTopology: (data) =>
     set((s) => {
-      const t = normalizeTopology(cloneTopology(data as TopologyData));
+      const report: NormalizeReport = { filledConnectionIds: 0 };
+      const t = normalizeTopology(cloneTopology(data as TopologyData), report);
       s.topology = t;
-      s.savedTopology = t;
-      s.dirty = false;
+      // Connections are addressed by id once deployed (captures pick a link by
+      // it), so ids invented here must be saved: start out dirty.
+      const changed = report.filledConnectionIds > 0;
+      s.savedTopology = changed ? null : t;
+      s.dirty = changed;
     }, false, 'loadTopology'),
 
   newTopology: (name) =>
@@ -290,6 +294,13 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
     }, false, 'updateConnection'),
 
   deleteConnections: (ids) => set((s) => { dropConnections(s.topology as TopologyData, ids); s.dirty = true; }, false, 'deleteConnections'),
+
+  setTrafficFlows: (flows) =>
+    set((s) => {
+      const t = s.topology as TopologyData;
+      t.traffic = { ...(t.traffic ?? {}), flows: JSON.parse(JSON.stringify(flows)) as SavedFlow[] };
+      s.dirty = true;
+    }, false, 'setTrafficFlows'),
 
   deleteNodes: (ids) => set((s) => { dropNodes(s.topology as TopologyData, ids); s.dirty = true; }, false, 'deleteNodes'),
 
