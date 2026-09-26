@@ -119,7 +119,7 @@ flowchart TB
         fake["FakeEngine"]
     end
 
-    docker[("Docker daemon<br/>containers + bridge networks")]
+    docker[("Docker daemon<br/>containers + Kathará plugin networks")]
 
     canvas -->|"REST /api/v1 · WebSocket exec"| api
     api --> services
@@ -282,8 +282,14 @@ rather than matching message text.
 | `GET /images?topology_id=` | Build support, image sources, and each image's status |
 | `POST /images/builds`, `POST /sources/{name}/sync` | 202 + build jobs / a sync job |
 | `GET /topologies/{id}/context` | Record + diagnostics + plan + runtime + events |
-| `GET /system/health`, `/system/labs`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
+| `GET /topologies/{id}/interfaces` | The deployed lab's interfaces and links (what captures can target) |
+| `POST /jobs/{id}/stop`, `GET /jobs/{id}/artifacts[/{name}]` | Stop an open-ended job (keeps its output); the files a job produced |
+| `POST/GET /topologies/{id}/captures`, `GET /captures/{id}` | Packet captures (§5.7) |
+| `GET /captures/{id}/pcap?follow=`, `/captures/{id}/packets` | The pcap (live with `follow`), packet summaries |
+| `POST/GET /topologies/{id}/traffic/runs`, `GET /traffic/runs/{id}[/samples\|/export]` | Traffic runs (§5.7) |
+| `GET /system/health`, `/system/labs`, `/system/environment`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
+| `WS /topologies/ws/{id}/captures/{job}`, `WS /topologies/ws/{id}/traffic/{job}` | Live packets / live samples |
 
 `context` exists for clients that need the whole picture at once — a support
 view, or the planned agent.
@@ -321,17 +327,26 @@ sequenceDiagram
   runs `undeploy → verify`; an image build runs `source → snapshot → build →
   verify`. Each transition is written to the job row and mirrored into `events`.
 - **Subjects.** A job serialises on its `subject`: `topology:<id>`,
-  `image:<ref>` or `source:<name>`. One job runs at a time per subject; a second
+  `image:<ref>`, `source:<name>`, `capture:<topology>:<node>:<interface>` or
+  `traffic:<topology>`. One job runs at a time per subject; a second
   deploy returns 409 `job_active`, while a second build of the same image
-  returns the running job. Only topology jobs set `topology_id`.
+  (or capture of the same interface) returns the running job. Captures and
+  traffic runs set `topology_id` but have their own subjects, so they never
+  block deploy or destroy; `/runtime` lists them as `activity`.
+- **Stop vs cancel.** Cancel aborts. Kinds registered `stoppable` (capture,
+  traffic) can also be *stopped* (`POST /jobs/{id}/stop`): the handler winds
+  down, keeps what it recorded, and the job ends `succeeded`. A job's `result`
+  (JSON) holds what it produced; bulk output goes to
+  `data/artifacts/<job id>/` (downloadable, deleted after 30 days).
 - **Logs.** Every job appends to `data/job-logs/<job id>.log` (`runner.log`,
   step progress included); `GET /jobs/{id}/log` pages it by byte offset. Logs are
   capped (the end is always kept) and deleted after two weeks.
 - **Waiting and cancelling.** A job can `await runner.wait(other)` (a deploy
   waits on the builds it needs). Kinds registered `cancellable` can be
   cancelled; a deploy only until `runner.point_of_no_return` (the engine starting
-  to create containers). Builds and syncs are cancelled at shutdown so a restart
-  or dev reload never waits on a 20-minute build.
+  to create containers). At shutdown builds and syncs are cancelled and
+  captures and traffic runs are stopped, so a restart or dev reload never waits
+  on them.
 - **Failure cleans up.** Before the engine deploys, the job records a
   provisional `engine_state` (the lab name, from which the hash follows), so a
   deploy that dies part-way is still torn down; the job error and log carry the
@@ -364,8 +379,9 @@ SQLite via Alembic (`db/migrations/`). Three tables:
 
 - **`topologies`** — `data` (the opaque document), `engine_state` (how to find
   the deployed lab), `status`, `version`.
-- **`jobs`** — kind, `subject`, `params`, status, ordered `steps`, error
-  (`topology_id` only for topology jobs; logs are files, see §5.3).
+- **`jobs`** — kind, `subject`, `params`, status, ordered `steps`, error,
+  `result` (`topology_id` for jobs that belong to a topology; logs and
+  artifacts are files, see §5.3).
 - **`events`** — append-only log per topology; the UI reads it, and it is the
   audit trail a future agent will consume.
 
@@ -410,6 +426,48 @@ Images with a `build` source in the catalog are built by AE3GIS
 
 ---
 
+### 5.7 Sidecars: packet capture and traffic runs
+
+Captures and traffic generation both run **sidecars**: short-lived containers
+started with `network_mode=container:<node>` (engine: `start_sidecar`). A
+sidecar shares one node's network namespace, so `tcpdump` sees the node's
+interfaces and `iperf3` sends from its IP along the lab's real routes, whatever
+image the node runs. The tools live in one image, `ae3gis.local/nettools`
+(`backend/tools/nettools/`, built by the image pipeline like any node image,
+named by the catalog's `tools` map).
+
+```
+browser ──WS──► api/captures ◄── LiveHub ◄── PcapRelay ◄── attach(stdout) ◄── tcpdump -w - (sidecar in node netns)
+        ◄─HTTP─ /captures/{id}/pcap?follow ◄── data/artifacts/<job>/capture.pcap (whole records only)
+```
+
+- **Capture** (`services/capture.py`, job kind `capture`): steps `images →
+  attach → capture`. The target is a link (connection id, either end) or a node
+  interface, resolved against `EngineState.links`, the plan's links saved at
+  deploy time (so later edits cannot move it) and checked against what the
+  engine attached. The relay writes whole pcap records only, so the file is
+  valid at every moment: download it mid-capture, or `curl -N
+  …/pcap?follow=true | wireshark -k -i -` to watch live. Packet summaries
+  (`domain/packets.py`) go to the browser at most `capture_ui_max_pps`/s; the
+  pcap has everything. Caps: size, time, packets.
+- **Traffic** (`services/traffic.py`, kind `traffic`, one run per topology):
+  steps `images → prepare → run`. Per flow, an `iperf3 -s -1` sidecar on the
+  server node (checked listening with `ss`) and an `iperf3 -c --json-stream`
+  sidecar on the client. Output is parsed (`domain/traffic/iperf3.py`, pinned
+  by real fixtures) into per-second samples; nodes *and sidecars* are sampled
+  for CPU, memory and per-interface rates (`sample_stats`,
+  `domain/telemetry.py`). Artifacts: `flows.ndjson`, `nodes.ndjson`, iperf3's
+  raw output, `run.json`. Generators plug in via `services/traffic_generators.py`.
+- **Environment.** Every capture and run records `run.json` with its
+  environment (`domain/environment.py`): host label, Docker/kernel/cgroup,
+  Kathará version and network plugin, AE3GIS commit, each node's image id, the
+  tool image, and a `fingerprint` over what changes results. Two runs with the
+  same fingerprint ran on the same stack. `backend/scripts/run_baseline.py`
+  runs a fixed suite and writes a report (`docs/baselines/`).
+- **Lifecycle.** Destroy's first step stops every capture and run of the
+  topology; sidecars are removed before the lab. Startup removes sidecars a
+  previous process left (label `ae3gis.owner` = this instance's id).
+
 ## 6. Frontend
 
 ### 6.1 One canvas, projected
@@ -450,9 +508,11 @@ One Zustand store (`store/index.ts`) built from slices:
 |---|---|
 | `topology` | The document, `dirty`, and every id-based mutation |
 | `document` | Backend id, `version`, deploy status, live `containerStatus`, `activeJob`, `diagnostics` |
-| `view` | Selection, `expanded`, theme, tool, panel layout, zoom |
-| `terminal` | Open terminal tabs |
+| `view` | Selection, `expanded`, theme, tool, panel layout, zoom, open dialogs/sheets |
+| `dock` | Dock tabs: terminals, captures, traffic runs (`openTerminal` wraps it) |
+| `activity` | Captures and traffic runs in progress (from `/runtime`) |
 | `catalog` | The fetched node catalog |
+| `images` | The `GET /images` report |
 
 - Undo/redo via `zundo`, tracking **only** `topology`; loading a topology resets
   history.
@@ -464,13 +524,17 @@ One Zustand store (`store/index.ts`) built from slices:
 ### 6.3 Shell
 
 `shell/` is the frame: top bar, sidebar (palette + explorer tree), inspector,
-terminal dock, status bar, command palette (<kbd>⌘K</kbd>). Its slots are
-deliberately extensible — sidebar tabs, dock tabs, inspector sections and
-palette commands are where deferred features will attach.
+dock, status bar, command palette (<kbd>⌘K</kbd>). The dock
+(`features/dock/Dock.tsx`) holds typed tabs (terminal, capture, traffic) that
+stay mounted, so live streams keep buffering while another tab is shown.
 
 `features/` holds the vertical slices: `deployment` (actions, runtime polling,
-validation and plan hooks), `topology` (dialogs, add-entity flow), `terminal`,
-`purdue`, `system` (labs dialog).
+validation and plan hooks, deployed interfaces), `topology` (dialogs,
+add-entity flow), `terminal`, `capture` (start dialog, live packet table,
+Wireshark commands), `traffic` (flow form, live charts via
+`ui/charts/TimeSeriesChart` on uPlot, run summary), `runs` (history sheet),
+`dock`, `images`, `purdue`, `system` (labs dialog). The canvas badges captured
+links and busy nodes from `activity` through `project()`.
 
 ### 6.4 Talking to the backend
 
@@ -496,7 +560,7 @@ LabPlan { nodes[], collision domains }
 Kathará Lab (machines + links + a startup script per machine)
         │  KatharaEngine.deploy()
         ▼
-Docker containers on bridge networks (one bridge per collision domain)
+Docker containers on Kathará plugin networks (one per collision domain)
 ```
 
 ### 7.1 `domain/plan.py` — the interesting part
@@ -584,6 +648,18 @@ Things that will bite if you do not know them:
 - **Built images live under `ae3gis.local/`.** That registry host does not
   resolve, so a missing image fails closed instead of being pulled from Docker
   Hub. Kathará also requires the image's architecture to match the host.
+- **Links are Kathará's VDE switches** (`kathara/katharanp_vde`, the default
+  plugin): userspace, one per collision domain, tap interfaces in the nodes.
+  There is no host bridge to sniff; captures run inside a node's namespace.
+  The switches' CPU is charged to the plugin, not to any node.
+- **Sidecars never carry `app=kathara`** (they would count as lab machines),
+  use the `none` log driver (stdout may be a binary pcap) and are attached
+  *before* they start (or the pcap header is lost). Remove them before the lab.
+- **A node's CPU is only its own processes.** Tool CPU lands in the sidecar's
+  cgroup, and kernel packet forwarding on routers and firewalls is not charged
+  to their containers: judge those by throughput, drops and interface rates.
+- **Connection ids address links once deployed.** A load that has to invent
+  ids starts dirty so they get saved.
 
 ---
 
@@ -636,8 +712,8 @@ recovery for free.
 
 | Suite | Command | Covers |
 |---|---|---|
-| Backend | `cd backend && python -m pytest` | Validation matrix, lab plan, exporters (golden files), job state machine (cancel, logs, recovery), migrations, catalog models, image fingerprints/statuses, builds and deploy-time builds (FakeEngine + a `path` source), git sync against a local repo, reconcile, naming, API contract |
-| Frontend | `cd frontend && npm run test` | Store slices and undo, canvas projection, layout, IP/CIDR helpers, catalog tree, palette, required images, job log paging |
+| Backend | `cd backend && python -m pytest` | Validation matrix, lab plan and link resolution, exporters, job state machine (cancel, stop, logs, recovery), migrations, catalog models, image fingerprints/statuses, builds and deploy-time builds (FakeEngine + a `path` source), git sync against a local repo, reconcile, naming, auth and WebSockets, pcap framing and packet summaries, iperf3 parsing (real fixtures), telemetry, captures and traffic runs end to end on FakeEngine sidecars, API contract |
+| Frontend | `cd frontend && npm run test` | Store slices (topology, dock) and undo, canvas projection (incl. activity badges), layout, IP/CIDR helpers, catalog tree, palette, required images, job log paging, packet buffer, Wireshark commands, chart series, flow helpers |
 
 Backend tests use `FakeEngine` and a temporary SQLite file, so the full suite
 runs in about a second without Docker.
@@ -654,9 +730,12 @@ job, which ships over SSH on merge to `main`.
 Deferred features, with the seams already in place — see
 [`FUTURE_WORK.md`](../FUTURE_WORK.md):
 
-- **Node exec / script runner** over Kathará's native `exec`, using
-  `backend/scripts/catalog.json` as its input.
-- **Packet capture** (`tcpdump` → downloadable pcap).
+- **Node exec / script runner** on the Docker-by-label exec path the sidecars
+  use, with `backend/scripts/catalog.json` as its input.
+- **More traffic generators** behind `services/traffic_generators.py`: Locust
+  (HTTP), Modbus/TCP polling, pcap replay; ICS scenarios built on them.
+- **Comparisons**: sweeps over image variants, resource limits and hosts; a
+  compare view over runs (their environment fingerprints say what differs).
 - **Live telemetry stream** replacing `/runtime` polling, built on `events`.
 - **Agent orchestration** — `GET /topologies/{id}/context` already returns
   everything an agent needs, and `version`/409 makes concurrent edits safe.
