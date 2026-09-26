@@ -6,8 +6,11 @@ event log, so the UI (polling ``/runtime``) and later an agent see progress.
 Every job also gets an append-only log file (``runner.log``).
 
 A job serialises on its *subject* (``topology:<id>``, ``image:<ref>``,
-``source:<name>``): one job runs at a time per subject. Jobs can wait on each
-other (``runner.wait``) and, where their kind allows it, be cancelled.
+``source:<name>``, ``capture:…``, ``traffic:<id>``): one job runs at a time per
+subject. Jobs can wait on each other (``runner.wait``) and, where their kind
+allows it, be cancelled (abort) or stopped (``request_stop``: the handler
+winds down, keeps what it made, and the job succeeds, e.g. a capture that
+runs until the user stops it). A job's ``result`` holds what it produced.
 """
 
 from __future__ import annotations
@@ -32,7 +35,10 @@ from services import events
 from services.joblogs import JobLogStore
 
 if TYPE_CHECKING:
+    from config import Settings
+    from services.artifacts import ArtifactStore
     from services.images import ImageManager
+    from services.live import LiveHub
 
 log = logging.getLogger(__name__)
 
@@ -84,14 +90,23 @@ def last_for_subject(db: Session, subject: str) -> Job | None:
     return db.scalars(stmt).first()
 
 
-def list_jobs(db: Session, topology_id: str, limit: int = 20) -> list[Job]:
-    stmt = (
-        select(Job)
-        .where(Job.topology_id == topology_id)
-        .order_by(Job.created_at.desc())
-        .limit(limit)
-    )
-    return list(db.scalars(stmt))
+def list_jobs(
+    db: Session, topology_id: str, limit: int = 20, *, kinds: tuple[str, ...] | None = None
+) -> list[Job]:
+    stmt = select(Job).where(Job.topology_id == topology_id)
+    if kinds:
+        stmt = stmt.where(Job.kind.in_(kinds))
+    return list(db.scalars(stmt.order_by(Job.created_at.desc()).limit(limit)))
+
+
+def active_jobs(
+    db: Session, topology_id: str, *, kinds: tuple[str, ...] | None = None
+) -> list[Job]:
+    """Every queued or running job that belongs to a topology (any subject)."""
+    stmt = select(Job).where(Job.topology_id == topology_id, Job.status.in_(ACTIVE))
+    if kinds:
+        stmt = stmt.where(Job.kind.in_(kinds))
+    return list(db.scalars(stmt.order_by(Job.created_at)))
 
 
 def job_to_dict(job: Job) -> dict:
@@ -103,6 +118,8 @@ def job_to_dict(job: Job) -> dict:
         "status": job.status,
         "steps": list(job.steps or []),
         "error": job.error,
+        "params": job.params,
+        "result": job.result,
         "created_at": job.created_at,
         "started_at": job.started_at,
         "finished_at": job.finished_at,
@@ -154,10 +171,18 @@ class JobRunner:
         self.session_factory = session_factory
         self.engine = engine
         self.logs = logs
-        # Set by the app (main.create_app); deploys use it to prepare images.
+        # Set by the app (main.create_app): deploys use ``images`` to prepare
+        # images; captures and traffic runs write ``artifacts`` and read limits
+        # from ``settings``.
         self.images: ImageManager | None = None
+        self.artifacts: ArtifactStore | None = None
+        self.settings: Settings | None = None
+        self.live: LiveHub | None = None
         self._handlers: dict[str, Handler] = {}
         self._cancellable_kinds: set[str] = set()
+        self._stoppable_kinds: set[str] = set()
+        self._stop_events: dict[str, asyncio.Event] = {}
+        self._stop_codes: dict[str, str] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._tasks: dict[str, asyncio.Task] = {}
         self._pending = 0
@@ -171,10 +196,14 @@ class JobRunner:
         # Serialises "is a job active? no → create one" across request threads.
         self.admission = threading.Lock()
 
-    def register(self, kind: str, handler: Handler, *, cancellable: bool = False) -> None:
+    def register(
+        self, kind: str, handler: Handler, *, cancellable: bool = False, stoppable: bool = False
+    ) -> None:
         self._handlers[kind] = handler
         if cancellable:
             self._cancellable_kinds.add(kind)
+        if stoppable:
+            self._stoppable_kinds.add(kind)
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Remember the app's event loop so sync request handlers (threadpool) can schedule jobs."""
@@ -208,21 +237,49 @@ class JobRunner:
     async def wait_idle(self) -> None:
         """Await every scheduled job (tests and shutdown)."""
         while self._tasks or self._pending:
-            if self._tasks:
-                await asyncio.gather(*list(self._tasks.values()), return_exceptions=True)
+            running = [t for t in self._tasks.values() if not t.done()]
+            if running:
+                await asyncio.gather(*running, return_exceptions=True)
             else:
+                # Finished tasks leave ``_tasks`` in a done-callback; yield so it
+                # runs. (gather() over already-done tasks completes without
+                # yielding, which would spin here forever.)
                 await asyncio.sleep(0)
 
-    async def shutdown(self, cancel_kinds: tuple[str, ...] = ()) -> None:
-        """Cancel jobs of the given kinds (long builds), then wait for the rest."""
+    def _active_ids(self, kinds: tuple[str, ...]) -> list[str]:
+        with self.session_factory() as db:
+            return list(
+                db.scalars(select(Job.id).where(Job.status.in_(ACTIVE), Job.kind.in_(kinds)))
+            )
+
+    async def shutdown(
+        self,
+        cancel_kinds: tuple[str, ...] = (),
+        stop_kinds: tuple[str, ...] = (),
+        stop_grace: float = 5.0,
+    ) -> None:
+        """Stop open-ended jobs (captures, traffic runs) so they keep what they
+        made, cancel long ones (builds), then wait for the rest."""
+        if stop_kinds:
+            stopping = []
+            for job_id in self._active_ids(stop_kinds):
+                # Only a job inside its handler can wind down; a queued one is
+                # simply cancelled.
+                if job_id in self._in_handler and self.request_stop(
+                    job_id, "Server shutting down", code="shutdown"
+                ):
+                    stopping.append(job_id)
+                else:
+                    self.cancel(job_id, reason="Server shutting down")
+            if stopping:
+                waits = [asyncio.ensure_future(self.wait(j)) for j in stopping]
+                _, pending = await asyncio.wait(waits, timeout=stop_grace)
+                for w in pending:
+                    w.cancel()
+                for job_id in stopping:
+                    self.cancel(job_id, reason="Server shutting down")
         if cancel_kinds:
-            with self.session_factory() as db:
-                ids = list(
-                    db.scalars(
-                        select(Job.id).where(Job.status.in_(ACTIVE), Job.kind.in_(cancel_kinds))
-                    )
-                )
-            for job_id in ids:
+            for job_id in self._active_ids(cancel_kinds):
                 self.cancel(job_id, reason="Server shutting down")
         await self.wait_idle()
 
@@ -271,6 +328,8 @@ class JobRunner:
                 self._in_handler.discard(job_id)
                 self._cancel_requested.discard(job_id)
                 self._uncancellable.discard(job_id)
+                self._stop_events.pop(job_id, None)
+                self._stop_codes.pop(job_id, None)
 
     def _finish(self, job_id: str, status: str, error: str | None) -> None:
         with self.session_factory() as db:
@@ -334,6 +393,43 @@ class JobRunner:
         if task is not None and job_id in self._in_handler:
             task.cancel()
         return True
+
+    # ── stopping (graceful) ──
+    def stoppable(self, job: Job) -> bool:
+        return job.is_active and job.kind in self._stoppable_kinds
+
+    def request_stop(
+        self, job_id: str, reason: str = "Stop requested", *, code: str = "user"
+    ) -> bool:
+        """Ask an open-ended job to wind down and keep what it made.
+
+        The handler watches ``stop_event(job_id)``; the job then finishes as
+        ``succeeded``. ``code`` says who asked (user, destroy, shutdown) and is
+        what ``stop_code`` returns. False if the job is finished or its kind
+        cannot stop. Must be called on the app loop.
+        """
+        with self.session_factory() as db:
+            job = db.get(Job, job_id)
+            if job is None or not self.stoppable(job):
+                return False
+        event = self.stop_event(job_id)
+        if not event.is_set():
+            self.log(job_id, reason)
+            self._stop_codes[job_id] = code
+            event.set()
+        return True
+
+    def stop_event(self, job_id: str) -> asyncio.Event:
+        """Set once a stop was requested for the job (created on first use)."""
+        return self._stop_events.setdefault(job_id, asyncio.Event())
+
+    def stop_requested(self, job_id: str) -> bool:
+        event = self._stop_events.get(job_id)
+        return event is not None and event.is_set()
+
+    def stop_code(self, job_id: str) -> str | None:
+        """Who asked the job to stop (see ``request_stop``), if anyone did."""
+        return self._stop_codes.get(job_id) if self.stop_requested(job_id) else None
 
     def point_of_no_return(self, job_id: str) -> None:
         """From here on the job can no longer be cancelled (e.g. engine.deploy started)."""
@@ -420,6 +516,11 @@ class JobRunner:
     def patch_step(self, job_id: str, name: str, **patch) -> None:
         """Set extra fields on a step (e.g. the build jobs it is waiting on)."""
         self._set_step(job_id, name, **patch)
+
+    def set_result(self, job_id: str, result: dict) -> None:
+        """Record what the job produced (replaces any earlier result)."""
+        with self._job(job_id) as (_db, job):
+            job.result = copy.deepcopy(result)
 
     def log(self, job_id: str, line: str) -> None:
         stamp = datetime.now(UTC).strftime("%H:%M:%S")

@@ -204,3 +204,63 @@ def test_restart_recovery_unsticks_topologies(app, client, topology):
     assert _runtime(client, topology["id"])["status"] == "error"
     types = [e["type"] for e in client.get(f"/api/v1/topologies/{topology['id']}/events").json()]
     assert "topology.recovered" in types
+
+
+# ── stopping open-ended jobs ─────────────────────────────────────────
+
+
+async def _open_ended(runner, job_id):
+    """A stand-in for a capture: runs until stopped, then records a result."""
+    async with runner.step(job_id, "run"):
+        await runner.stop_event(job_id).wait()
+    runner.set_result(job_id, {"stopped_by": "user"})
+
+
+def _start_open_ended(app, client, subject="test:1"):
+    from services import jobs
+
+    runner = app.state.runner
+    runner.register("open_ended", _open_ended, cancellable=True, stoppable=True)
+    with runner.session_factory() as db:
+        job = jobs.create_job(db, "open_ended", subject=subject)
+        db.commit()
+        job_id = job.id
+    runner.submit(job_id)
+    for _ in range(200):
+        steps = client.get(f"/api/v1/jobs/{job_id}").json()["steps"]
+        if steps and steps[0]["status"] == "running":
+            return job_id
+        client.portal.call(_sleep)
+    raise AssertionError("job never started")
+
+
+async def _sleep():
+    import asyncio
+
+    await asyncio.sleep(0.01)
+
+
+def test_stop_finishes_an_open_ended_job_as_succeeded(app, client, wait_jobs):
+    job_id = _start_open_ended(app, client)
+    r = client.post(f"/api/v1/jobs/{job_id}/stop")
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "succeeded" and job["result"] == {"stopped_by": "user"}
+    # A finished job can't be stopped again.
+    assert client.post(f"/api/v1/jobs/{job_id}/stop").json()["code"] == "not_stoppable"
+
+
+def test_stop_is_refused_for_kinds_that_cannot_stop(client, topology, wait_jobs):
+    job = client.post(f"/api/v1/topologies/{topology['id']}/deploy").json()
+    r = client.post(f"/api/v1/jobs/{job['id']}/stop")
+    assert r.status_code == 409 and r.json()["code"] == "not_stoppable"
+    wait_jobs()
+
+
+def test_shutdown_stops_open_ended_jobs(app, client):
+    job_id = _start_open_ended(app, client)
+    runner = app.state.runner
+    client.portal.call(lambda: runner.shutdown(stop_kinds=("open_ended",), stop_grace=2))
+    job = client.get(f"/api/v1/jobs/{job_id}").json()
+    assert job["status"] == "succeeded" and job["result"] == {"stopped_by": "user"}

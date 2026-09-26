@@ -7,7 +7,8 @@ content change and backs optimistic concurrency on PUT.
 
 Jobs record every long-running operation with ordered steps. A job's
 ``subject`` is what it serialises on (``topology:<id>``, ``image:<ref>``,
-``source:<name>``); ``topology_id`` is set only for topology jobs. Events are
+``source:<name>``, ``capture:…``, ``traffic:<id>``); ``topology_id`` is set
+for jobs that belong to a topology. Events are
 an append-only log per topology that the UI, reconcile, and a future agent can
 read.
 """
@@ -31,7 +32,7 @@ def new_id() -> str:
 
 
 TOPOLOGY_STATUSES = ("idle", "deploying", "deployed", "destroying", "error")
-JOB_KINDS = ("deploy", "destroy", "purge", "build", "sync_source")
+JOB_KINDS = ("deploy", "destroy", "purge", "build", "sync_source", "capture", "traffic")
 JOB_STATUSES = ("queued", "running", "succeeded", "failed", "cancelled")
 
 
@@ -63,6 +64,9 @@ class Job(Base):
     # [{name, status, message, started_at, ended_at}]
     steps = Column(JSON, default=list, nullable=False)
     error = Column(Text, nullable=True)
+    # What the job produced, e.g. a capture's packet counts or a traffic run's
+    # summary. Bulk output (pcaps, time series) lives in its artifacts directory.
+    result = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
