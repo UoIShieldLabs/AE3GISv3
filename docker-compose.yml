@@ -20,8 +20,9 @@ services:
       - "8000:8000"
     volumes:
       # Kathara + the terminal bridge talk to the host Docker daemon through the
-      # socket. No privileged mode, no host netns, no host pid — Kathara creates
-      # collision domains as ordinary Docker bridge networks.
+      # socket. No privileged mode, no host netns, no host pid. Kathara creates
+      # each collision domain through its network plugin (kathara/katharanp_vde
+      # by default: a userspace VDE switch per link, tap interfaces in the nodes).
       - /var/run/docker.sock:/var/run/docker.sock
       - ae3gis-data:/app/data
       # Dev live-reload: mount source and run uvicorn --reload (see command).
@@ -32,11 +33,19 @@ services:
       # frontend's VITE_INSTRUCTOR_TOKEN) to require a bearer token.
       - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
       - AE3GIS_CORS_ORIGINS=${AE3GIS_CORS_ORIGINS:-*}
+      # Recorded with every capture and traffic run (see start.sh): which code
+      # ran, in which mode, on which machine (Docker Desktop only reports its VM).
+      - AE3GIS_MODE=dev
+      - AE3GIS_GIT_COMMIT=${AE3GIS_GIT_COMMIT:-}
+      - AE3GIS_GIT_DIRTY=${AE3GIS_GIT_DIRTY:-false}
+      - AE3GIS_HOST_LABEL=${AE3GIS_HOST_LABEL:-}
       # To build node images from a local checkout instead of the git source
       # in the catalog, mount it and add (JSON):
       #   - AE3GIS_SOURCE_OVERRIDES={"ae3gis-containers": "/sources/ae3gis-containers"}
     # Reload on code changes, but not on cloned image sources and build contexts.
-    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "/app/data"]
+    # --timeout-graceful-shutdown: a live pcap stream (?follow=true) lasts as
+    # long as its capture, which only stops during shutdown; don't wait on it.
+    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "5", "--reload", "--reload-exclude", "/app/data"]
     restart: unless-stopped
 
 volumes:
