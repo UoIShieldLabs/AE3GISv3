@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 
 from config import Settings
 from engine.base import DeploymentEngine
+from services.artifacts import ArtifactStore
 from services.images import ImageManager
 from services.jobs import JobRunner
+from services.live import LiveHub
 
 
 def get_settings(request: Request) -> Settings:
@@ -35,3 +37,11 @@ def get_runner(request: Request) -> JobRunner:
 
 def get_images(request: Request) -> ImageManager:
     return request.app.state.images
+
+
+def get_artifacts(request: Request) -> ArtifactStore:
+    return request.app.state.artifacts
+
+
+def get_live(request: Request) -> LiveHub:
+    return request.app.state.live
