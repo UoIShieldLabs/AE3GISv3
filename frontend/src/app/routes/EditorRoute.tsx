@@ -6,9 +6,11 @@ import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTo
 import { useServerValidation } from '@/features/deployment/useServerValidation';
 import { UnsavedChangesGuard } from '@/features/topology/UnsavedChangesGuard';
 import { AddEntityProvider } from '@/features/topology/AddEntityProvider';
-import { TerminalDock } from '@/features/terminal/TerminalDock';
+import { Dock } from '@/features/dock/Dock';
 import { PurdueSheet } from '@/features/purdue/PurdueSheet';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
+import { StartCaptureDialog } from '@/features/capture/StartCaptureDialog';
+import { RunsSheet } from '@/features/runs/RunsSheet';
 import { RequiredImagesBanner } from '@/features/images/RequiredImagesBanner';
 import { TopologyCanvas } from '@/canvas/TopologyCanvas';
 import { EditorShell } from '@/shell/EditorShell';
@@ -101,11 +103,13 @@ export function EditorRoute() {
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
         canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
-        dock={<TerminalDock />}
+        dock={<Dock />}
         statusBar={<StatusBar scope={scope} />}
       />
       <PurdueSheet />
       <ImagesSheet />
+      <RunsSheet />
+      <StartCaptureDialog />
       <CommandPalette scope={scope} onNavigate={onNavigate} onSave={() => void save()} />
       <UnsavedChangesGuard onSave={save} />
     </AddEntityProvider>

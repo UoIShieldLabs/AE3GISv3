@@ -15,11 +15,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
-    allowedHosts: ['ae3gis.wilsonops.com'],
     proxy: {
       '/api/v1/topologies/ws': {
         target: 'ws://localhost:8000',
         ws: true,
+      },
+      // Live pcap streams can sit idle for a long time: no proxy timeout.
+      '^/api/v1/captures/[^/]+/pcap': {
+        target: 'http://localhost:8000',
       },
       '/api': {
         target: 'http://localhost:8000',

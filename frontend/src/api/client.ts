@@ -27,6 +27,20 @@ export type JobLog = S['JobLogOut'];
 export type ImagesReport = S['ImagesReport'];
 export type ImageStatus = S['ImageStatusOut'];
 export type ImageSource = S['SourceOut'];
+export type Activity = S['ActivityOut'];
+export type Artifact = S['ArtifactOut'];
+export type DeployedInterfaces = S['DeployedInterfacesOut'];
+export type DeployedInterface = S['InterfaceOut'];
+export type CaptureRequest = S['CaptureRequest'];
+export type Capture = S['CaptureOut'];
+export type PacketSummary = S['PacketSummaryOut'];
+export type PacketPage = S['PacketPageOut'];
+export type TrafficRunRequest = S['TrafficRunRequest'];
+export type Iperf3Flow = S['Iperf3Flow'];
+export type TrafficRun = S['TrafficRunOut'];
+export type FlowSample = S['FlowSampleOut'];
+export type NodeSample = S['NodeSampleOut'];
+export type TrafficSamples = S['TrafficSamplesOut'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -141,19 +155,28 @@ export function listEvents(id: string, after = 0, limit = 200): Promise<Topology
   return request(`${V1}/topologies/${encodeURIComponent(id)}/events?after=${after}&limit=${limit}`);
 }
 
-/** Fetch an export and hand it to the browser as a download. */
-export async function downloadExport(id: string, format: ExportFormat): Promise<void> {
-  const res = await fetch(`${V1}/topologies/${encodeURIComponent(id)}/export?format=${format}`, { headers: authHeaders() });
+/** Fetch a file from the API and hand it to the browser as a download
+ *  (named by the server's Content-Disposition, else `fallbackName`). */
+export async function downloadUrl(url: string, fallbackName: string): Promise<void> {
+  const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw await toApiError(res);
   const blob = await res.blob();
   const disposition = res.headers.get('Content-Disposition') ?? '';
   const match = /filename="?([^";]+)"?/.exec(disposition);
   const a = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  a.href = url;
-  a.download = match?.[1] ?? `topology.${format === 'labspec' ? 'json' : 'zip'}`;
+  const href = URL.createObjectURL(blob);
+  a.href = href;
+  a.download = match?.[1] ?? fallbackName;
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(href);
+}
+
+/** Fetch an export and hand it to the browser as a download. */
+export function downloadExport(id: string, format: ExportFormat): Promise<void> {
+  return downloadUrl(
+    `${V1}/topologies/${encodeURIComponent(id)}/export?format=${format}`,
+    `topology.${format === 'labspec' ? 'json' : 'zip'}`,
+  );
 }
 
 // ── Deployment (jobs) ──────────────────────────────────────────────
@@ -179,6 +202,24 @@ export function getJobLog(jobId: string, offset?: number, limit?: number): Promi
 }
 export function cancelJob(jobId: string): Promise<Job> {
   return request(`${V1}/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' });
+}
+/** Stop an open-ended job (capture, traffic run): it keeps what it recorded. */
+export function stopJob(jobId: string): Promise<Job> {
+  return request(`${V1}/jobs/${encodeURIComponent(jobId)}/stop`, { method: 'POST' });
+}
+export function listArtifacts(jobId: string): Promise<Artifact[]> {
+  return request(`${V1}/jobs/${encodeURIComponent(jobId)}/artifacts`);
+}
+/** A JSON artifact of a job (e.g. a run's run.json). */
+export function getArtifactJson<T>(jobId: string, name: string): Promise<T> {
+  return request(artifactUrl(jobId, name));
+}
+export function artifactUrl(jobId: string, name: string): string {
+  return `${V1}/jobs/${encodeURIComponent(jobId)}/artifacts/${encodeURIComponent(name)}`;
+}
+/** The deployed lab's interfaces (what captures can target). */
+export function getInterfaces(id: string): Promise<DeployedInterfaces> {
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/interfaces`);
 }
 export function execWsPath(id: string, containerId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(id)}/exec/${encodeURIComponent(containerId)}`;
@@ -218,4 +259,50 @@ export function reconcileLabs(): Promise<{ reset: number; orphans: number }> {
 }
 export function purgeLab(labHash: string): Promise<{ lab_hash: string; topology_id: string | null }> {
   return request(`${V1}/system/labs/${encodeURIComponent(labHash)}/purge`, { method: 'POST' });
+}
+
+// ── Packet capture ─────────────────────────────────────────────────
+/** Start a capture (or get the one already running on that interface). */
+export function startCapture(topologyId: string, body: CaptureRequest): Promise<Capture> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/captures`, json(body));
+}
+export function listCaptures(topologyId: string, limit = 50): Promise<Capture[]> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/captures?limit=${limit}`);
+}
+export function getCapture(jobId: string): Promise<Capture> {
+  return request(`${V1}/captures/${encodeURIComponent(jobId)}`);
+}
+export function getPackets(jobId: string, after = 0, limit = 500): Promise<PacketPage> {
+  return request(`${V1}/captures/${encodeURIComponent(jobId)}/packets?after=${after}&limit=${limit}`);
+}
+/** Absolute URL of a capture's pcap; `follow` streams it live (for Wireshark).
+ *  With auth on, the token goes in the query so a pasted curl command works. */
+export function pcapUrl(jobId: string, follow = false): string {
+  const q = new URLSearchParams();
+  if (follow) q.set('follow', 'true');
+  if (AUTH_TOKEN) q.set('token', AUTH_TOKEN);
+  const qs = q.toString();
+  return `${window.location.origin}${V1}/captures/${encodeURIComponent(jobId)}/pcap${qs ? `?${qs}` : ''}`;
+}
+
+// ── Traffic ────────────────────────────────────────────────────────
+export function startTrafficRun(topologyId: string, body: TrafficRunRequest): Promise<TrafficRun> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/traffic/runs`, json(body));
+}
+export function listTrafficRuns(topologyId: string, limit = 50): Promise<TrafficRun[]> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/traffic/runs?limit=${limit}`);
+}
+export function getTrafficRun(jobId: string): Promise<TrafficRun> {
+  return request(`${V1}/traffic/runs/${encodeURIComponent(jobId)}`);
+}
+export function trafficExportUrl(jobId: string): string {
+  return `${V1}/traffic/runs/${encodeURIComponent(jobId)}/export`;
+}
+
+// ── Live channels (WebSocket paths; open with `wsUrl`) ─────────────
+export function captureWsPath(topologyId: string, jobId: string): string {
+  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/captures/${encodeURIComponent(jobId)}`;
+}
+export function trafficWsPath(topologyId: string, jobId: string): string {
+  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/traffic/${encodeURIComponent(jobId)}`;
 }

@@ -4,6 +4,64 @@
  */
 
 export interface paths {
+    "/api/v1/captures/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Capture */
+        get: operations["get_capture_api_v1_captures__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{job_id}/packets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Packets
+         * @description Summaries of the captured packets, read from the pcap (any capture).
+         */
+        get: operations["get_packets_api_v1_captures__job_id__packets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/captures/{job_id}/pcap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pcap
+         * @description The capture as a pcap file. Valid at any moment, even mid-capture.
+         *     Accepts ``?token=`` so curl and plain links work with auth on.
+         */
+        get: operations["get_pcap_api_v1_captures__job_id__pcap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog": {
         parameters: {
             query?: never;
@@ -83,6 +141,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Artifacts
+         * @description Files the job produced (a capture's pcap, a traffic run's time series).
+         */
+        get: operations["list_artifacts_api_v1_jobs__job_id__artifacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/artifacts/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Artifact
+         * @description Download one artifact. Accepts ``?token=`` so it works as a plain link.
+         */
+        get: operations["download_artifact_api_v1_jobs__job_id__artifacts__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}/cancel": {
         parameters: {
             query?: never;
@@ -119,6 +217,27 @@ export interface paths {
         get: operations["get_job_log_api_v1_jobs__job_id__log_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Job
+         * @description Stop an open-ended job (a capture or traffic run): it winds down, keeps
+         *     what it recorded, and finishes as ``succeeded``. Use cancel to abort.
+         */
+        post: operations["stop_job_api_v1_jobs__job_id__stop_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -193,6 +312,26 @@ export interface paths {
          * @description Fetch a git source's configured ref; the job reports which images changed.
          */
         post: operations["sync_source_api_v1_sources__name__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/environment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Environment
+         * @description The host, Docker, Kathara and AE3GIS versions every run records.
+         */
+        get: operations["get_environment_api_v1_system_environment_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -350,6 +489,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/captures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Captures */
+        get: operations["list_captures_api_v1_topologies__topology_id__captures_get"];
+        put?: never;
+        /**
+         * Start Capture
+         * @description Start capturing on a link or a node interface of a deployed topology.
+         *
+         *     A capture of an interface that is already being captured returns that
+         *     capture (200). Stop it with ``POST /jobs/{id}/stop``: the pcap is kept.
+         */
+        post: operations["start_capture_api_v1_topologies__topology_id__captures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/context": {
         parameters: {
             query?: never;
@@ -444,6 +607,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/interfaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Interfaces
+         * @description Every deployed interface by node, and the links between them: what a
+         *     capture can target. Reads the saved deploy state; no engine call.
+         */
+        get: operations["get_interfaces_api_v1_topologies__topology_id__interfaces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/jobs": {
         parameters: {
             query?: never;
@@ -501,6 +685,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/traffic/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_v1_topologies__topology_id__traffic_runs_get"];
+        put?: never;
+        /**
+         * Start Run
+         * @description Start generating traffic between deployed nodes. One run at a time per
+         *     topology (409 ``traffic_active``). Results and samples are kept.
+         */
+        post: operations["start_run_api_v1_topologies__topology_id__traffic_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/validate": {
         parameters: {
             query?: never;
@@ -518,10 +724,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/traffic/runs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_v1_traffic_runs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/traffic/runs/{job_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Run
+         * @description The run as a zip: run.json (request, environment, summary), the samples,
+         *     iperf3's raw output and the job log.
+         */
+        get: operations["export_run_api_v1_traffic_runs__job_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/traffic/runs/{job_id}/samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Samples
+         * @description Every flow and node sample of a run (live or finished).
+         */
+        get: operations["get_samples_api_v1_traffic_runs__job_id__samples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActivityOut
+         * @description A capture or traffic run in progress on the topology.
+         */
+        ActivityOut: {
+            /**
+             * Connection Ids
+             * @default []
+             */
+            connection_ids: string[];
+            /** Job Id */
+            job_id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Message */
+            message?: string | null;
+            /**
+             * Node Ids
+             * @default []
+             */
+            node_ids: string[];
+            /** Started At */
+            started_at?: string | null;
+            /** Status */
+            status: string;
+        };
+        /** ArtifactOut */
+        ArtifactOut: {
+            /** Content Type */
+            content_type: string;
+            /**
+             * Modified At
+             * Format: date-time
+             */
+            modified_at: string;
+            /** Name */
+            name: string;
+            /** Size */
+            size: number;
+        };
         /** Body_import_json_api_v1_topologies_import_json_post */
         Body_import_json_api_v1_topologies_import_json_post: {
             /** File */
@@ -561,6 +870,110 @@ export interface components {
             /** Repo */
             repo: string;
         };
+        /** CaptureEndpointOut */
+        CaptureEndpointOut: {
+            /** Collision Domain */
+            collision_domain: string;
+            /** Connection Id */
+            connection_id?: string | null;
+            /** Interface */
+            interface: string;
+            /** Ip */
+            ip?: string | null;
+            /** Machine */
+            machine: string;
+            /** Node Id */
+            node_id: string;
+            /** Peer Node Id */
+            peer_node_id?: string | null;
+        };
+        /** CaptureOut */
+        CaptureOut: {
+            endpoint: components["schemas"]["CaptureEndpointOut"];
+            /** Filter */
+            filter: string;
+            /** Id */
+            id: string;
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Limits */
+            limits: {
+                [key: string]: unknown;
+            };
+            /** Live */
+            live: boolean;
+            /** Pcap Url */
+            pcap_url: string;
+            /** Snaplen */
+            snaplen: number;
+            stats: components["schemas"]["CaptureStatsOut"];
+            /** Status */
+            status: string;
+            /** Target */
+            target: {
+                [key: string]: unknown;
+            };
+            /** Topology Id */
+            topology_id: string;
+            /** Ws Path */
+            ws_path: string;
+        };
+        /** CaptureRequest */
+        CaptureRequest: {
+            /**
+             * Filter
+             * @default
+             */
+            filter: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Max Bytes */
+            max_bytes?: number | null;
+            /** Max Packets */
+            max_packets?: number | null;
+            /** Max Seconds */
+            max_seconds?: number | null;
+            /**
+             * Snaplen
+             * @default 0
+             */
+            snaplen: number;
+            /** Target */
+            target: components["schemas"]["LinkTarget"] | components["schemas"]["InterfaceTarget"];
+        };
+        /** CaptureStatsOut */
+        CaptureStatsOut: {
+            /**
+             * Bytes
+             * @default 0
+             */
+            bytes: number;
+            /** Dropped By Kernel */
+            dropped_by_kernel?: number | null;
+            /** Duration S */
+            duration_s?: number | null;
+            /**
+             * File Bytes
+             * @default 0
+             */
+            file_bytes: number;
+            /**
+             * Packets
+             * @default 0
+             */
+            packets: number;
+            /** Stopped By */
+            stopped_by?: string | null;
+            /**
+             * Undecoded
+             * @default 0
+             */
+            undecoded: number;
+        };
         /** Catalog */
         Catalog: {
             /** Categories */
@@ -581,6 +994,10 @@ export interface components {
             /** Sources */
             sources?: {
                 [key: string]: components["schemas"]["GitSource"] | components["schemas"]["PathSource"];
+            };
+            /** Tools */
+            tools?: {
+                [key: string]: string;
             };
             /** Types */
             types: {
@@ -606,6 +1023,25 @@ export interface components {
             };
             runtime: components["schemas"]["RuntimeOut"];
             topology: components["schemas"]["TopologyRecord"];
+        };
+        /**
+         * DeployedInterfacesOut
+         * @description The deployed lab's interfaces: what captures can target.
+         */
+        DeployedInterfacesOut: {
+            /** Deployed */
+            deployed: boolean;
+            /** Links */
+            links: components["schemas"]["LinkOut"][];
+            /**
+             * Mapping
+             * @enum {string}
+             */
+            mapping: "deployed" | "recomputed" | "none";
+            /** Nodes */
+            nodes: {
+                [key: string]: components["schemas"]["InterfaceOut"][];
+            };
         };
         /** Diagnostic */
         Diagnostic: {
@@ -657,6 +1093,46 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** FlowSampleOut */
+        FlowSampleOut: {
+            /** Bps */
+            bps: number;
+            /** Bytes */
+            bytes: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "fwd" | "rev";
+            /** Flow Id */
+            flow_id: string;
+            /** Jitter Ms */
+            jitter_ms?: number | null;
+            /** Lost Packets */
+            lost_packets?: number | null;
+            /** Lost Percent */
+            lost_percent?: number | null;
+            /**
+             * Omitted
+             * @default false
+             */
+            omitted: boolean;
+            /** Packets */
+            packets?: number | null;
+            /** Retransmits */
+            retransmits?: number | null;
+            /** Rtt Ms */
+            rtt_ms?: number | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "sender" | "receiver";
+            /** T */
+            t: number;
+        };
         /**
          * GitSource
          * @description A git repository the backend clones (and syncs on demand).
@@ -705,6 +1181,32 @@ export interface components {
             detail: string;
             /** Platform */
             platform: string;
+        };
+        /** IfaceRatesOut */
+        IfaceRatesOut: {
+            /**
+             * Errors
+             * @default 0
+             */
+            errors: number;
+            /** Rx Bps */
+            rx_bps: number;
+            /**
+             * Rx Dropped
+             * @default 0
+             */
+            rx_dropped: number;
+            /** Rx Pps */
+            rx_pps: number;
+            /** Tx Bps */
+            tx_bps: number;
+            /**
+             * Tx Dropped
+             * @default 0
+             */
+            tx_dropped: number;
+            /** Tx Pps */
+            tx_pps: number;
         };
         /** ImageSpec */
         ImageSpec: {
@@ -779,6 +1281,80 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["SourceOut"][];
         };
+        /** InterfaceOut */
+        InterfaceOut: {
+            /** Collision Domain */
+            collision_domain: string;
+            /** Connection Id */
+            connection_id?: string | null;
+            /** Ip */
+            ip?: string | null;
+            /** Name */
+            name: string;
+            /** Peer Node Id */
+            peer_node_id?: string | null;
+        };
+        /**
+         * InterfaceTarget
+         * @description Capture one interface of a node.
+         */
+        InterfaceTarget: {
+            /** Interface */
+            interface: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "interface";
+            /** Node Id */
+            node_id: string;
+        };
+        /**
+         * Iperf3Flow
+         * @description One iperf3 flow: ``client`` sends to ``server`` (reverse: the other way).
+         */
+        Iperf3Flow: {
+            /** Bitrate */
+            bitrate?: string | null;
+            /** Client */
+            client: string;
+            /**
+             * Direction
+             * @default forward
+             * @enum {string}
+             */
+            direction: "forward" | "reverse" | "bidir";
+            /**
+             * Generator
+             * @default iperf3
+             * @constant
+             */
+            generator: "iperf3";
+            /** Id */
+            id: string;
+            /** Length */
+            length?: number | null;
+            /**
+             * Omit S
+             * @default 0
+             */
+            omit_s: number;
+            /**
+             * Parallel
+             * @default 1
+             */
+            parallel: number;
+            /**
+             * Protocol
+             * @default tcp
+             * @enum {string}
+             */
+            protocol: "tcp" | "udp";
+            /** Server */
+            server: string;
+            /** Server Address */
+            server_address?: string | null;
+        };
         /**
          * JobLogOut
          * @description A line-aligned slice of a job's log. Poll again from ``next_offset``.
@@ -810,6 +1386,14 @@ export interface components {
             id: string;
             /** Kind */
             kind: string;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
             /** Started At */
             started_at?: string | null;
             /** Status */
@@ -865,6 +1449,76 @@ export interface components {
             /** Stale */
             stale: components["schemas"]["StaleOut"][];
         };
+        /** LinkEndpointOut */
+        LinkEndpointOut: {
+            /** Interface */
+            interface: string;
+            /** Ip */
+            ip?: string | null;
+            /** Machine Name */
+            machine_name: string;
+            /** Node */
+            node: string;
+            /** Prefix Len */
+            prefix_len?: string | null;
+        };
+        /** LinkOut */
+        LinkOut: {
+            /** Collision Domain */
+            collision_domain: string;
+            /** Connection Id */
+            connection_id?: string | null;
+            /** Endpoints */
+            endpoints: components["schemas"]["LinkEndpointOut"][];
+            /** From */
+            from?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** To */
+            to?: string | null;
+        };
+        /**
+         * LinkTarget
+         * @description Capture a whole link (a topology connection) from one of its ends.
+         */
+        LinkTarget: {
+            /** Connection Id */
+            connection_id: string;
+            /** Endpoint */
+            endpoint?: ("from" | "to") | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "link";
+        };
+        /** NodeSampleOut */
+        NodeSampleOut: {
+            /** Cpu Percent */
+            cpu_percent?: number | null;
+            /**
+             * Ifaces
+             * @default {}
+             */
+            ifaces: {
+                [key: string]: components["schemas"]["IfaceRatesOut"];
+            };
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "node" | "sidecar";
+            /** Mem Limit */
+            mem_limit?: number | null;
+            /** Mem Used */
+            mem_used: number;
+            /** Pids */
+            pids?: number | null;
+            /** T */
+            t: number;
+            /** Target */
+            target: string;
+        };
         /** NodeState */
         NodeState: {
             /** Id */
@@ -906,6 +1560,50 @@ export interface components {
             webUiPort?: number | null;
         } & {
             [key: string]: unknown;
+        };
+        /** PacketPageOut */
+        PacketPageOut: {
+            /** Items */
+            items: components["schemas"]["PacketSummaryOut"][];
+            /** Next After */
+            next_after: number;
+            /** Total */
+            total: number;
+        };
+        /** PacketSummaryOut */
+        PacketSummaryOut: {
+            /** Caplen */
+            caplen: number;
+            /** Dport */
+            dport?: number | null;
+            /**
+             * Dst
+             * @default
+             */
+            dst: string;
+            /**
+             * Info
+             * @default
+             */
+            info: string;
+            /** Len */
+            len: number;
+            /** N */
+            n: number;
+            /**
+             * Proto
+             * @default
+             */
+            proto: string;
+            /** Sport */
+            sport?: number | null;
+            /**
+             * Src
+             * @default
+             */
+            src: string;
+            /** Ts */
+            ts: number;
         };
         /**
          * PathSource
@@ -984,6 +1682,11 @@ export interface components {
         /** RuntimeOut */
         RuntimeOut: {
             active_job?: components["schemas"]["JobOut"] | null;
+            /**
+             * Activity
+             * @default []
+             */
+            activity: components["schemas"]["ActivityOut"][];
             /** Nodes */
             nodes: components["schemas"]["NodeState"][];
             /** Status */
@@ -992,6 +1695,18 @@ export interface components {
             topology_id: string;
             /** Version */
             version: number;
+        };
+        /** SidecarRoleOut */
+        SidecarRoleOut: {
+            /** Flow Id */
+            flow_id: string;
+            /** Node Id */
+            node_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "client" | "server";
         };
         /** SourceOut */
         SourceOut: {
@@ -1100,6 +1815,80 @@ export interface components {
             /** Version */
             version?: number | null;
         };
+        /** TrafficRunOut */
+        TrafficRunOut: {
+            /** Duration S */
+            duration_s: number | null;
+            /** Flows */
+            flows: {
+                [key: string]: unknown;
+            }[];
+            /** Id */
+            id: string;
+            /** Interval S */
+            interval_s: number;
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Live */
+            live: boolean;
+            /** Monitored */
+            monitored: string[];
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Sidecars
+             * @default {}
+             */
+            sidecars: {
+                [key: string]: components["schemas"]["SidecarRoleOut"];
+            };
+            /** Status */
+            status: string;
+            /** Topology Id */
+            topology_id: string;
+            /** Ws Path */
+            ws_path: string;
+        };
+        /** TrafficRunRequest */
+        TrafficRunRequest: {
+            /**
+             * Duration S
+             * @default 30
+             */
+            duration_s: number | null;
+            /** Flows */
+            flows: components["schemas"]["Iperf3Flow"][];
+            /**
+             * Interval S
+             * @default 1
+             */
+            interval_s: number;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Monitor Nodes
+             * @default all
+             */
+            monitor_nodes: ("all" | "flows") | string[];
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+        };
+        /** TrafficSamplesOut */
+        TrafficSamplesOut: {
+            /** Flows */
+            flows: components["schemas"]["FlowSampleOut"][];
+            /** Nodes */
+            nodes: components["schemas"]["NodeSampleOut"][];
+        };
         /** ValidateBody */
         ValidateBody: {
             /** Data */
@@ -1135,6 +1924,112 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_capture_api_v1_captures__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_packets_api_v1_captures__job_id__packets_get: {
+        parameters: {
+            query?: {
+                /** @description Packet number to start after */
+                after?: number;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PacketPageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pcap_api_v1_captures__job_id__pcap_get: {
+        parameters: {
+            query?: {
+                /** @description Keep streaming new packets until the capture ends (pipe into `wireshark -k -i -`) */
+                follow?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.tcpdump.pcap": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_catalog_api_v1_catalog_get: {
         parameters: {
             query?: never;
@@ -1257,6 +2152,73 @@ export interface operations {
             };
         };
     };
+    list_artifacts_api_v1_jobs__job_id__artifacts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_artifact_api_v1_jobs__job_id__artifacts__name__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancel_job_api_v1_jobs__job_id__cancel_post: {
         parameters: {
             query?: never;
@@ -1314,6 +2276,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobLogOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_job_api_v1_jobs__job_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Validation Error */
@@ -1433,6 +2428,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_environment_api_v1_system_environment_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -1799,6 +2827,87 @@ export interface operations {
             };
         };
     };
+    list_captures_api_v1_topologies__topology_id__captures_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_capture_api_v1_topologies__topology_id__captures_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description Already capturing there */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOut"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_context_api_v1_topologies__topology_id__context_get: {
         parameters: {
             query?: never;
@@ -1969,6 +3078,39 @@ export interface operations {
             };
         };
     };
+    get_interfaces_api_v1_topologies__topology_id__interfaces_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeployedInterfacesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_topology_jobs_api_v1_topologies__topology_id__jobs_get: {
         parameters: {
             query?: never;
@@ -2068,6 +3210,78 @@ export interface operations {
             };
         };
     };
+    list_runs_api_v1_topologies__topology_id__traffic_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_run_api_v1_topologies__topology_id__traffic_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrafficRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     validate_topology_api_v1_topologies__topology_id__validate_post: {
         parameters: {
             query?: never;
@@ -2088,6 +3302,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ValidationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_traffic_runs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_run_api_v1_traffic_runs__job_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_samples_api_v1_traffic_runs__job_id__samples_get: {
+        parameters: {
+            query?: {
+                /** @description Only samples after this run time (s) */
+                since?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrafficSamplesOut"];
                 };
             };
             /** @description Validation Error */
