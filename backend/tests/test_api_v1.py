@@ -139,3 +139,47 @@ def test_auth_open_by_default_and_enforced_when_configured(tmp_path):
         )
         assert c.get("/api/v1/topologies?token=s3cret").status_code == 200
         assert c.get("/api/v1/system/health").json()["auth_required"] is True
+
+
+def test_interfaces_come_from_the_deployed_state(client, topology, wait_jobs):
+    tid = topology["id"]
+    assert client.get(f"/api/v1/topologies/{tid}/interfaces").json() == {
+        "deployed": False,
+        "mapping": "none",
+        "nodes": {},
+        "links": [],
+    }
+    client.post(f"/api/v1/topologies/{tid}/deploy")
+    wait_jobs()
+    body = client.get(f"/api/v1/topologies/{tid}/interfaces").json()
+    assert body["deployed"] and body["mapping"] == "deployed"
+    assert body["nodes"]["hA"] == [
+        {
+            "name": "eth0",
+            "collision_domain": "cd1",
+            "connection_id": "c2",
+            "peer_node_id": "swA",
+            "ip": "10.0.1.5",
+        }
+    ]
+    wan = next(link for link in body["links"] if link["connection_id"] == "c5")
+    assert (wan["from"], wan["to"], wan["kind"]) == ("rA", "rB", "subnet")
+
+    # Editing the topology after the deploy doesn't move the deployed mapping.
+    rec = client.get(f"/api/v1/topologies/{tid}").json()
+    rec["data"]["sites"][0]["subnets"][0]["connections"].reverse()
+    client.put(f"/api/v1/topologies/{tid}", json={"data": rec["data"]})
+    again = client.get(f"/api/v1/topologies/{tid}/interfaces").json()
+    assert again["nodes"]["hA"] == body["nodes"]["hA"]
+
+
+def test_runtime_lists_activity_and_destroy_stops_it_first(client, topology, wait_jobs):
+    tid = topology["id"]
+    client.post(f"/api/v1/topologies/{tid}/deploy")
+    wait_jobs()
+    assert client.get(f"/api/v1/topologies/{tid}/runtime").json()["activity"] == []
+    job = client.post(f"/api/v1/topologies/{tid}/destroy").json()
+    wait_jobs()
+    steps = client.get(f"/api/v1/jobs/{job['id']}").json()["steps"]
+    assert [s["name"] for s in steps] == ["stop", "undeploy", "verify"]
+    assert steps[0]["message"] == "Nothing running"
