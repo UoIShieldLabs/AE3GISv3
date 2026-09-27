@@ -94,7 +94,6 @@ def run_one(api: Api, topo: str, name: str, flow: dict[str, Any], args, capture_
             "label": f"baseline: {name}",
             "flows": [{"id": "f1", "client": args.client, "server": args.server, **flow}],
             "duration_s": args.duration,
-            "monitor_nodes": "all",
         },
     )
     job = api.wait(run["id"], args.duration + 120)

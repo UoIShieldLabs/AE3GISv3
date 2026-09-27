@@ -35,6 +35,7 @@ def test_argv():
     assert "--bidir" in udp and udp[udp.index("-i") + 1] == "0.5" and "-l" in udp
     assert "-R" in client_argv({"direction": "reverse"}, "h", 1, 1)
     assert server_argv(5201, 1) == ["iperf3", "-s", "-1", "-p", "5201", "--json-stream", "-i", "1"]
+    assert server_argv(5202, 1, "10.0.2.1")[-2:] == ["-B", "10.0.2.1"]
 
 
 def test_tcp_forward_client_and_server():
