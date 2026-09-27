@@ -24,6 +24,7 @@ def rates(prev: RawStats | None, cur: RawStats, t: float) -> dict[str, Any]:
         "mem_used": max(mem_used, 0),
         "mem_limit": cur.mem_limit,
         "pids": cur.pids,
+        "oom_kills": cur.oom_kills,
         "ifaces": {},
     }
     if prev is None:

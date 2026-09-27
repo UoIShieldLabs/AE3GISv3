@@ -350,7 +350,7 @@ async def run_capture(runner: JobRunner, job_id: str) -> None:
             tool = catalog.tool_image("capture")
             assert runner.images is not None
             await runner.images.ensure_images(
-                runner, job_id, [tool], stale_event="capture.images_stale"
+                runner, job_id, [tool], stale_event="capture.images_stale", rebuild_stale=True
             )
 
         async with runner.step(job_id, "attach", message=f"{ep['machine']} {ep['interface']}"):

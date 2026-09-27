@@ -4,6 +4,87 @@
  */
 
 export interface paths {
+    "/api/v1/benchmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Benchmarks */
+        get: operations["list_benchmarks_api_v1_benchmarks_get"];
+        put?: never;
+        /**
+         * Start Benchmark
+         * @description Start a sweep. One benchmark at a time (409 ``benchmark_active``); it
+         *     fails at its first step if other labs or jobs load the host, unless
+         *     ``allow_busy_host``.
+         */
+        post: operations["start_benchmark_api_v1_benchmarks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/benchmarks/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Benchmark */
+        get: operations["get_benchmark_api_v1_benchmarks__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/benchmarks/{job_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Benchmark
+         * @description Everything: benchmark.json, results.csv, report.md, the monitor's CSVs,
+         *     each step's topology, and the job log.
+         */
+        get: operations["export_benchmark_api_v1_benchmarks__job_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/benchmarks/{job_id}/report.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Report
+         * @description The results as Markdown (so far, while it runs).
+         */
+        get: operations["get_report_api_v1_benchmarks__job_id__report_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/captures/{job_id}": {
         parameters: {
             query?: never;
@@ -244,6 +325,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/monitors/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monitor */
+        get: operations["get_monitor_api_v1_monitors__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitors/{job_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Monitor
+         * @description The monitor as a zip: monitor.json (request, environment, summary), the
+         *     CSV files and the job log.
+         */
+        get: operations["export_monitor_api_v1_monitors__job_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/monitors/{job_id}/samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Samples
+         * @description Recorded sweeps of a monitor (live or finished).
+         */
+        get: operations["get_samples_api_v1_monitors__job_id__samples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/presets": {
         parameters: {
             query?: never;
@@ -427,6 +566,28 @@ export interface paths {
         put?: never;
         /** Create Topology */
         post: operations["create_topology_api_v1_topologies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Topology
+         * @description Create a topology from a few numbers (the benchmarks' generator): a
+         *     servers subnet behind a core router, client subnets behind their own
+         *     routers, access switches under a distribution switch per subnet.
+         */
+        post: operations["generate_topology_api_v1_topologies_generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -645,6 +806,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/monitors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Monitors */
+        get: operations["list_monitors_api_v1_topologies__topology_id__monitors_get"];
+        put?: never;
+        /**
+         * Start Monitor
+         * @description Start recording CPU, memory and network of the selected nodes and of the
+         *     host every ``interval_s``. One monitor at a time per topology (409
+         *     ``monitor_active``).
+         */
+        post: operations["start_monitor_api_v1_topologies__topology_id__monitors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/plan": {
         parameters: {
             query?: never;
@@ -750,8 +934,8 @@ export interface paths {
         };
         /**
          * Export Run
-         * @description The run as a zip: run.json (request, environment, summary), the samples,
-         *     iperf3's raw output and the job log.
+         * @description The run as a zip: run.json (request, environment, summary), the samples
+         *     and totals, the driver's raw output and the job log.
          */
         get: operations["export_run_api_v1_traffic_runs__job_id__export_get"];
         put?: never;
@@ -771,7 +955,8 @@ export interface paths {
         };
         /**
          * Get Samples
-         * @description Every flow and node sample of a run (live or finished).
+         * @description A run's flow samples and its all-flow totals (live or finished). Runs of
+         *     many flows: ask for ``totals_only`` or a few ``flows``.
          */
         get: operations["get_samples_api_v1_traffic_runs__job_id__samples_get"];
         put?: never;
@@ -830,6 +1015,171 @@ export interface components {
             name: string;
             /** Size */
             size: number;
+        };
+        /** BenchmarkMonitor */
+        BenchmarkMonitor: {
+            /**
+             * Interval S
+             * @default 5
+             */
+            interval_s: number;
+        };
+        /** BenchmarkOut */
+        BenchmarkOut: {
+            /** Current */
+            current?: string | null;
+            /** Id */
+            id: string;
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Live */
+            live: boolean;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Spec */
+            spec: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status: string;
+            /** Topology Id */
+            topology_id: string | null;
+        };
+        /** BenchmarkRequest */
+        BenchmarkRequest: {
+            /**
+             * Allow Busy Host
+             * @default false
+             */
+            allow_busy_host: boolean;
+            /**
+             * Cooldown S
+             * @default 20
+             */
+            cooldown_s: number;
+            /**
+             * Hold S
+             * @default 60
+             */
+            hold_s: number;
+            /**
+             * Keep Last
+             * @default false
+             */
+            keep_last: boolean;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            monitor?: components["schemas"]["BenchmarkMonitor"];
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Quiet Cpu Pct
+             * @default 10
+             */
+            quiet_cpu_pct: number;
+            /**
+             * Quiet Timeout S
+             * @default 300
+             */
+            quiet_timeout_s: number;
+            /**
+             * Repetitions
+             * @default 1
+             */
+            repetitions: number;
+            /** Scale */
+            scale?: number[];
+            /**
+             * Settle S
+             * @default 20
+             */
+            settle_s: number;
+            stop?: components["schemas"]["BenchmarkStop"];
+            topology?: components["schemas"]["BenchmarkTopology"];
+            traffic?: components["schemas"]["BenchmarkTraffic"] | null;
+        };
+        /**
+         * BenchmarkStop
+         * @description When a step fails and the sweep ends (see domain/benchmark).
+         */
+        BenchmarkStop: {
+            /**
+             * Deploy Timeout S
+             * @default 1800
+             */
+            deploy_timeout_s: number;
+            /**
+             * Max Loss Pct
+             * @default 5
+             */
+            max_loss_pct: number | null;
+            /**
+             * Max Mem Pct
+             * @default 90
+             */
+            max_mem_pct: number | null;
+            /**
+             * Max Psi Mem Full
+             * @default 10
+             */
+            max_psi_mem_full: number | null;
+            /**
+             * Min Delivered Ratio
+             * @default 0.8
+             */
+            min_delivered_ratio: number | null;
+            /**
+             * Project Memory
+             * @default true
+             */
+            project_memory: boolean;
+            /**
+             * Ready Timeout S
+             * @default 300
+             */
+            ready_timeout_s: number;
+            /**
+             * Stop On Degraded
+             * @default true
+             */
+            stop_on_degraded: boolean;
+        };
+        /**
+         * BenchmarkTopology
+         * @description What each step deploys: a generated topology of ``scale`` hosts, or an
+         *     existing (idle) topology repeated.
+         */
+        BenchmarkTopology: {
+            generate?: components["schemas"]["GeneratorSpec"] | null;
+            /** Topology Id */
+            topology_id?: string | null;
+        };
+        /**
+         * BenchmarkTraffic
+         * @description Each step's load during its hold window (see TrafficPattern).
+         */
+        BenchmarkTraffic: {
+            /**
+             * Interval S
+             * @default 5
+             */
+            interval_s: number;
+            /** Patterns */
+            patterns: components["schemas"]["TrafficPattern"][];
+            /**
+             * Ramp S
+             * @default 10
+             */
+            ramp_s: number;
         };
         /** Body_import_json_api_v1_topologies_import_json_post */
         Body_import_json_api_v1_topologies_import_json_post: {
@@ -1133,6 +1483,92 @@ export interface components {
             /** T */
             t: number;
         };
+        /** GenerateRequest */
+        GenerateRequest: {
+            /**
+             * Host Type
+             * @default workstation
+             */
+            host_type: string;
+            /** Hosts */
+            hosts: number;
+            /**
+             * Hosts Per Subnet
+             * @default 200
+             */
+            hosts_per_subnet: number;
+            /**
+             * Hosts Per Switch
+             * @default 48
+             */
+            hosts_per_switch: number;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Router Type
+             * @default router
+             */
+            router_type: string;
+            /**
+             * Server Type
+             * @default workstation
+             */
+            server_type: string;
+            /**
+             * Servers
+             * @default 1
+             */
+            servers: number;
+            /**
+             * Switch Type
+             * @default switch
+             */
+            switch_type: string;
+        };
+        /**
+         * GeneratorSpec
+         * @description The shape of a generated topology (see domain/generator).
+         */
+        GeneratorSpec: {
+            /**
+             * Host Type
+             * @default workstation
+             */
+            host_type: string;
+            /**
+             * Hosts Per Subnet
+             * @default 200
+             */
+            hosts_per_subnet: number;
+            /**
+             * Hosts Per Switch
+             * @default 48
+             */
+            hosts_per_switch: number;
+            /**
+             * Router Type
+             * @default router
+             */
+            router_type: string;
+            /**
+             * Server Type
+             * @default workstation
+             */
+            server_type: string;
+            /**
+             * Servers
+             * @default 1
+             */
+            servers: number;
+            /**
+             * Switch Type
+             * @default switch
+             */
+            switch_type: string;
+        };
         /**
          * GitSource
          * @description A git repository the backend clones (and syncs on demand).
@@ -1181,32 +1617,6 @@ export interface components {
             detail: string;
             /** Platform */
             platform: string;
-        };
-        /** IfaceRatesOut */
-        IfaceRatesOut: {
-            /**
-             * Errors
-             * @default 0
-             */
-            errors: number;
-            /** Rx Bps */
-            rx_bps: number;
-            /**
-             * Rx Dropped
-             * @default 0
-             */
-            rx_dropped: number;
-            /** Rx Pps */
-            rx_pps: number;
-            /** Tx Bps */
-            tx_bps: number;
-            /**
-             * Tx Dropped
-             * @default 0
-             */
-            tx_dropped: number;
-            /** Tx Pps */
-            tx_pps: number;
         };
         /** ImageSpec */
         ImageSpec: {
@@ -1492,32 +1902,96 @@ export interface components {
              */
             kind: "link";
         };
-        /** NodeSampleOut */
-        NodeSampleOut: {
-            /** Cpu Percent */
-            cpu_percent?: number | null;
+        /** MonitorOut */
+        MonitorOut: {
+            /** Duration S */
+            duration_s: number | null;
+            /** Id */
+            id: string;
+            /** Interval S */
+            interval_s: number;
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Live */
+            live: boolean;
+            /** Monitored */
+            monitored: string[];
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Selector */
+            selector: unknown;
+            /** Status */
+            status: string;
+            /** Topology Id */
+            topology_id: string;
+            /** Ws Path */
+            ws_path: string;
+        };
+        /** MonitorRequest */
+        MonitorRequest: {
+            /** Duration S */
+            duration_s?: number | null;
             /**
-             * Ifaces
-             * @default {}
+             * Interval S
+             * @default 1
              */
+            interval_s: number;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Nodes
+             * @default all
+             */
+            nodes: "all" | string[] | components["schemas"]["NodeSelector"];
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+        };
+        /**
+         * MonitorSamplesOut
+         * @description Recorded rows (see the monitor's CSV files); numbers are per sweep.
+         */
+        MonitorSamplesOut: {
+            /** Host */
+            host: {
+                [key: string]: unknown;
+            }[];
+            /** Ifaces */
             ifaces: {
-                [key: string]: components["schemas"]["IfaceRatesOut"];
-            };
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "node" | "sidecar";
-            /** Mem Limit */
-            mem_limit?: number | null;
-            /** Mem Used */
-            mem_used: number;
-            /** Pids */
-            pids?: number | null;
-            /** T */
-            t: number;
-            /** Target */
-            target: string;
+                [key: string]: unknown;
+            }[];
+            /** Markers */
+            markers: {
+                [key: string]: unknown;
+            }[];
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * NodeSelector
+         * @description Nodes by id and/or by type, subnet or role; ``exclude`` applies last.
+         */
+        NodeSelector: {
+            /** Exclude */
+            exclude?: string[] | null;
+            /** Ids */
+            ids?: string[] | null;
+            /** Roles */
+            roles?: ("router" | "switch" | "host")[] | null;
+            /** Subnets */
+            subnets?: string[] | null;
+            /** Types */
+            types?: string[] | null;
         };
         /** NodeState */
         NodeState: {
@@ -1696,18 +2170,6 @@ export interface components {
             /** Version */
             version: number;
         };
-        /** SidecarRoleOut */
-        SidecarRoleOut: {
-            /** Flow Id */
-            flow_id: string;
-            /** Node Id */
-            node_id: string;
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "client" | "server";
-        };
         /** SourceOut */
         SourceOut: {
             active_job?: components["schemas"]["JobOut"] | null;
@@ -1815,10 +2277,72 @@ export interface components {
             /** Version */
             version?: number | null;
         };
+        /**
+         * TrafficPattern
+         * @description Many flows from one line (see domain/traffic/patterns): each client
+         *     sends to a server (``clients_to_servers``), or each node to the next
+         *     ``fanout`` nodes on a ring (``mesh``). Node sets are selectors like a
+         *     monitor's: ``"all"``, a list of ids, or ``{types, subnets, roles…}``;
+         *     clients and mesh nodes default to every host.
+         */
+        TrafficPattern: {
+            /** Bitrate */
+            bitrate: string;
+            /** Clients */
+            clients?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Direction
+             * @default forward
+             * @enum {string}
+             */
+            direction: "forward" | "reverse" | "bidir";
+            /**
+             * Each
+             * @default one
+             * @enum {string}
+             */
+            each: "one" | "all";
+            /**
+             * Fanout
+             * @default 1
+             */
+            fanout: number;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "clients_to_servers" | "mesh";
+            /** Length */
+            length?: number | null;
+            /** Nodes */
+            nodes?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Omit S
+             * @default 0
+             */
+            omit_s: number;
+            /**
+             * Parallel
+             * @default 1
+             */
+            parallel: number;
+            /**
+             * Protocol
+             * @default tcp
+             * @enum {string}
+             */
+            protocol: "tcp" | "udp";
+            /** Servers */
+            servers?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+        };
         /** TrafficRunOut */
         TrafficRunOut: {
             /** Duration S */
             duration_s: number | null;
+            /** Flow Count */
+            flow_count: number;
             /** Flows */
             flows: {
                 [key: string]: unknown;
@@ -1832,19 +2356,22 @@ export interface components {
             label: string;
             /** Live */
             live: boolean;
-            /** Monitored */
-            monitored: string[];
+            /**
+             * Patterns
+             * @default []
+             */
+            patterns: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Ramp S
+             * @default 0
+             */
+            ramp_s: number;
             /** Result */
             result?: {
                 [key: string]: unknown;
             } | null;
-            /**
-             * Sidecars
-             * @default {}
-             */
-            sidecars: {
-                [key: string]: components["schemas"]["SidecarRoleOut"];
-            };
             /** Status */
             status: string;
             /** Topology Id */
@@ -1860,7 +2387,7 @@ export interface components {
              */
             duration_s: number | null;
             /** Flows */
-            flows: components["schemas"]["Iperf3Flow"][];
+            flows?: components["schemas"]["Iperf3Flow"][];
             /**
              * Interval S
              * @default 1
@@ -1872,22 +2399,38 @@ export interface components {
              */
             label: string;
             /**
-             * Monitor Nodes
-             * @default all
-             */
-            monitor_nodes: ("all" | "flows") | string[];
-            /**
              * Notes
              * @default
              */
             notes: string;
+            /** Patterns */
+            patterns?: components["schemas"]["TrafficPattern"][];
+            /**
+             * Ramp S
+             * @default 0
+             */
+            ramp_s: number;
         };
         /** TrafficSamplesOut */
         TrafficSamplesOut: {
             /** Flows */
             flows: components["schemas"]["FlowSampleOut"][];
-            /** Nodes */
-            nodes: components["schemas"]["NodeSampleOut"][];
+            /** Totals */
+            totals: components["schemas"]["TrafficTotalsOut"][];
+        };
+        /**
+         * TrafficTotalsOut
+         * @description All flows at one moment: what arrived (receiver-measured) vs. what was asked.
+         */
+        TrafficTotalsOut: {
+            /** Active */
+            active: number;
+            /** Delivered Bps */
+            delivered_bps: number;
+            /** Offered Bps */
+            offered_bps?: number | null;
+            /** T */
+            t: number;
         };
         /** ValidateBody */
         ValidateBody: {
@@ -1924,6 +2467,173 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_benchmarks_api_v1_benchmarks_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchmarkOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_benchmark_api_v1_benchmarks_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenchmarkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchmarkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_benchmark_api_v1_benchmarks__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchmarkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_benchmark_api_v1_benchmarks__job_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_benchmarks__job_id__report_md_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_capture_api_v1_captures__job_id__get: {
         parameters: {
             query?: never;
@@ -2322,6 +3032,114 @@ export interface operations {
             };
         };
     };
+    get_monitor_api_v1_monitors__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_monitor_api_v1_monitors__job_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_samples_api_v1_monitors__job_id__samples_get: {
+        parameters: {
+            query?: {
+                /** @description Only sweeps after this time (s) */
+                since?: number;
+                /** @description Comma-separated node ids */
+                nodes?: string | null;
+                /** @description Keep every n-th sweep */
+                every?: number;
+                /** @description Leave out node and interface rows */
+                host_only?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorSamplesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_presets_api_v1_presets_get: {
         parameters: {
             query?: never;
@@ -2632,6 +3450,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TopologyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_topology_api_v1_topologies_generate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRequest"];
             };
         };
         responses: {
@@ -3144,6 +3997,78 @@ export interface operations {
             };
         };
     };
+    list_monitors_api_v1_topologies__topology_id__monitors_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_monitor_api_v1_topologies__topology_id__monitors_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonitorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_plan_api_v1_topologies__topology_id__plan_get: {
         parameters: {
             query?: never;
@@ -3386,6 +4311,10 @@ export interface operations {
             query?: {
                 /** @description Only samples after this run time (s) */
                 since?: number;
+                /** @description Comma-separated flow ids */
+                flows?: string | null;
+                /** @description Leave out per-flow samples */
+                totals_only?: boolean;
             };
             header?: {
                 authorization?: string | null;

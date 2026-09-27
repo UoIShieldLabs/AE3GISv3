@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '@/store';
+import { monitorTabId } from '@/store/slices/dockSlice';
 
 const st = () => useAppStore.getState();
 
@@ -31,5 +32,13 @@ describe('dock slice', () => {
     expect(st().dockTabs[0]).toMatchObject({ title: 'renamed' });
     st().closeDockTab('traffic:j2');
     expect(st().activeDockTabId).toBe('cap:j1');
+  });
+
+  it('opens a monitor form with its seed and swaps in the monitor', () => {
+    st().openDockTab({ kind: 'monitor', id: monitorTabId(null), jobId: null, title: 'New monitor', seed: { nodes: ['h1'], nonce: 1 } });
+    expect(st().dockTabs[0]).toMatchObject({ id: 'monitor:new', seed: { nodes: ['h1'] } });
+    st().replaceDockTab('monitor:new', { kind: 'monitor', id: monitorTabId('m1'), jobId: 'm1', title: 'idle' });
+    expect(st().dockTabs.map((t) => t.id)).toEqual(['monitor:m1']);
+    expect(st().activeDockTabId).toBe('monitor:m1');
   });
 });

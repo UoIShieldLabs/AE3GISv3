@@ -1,29 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import * as api from '@/api/client';
 
-type SidecarRoles = api.TrafficRun['sidecars'];
+export type FlowRates = Record<string, { fwd?: number; rev?: number }>;
 
 export interface TrafficStream {
   run: api.TrafficRun | null;
+  /** Per-flow samples (runs of up to 16 flows; bigger runs send totals only). */
   flows: api.FlowSample[];
-  nodes: api.NodeSample[];
-  sidecars: SidecarRoles;
+  /** All flows together, once per interval. */
+  totals: api.TrafficTotals[];
+  /** Each flow's latest rate (the busiest 200), from the live status. */
+  rates: FlowRates;
   elapsed: number | null;
   ended: boolean;
   connection: 'connecting' | 'open' | 'closed';
 }
 
 type Message =
-  | { type: 'hello'; run: api.TrafficRun; backlog: { flows: api.FlowSample[]; nodes: api.NodeSample[] } }
+  | { type: 'hello'; run: api.TrafficRun; backlog: { flows: api.FlowSample[]; totals: api.TrafficTotals[] } }
   | { type: 'flow'; samples: api.FlowSample[] }
-  | { type: 'nodes'; samples: api.NodeSample[] }
-  | { type: 'sidecars'; items: SidecarRoles }
-  | { type: 'status'; elapsed: number }
+  | { type: 'status'; elapsed: number; total: api.TrafficTotals; flows: FlowRates }
   | { type: 'end'; result: Record<string, unknown> | null };
 
 const TICK_MS = 1000;
 const flowKey = (s: api.FlowSample) => `${s.flow_id}:${s.direction}:${s.side}:${s.t}`;
-const nodeKey = (s: api.NodeSample) => `${s.target}:${s.t}`;
+const totalKey = (s: api.TrafficTotals) => String(s.t);
 
 function merge<T>(into: T[], seen: Set<string>, items: readonly T[], key: (x: T) => string): boolean {
   let added = false;
@@ -37,11 +38,11 @@ function merge<T>(into: T[], seen: Set<string>, items: readonly T[], key: (x: T)
   return added;
 }
 
-/** A traffic run's samples, live over its WebSocket (backlog first, then
- *  updates), re-rendered once a second. Works for finished runs too. */
+/** A traffic run's samples and totals, live over its WebSocket (backlog first,
+ *  then updates), re-rendered once a second. Works for finished runs too. */
 export function useTrafficStream(topologyId: string | null, jobId: string): TrafficStream {
-  const [state, setState] = useState<TrafficStream>({ run: null, flows: [], nodes: [], sidecars: {}, elapsed: null, ended: false, connection: 'connecting' });
-  const buf = useRef({ flows: [] as api.FlowSample[], nodes: [] as api.NodeSample[], fseen: new Set<string>(), nseen: new Set<string>(), dirty: false });
+  const [state, setState] = useState<TrafficStream>({ run: null, flows: [], totals: [], rates: {}, elapsed: null, ended: false, connection: 'connecting' });
+  const buf = useRef({ flows: [] as api.FlowSample[], totals: [] as api.TrafficTotals[], fseen: new Set<string>(), tseen: new Set<string>(), dirty: false });
 
   useEffect(() => {
     if (!topologyId) return;
@@ -51,14 +52,14 @@ export function useTrafficStream(topologyId: string | null, jobId: string): Traf
     let retry: ReturnType<typeof setTimeout> | null = null;
     const b = buf.current;
     b.flows = [];
-    b.nodes = [];
+    b.totals = [];
     b.fseen = new Set();
-    b.nseen = new Set();
+    b.tseen = new Set();
 
     const flush = () => {
       if (!b.dirty) return;
       b.dirty = false;
-      setState((s) => ({ ...s, flows: b.flows.slice(), nodes: b.nodes.slice() }));
+      setState((s) => ({ ...s, flows: b.flows.slice(), totals: b.totals.slice() }));
     };
     const tick = setInterval(flush, TICK_MS);
 
@@ -72,21 +73,16 @@ export function useTrafficStream(topologyId: string | null, jobId: string): Traf
         switch (msg.type) {
           case 'hello':
             b.dirty = merge(b.flows, b.fseen, msg.backlog.flows, flowKey) || b.dirty;
-            b.dirty = merge(b.nodes, b.nseen, msg.backlog.nodes, nodeKey) || b.dirty;
-            setState((s) => ({ ...s, run: msg.run, sidecars: msg.run.sidecars ?? {} }));
+            b.dirty = merge(b.totals, b.tseen, msg.backlog.totals ?? [], totalKey) || b.dirty;
+            setState((s) => ({ ...s, run: msg.run }));
             flush();
             break;
           case 'flow':
             b.dirty = merge(b.flows, b.fseen, msg.samples, flowKey) || b.dirty;
             break;
-          case 'nodes':
-            b.dirty = merge(b.nodes, b.nseen, msg.samples, nodeKey) || b.dirty;
-            break;
-          case 'sidecars':
-            setState((s) => ({ ...s, sidecars: msg.items }));
-            break;
           case 'status':
-            setState((s) => ({ ...s, elapsed: msg.elapsed }));
+            b.dirty = merge(b.totals, b.tseen, [msg.total], totalKey) || b.dirty;
+            setState((s) => ({ ...s, elapsed: msg.elapsed, rates: msg.flows }));
             break;
           case 'end':
             ended = true;

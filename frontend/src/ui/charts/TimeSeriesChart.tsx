@@ -15,6 +15,8 @@ export interface TimeSeriesChartProps {
   yMin?: number;
   /** A note under the title (e.g. "top 6 of 9"). */
   note?: string;
+  /** What x counts (default run time, "s"); e.g. " hosts" for a benchmark's scale. */
+  xUnit?: string;
 }
 
 function cssVar(name: string): string {
@@ -24,10 +26,10 @@ function cssVar(name: string): string {
 const fmt = (v: number | null | undefined, unit: string) =>
   v === null || v === undefined || Number.isNaN(v) ? '–' : `${v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)} ${unit}`;
 
-/** A small line chart over run time (seconds). Colours come from the
+/** A small line chart over run time (seconds, or another x via ``xUnit``). Colours come from the
  *  --chart-N tokens, so it follows the theme; the legend shows each series'
  *  value under the cursor (and is hidden for a single series: the title names it). */
-export function TimeSeriesChart({ title, unit, data, height = 150, yMin = 0, note }: TimeSeriesChartProps) {
+export function TimeSeriesChart({ title, unit, data, height = 150, yMin = 0, note, xUnit = 's' }: TimeSeriesChartProps) {
   const host = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
   const theme = useResolvedTheme();
@@ -51,13 +53,13 @@ export function TimeSeriesChart({ title, unit, data, height = 150, yMin = 0, not
       height,
       scales: { x: { time: false }, y: { range: (_u, _min, max) => [yMin, Math.max(max * 1.1, yMin + 1e-9)] } },
       axes: [
-        { ...axis, values: (_u, ticks) => ticks.map((t) => `${Math.round(t)}s`) },
+        { ...axis, values: (_u, ticks) => ticks.map((t) => `${Math.round(t)}${xUnit}`) },
         { ...axis, size: 44, values: (_u, ticks) => ticks.map((t) => (t >= 1000 ? `${(t / 1000).toFixed(1)}k` : `${+t.toFixed(2)}`)) },
       ],
       legend: { show: data.series.length >= 2, live: true },
       cursor: { drag: { x: false, y: false }, points: { size: 8, width: 2 } },
       series: [
-        { label: 't', value: (_u, v) => (v === null ? '–' : `${v.toFixed(1)}s`) },
+        { label: xUnit === 's' ? 't' : xUnit.trim(), value: (_u, v) => (v === null ? '–' : `${xUnit === 's' ? v.toFixed(1) : Math.round(v)}${xUnit}`) },
         ...data.series.map((s) => ({
           label: s.label,
           stroke: cssVar(`--chart-${s.slot}`),
@@ -79,7 +81,7 @@ export function TimeSeriesChart({ title, unit, data, height = 150, yMin = 0, not
       plot.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape, theme, height, unit, yMin]);
+  }, [shape, theme, height, unit, yMin, xUnit]);
 
   useEffect(() => {
     plot.current?.setData(aligned);

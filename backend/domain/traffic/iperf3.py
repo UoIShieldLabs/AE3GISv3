@@ -72,9 +72,14 @@ def client_argv(flow: dict[str, Any], server_ip: str, port: int, interval: float
     return argv
 
 
-def server_argv(port: int, interval: float) -> list[str]:
-    # -1: serve one test, then exit.
-    return ["iperf3", "-s", "-1", "-p", str(port), "--json-stream", "-i", _num(interval)]
+def server_argv(port: int, interval: float, bind: str | None = None) -> list[str]:
+    """-1: serve one test, then exit. ``bind``: the address clients connect
+    to. A multi-homed node (a router) must answer UDP from that address: left
+    to the route, its reply to a client in another subnet leaves from the
+    link's address and the client's connected socket drops it (the test
+    stalls at 0 b/s)."""
+    argv = ["iperf3", "-s", "-1", "-p", str(port), "--json-stream", "-i", _num(interval)]
+    return argv + (["-B", bind] if bind else [])
 
 
 def _num(x: float) -> str:

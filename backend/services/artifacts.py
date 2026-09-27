@@ -24,6 +24,8 @@ CONTENT_TYPES = {
     ".zip": "application/zip",
     ".log": "text/plain",
     ".txt": "text/plain",
+    ".csv": "text/csv",
+    ".gz": "application/gzip",
 }
 
 

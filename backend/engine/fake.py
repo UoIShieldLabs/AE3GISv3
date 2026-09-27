@@ -10,12 +10,19 @@ reports running. Test hooks:
 - ``fail_build``: image ref -> error message.
 - ``fail_sidecar``: sidecar purpose -> stderr text; that sidecar exits 1 at once.
 - ``capture_packets``: frames every capture sidecar emits (default: pings at
-  ``capture_pps``); ``traffic_interval``: seconds between iperf3 intervals.
+  ``capture_pps``).
+- ``fail_helper``: helper purpose -> stderr text; that helper exits 1 at once.
+- ``monitor_interval``: seconds between collector sweeps (default: its
+  ``--interval``); ``fake_mem_per_node``: host memory each running node takes;
+  ``oom_nodes``: nodes whose cgroup reports an OOM kill.
+- ``traffic_interval``: seconds between iperf3 intervals of the fake driver;
+  ``fail_listen``: nodes whose traffic servers never listen; ``unreachable``:
+  nodes whose readiness probes fail.
 
-Sidecars behave like the real tools: a capture sidecar streams a pcap and
-prints tcpdump's totals when signalled; an iperf3 client drives the server
-sidecar listening on its target (and fails to connect if there is none).
-``calls`` records sidecar removals and lab teardown in order.
+A capture sidecar behaves like tcpdump: it streams a pcap and prints its
+totals when signalled. Helpers (``start_helper``: the collector and the netns
+driver) are in ``engine/fake_helpers.py``. ``calls`` records sidecar and
+helper removals and lab teardown in order.
 
 Images under ``ae3gis.local/`` (built by AE3GIS, never pulled) are absent until
 built; other refs follow ``present_images``. ``build_delay`` paces the simulated
@@ -40,8 +47,9 @@ from engine.base import (
     BuildError,
     BuildSpec,
     BuildSupport,
+    ContainerRef,
     EngineState,
-    IfaceCounters,
+    HelperSpec,
     ImageInfo,
     LabRef,
     NodeInterface,
@@ -49,11 +57,12 @@ from engine.base import (
     NodeRuntimeInfo,
     NodeStatus,
     Progress,
-    RawStats,
     SidecarInfo,
     SidecarSpec,
     normalize_ref,
 )
+from engine.docker_sidecar import helper_labels, sidecar_labels
+from engine.fake_helpers import FakeCollector, FakeDriver, FakeHelper, fake_container_id
 from engine.kathara.naming import lab_hash as hash_for_name
 
 LOCAL_PREFIX = "ae3gis.local/"
@@ -77,6 +86,7 @@ class FakeSidecar:
         self.node_id = spec.node_id
         machine = lab.state.nodes.get(spec.node_id, spec.node_id)
         self.name = f"ae3gis-{spec.purpose}-{spec.job_id[:8]}-{machine}-{uuid.uuid4().hex[:4]}"
+        self.id = fake_container_id(self.name)
         self.status = "running"
         self.signalled = asyncio.Event()
         self._out: asyncio.Queue[tuple[str, bytes] | int] = asyncio.Queue()
@@ -106,10 +116,6 @@ class FakeSidecar:
             tool = self.spec.command[0] if self.spec.command else ""
             if tool == "tcpdump":
                 await self._tcpdump()
-            elif tool == "iperf3" and "-s" in self.spec.command:
-                await self._iperf_server()
-            elif tool == "iperf3":
-                await self._iperf_client()
             else:
                 await self.signalled.wait()
                 self.exit(0)
@@ -144,59 +150,6 @@ class FakeSidecar:
         self.emit("stderr", tools.tcpdump_totals(count))
         self.exit(0)
 
-    async def _iperf_server(self) -> None:
-        args = tools.IperfArgs(self.spec.command)
-        key = (self.lab.state.lab_hash, self.node_id, args.port)
-        self.engine.iperf_servers[key] = self
-        try:
-            # Output comes from the client driving this server (see _iperf_client).
-            await self.signalled.wait()
-            self.exit(0)
-        finally:
-            self.engine.iperf_servers.pop(key, None)
-
-    async def _iperf_client(self) -> None:
-        args = tools.IperfArgs(self.spec.command)
-        server = self.engine._iperf_server_for(self.lab, args.host, args.port)
-        if server is None:
-            self.emit(
-                "stdout",
-                tools.iperf_error(
-                    "unable to connect to server - server may have stopped running or use a "
-                    "different port, firewall issue, etc.: Connection refused"
-                ),
-            )
-            self.exit(1)
-            return
-        self.emit("stdout", tools.iperf_start(args, client=True))
-        server.emit("stdout", tools.iperf_start(args, client=False))
-        i = 0
-        interval = self.engine.traffic_interval
-        until_stopped = args.duration == 0
-        while until_stopped or i < args.duration:
-            if self.signalled.is_set():
-                break
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(
-                    self.signalled.wait(), timeout=max(interval, 0.01 if until_stopped else 0)
-                )
-            if self.signalled.is_set():
-                break
-            i += 1
-            self.emit("stdout", tools.iperf_interval(args, i, client=True))
-            server.emit("stdout", tools.iperf_interval(args, i, client=False))
-        interrupted = self.signalled.is_set()
-        if interrupted:
-            self.emit(
-                "stdout",
-                tools.iperf_error("interrupt - the client has terminated by signal Interrupt(2)"),
-            )
-            server.emit("stdout", tools.iperf_error("the client has terminated"))
-        self.emit("stdout", tools.iperf_end(args, float(i), client=True, interrupted=interrupted))
-        server.emit("stdout", tools.iperf_end(args, float(i), client=False, interrupted=False))
-        server.exit(0)  # -s -1: one test, then exit
-        self.exit(0)
-
     # Sidecar protocol
     async def pump(
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
@@ -217,15 +170,6 @@ class FakeSidecar:
 
     async def exec(self, cmd: list[str], timeout: float = 5.0) -> tuple[int, str]:
         joined = " ".join(cmd)
-        if cmd and cmd[0] == "ss":
-            ports = [
-                port
-                for (lab, node, port) in self.engine.iperf_servers
-                if lab == self.lab.state.lab_hash and node == self.node_id
-            ]
-            return 0, "".join(
-                f"LISTEN 0 4096 *:{port} *:*\n" for port in ports if str(port) in joined
-            )
         if "--version" in joined:
             return 0, "iperf 3.19.1 (fake)\ntcpdump version 4.99.5 (fake)\n"
         return 0, ""
@@ -263,9 +207,17 @@ class FakeEngine:
         self.capture_packets: list[bytes] | None = None
         self.capture_pps = 20.0
         self.traffic_interval = 0.0
-        self.iperf_servers: dict[tuple[str, str, int], FakeSidecar] = {}
         self.calls: list[tuple[str, str]] = []
         self.started_sidecars: list[SidecarSpec] = []
+        self.helpers: dict[str, FakeHelper] = {}
+        self.started_helpers: list[HelperSpec] = []
+        self.fail_helper: dict[str, str] = {}
+        self.monitor_interval: float | None = None
+        self.fake_mem_per_node = 10_000_000
+        self.oom_nodes: set[str] = set()
+        self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
+        self.unreachable: set[str] = set()  # nodes whose readiness probes fail
+        self._pids: dict[tuple[str, str], int] = {}
 
     @staticmethod
     def _hash(state: EngineState) -> str:
@@ -428,14 +380,6 @@ class FakeEngine:
                         peer = i.ip
         return mine, peer
 
-    def _iperf_server_for(self, lab: _Lab, host: str | None, port: int) -> FakeSidecar | None:
-        if lab.plan is None:
-            return None
-        for n in lab.plan.nodes:
-            if any(i.ip == host for i in n.interfaces):
-                return self.iperf_servers.get((lab.state.lab_hash, n.id, port))
-        return None
-
     async def node_interfaces(self, state: EngineState, node_id: str) -> list[NodeInterface]:
         lab = self._lab_for(state)
         if node_id not in lab.running:
@@ -471,6 +415,19 @@ class FakeEngine:
             for sc in list(self.sidecars.values())
             if (lab_hash is None or sc.lab.state.lab_hash == lab_hash)
             and (owner is None or sc.spec.owner == owner)
+        ] + [
+            SidecarInfo(
+                name=h.name,
+                node_id="",
+                job_id=h.spec.job_id,
+                purpose=h.spec.purpose,
+                lab_hash=h.spec.lab_hash,
+                owner=h.spec.owner,
+                status=h.status,
+            )
+            for h in list(self.helpers.values())
+            if (lab_hash is None or h.spec.lab_hash == lab_hash)
+            and (owner is None or h.spec.owner == owner)
         ]
 
     async def remove_sidecars(
@@ -478,58 +435,84 @@ class FakeEngine:
     ) -> int:
         if not (lab_hash or job_id or owner):
             raise ValueError("remove_sidecars needs a filter")
-        doomed = [
+        doomed: list[FakeSidecar | FakeHelper] = [
             sc
             for sc in list(self.sidecars.values())
             if (lab_hash is None or sc.lab.state.lab_hash == lab_hash)
             and (job_id is None or sc.spec.job_id == job_id)
             and (owner is None or sc.spec.owner == owner)
         ]
+        doomed += [
+            h
+            for h in list(self.helpers.values())
+            if (lab_hash is None or h.spec.lab_hash == lab_hash)
+            and (job_id is None or h.spec.job_id == job_id)
+            and (owner is None or h.spec.owner == owner)
+        ]
         for sc in doomed:
             await sc.remove()
         return len(doomed)
 
-    # ── telemetry ──
-    async def sample_stats(
-        self, state: EngineState, node_ids: list[str], sidecars: list[str] = ()
-    ) -> list[RawStats]:
-        lab = self._lab_for(state)
-        elapsed = time.monotonic() - lab.started
-        out: list[RawStats] = []
-        ifaces_of: dict[str, list[str]] = {
-            n.id: [i.name for i in n.interfaces] for n in (lab.plan.nodes if lab.plan else [])
-        }
+    # ── helpers ──
+    def node_container_id(self, lab_hash: str, node_id: str) -> str:
+        return fake_container_id(f"{lab_hash}/{node_id}")
 
-        def sample(target: str, kind: str, ifaces: list[str], load: float) -> RawStats:
-            moved = int(elapsed * load * 1_000_000)
-            return RawStats(
-                target=target,
-                kind=kind,  # type: ignore[arg-type]
-                ts=time.time(),
-                cpu_total_ns=int(elapsed * load * 1e8),
-                system_cpu_ns=int(elapsed * 8e9),
-                online_cpus=8,
-                mem_usage=40_000_000 + int(load * 1_000_000),
-                mem_inactive_file=4_000_000,
-                mem_limit=8_000_000_000,
-                pids=3,
-                ifaces={
-                    name: IfaceCounters(
-                        rx_bytes=moved,
-                        tx_bytes=moved,
-                        rx_packets=moved // 1000,
-                        tx_packets=moved // 1000,
-                    )
-                    for name in ifaces
+    async def start_helper(self, spec: HelperSpec) -> FakeHelper:
+        kinds: dict[str, type[FakeHelper]] = {
+            "collector": FakeCollector,
+            "driver": FakeDriver,
+            "probe": FakeDriver,
+        }
+        helper = kinds.get(spec.purpose, FakeHelper)(self, spec)
+        self.helpers[helper.name] = helper
+        self.started_helpers.append(spec)
+        helper.start()
+        return helper
+
+    async def node_pids(self, state: EngineState) -> dict[str, int]:
+        lab = self._lab_for(state)
+        h = lab.state.lab_hash
+        for nid in sorted(lab.running):
+            self._pids.setdefault((h, nid), 10_000 + len(self._pids))
+        return {nid: self._pids[(h, nid)] for nid in sorted(lab.running)}
+
+    def node_for_pid(self, pid: int) -> str | None:
+        """The running node a fake pid belongs to (helpers resolve their spec)."""
+        for (h, nid), p in self._pids.items():
+            lab = self.labs.get(h)
+            if p == pid and lab is not None and nid in lab.running:
+                return nid
+        return None
+
+    async def list_containers(self) -> list[ContainerRef]:
+        out = [
+            ContainerRef(
+                id=self.node_container_id(h, nid),
+                name=f"fake_{lab.state.nodes.get(nid, nid)}",
+                status="running",
+                labels={
+                    "app": "kathara",
+                    "lab_hash": h,
+                    "name": lab.state.nodes.get(nid, nid),
+                    "user": lab.state.user_prefix,
                 },
             )
-
-        for i, nid in enumerate(node_ids):
-            if nid in lab.running:
-                out.append(sample(nid, "node", ifaces_of.get(nid, []), 1.0 + i))
-        for name in sidecars:
-            if name in self.sidecars:
-                out.append(sample(name, "sidecar", [], 5.0))
+            for h, lab in self.labs.items()
+            for nid in sorted(lab.running)
+        ]
+        out += [
+            ContainerRef(
+                id=sc.id,
+                name=sc.name,
+                status=sc.status,
+                labels=sidecar_labels(sc.spec, sc.lab.state.lab_hash),
+            )
+            for sc in self.sidecars.values()
+        ]
+        out += [
+            ContainerRef(id=h.id, name=h.name, status=h.status, labels=helper_labels(h.spec))
+            for h in self.helpers.values()
+        ]
         return out
 
     async def node_runtime_info(self, state: EngineState) -> list[NodeRuntimeInfo]:

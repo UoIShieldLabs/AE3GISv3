@@ -18,6 +18,7 @@ export * from './Tabs';
 export * from './Select';
 export * from './Command';
 export * from './Combobox';
+export * from './MultiSelect';
 export * from './ScrollArea';
 export * from './Toaster';
 export * from './Resizable';

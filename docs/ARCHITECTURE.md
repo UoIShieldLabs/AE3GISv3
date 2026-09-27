@@ -251,10 +251,10 @@ main.py           create_app(settings, engine) — the only entry point
 
 | Directory | Contains | Depends on |
 |---|---|---|
-| `api/` | `topologies`, `deployment`, `jobs`, `images`, `system`, `catalog`, `presets`, `deps`, `errors`, `schemas` | services, domain |
-| `services/` | `topologies`, `deployment`, `jobs` (+ `joblogs`), `images`, `sources`, `reconcile`, `events` | domain, engine, db |
-| `domain/` | `topology` (read helpers), `validation`, `plan`, `images` (fingerprints, statuses), `export/` | catalog only |
-| `engine/` | `base` (protocol), `kathara/`, `fake`, `docker_build`, `terminal` | domain |
+| `api/` | `topologies`, `deployment`, `jobs`, `images`, `captures`, `traffic`, `monitors`, `benchmarks`, `system`, `catalog`, `presets`, `deps`, `errors`, `schemas` | services, domain |
+| `services/` | `topologies`, `deployment`, `jobs` (+ `joblogs`), `images`, `sources`, `reconcile`, `events`, `capture`, `traffic`, `monitor`, `netns_driver`, `benchmark` | domain, engine, db |
+| `domain/` | `topology` (read helpers), `selectors`, `validation`, `plan`, `images` (fingerprints, statuses), `export/`, `monitor`, `telemetry`, `traffic/` (iperf3, patterns, summary), `generator`, `benchmark` | catalog only |
+| `engine/` | `base` (protocol), `kathara/`, `fake` (+ `fake_helpers`), `docker_sidecar`, `docker_build`, `terminal` | domain |
 | `db/` | `models`, `session`, `migrations/` | — |
 
 `main.create_app` takes its settings and engine as arguments and does nothing at
@@ -286,10 +286,13 @@ rather than matching message text.
 | `POST /jobs/{id}/stop`, `GET /jobs/{id}/artifacts[/{name}]` | Stop an open-ended job (keeps its output); the files a job produced |
 | `POST/GET /topologies/{id}/captures`, `GET /captures/{id}` | Packet captures (§5.7) |
 | `GET /captures/{id}/pcap?follow=`, `/captures/{id}/packets` | The pcap (live with `follow`), packet summaries |
-| `POST/GET /topologies/{id}/traffic/runs`, `GET /traffic/runs/{id}[/samples\|/export]` | Traffic runs (§5.7) |
+| `POST/GET /topologies/{id}/traffic/runs`, `GET /traffic/runs/{id}[/samples\|/export]` | Traffic runs: flows and patterns (§5.7) |
+| `POST/GET /topologies/{id}/monitors`, `GET /monitors/{id}[/samples\|/export]` | Monitors: CPU, memory, network of nodes and host (§5.7) |
+| `POST /topologies/generate` | A topology from a few numbers (the benchmarks' generator) |
+| `POST/GET /benchmarks`, `GET /benchmarks/{id}[/report.md\|/export]` | Scale sweeps (§5.8) |
 | `GET /system/health`, `/system/labs`, `/system/environment`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
-| `WS /topologies/ws/{id}/captures/{job}`, `WS /topologies/ws/{id}/traffic/{job}` | Live packets / live samples |
+| `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}` | Live packets / flow samples / monitor sweeps |
 
 `context` exists for clients that need the whole picture at once — a support
 view, or the planned agent.
@@ -327,14 +330,17 @@ sequenceDiagram
   runs `undeploy → verify`; an image build runs `source → snapshot → build →
   verify`. Each transition is written to the job row and mirrored into `events`.
 - **Subjects.** A job serialises on its `subject`: `topology:<id>`,
-  `image:<ref>`, `source:<name>`, `capture:<topology>:<node>:<interface>` or
-  `traffic:<topology>`. One job runs at a time per subject; a second
+  `image:<ref>`, `source:<name>`, `capture:<topology>:<node>:<interface>`,
+  `traffic:<topology>`, `monitor:<topology>` or `benchmark` (one sweep on the
+  whole host). One job runs at a time per subject; a second
   deploy returns 409 `job_active`, while a second build of the same image
-  (or capture of the same interface) returns the running job. Captures and
-  traffic runs set `topology_id` but have their own subjects, so they never
-  block deploy or destroy; `/runtime` lists them as `activity`.
+  (or capture of the same interface) returns the running job. Captures,
+  traffic runs and monitors set `topology_id` but have their own subjects, so
+  they never block deploy or destroy; `/runtime` lists them as `activity`. A
+  benchmark has no `topology_id`: it drives its topology's deploy and destroy
+  jobs like a user would (`runner.wait` on each).
 - **Stop vs cancel.** Cancel aborts. Kinds registered `stoppable` (capture,
-  traffic) can also be *stopped* (`POST /jobs/{id}/stop`): the handler winds
+  traffic, monitor, benchmark: finish the current step) can also be *stopped* (`POST /jobs/{id}/stop`): the handler winds
   down, keeps what it recorded, and the job ends `succeeded`. A job's `result`
   (JSON) holds what it produced; bulk output goes to
   `data/artifacts/<job id>/` (downloadable, deleted after 30 days).
@@ -344,9 +350,9 @@ sequenceDiagram
 - **Waiting and cancelling.** A job can `await runner.wait(other)` (a deploy
   waits on the builds it needs). Kinds registered `cancellable` can be
   cancelled; a deploy only until `runner.point_of_no_return` (the engine starting
-  to create containers). At shutdown builds and syncs are cancelled and
-  captures and traffic runs are stopped, so a restart or dev reload never waits
-  on them.
+  to create containers). At shutdown builds, syncs and benchmarks are cancelled
+  and captures, traffic runs and monitors are stopped, so a restart or dev
+  reload never waits on them.
 - **Failure cleans up.** Before the engine deploys, the job records a
   provisional `engine_state` (the lab name, from which the hash follows), so a
   deploy that dies part-way is still torn down; the job error and log carry the
@@ -426,19 +432,40 @@ Images with a `build` source in the catalog are built by AE3GIS
 
 ---
 
-### 5.7 Sidecars: packet capture and traffic runs
+### 5.7 Sidecars and helpers: captures, monitors, traffic
 
-Captures and traffic generation both run **sidecars**: short-lived containers
-started with `network_mode=container:<node>` (engine: `start_sidecar`). A
-sidecar shares one node's network namespace, so `tcpdump` sees the node's
-interfaces and `iperf3` sends from its IP along the lab's real routes, whatever
-image the node runs. The tools live in one image, `ae3gis.local/nettools`
-(`backend/tools/nettools/`, built by the image pipeline like any node image,
-named by the catalog's `tools` map).
+Three features watch or drive a deployed lab, each its own job kind:
+**captures** (packets), **monitors** (resource use) and **traffic runs**
+(load). They never block deploy or destroy, destroy stops them first, and each
+records its environment (below). The tools live in one image,
+`ae3gis.local/nettools` (`backend/tools/nettools/`, built by the image pipeline
+like any node image, named by the catalog's `tools` map: `capture`,
+`collector`, `driver`), and run in two kinds of container:
+
+- a **sidecar** (`engine.start_sidecar`): `network_mode=container:<node>`, so
+  `tcpdump` sees that node's interfaces. One node, one tool.
+- a **helper** (`engine.start_helper`, `HelperSpec`): no network of its own,
+  host namespaces as needed, specs written in as files. One helper serves the
+  whole lab, however many nodes it has:
+  - the **collector** (`ae3gis-collect`): host PID and cgroup namespaces, the
+    host cgroup tree read-only. Each sweep reads every container's cgroup
+    (CPU, memory, pids, OOM kills), its network counters through
+    `/proc/<pid>/net/dev`, and the host's `/proc` (CPU, memory, load, PSI,
+    Docker's own processes). No Docker API calls: 20–40 ms per container per
+    call would make watching 500 nodes cost more than the nodes.
+  - the **netns driver** (`ae3gis-netns`): host PID namespace plus
+    `CAP_SYS_ADMIN` (`setns`) and `CAP_SYS_PTRACE` (opening a node's
+    `/proc/<pid>/ns/net`, since Kathará nodes hold capabilities the driver
+    lacks). It starts processes inside nodes' network namespaces (iperf3 ends,
+    pings) and is the only writer to its stdout, so events never interleave.
+    Not a privileged container; on AppArmor/SELinux hosts set
+    `AE3GIS_DRIVER_SECURITY_OPT`.
 
 ```
 browser ──WS──► api/captures ◄── LiveHub ◄── PcapRelay ◄── attach(stdout) ◄── tcpdump -w - (sidecar in node netns)
         ◄─HTTP─ /captures/{id}/pcap?follow ◄── data/artifacts/<job>/capture.pcap (whole records only)
+browser ──WS──► api/monitors ◄── MonitorSession ◄── ae3gis-collect (helper: /proc + cgroupfs, all containers)
+browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis-netns   (helper: iperf3 in each node's netns)
 ```
 
 - **Capture** (`services/capture.py`, job kind `capture`): steps `images →
@@ -450,23 +477,70 @@ browser ──WS──► api/captures ◄── LiveHub ◄── PcapRelay ◄
   …/pcap?follow=true | wireshark -k -i -` to watch live. Packet summaries
   (`domain/packets.py`) go to the browser at most `capture_ui_max_pps`/s; the
   pcap has everything. Caps: size, time, packets.
+- **Monitor** (`services/monitor.py`, kind `monitor`, one per topology):
+  steps `images → prepare → run`. `MonitorSession` turns collector lines into
+  rates (`domain/monitor.py` over `domain/telemetry.py`), classifies containers
+  by label into groups (the lab's `node`s, AE3GIS `tool`s, `other_lab`,
+  `other`), records the selected nodes one by one (`domain/selectors.py`:
+  all, ids, or `{types, subnets, roles}`) and the rest as group totals, and
+  keeps only a short ring in memory. Artifacts: `host.csv`, `nodes.csv`,
+  `ifaces.csv`, `markers.csv` (gzipped at the end) and `monitor.json`. Other
+  jobs mark events on it (`monitor.mark`: traffic started, a benchmark step…).
 - **Traffic** (`services/traffic.py`, kind `traffic`, one run per topology):
-  steps `images → prepare → run`. Per flow, an `iperf3 -s -1` sidecar on the
-  server node (checked listening with `ss`) and an `iperf3 -c --json-stream`
-  sidecar on the client. Output is parsed (`domain/traffic/iperf3.py`, pinned
-  by real fixtures) into per-second samples; nodes *and sidecars* are sampled
-  for CPU, memory and per-interface rates (`sample_stats`,
-  `domain/telemetry.py`). Artifacts: `flows.ndjson`, `nodes.ndjson`, iperf3's
-  raw output, `run.json`. Generators plug in via `services/traffic_generators.py`.
-- **Environment.** Every capture and run records `run.json` with its
+  steps `images → prepare → run`. Flows come from a list and/or patterns
+  (`domain/traffic/patterns.py`: clients → servers, mesh; hosts by default),
+  each server port counted per node. One driver helper runs every flow's
+  `iperf3 -s -1 -B <address>` and `iperf3 -c --json-stream` (clients spread
+  over `ramp_s`, early connect failures retried); output is parsed
+  (`domain/traffic/iperf3.py`, pinned by real fixtures) into samples, summed
+  per flow as they arrive (`FlowSummary`, nothing kept in memory), and into
+  all-flow totals (delivered vs. asked) once per interval. Artifacts:
+  `flows.ndjson`, `totals.ndjson`, `raw.ndjson`, `run.json` (every flow's
+  summary; the job row keeps totals and at most 64 flows). Resource use is
+  not the run's business: start a monitor. Generators plug in via
+  `services/traffic_generators.py`.
+- **Environment.** Every capture, monitor, run and benchmark records its
   environment (`domain/environment.py`): host label, Docker/kernel/cgroup,
   Kathará version and network plugin, AE3GIS commit, each node's image id, the
   tool image, and a `fingerprint` over what changes results. Two runs with the
   same fingerprint ran on the same stack. `backend/scripts/run_baseline.py`
-  runs a fixed suite and writes a report (`docs/baselines/`).
-- **Lifecycle.** Destroy's first step stops every capture and run of the
-  topology; sidecars are removed before the lab. Startup removes sidecars a
-  previous process left (label `ae3gis.owner` = this instance's id).
+  runs a fixed iperf3 suite and writes a report (`docs/baselines/`).
+- **Lifecycle.** Destroy's first step stops every capture, monitor and run of
+  the topology; sidecars and helpers go before the lab. Startup removes those a
+  previous process left (label `ae3gis.owner` = this instance's id). Tool
+  images are rebuilt when stale before a tool job (`rebuild_stale`): the
+  scripts must match the code that reads their output.
+
+### 5.8 Benchmarks: scale sweeps
+
+`services/benchmark.py` (kind `benchmark`, subject `benchmark`: one at a time,
+the benchmark owns the host) sweeps a topology through growing `scale` steps
+and stops at the first one that fails. The topology is generated
+(`domain/generator.py`: a servers subnet behind a core router, client /24s of
+up to 230 hosts behind their own routers, access switches under a distribution
+switch; at most 64 client subnets) or an existing one repeated. One monitor
+session records the host and every container for the whole sweep; each step,
+on that timeline:
+
+```
+quiet (the last teardown drains) → pre (nothing deployed) → deploy job → network
+ready (every host pings its gateway and a far host, through the driver) → settle
+(idle) → hold (traffic run, or idle) → destroy job
+```
+
+Stop criteria (`domain/benchmark.py`): host memory or memory stalls (PSI)
+over their limits for 3 sweeps, a node OOM-killed or gone, the collector
+falling behind its interval; a failed, partial or slow deploy; unreachable
+hosts; traffic that did not get through. A step whose deploy would cross the
+memory limit (by the previous step's cost per node) is not started: deploys
+cannot be interrupted. Metrics per step come from the windows: **marginal
+memory per node** (host memory used in `settle` minus `pre`, per node: shims,
+VDE switches and kernel included) beside the containers' own cgroup memory,
+Docker's own processes per node, deploy phases, time to network ready,
+destroy time, host CPU/memory/PSI under load, delivered/asked. Results:
+`benchmark.json`, `results.csv`, `report.md`, the monitor's CSVs (with a
+`step` column). Run headless with `backend/scripts/bench.py` (specs in
+`backend/benchmarks/specs/`); `docs/benchmarks/` explains the method.
 
 ## 6. Frontend
 
@@ -509,8 +583,8 @@ One Zustand store (`store/index.ts`) built from slices:
 | `topology` | The document, `dirty`, and every id-based mutation |
 | `document` | Backend id, `version`, deploy status, live `containerStatus`, `activeJob`, `diagnostics` |
 | `view` | Selection, `expanded`, theme, tool, panel layout, zoom, open dialogs/sheets |
-| `dock` | Dock tabs: terminals, captures, traffic runs (`openTerminal` wraps it) |
-| `activity` | Captures and traffic runs in progress (from `/runtime`) |
+| `dock` | Dock tabs: terminals, captures, traffic runs, monitors (`openTerminal` wraps it) |
+| `activity` | Captures, traffic runs and monitors in progress (from `/runtime`) |
 | `catalog` | The fetched node catalog |
 | `images` | The `GET /images` report |
 
@@ -525,16 +599,20 @@ One Zustand store (`store/index.ts`) built from slices:
 
 `shell/` is the frame: top bar, sidebar (palette + explorer tree), inspector,
 dock, status bar, command palette (<kbd>⌘K</kbd>). The dock
-(`features/dock/Dock.tsx`) holds typed tabs (terminal, capture, traffic) that
-stay mounted, so live streams keep buffering while another tab is shown.
+(`features/dock/Dock.tsx`) holds typed tabs (terminal, capture, traffic,
+monitor) that stay mounted, so live streams keep buffering while another tab
+is shown.
 
 `features/` holds the vertical slices: `deployment` (actions, runtime polling,
 validation and plan hooks, deployed interfaces), `topology` (dialogs,
 add-entity flow), `terminal`, `capture` (start dialog, live packet table,
-Wireshark commands), `traffic` (flow form, live charts via
-`ui/charts/TimeSeriesChart` on uPlot, run summary), `runs` (history sheet),
-`dock`, `images`, `purdue`, `system` (labs dialog). The canvas badges captured
-links and busy nodes from `activity` through `project()`.
+Wireshark commands), `traffic` (flows or a pattern, live totals and per-flow
+charts via `ui/charts/TimeSeriesChart` on uPlot, run summary), `monitor`
+(node selection, host / group / per-node charts, loaded history then live
+sweeps), `benchmarks` (read-only sweep results on the library page), `runs`
+(history sheet), `dock`, `images`, `purdue`, `system` (labs dialog).
+`ui/MultiSelect` picks node sets. The canvas badges captured links and busy
+nodes from `activity` through `project()`.
 
 ### 6.4 Talking to the backend
 
@@ -656,8 +734,19 @@ Things that will bite if you do not know them:
   use the `none` log driver (stdout may be a binary pcap) and are attached
   *before* they start (or the pcap header is lost). Remove them before the lab.
 - **A node's CPU is only its own processes.** Tool CPU lands in the sidecar's
-  cgroup, and kernel packet forwarding on routers and firewalls is not charged
-  to their containers: judge those by throughput, drops and interface rates.
+  or helper's cgroup (the monitor reports it as `tool`), and kernel packet
+  forwarding on routers and firewalls is not charged to their containers:
+  judge those by throughput, drops and interface rates.
+- **`docker stats` memory is not what a node costs.** An idle node's cgroup
+  holds ~1 MB; its containerd shim (~14 MB), its links' VDE switches and its
+  kernel state sit outside. Benchmarks report marginal host memory per node.
+- **iperf3 servers bind to their node's address** (`-B`). A multi-homed node
+  (a router) would otherwise answer UDP from whichever interface its route
+  picks, and the client's connected socket drops the reply: the flow stalls at
+  0 b/s. Dual-stack listeners only show in `/proc/net/tcp6`.
+- **The dev backend's `--reload` does not see host edits on Docker Desktop**
+  (bind mount, no inotify): restart it. For long monitors and benchmarks use
+  `docker-compose.bench.yml` (no reload), since a reload stops them.
 - **Connection ids address links once deployed.** A load that has to invent
   ids starts dirty so they get saved.
 
@@ -735,8 +824,10 @@ Deferred features, with the seams already in place — see
 - **More traffic generators** behind `services/traffic_generators.py`: Locust
   (HTTP), Modbus/TCP polling, pcap replay; ICS scenarios built on them.
 - **Comparisons**: sweeps over image variants, resource limits and hosts; a
-  compare view over runs (their environment fingerprints say what differs).
-- **Live telemetry stream** replacing `/runtime` polling, built on `events`.
+  compare view over benchmark exports (their fingerprints say what differs);
+  a shared-LAN deploy mode (one collision domain per subnet instead of a link
+  per host) as a benchmark variable.
+- **Live runtime stream** replacing `/runtime` polling, built on `events`.
 - **Agent orchestration** — `GET /topologies/{id}/context` already returns
   everything an agent needs, and `version`/409 makes concurrent edits safe.
 - Classroom mode, firewall editor, and a container web-UI proxy.

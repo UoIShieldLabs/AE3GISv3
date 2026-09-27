@@ -1,0 +1,9 @@
+# Benchmark mode: the dev stack without auto-reload, so editing a file does
+# not restart the backend (and kill a running benchmark or monitor).
+#   docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d
+# Set AE3GIS_HOST_LABEL to name the machine in the results.
+services:
+  backend:
+    command: ["python", "-m", "uvicorn", "main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "5"]
+    environment:
+      - AE3GIS_MODE=bench

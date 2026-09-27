@@ -24,8 +24,9 @@ LABEL_REF = "io.ae3gis.ref"
 LABEL_REVISION = "org.opencontainers.image.revision"
 LABEL_CREATED = "org.opencontainers.image.created"
 
-# Entries never part of a build context's identity.
-SKIPPED_NAMES = frozenset({".git", ".DS_Store"})
+# Entries never part of a build context's identity (nor copied into it):
+# Python bytecode caches appear wherever tests import a context's scripts.
+SKIPPED_NAMES = frozenset({".git", ".DS_Store", "__pycache__"})
 
 Status = Literal["ready", "missing", "stale", "unmanaged", "unavailable", "building", "failed"]
 

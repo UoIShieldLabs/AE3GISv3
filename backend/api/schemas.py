@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Diagnostic(BaseModel):
@@ -427,6 +427,16 @@ class PacketPageOut(BaseModel):
     total: int
 
 
+class NodeSelector(BaseModel):
+    """Nodes by id and/or by type, subnet or role; ``exclude`` applies last."""
+
+    ids: list[str] | None = None
+    types: list[str] | None = None
+    subnets: list[str] | None = None
+    roles: list[Literal["router", "switch", "host"]] | None = None
+    exclude: list[str] | None = None
+
+
 # ── traffic ───────────────────────────────────────────────────────────
 
 
@@ -450,16 +460,49 @@ class Iperf3Flow(BaseModel):
     omit_s: int = Field(default=0, ge=0, le=60)
 
 
+class TrafficPattern(BaseModel):
+    """Many flows from one line (see domain/traffic/patterns): each client
+    sends to a server (``clients_to_servers``), or each node to the next
+    ``fanout`` nodes on a ring (``mesh``). Node sets are selectors like a
+    monitor's: ``"all"``, a list of ids, or ``{types, subnets, roles…}``;
+    clients and mesh nodes default to every host."""
+
+    id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,16}$")
+    kind: Literal["clients_to_servers", "mesh"]
+    clients: Literal["all"] | list[str] | NodeSelector | None = None
+    servers: Literal["all"] | list[str] | NodeSelector | None = None
+    # clients_to_servers: to one server each (round-robin) or to every server.
+    each: Literal["one", "all"] = "one"
+    nodes: Literal["all"] | list[str] | NodeSelector | None = None
+    fanout: int = Field(default=1, ge=1, le=1000)
+    protocol: Literal["tcp", "udp"] = "tcp"
+    # Target rate per flow and stream, e.g. "10M"; "0" = as fast as the path allows.
+    bitrate: str = Field(pattern=r"^\d+(\.\d+)?[KMGkmg]?$")
+    parallel: int = Field(default=1, ge=1, le=16)
+    length: int | None = Field(default=None, ge=16, le=65507)
+    direction: Literal["forward", "reverse", "bidir"] = "forward"
+    omit_s: int = Field(default=0, ge=0, le=60)
+
+
 class TrafficRunRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
-    flows: list[Iperf3Flow] = Field(min_length=1, max_length=8)
+    flows: list[Iperf3Flow] = Field(default_factory=list, max_length=64)
+    patterns: list[TrafficPattern] = Field(default_factory=list, max_length=16)
     # Seconds; null runs until stopped (capped by the server's limit).
     duration_s: int | None = Field(default=30, ge=1)
-    # Sampling interval for iperf3 reports and node telemetry.
-    interval_s: float = Field(default=1.0, ge=0.5, le=10)
-    # Nodes whose CPU/memory/interfaces are sampled: all, the flows' ends, or a list.
-    monitor_nodes: Literal["all", "flows"] | list[str] = "all"
+    # iperf3 report interval (the samples' resolution).
+    interval_s: float = Field(default=1.0, ge=0.5, le=60)
+    # Clients start spread over this many seconds (servers first, all at once).
+    ramp_s: float = Field(default=0.0, ge=0, le=600)
+
+    @field_validator("patterns")
+    @classmethod
+    def _unique_patterns(cls, v: list[TrafficPattern]) -> list[TrafficPattern]:
+        ids = [p.id for p in v]
+        if len(ids) != len(set(ids)):
+            raise ValueError("pattern ids must be unique")
+        return v
 
 
 class FlowSampleOut(BaseModel):
@@ -479,36 +522,19 @@ class FlowSampleOut(BaseModel):
     lost_percent: float | None = None
 
 
-class IfaceRatesOut(BaseModel):
-    rx_bps: float
-    tx_bps: float
-    rx_pps: float
-    tx_pps: float
-    rx_dropped: int = 0
-    tx_dropped: int = 0
-    errors: int = 0
+class TrafficTotalsOut(BaseModel):
+    """All flows at one moment: what arrived (receiver-measured) vs. what was asked."""
 
-
-class NodeSampleOut(BaseModel):
     t: float
-    target: str  # node id, or sidecar name (see the run's ``sidecars``)
-    kind: Literal["node", "sidecar"]
-    cpu_percent: float | None = None  # 100 = one core
-    mem_used: int
-    mem_limit: int | None = None
-    pids: int | None = None
-    ifaces: dict[str, IfaceRatesOut] = {}
+    delivered_bps: float
+    # Null when a running flow has no target rate (TCP as fast as it goes).
+    offered_bps: float | None = None
+    active: int  # clients running
 
 
 class TrafficSamplesOut(BaseModel):
     flows: list[FlowSampleOut]
-    nodes: list[NodeSampleOut]
-
-
-class SidecarRoleOut(BaseModel):
-    flow_id: str
-    role: Literal["client", "server"]
-    node_id: str
+    totals: list[TrafficTotalsOut]
 
 
 class TrafficRunOut(BaseModel):
@@ -517,12 +543,164 @@ class TrafficRunOut(BaseModel):
     label: str
     status: str
     live: bool
+    # Every flow (explicit and expanded from patterns); empty in listings.
     flows: list[dict[str, Any]]
+    flow_count: int
+    patterns: list[dict[str, Any]] = []
     duration_s: int | None
     interval_s: float
-    monitored: list[str]
-    sidecars: dict[str, SidecarRoleOut] = {}
-    # The run's outcome (summary per flow, stopped_by, environment fingerprint).
+    ramp_s: float = 0.0
+    # The run's outcome (totals, per-flow summaries, stopped_by, environment fingerprint).
     result: dict[str, Any] | None = None
     job: JobOut
     ws_path: str
+
+
+# ── monitors ──────────────────────────────────────────────────────────
+
+
+class MonitorRequest(BaseModel):
+    label: str = Field(default="", max_length=80)
+    notes: str = Field(default="", max_length=2000)
+    # Which nodes are recorded one by one: all, a list of ids, or a selector.
+    # The host and group totals are always recorded.
+    nodes: Literal["all"] | list[str] | NodeSelector = "all"
+    interval_s: float = Field(default=1.0, ge=0.5, le=60)
+    # Seconds; null runs until stopped (capped by the server's limit).
+    duration_s: int | None = Field(default=None, ge=1)
+
+
+class MonitorOut(BaseModel):
+    id: str  # the monitor's job id
+    topology_id: str
+    label: str
+    status: str
+    live: bool
+    interval_s: float
+    duration_s: int | None
+    selector: Any
+    monitored: list[str]
+    # The monitor's outcome (host summary, notable nodes, stopped_by…).
+    result: dict[str, Any] | None = None
+    job: JobOut
+    ws_path: str
+
+
+class MonitorSamplesOut(BaseModel):
+    """Recorded rows (see the monitor's CSV files); numbers are per sweep."""
+
+    host: list[dict[str, Any]]
+    nodes: list[dict[str, Any]]
+    ifaces: list[dict[str, Any]]
+    markers: list[dict[str, Any]]
+
+
+# ── generated topologies and benchmarks ──────────────────────────────
+
+
+class GeneratorSpec(BaseModel):
+    """The shape of a generated topology (see domain/generator)."""
+
+    servers: int = Field(default=1, ge=0, le=230)
+    # Clients per subnet (a /24 each, at most 64 of them) and per access switch.
+    hosts_per_subnet: int = Field(default=200, ge=1, le=230)
+    hosts_per_switch: int = Field(default=48, ge=1, le=230)
+    host_type: str = "workstation"
+    server_type: str = "workstation"
+    router_type: str = "router"
+    switch_type: str = "switch"
+
+
+class GenerateRequest(GeneratorSpec):
+    name: str = Field(default="", max_length=200)
+    hosts: int = Field(ge=1, le=14720)
+
+
+class BenchmarkTopology(BaseModel):
+    """What each step deploys: a generated topology of ``scale`` hosts, or an
+    existing (idle) topology repeated."""
+
+    generate: GeneratorSpec | None = None
+    topology_id: str | None = None
+
+    @model_validator(mode="after")
+    def _one(self) -> BenchmarkTopology:
+        if (self.generate is None) == (self.topology_id is None):
+            raise ValueError("give either generate or topology_id")
+        return self
+
+
+class BenchmarkMonitor(BaseModel):
+    interval_s: float = Field(default=5.0, ge=1, le=60)
+
+
+class BenchmarkTraffic(BaseModel):
+    """Each step's load during its hold window (see TrafficPattern)."""
+
+    patterns: list[TrafficPattern] = Field(min_length=1, max_length=16)
+    interval_s: float = Field(default=5.0, ge=0.5, le=60)
+    ramp_s: float = Field(default=10.0, ge=0, le=600)
+
+
+class BenchmarkStop(BaseModel):
+    """When a step fails and the sweep ends (see domain/benchmark)."""
+
+    deploy_timeout_s: float = Field(default=1800, ge=10)
+    ready_timeout_s: float = Field(default=300, ge=5)
+    max_mem_pct: float | None = Field(default=90, gt=0, le=100)
+    # Share of time every task stalled on memory (PSI "full"), per sweep.
+    max_psi_mem_full: float | None = Field(default=10, ge=0, le=100)
+    min_delivered_ratio: float | None = Field(default=0.8, ge=0, le=1)
+    max_loss_pct: float | None = Field(default=5, ge=0, le=100)
+    # A step whose traffic falls short ends the sweep (else it is noted and the sweep goes on).
+    stop_on_degraded: bool = True
+    # Skip a step whose deploy would, by the last step's memory per node, cross
+    # max_mem_pct (deploys cannot be interrupted once they start).
+    project_memory: bool = True
+
+
+class BenchmarkRequest(BaseModel):
+    label: str = Field(default="", max_length=80)
+    notes: str = Field(default="", max_length=2000)
+    topology: BenchmarkTopology = Field(
+        default_factory=lambda: BenchmarkTopology(generate=GeneratorSpec())
+    )
+    # Hosts per step, increasing (generated topologies only).
+    scale: list[int] = Field(default_factory=list, max_length=100)
+    repetitions: int = Field(default=1, ge=1, le=20)
+    cooldown_s: float = Field(default=20, ge=0, le=3600)
+    # Before each step's reference window, wait (up to quiet_timeout_s) until
+    # host CPU stays under quiet_cpu_pct: Docker keeps tearing the previous
+    # step down after its destroy job ends.
+    quiet_cpu_pct: float = Field(default=10, gt=0, le=100)
+    quiet_timeout_s: float = Field(default=300, ge=0, le=3600)
+    settle_s: float = Field(default=20, ge=0, le=3600)
+    hold_s: float = Field(default=60, ge=0, le=86400)
+    monitor: BenchmarkMonitor = Field(default_factory=BenchmarkMonitor)
+    traffic: BenchmarkTraffic | None = None
+    stop: BenchmarkStop = Field(default_factory=BenchmarkStop)
+    # Run although other labs or jobs load the host (recorded with the results).
+    allow_busy_host: bool = False
+    # Leave the last step's lab deployed for inspection.
+    keep_last: bool = False
+
+    @field_validator("scale")
+    @classmethod
+    def _increasing(cls, v: list[int]) -> list[int]:
+        if any(x < 1 for x in v) or any(b <= a for a, b in zip(v, v[1:], strict=False)):
+            raise ValueError("scale must be positive and strictly increasing")
+        return v
+
+
+class BenchmarkOut(BaseModel):
+    id: str  # the benchmark's job id
+    label: str
+    status: str
+    live: bool
+    topology_id: str | None
+    spec: dict[str, Any]
+    # rows (one per step), by_scale, ceiling, reason, stopped_by… (updated after each step)
+    result: dict[str, Any] | None = None
+    # The running step and what it is doing.
+    current: str | None = None
+    job: JobOut

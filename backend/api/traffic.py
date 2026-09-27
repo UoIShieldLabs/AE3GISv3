@@ -36,32 +36,38 @@ def _get_run(db: Session, job_id: str) -> Job:
     return job
 
 
-def run_out(job: Job) -> dict[str, Any]:
+def run_out(job: Job, *, full: bool = True) -> dict[str, Any]:
+    """A run; listings (``full=False``) leave out the flows and per-flow results."""
     params = job.params or {}
-    recorder = traffic.active_recorder(job.id)
-    sidecars = recorder.sidecars if recorder else (job.result or {}).get("sidecars") or {}
+    flows = params.get("flows") or []
+    result = job.result
+    if not full and result:
+        result = {k: v for k, v in result.items() if k != "flows"}
     return {
         "id": job.id,
         "topology_id": job.topology_id,
         "label": params.get("label") or "",
         "status": job.status,
         "live": job.is_active,
-        "flows": params.get("flows") or [],
+        "flows": flows if full else [],
+        "flow_count": len(flows),
+        "patterns": params.get("patterns") or [],
         "duration_s": params.get("duration_s"),
         "interval_s": params.get("interval_s") or 1.0,
-        "monitored": params.get("monitored") or [],
-        "sidecars": sidecars,
-        "result": job.result,
+        "ramp_s": params.get("ramp_s") or 0.0,
+        "result": result,
         "job": jobs.job_to_dict(job),
         "ws_path": f"{V1}/topologies/ws/{job.topology_id}/traffic/{job.id}",
     }
 
 
-def _backlog(store: ArtifactStore, job_id: str) -> dict[str, list[dict[str, Any]]]:
+def _backlog(
+    store: ArtifactStore, job_id: str, flows: set[str] | None = None, samples: bool = True
+) -> dict[str, list[dict[str, Any]]]:
     recorder = traffic.active_recorder(job_id)
-    if recorder is not None:
+    if recorder is not None and flows is None and samples:
         return recorder.backlog()
-    return traffic.read_backlog(store.dir(job_id))
+    return traffic.read_backlog(store.dir(job_id), flows=flows, samples=samples)
 
 
 @router.post(
@@ -88,7 +94,10 @@ def list_runs(
     _=Depends(require_any_auth),
 ):
     topologies.get_or_404(db, topology_id)
-    return [run_out(j) for j in jobs.list_jobs(db, topology_id, limit, kinds=(traffic.KIND,))]
+    return [
+        run_out(j, full=False)
+        for j in jobs.list_jobs(db, topology_id, limit, kinds=(traffic.KIND,))
+    ]
 
 
 @router.get("/traffic/runs/{job_id}", response_model=TrafficRunOut)
@@ -100,13 +109,17 @@ def get_run(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_au
 async def get_samples(
     job_id: str,
     since: float = Query(default=-1.0, description="Only samples after this run time (s)"),
+    flows: str | None = Query(default=None, description="Comma-separated flow ids"),
+    totals_only: bool = Query(default=False, description="Leave out per-flow samples"),
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     _=Depends(require_any_auth),
 ):
-    """Every flow and node sample of a run (live or finished)."""
+    """A run's flow samples and its all-flow totals (live or finished). Runs of
+    many flows: ask for ``totals_only`` or a few ``flows``."""
     _get_run(db, job_id)
-    backlog = await asyncio.to_thread(_backlog, store, job_id)
+    wanted = {f for f in flows.split(",") if f} if flows else None
+    backlog = await asyncio.to_thread(_backlog, store, job_id, wanted, not totals_only)
     return {k: [s for s in rows if s.get("t", 0) > since] for k, rows in backlog.items()}
 
 
@@ -122,8 +135,8 @@ def export_run(
     runner: JobRunner = Depends(get_runner),
     _=Depends(require_any_auth),
 ):
-    """The run as a zip: run.json (request, environment, summary), the samples,
-    iperf3's raw output and the job log."""
+    """The run as a zip: run.json (request, environment, summary), the samples
+    and totals, the driver's raw output and the job log."""
     job = _get_run(db, job_id)
     directory = store.dir(job.id)
     buf = io.BytesIO()
@@ -152,9 +165,10 @@ async def traffic_live(
     job_id: str,
     token: str | None = Query(default=None),
 ):
-    """Live samples. Messages (JSON): ``hello`` {run, backlog: {flows, nodes}},
-    ``flow`` {samples}, ``nodes`` {samples}, ``sidecars`` {items}, ``status``
-    {elapsed, flows: {id: {fwd, rev}}}, ``end`` {result}."""
+    """Live samples. Messages (JSON): ``hello`` {run, backlog: {flows, totals}},
+    ``flow`` {samples} (runs of up to 16 flows), ``status`` {elapsed, total:
+    {delivered_bps, offered_bps, active}, flows: {id: {fwd, rev}} (the busiest
+    200)}, ``end`` {result}."""
     if not valid_ws_token(websocket, token):
         await websocket.close(code=4003, reason="Forbidden")
         return
@@ -188,8 +202,9 @@ async def traffic_live(
         # Subscribe before reading the backlog so nothing falls in between
         # (clients dedupe on t + flow/target).
         sub = channel.subscribe(maxsize=512)[0] if channel is not None else None
-        backlog = await asyncio.to_thread(_backlog, store, job_id)
         hello = await asyncio.to_thread(info)
+        few = (hello or {}).get("flow_count", 0) <= traffic.LIVE_FLOW_LIMIT
+        backlog = await asyncio.to_thread(_backlog, store, job_id, None, few)
         await websocket.send_json({"type": "hello", "run": hello, "backlog": backlog})
         if sub is None:
             await websocket.send_json({"type": "end", "result": (hello or {}).get("result")})

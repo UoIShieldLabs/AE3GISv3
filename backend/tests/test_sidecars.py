@@ -1,9 +1,10 @@
-"""Sidecars on the fake engine: lifecycle, teardown order, sweeps, telemetry."""
+"""Sidecars and helpers on the fake engine: lifecycle, teardown order, sweeps."""
 
 import asyncio
+import json
 
 from domain.pcap import PcapSplitter
-from engine.base import EngineState, SidecarSpec
+from engine.base import EngineState, HelperSpec, SidecarSpec
 from engine.fake import FakeEngine
 from tests.conftest import TWO_SUBNETS
 
@@ -44,18 +45,80 @@ def test_capture_sidecar_streams_a_pcap_until_signalled(client, wait_jobs, topol
     assert b"listening on eth0" in err
 
 
-def test_iperf_client_without_a_server_is_refused(client, wait_jobs, topology, fake_engine):
+def _driver(spec: dict, purpose="driver", job="job1") -> HelperSpec:
+    return HelperSpec(
+        image="ae3gis.local/nettools",
+        command=["ae3gis-netns"],
+        purpose=purpose,
+        job_id=job,
+        owner="me",
+        pid_host=True,
+        cap_add=("SYS_ADMIN",),
+        files={"/ae3gis/spec.json": json.dumps(spec).encode()},
+    )
+
+
+def _events(out: bytes) -> list[dict]:
+    return [json.loads(line) for line in out.decode().splitlines() if line.strip()]
+
+
+def test_driver_client_without_a_listening_server_is_refused(
+    client, wait_jobs, topology, fake_engine
+):
     state = _deployed(client, wait_jobs, topology)
+    fake_engine.fail_listen = {"hB"}
 
     async def run():
-        sc = await fake_engine.start_sidecar(
-            state, _spec(["iperf3", "-c", "10.0.2.5", "--json-stream"], purpose="iperf-client")
+        pids = await fake_engine.node_pids(state)
+        spec = {
+            "mode": "run",
+            "procs": [
+                {
+                    "id": "f1.s",
+                    "pid": pids["hB"],
+                    "role": "server",
+                    "port": 5201,
+                    "argv": ["iperf3", "-s"],
+                },
+                {
+                    "id": "f1.c",
+                    "pid": pids["hA"],
+                    "role": "client",
+                    "argv": ["iperf3", "-c", "10.0.2.5", "-t", "1"],
+                },
+            ],
+        }
+        helper = await fake_engine.start_helper(_driver(spec))
+        out = bytearray()
+        return await helper.pump(out.extend, lambda _b: None), _events(bytes(out))
+
+    code, evts = client.portal.call(run)
+    ready = next(e for e in evts if e["k"] == "servers_ready")
+    assert code == 0 and ready["failed"] == ["f1.s"]
+    assert any("Connection refused" in e.get("line", "") for e in evts if e.get("p") == "f1.c")
+    assert evts[-1]["k"] == "done"
+
+
+def test_driver_probes(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+    fake_engine.unreachable = {"hB"}
+
+    async def run():
+        pids = await fake_engine.node_pids(state)
+        probes = [{"node": n, "pid": pids[n], "target": "10.0.1.1"} for n in ("hA", "hB")]
+        helper = await fake_engine.start_helper(
+            _driver({"mode": "probe", "timeout_s": 2, "probes": probes}, purpose="probe")
         )
         out = bytearray()
-        return await sc.pump(out.extend, lambda _b: None), bytes(out)
+        await helper.pump(out.extend, lambda _b: None)
+        return _events(bytes(out))
 
-    code, out = client.portal.call(run)
-    assert code == 1 and b"Connection refused" in out
+    evts = client.portal.call(run)
+    assert [(e["node"], e["ok"]) for e in evts if e["k"] == "probe"] == [
+        ("hA", True),
+        ("hB", False),
+    ]
+    assert evts[-1] == {"k": "done", "ok": 1, "failed": 1, "elapsed": 0.01}
 
 
 def test_destroy_removes_sidecars_before_the_lab(client, wait_jobs, topology, fake_engine):
@@ -118,17 +181,22 @@ def test_startup_sweeps_this_backends_sidecars(tmp_path):
         assert [s.spec.owner for s in engine.sidecars.values()] == ["someone-else"]
 
 
-def test_interfaces_stats_and_runtime_info(client, wait_jobs, topology, fake_engine):
+def test_interfaces_pids_containers_and_runtime_info(client, wait_jobs, topology, fake_engine):
     state = _deployed(client, wait_jobs, topology)
 
     async def run():
         ifaces = await fake_engine.node_interfaces(state, "rA")
-        stats = await fake_engine.sample_stats(state, ["rA", "hA", "gone"])
+        pids = await fake_engine.node_pids(state)
+        await fake_engine.start_sidecar(state, _spec(["sleep"]))
+        refs = await fake_engine.list_containers()
         info = await fake_engine.node_runtime_info(state)
-        return ifaces, stats, info
+        return ifaces, pids, refs, info
 
-    ifaces, stats, info = client.portal.call(run)
+    ifaces, pids, refs, info = client.portal.call(run)
     assert [(i.name, i.collision_domain) for i in ifaces] == [("eth0", "cd0"), ("eth1", "cd4")]
-    assert [s.target for s in stats] == ["rA", "hA"]
-    assert set(stats[0].ifaces) == {"eth0", "eth1"} and stats[0].online_cpus == 8
+    assert set(pids) == {"rA", "swA", "hA", "rB", "swB", "hB"} and len(set(pids.values())) == 6
+    nodes = [r for r in refs if r.labels.get("app") == "kathara"]
+    assert len(nodes) == 6 and all(r.labels["lab_hash"] == state.lab_hash for r in nodes)
+    [sidecar] = [r for r in refs if r.labels.get("ae3gis.sidecar") == "1"]
+    assert sidecar.labels["ae3gis.purpose"] == "capture"
     assert {i.node_id for i in info} == {"rA", "swA", "hA", "rB", "swB", "hB"}

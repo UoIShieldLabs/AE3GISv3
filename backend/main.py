@@ -15,11 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import catalog as node_catalog
 from api import (
+    benchmarks,
     captures,
     catalog,
     deployment,
     images,
     jobs,
+    monitors,
     presets,
     system,
     topologies,
@@ -31,7 +33,9 @@ from db.migrations import run_migrations
 from db.session import make_engine, make_session_factory
 from engine.base import DeploymentEngine
 from engine.fake import make_engine as make_deployment_engine
+from services import benchmark as benchmark_service
 from services import capture, reconcile
+from services import monitor as monitor_service
 from services import traffic as traffic_service
 from services.artifacts import ArtifactStore
 from services.deployment import register_handlers
@@ -42,10 +46,10 @@ from services.live import LiveHub
 from services.sources import Sources
 
 # Job kinds cancelled (rather than awaited) at shutdown.
-SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source")
+SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source", "benchmark")
 # Open-ended job kinds stopped at shutdown: they keep what they recorded, and a
 # restart (or a dev reload) does not wait on a capture that runs for hours.
-SHUTDOWN_STOP_KINDS: tuple[str, ...] = ("capture", "traffic")
+SHUTDOWN_STOP_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor")
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +72,8 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     register_handlers(runner)
     capture.register(runner)
     traffic_service.register(runner)
+    monitor_service.register(runner)
+    benchmark_service.register(runner)
     image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
     image_manager.register()
     runner.images = image_manager
@@ -133,6 +139,8 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         jobs.router,
         captures.router,
         traffic.router,
+        monitors.router,
+        benchmarks.router,
         images.router,
         system.router,
         catalog.router,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, Download, Plus, Radio, RefreshCw } from 'lucide-react';
+import { Activity, Download, Gauge, Plus, Radio, RefreshCw } from 'lucide-react';
 import * as api from '@/api/client';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, IconButton, Sheet } from '@/ui';
 import { downloadPcap, openCaptureTab } from '@/features/capture/actions';
 import { formatBytes } from '@/features/capture/packetBuffer';
 import { exportTrafficRun, openTrafficPanel, openTrafficRun } from '@/features/traffic/actions';
+import { exportMonitor, openMonitor, openMonitorPanel } from '@/features/monitor/actions';
 
 function StatusBadge({ status, live }: { status: string; live: boolean }) {
   if (live) return <Badge tone="success" dot="pulse">Running</Badge>;
@@ -17,18 +18,19 @@ function StatusBadge({ status, live }: { status: string; live: boolean }) {
 
 const when = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' }) : '–');
 
-/** Every capture and traffic run of the loaded topology, newest first. */
+/** Every monitor, capture and traffic run of the loaded topology, newest first. */
 export function RunsSheet() {
   const { open, backendId, activityKey } = useAppShallow((s) => ({ open: s.runsOpen, backendId: s.backendId, activityKey: s.activity.map((a) => a.job_id).join(',') }));
   const setOpen = useAppStore((s) => s.setRunsOpen);
   const [captures, setCaptures] = useState<api.Capture[] | null>(null);
   const [runs, setRuns] = useState<api.TrafficRun[] | null>(null);
+  const [monitors, setMonitors] = useState<api.Monitor[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     if (!backendId) return;
-    Promise.all([api.listCaptures(backendId), api.listTrafficRuns(backendId)])
-      .then(([c, r]) => { setCaptures(c); setRuns(r); setError(null); })
+    Promise.all([api.listCaptures(backendId), api.listTrafficRuns(backendId), api.listMonitors(backendId)])
+      .then(([c, r, m]) => { setCaptures(c); setRuns(r); setMonitors(m); setError(null); })
       .catch((err: unknown) => setError(api.errorMessage(err)));
   }, [backendId]);
 
@@ -43,8 +45,8 @@ export function RunsSheet() {
       onOpenChange={setOpen}
       side="right"
       size="min(760px, 100vw)"
-      title="Captures & traffic runs"
-      description="Everything recorded on this topology. Pcaps, samples and each run's environment are kept on the server."
+      title="Monitors, captures & traffic runs"
+      description="Everything recorded on this topology. Samples, pcaps and each run's environment are kept on the server."
       headerAction={<IconButton label="Refresh" size="icon-sm" onClick={refresh}><RefreshCw /></IconButton>}
     >
       {!backendId ? (
@@ -52,6 +54,39 @@ export function RunsSheet() {
       ) : (
         <div className="flex flex-col gap-6 text-xs">
           {error ? <div className="rounded-md bg-danger-soft px-3 py-2 text-danger">{error}</div> : null}
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <Gauge className="size-3.5 text-fg-muted" aria-hidden />
+              <h3 className="font-medium text-fg">Monitors</h3>
+              <Button size="xs" variant="ghost" className="ml-auto" onClick={() => show(() => openMonitorPanel())}><Plus /> New monitor</Button>
+            </div>
+            {monitors?.length ? (
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {monitors.map((m) => {
+                  const result = m.result as { duration_s?: number; sweeps?: number } | null | undefined;
+                  return (
+                    <li key={m.id} className="flex items-center gap-3 px-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium text-fg">{m.label || 'Monitor'}</span>
+                          <StatusBadge status={m.status} live={m.live} />
+                        </div>
+                        <div className="truncate text-2xs text-fg-muted">
+                          {when(m.job.started_at ?? m.job.created_at)} · {m.monitored.length} node(s) every {m.interval_s}s
+                          {result?.duration_s ? ` · ${result.duration_s.toFixed(0)}s` : ''}
+                          {m.status === 'failed' && m.job.error ? ` · ${m.job.error}` : ''}
+                        </div>
+                      </div>
+                      <Button size="xs" variant="secondary" onClick={() => show(() => openMonitor(m.id, m.label || 'Monitor'))}>Open</Button>
+                      <IconButton label="Export (.zip)" size="icon-sm" onClick={() => exportMonitor(m.id)}><Download /></IconButton>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-fg-subtle">{monitors ? 'No monitors yet.' : 'Loading…'}</p>
+            )}
+          </section>
           <section>
             <div className="mb-2 flex items-center gap-2">
               <Activity className="size-3.5 text-fg-muted" aria-hidden />
@@ -70,7 +105,7 @@ export function RunsSheet() {
                           <StatusBadge status={r.status} live={r.live} />
                         </div>
                         <div className="truncate text-2xs text-fg-muted">
-                          {when(r.job.started_at ?? r.job.created_at)} · {r.flows.length} flow(s)
+                          {when(r.job.started_at ?? r.job.created_at)} · {r.flow_count} flow(s)
                           {result?.duration_s ? ` · ${result.duration_s.toFixed(0)}s` : ''}
                           {r.status === 'failed' && r.job.error ? ` · ${r.job.error}` : ''}
                         </div>

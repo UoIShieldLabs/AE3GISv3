@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { FlowSample, NodeSample } from '@/api/client';
-import { latestRates, metricOf, nodeSeries, throughputSeries } from '../series';
+import type { FlowSample, TrafficTotals } from '@/api/client';
+import { latestRates, throughputSeries, totalsSeries } from '../series';
 
 const fs = (flow_id: string, t: number, direction: 'fwd' | 'rev', side: 'sender' | 'receiver', bps: number): FlowSample =>
   ({ flow_id, t, direction, side, bps, bytes: 0, seconds: 1, omitted: false }) as FlowSample;
 
-const ns = (target: string, t: number, cpu: number | null, mem = 10e6): NodeSample =>
-  ({ target, t, kind: 'node', cpu_percent: cpu, mem_used: mem, ifaces: { eth0: { rx_bps: 2e6, tx_bps: 1e6, rx_pps: 0, tx_pps: 0, rx_dropped: 0, tx_dropped: 0, errors: 0 } } }) as NodeSample;
 
 describe('throughputSeries', () => {
   it('prefers the receiver, aligns x and dashes the reverse direction', () => {
@@ -26,21 +24,16 @@ describe('throughputSeries', () => {
   });
 });
 
-describe('nodeSeries', () => {
-  it('shows the busiest targets in a stable order and counts the rest', () => {
-    const samples = [ns('a', 1, 5), ns('b', 1, 50), ns('c', 1, 20), ns('a', 2, 6), ns('b', 2, null)];
-    const data = nodeSeries(samples, 'cpu', (t) => t.toUpperCase(), ['a', 'b', 'c'], 2);
-    expect(data.series.map((s) => s.label)).toEqual(['B', 'C']);
-    expect(data.hidden).toBe(1);
-    expect(data.x).toEqual([1]); // only the shown targets' samples set the x axis
-    expect(data.series[0].values).toEqual([50]);
-  });
-
-  it('computes memory and interface rates', () => {
-    const s = ns('a', 1, 1, 42e6);
-    expect(metricOf(s, 'mem')).toBe(42);
-    expect(metricOf(s, 'rx')).toBe(2);
-    expect(metricOf({ ...s, ifaces: {} }, 'tx')).toBeNull();
+describe('totalsSeries', () => {
+  it('charts delivered and, when every flow has a rate, asked', () => {
+    const rows: TrafficTotals[] = [
+      { t: 1, delivered_bps: 8e6, offered_bps: 10e6, active: 2 },
+      { t: 2, delivered_bps: 9e6, offered_bps: null, active: 2 },
+    ];
+    const data = totalsSeries(rows);
+    expect(data.x).toEqual([1, 2]);
+    expect(data.series.map((s) => [s.key, s.values])).toEqual([['delivered', [8, 9]], ['offered', [10, null]]]);
+    expect(totalsSeries([{ t: 1, delivered_bps: 1e6, offered_bps: null, active: 1 }]).series.map((s) => s.key)).toEqual(['delivered']);
   });
 });
 

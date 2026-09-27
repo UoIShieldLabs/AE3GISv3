@@ -95,7 +95,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <DropdownMenuItem onSelect={() => onExportLab('containerlab')} disabled={!backendId}><PackageOpen /> ContainerLab topology (zip)</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => useAppStore.getState().setRunsOpen(true)} disabled={!backendId}><Activity /> Captures & traffic runs…</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => useAppStore.getState().setRunsOpen(true)} disabled={!backendId}><Activity /> Monitors, captures & traffic…</DropdownMenuItem>
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
