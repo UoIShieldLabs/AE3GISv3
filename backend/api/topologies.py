@@ -14,6 +14,7 @@ from api.schemas import (
     ContextOut,
     Diagnostic,
     EventOut,
+    GenerateRequest,
     PlanOut,
     RuntimeOut,
     TopologyCreate,
@@ -27,6 +28,7 @@ from auth import require_any_auth, require_instructor
 from db.models import Topology
 from domain import validation
 from domain.export import containerlab, kathara, labspec
+from domain.generator import GeneratorError, GeneratorParams, generate
 from engine.base import DeploymentEngine
 from services import deployment, events, topologies
 
@@ -55,6 +57,21 @@ def create_topology(
     body: TopologyCreate, db: Session = Depends(get_db), _=Depends(require_instructor)
 ):
     topo, diags = topologies.create(db, name=body.name, data=body.data)
+    return _record(topo, diags)
+
+
+@router.post("/generate", response_model=TopologyRecord, status_code=201)
+def generate_topology(
+    body: GenerateRequest, db: Session = Depends(get_db), _=Depends(require_instructor)
+):
+    """Create a topology from a few numbers (the benchmarks' generator): a
+    servers subnet behind a core router, client subnets behind their own
+    routers, access switches under a distribution switch per subnet."""
+    try:
+        data = generate(GeneratorParams(**body.model_dump()))
+    except GeneratorError as exc:
+        raise Invalid(str(exc), code="bad_generator") from exc
+    topo, diags = topologies.create(db, name=data["name"], data=data)
     return _record(topo, diags)
 
 
