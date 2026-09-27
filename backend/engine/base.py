@@ -146,8 +146,8 @@ class SidecarSpec:
     """Run ``command`` in ``image`` inside ``node_id``'s network namespace.
 
     The sidecar sees the node's interfaces and sends from its addresses and
-    routes, whatever image the node runs. ``purpose`` (capture, iperf-server,
-    iperf-client, probe), ``job_id`` and ``owner`` (the backend instance) are
+    routes, whatever image the node runs. ``purpose`` (capture), ``job_id``
+    and ``owner`` (the backend instance) are
     stamped as labels so sidecars can be found and removed later.
     """
 
@@ -184,6 +184,43 @@ class Sidecar(Protocol):
 
 
 @dataclass
+class HelperSpec:
+    """Run ``command`` in ``image`` as a helper container outside every node.
+
+    Helpers watch or drive a whole lab from one container: the monitor's
+    collector (``pid_host`` + ``cgroupns_host`` + the host cgroup tree bound
+    read-only) and the traffic driver (``pid_host`` + ``CAP_SYS_ADMIN`` +
+    ``CAP_SYS_PTRACE``, it enters node network namespaces with ``setns``). ``files`` (path -> bytes)
+    are written into the container before it starts (specs too large for
+    argv). Labelled like sidecars, so the same sweeps remove them.
+    """
+
+    image: str
+    command: list[str]
+    purpose: str  # collector | driver | probe
+    job_id: str
+    owner: str
+    lab_hash: str = ""
+    pid_host: bool = False
+    cgroupns_host: bool = False
+    cap_add: tuple[str, ...] = ()
+    security_opt: tuple[str, ...] = ()
+    binds: dict[str, str] = field(default_factory=dict)  # host path -> container path (ro)
+    files: dict[str, bytes] = field(default_factory=dict)
+    nofile: int | None = None
+
+
+@dataclass
+class ContainerRef:
+    """A container on the engine's host, as the monitor classifies it."""
+
+    id: str  # full id
+    name: str
+    status: str
+    labels: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class SidecarInfo:
     name: str
     node_id: str
@@ -213,8 +250,8 @@ class IfaceCounters:
 class RawStats:
     """One cgroup sample of a node or sidecar (cumulative counters)."""
 
-    target: str  # node id, or sidecar name
-    kind: Literal["node", "sidecar"]
+    target: str  # node id, sidecar name, or container id
+    kind: Literal["node", "sidecar", "tool", "other_lab", "other"]
     ts: float  # unix seconds
     cpu_total_ns: int
     system_cpu_ns: int | None
@@ -224,6 +261,7 @@ class RawStats:
     mem_limit: int | None
     pids: int | None
     ifaces: dict[str, IfaceCounters] = field(default_factory=dict)
+    oom_kills: int | None = None
 
 
 @dataclass
@@ -286,7 +324,7 @@ class DeploymentEngine(Protocol):
         """
         ...
 
-    # ── sidecars and telemetry (captures, traffic runs) ──
+    # ── sidecars (captures) ──
 
     async def node_interfaces(self, state: EngineState, node_id: str) -> list[NodeInterface]:
         """The node's interfaces as attached right now (checks the saved link map)."""
@@ -306,10 +344,18 @@ class DeploymentEngine(Protocol):
         """Force-remove matching sidecars (at least one filter); return how many."""
         ...
 
-    async def sample_stats(
-        self, state: EngineState, node_ids: list[str], sidecars: list[str] = ()
-    ) -> list[RawStats]:
-        """One sample per running node / named sidecar (missing ones are skipped)."""
+    # ── helpers (monitor collector, traffic driver) ──
+
+    async def start_helper(self, spec: HelperSpec) -> Sidecar:
+        """Start a helper container, output already attached."""
+        ...
+
+    async def node_pids(self, state: EngineState) -> dict[str, int]:
+        """Host PID of each running node's container (for ``setns``), by node id."""
+        ...
+
+    async def list_containers(self) -> list[ContainerRef]:
+        """Every container on the host, running or not (one cheap listing)."""
         ...
 
     async def node_runtime_info(self, state: EngineState) -> list[NodeRuntimeInfo]: ...

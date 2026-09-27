@@ -8,6 +8,11 @@ prefix, which is derived from the backend's hostname and therefore changes
 whenever the backend container is recreated — the cause of "device not found"
 and orphaned labs before this design.
 
+Lookups use Docker's container *summaries* (one API call for any number of
+containers); ``containers.list()`` would inspect each container, which at a
+few hundred nodes makes every status poll slow and loads the daemon being
+measured. Full inspects happen only where needed, in parallel.
+
 All Kathara/Docker calls are blocking and run in a worker thread.
 """
 
@@ -24,7 +29,9 @@ from domain.plan import LabPlan
 from engine.base import (
     BuildSpec,
     BuildSupport,
+    ContainerRef,
     EngineState,
+    HelperSpec,
     ImageInfo,
     LabRef,
     NodeInterface,
@@ -32,7 +39,6 @@ from engine.base import (
     NodeRuntimeInfo,
     NodeStatus,
     Progress,
-    RawStats,
     SidecarInfo,
     SidecarSpec,
     normalize_ref,
@@ -45,7 +51,6 @@ from engine.docker_sidecar import (
     LABEL_OWNER,
     LABEL_PURPOSE,
     DockerSidecar,
-    parse_stats,
     sidecar_filters,
     sidecar_labels,
 )
@@ -59,6 +64,14 @@ _KATHARA_LABEL = "app=kathara"
 
 # Docker reports the daemon's machine; images are built for linux/<arch>.
 _ARCH = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
+
+
+def _labels(summary: dict[str, Any]) -> dict[str, str]:
+    return summary.get("Labels") or {}
+
+
+def _name(summary: dict[str, Any]) -> str:
+    return ((summary.get("Names") or [""])[0] or "").lstrip("/")
 
 
 def _map_state(raw: str) -> str:
@@ -88,10 +101,28 @@ class KatharaEngine:
     def _hash(state: EngineState) -> str:
         return state.lab_hash or hash_for_name(state.lab_name)
 
+    def _summaries(self, labels: list[str] | None = None) -> list[dict[str, Any]]:
+        """Container summaries (Id, Names, State, Labels…) in one API call."""
+        filters = {"label": labels} if labels else None
+        return self._docker().api.containers(all=True, filters=filters)
+
+    def _lab_summaries(self, lab_hash: str) -> list[dict[str, Any]]:
+        return self._summaries([_KATHARA_LABEL, f"lab_hash={lab_hash}"])
+
     def _containers(self, lab_hash: str) -> list[Any]:
-        return self._docker().containers.list(
-            all=True, filters={"label": [_KATHARA_LABEL, f"lab_hash={lab_hash}"]}
-        )
+        """Full container objects of a lab, inspected in parallel."""
+        client = self._docker()
+        ids = [c["Id"] for c in self._lab_summaries(lab_hash)]
+        if not ids:
+            return []
+
+        def get(cid: str) -> Any:
+            with contextlib.suppress(Exception):
+                return client.containers.get(cid)
+            return None
+
+        with ThreadPoolExecutor(max_workers=min(16, len(ids))) as pool:
+            return [c for c in pool.map(get, ids) if c is not None]
 
     # ── protocol ──
     async def is_available(self) -> tuple[bool, str]:
@@ -145,13 +176,15 @@ class KatharaEngine:
         lab_hash = self._hash(state)
 
         def _status() -> list[NodeStatus]:
-            by_machine = {c.labels.get("name", ""): c for c in self._containers(lab_hash)}
+            by_machine = {_labels(c).get("name", ""): c for c in self._lab_summaries(lab_hash)}
             out: list[NodeStatus] = []
             for node_id, mname in state.nodes.items():
                 c = by_machine.get(mname)
                 out.append(
                     NodeStatus(
-                        node_id=node_id, name=mname, state=_map_state(c.status) if c else "stopped"
+                        node_id=node_id,
+                        name=mname,
+                        state=_map_state(c.get("State", "")) if c else "stopped",
                     )
                 )
             return out
@@ -163,9 +196,9 @@ class KatharaEngine:
         mname = state.nodes.get(node_id) or machine_name(node_id)
 
         def _resolve() -> str:
-            for c in self._containers(lab_hash):
-                if c.labels.get("name") == mname:
-                    return c.name
+            for c in self._lab_summaries(lab_hash):
+                if _labels(c).get("name") == mname:
+                    return _name(c)
             raise LookupError(f"Device '{mname}' is not running in this lab")
 
         return await asyncio.to_thread(_resolve)
@@ -176,10 +209,15 @@ class KatharaEngine:
 
         def _logs() -> list[NodeLog]:
             out: list[NodeLog] = []
-            for c in self._containers(lab_hash):
+            client = self._docker()
+            for summary in self._lab_summaries(lab_hash):
                 # "created" containers never ran (a deploy that stopped early);
                 # only exited ones have something to say.
-                if c.status not in ("exited", "dead"):
+                if summary.get("State") not in ("exited", "dead"):
+                    continue
+                try:
+                    c = client.containers.get(summary["Id"])
+                except Exception:  # pragma: no cover - removed meanwhile
                     continue
                 mname = c.labels.get("name", c.name)
                 try:
@@ -201,13 +239,14 @@ class KatharaEngine:
     async def list_labs(self) -> list[LabRef]:
         def _list() -> list[LabRef]:
             groups: dict[str, dict[str, Any]] = {}
-            for c in self._docker().containers.list(all=True, filters={"label": [_KATHARA_LABEL]}):
-                h = c.labels.get("lab_hash", "")
+            for c in self._summaries([_KATHARA_LABEL]):
+                labels = _labels(c)
+                h = labels.get("lab_hash", "")
                 g = groups.setdefault(
-                    h, {"user": c.labels.get("user", ""), "machines": [], "running": 0}
+                    h, {"user": labels.get("user", ""), "machines": [], "running": 0}
                 )
-                g["machines"].append(c.labels.get("name", c.name))
-                if c.status == "running":
+                g["machines"].append(labels.get("name", _name(c)))
+                if c.get("State") == "running":
                     g["running"] += 1
             return [
                 LabRef(
@@ -228,11 +267,9 @@ class KatharaEngine:
     def _purge_sync(self, lab_hash: str) -> None:
         client = self._docker()
         self._remove_sidecars_sync(sidecar_filters(lab_hash=lab_hash))
-        for c in client.containers.list(
-            all=True, filters={"label": [_KATHARA_LABEL, f"lab_hash={lab_hash}"]}
-        ):
+        for c in self._lab_summaries(lab_hash):
             with contextlib.suppress(Exception):
-                c.remove(force=True)
+                client.api.remove_container(c["Id"], force=True)
         # Kathara names its networks kathara_<user>_<cd>_<lab_hash>; labels vary by version.
         for n in client.networks.list():
             labels = n.attrs.get("Labels") or {}
@@ -303,9 +340,9 @@ class KatharaEngine:
     # ── sidecars ──
     def _node_container(self, state: EngineState, node_id: str) -> Any:
         mname = state.nodes.get(node_id) or machine_name(node_id)
-        for c in self._containers(self._hash(state)):
-            if c.labels.get("name") == mname:
-                return c
+        for c in self._lab_summaries(self._hash(state)):
+            if _labels(c).get("name") == mname:
+                return self._docker().containers.get(c["Id"])
         raise LookupError(f"Device '{mname}' is not running in this lab")
 
     async def node_interfaces(self, state: EngineState, node_id: str) -> list[NodeInterface]:
@@ -343,24 +380,25 @@ class KatharaEngine:
             flt = sidecar_filters(lab_hash=lab_hash, owner=owner)
             return [
                 SidecarInfo(
-                    name=c.name,
-                    node_id=c.labels.get(LABEL_NODE, ""),
-                    job_id=c.labels.get(LABEL_JOB, ""),
-                    purpose=c.labels.get(LABEL_PURPOSE, ""),
-                    lab_hash=c.labels.get(LABEL_LAB, ""),
-                    owner=c.labels.get(LABEL_OWNER, ""),
-                    status=c.status,
+                    name=_name(c),
+                    node_id=_labels(c).get(LABEL_NODE, ""),
+                    job_id=_labels(c).get(LABEL_JOB, ""),
+                    purpose=_labels(c).get(LABEL_PURPOSE, ""),
+                    lab_hash=_labels(c).get(LABEL_LAB, ""),
+                    owner=_labels(c).get(LABEL_OWNER, ""),
+                    status=c.get("State", ""),
                 )
-                for c in self._docker().containers.list(all=True, filters={"label": flt})
+                for c in self._summaries(flt)
             ]
 
         return await asyncio.to_thread(_list)
 
     def _remove_sidecars_sync(self, labels: list[str]) -> int:
         removed = 0
-        for c in self._docker().containers.list(all=True, filters={"label": labels}):
+        client = self._docker()
+        for c in self._summaries(labels):
             with contextlib.suppress(Exception):
-                c.remove(force=True)
+                client.api.remove_container(c["Id"], force=True)
                 removed += 1
         return removed
 
@@ -372,40 +410,45 @@ class KatharaEngine:
         flt = sidecar_filters(lab_hash=lab_hash, job_id=job_id, owner=owner)
         return await asyncio.to_thread(self._remove_sidecars_sync, flt)
 
-    # ── telemetry ──
-    async def sample_stats(
-        self, state: EngineState, node_ids: list[str], sidecars: list[str] = ()
-    ) -> list[RawStats]:
+    # ── helpers ──
+    async def start_helper(self, spec: HelperSpec) -> DockerSidecar:
+        return await asyncio.to_thread(DockerSidecar.start_helper, self._docker(), spec)
+
+    async def node_pids(self, state: EngineState) -> dict[str, int]:
         lab_hash = self._hash(state)
+        node_for = {m: nid for nid, m in state.nodes.items()}
 
-        def _sample() -> list[RawStats]:
-            client = self._docker()
-            by_machine = {
-                c.labels.get("name", ""): c
-                for c in self._containers(lab_hash)
-                if c.status == "running"
-            }
-            targets: list[tuple[str, str, Any]] = []
-            for nid in node_ids:
-                c = by_machine.get(state.nodes.get(nid) or machine_name(nid))
-                if c is not None:
-                    targets.append((nid, "node", c))
-            for name in sidecars:
-                with contextlib.suppress(Exception):
-                    targets.append((name, "sidecar", client.containers.get(name)))
+        def _pids() -> dict[str, int]:
+            api = self._docker().api
+            running = [
+                (node_for[_labels(c).get("name", "")], c["Id"])
+                for c in self._lab_summaries(lab_hash)
+                if c.get("State") == "running" and _labels(c).get("name", "") in node_for
+            ]
+            if not running:
+                return {}
 
-            def one(t: tuple[str, str, Any]) -> RawStats | None:
+            def pid(item: tuple[str, str]) -> tuple[str, int]:
                 try:
-                    return parse_stats(t[2].stats(stream=False, one_shot=True), t[0], t[1])
+                    return item[0], int(api.inspect_container(item[1])["State"]["Pid"] or 0)
                 except Exception:
-                    return None
+                    return item[0], 0
 
-            if not targets:
-                return []
-            with ThreadPoolExecutor(max_workers=min(8, len(targets))) as pool:
-                return [r for r in pool.map(one, targets) if r is not None]
+            with ThreadPoolExecutor(max_workers=min(16, len(running))) as pool:
+                return {nid: p for nid, p in pool.map(pid, running) if p > 0}
 
-        return await asyncio.to_thread(_sample)
+        return await asyncio.to_thread(_pids)
+
+    async def list_containers(self) -> list[ContainerRef]:
+        def _list() -> list[ContainerRef]:
+            return [
+                ContainerRef(
+                    id=c["Id"], name=_name(c), status=c.get("State", ""), labels=_labels(c)
+                )
+                for c in self._summaries()
+            ]
+
+        return await asyncio.to_thread(_list)
 
     async def node_runtime_info(self, state: EngineState) -> list[NodeRuntimeInfo]:
         lab_hash = self._hash(state)

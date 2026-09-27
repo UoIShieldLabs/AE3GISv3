@@ -1,4 +1,4 @@
-"""Docker helpers for sidecars and container stats (engine-agnostic).
+"""Docker helpers for sidecars and helper containers (engine-agnostic).
 
 A sidecar is a short-lived container started with
 ``network_mode=container:<node>``: it shares the node's network namespace, so
@@ -22,13 +22,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import io
 import logging
-import time
+import tarfile
 import uuid
 from collections.abc import Callable
+from pathlib import PurePosixPath
 from typing import Any
 
-from engine.base import IfaceCounters, RawStats, SidecarSpec
+from engine.base import HelperSpec, SidecarSpec
 
 log = logging.getLogger(__name__)
 
@@ -50,6 +52,40 @@ def sidecar_labels(spec: SidecarSpec, lab_hash: str) -> dict[str, str]:
         LABEL_JOB: spec.job_id,
         LABEL_PURPOSE: spec.purpose,
     }
+
+
+def helper_labels(spec: HelperSpec) -> dict[str, str]:
+    """Helpers carry the sidecar labels (no node), so the same sweeps find them."""
+    return {
+        LABEL_SIDECAR: "1",
+        LABEL_OWNER: spec.owner,
+        LABEL_LAB: spec.lab_hash,
+        LABEL_NODE: "",
+        LABEL_JOB: spec.job_id,
+        LABEL_PURPOSE: spec.purpose,
+    }
+
+
+def files_tar(files: dict[str, bytes]) -> bytes:
+    """An in-memory tar of absolute ``path -> content``, parents included, for
+    ``put_archive("/", ...)``."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        dirs: set[str] = set()
+        for path, content in files.items():
+            rel = PurePosixPath(path.lstrip("/"))
+            for parent in reversed(rel.parents[:-1]):
+                if str(parent) not in dirs:
+                    dirs.add(str(parent))
+                    info = tarfile.TarInfo(str(parent))
+                    info.type = tarfile.DIRTYPE
+                    info.mode = 0o755
+                    tar.addfile(info)
+            info = tarfile.TarInfo(str(rel))
+            info.size = len(content)
+            info.mode = 0o644
+            tar.addfile(info, io.BytesIO(content))
+    return buf.getvalue()
 
 
 def sidecar_filters(
@@ -77,25 +113,29 @@ class DockerSidecar:
         self._removed = False
 
     @classmethod
-    def start(
-        cls, client: Any, node_container: Any, spec: SidecarSpec, labels: dict[str, str]
+    def _launch(
+        cls,
+        client: Any,
+        image: str,
+        command: list[str],
+        node_id: str,
+        files: dict[str, bytes] | None = None,
+        **create: Any,
     ) -> DockerSidecar:
-        """Create → attach → start (blocking; call from a worker thread)."""
+        """Create → write files → attach → start (blocking; call from a worker thread)."""
         from docker.types import LogConfig
 
-        machine = node_container.labels.get("name") or spec.node_id
         container = client.containers.create(
-            spec.image,
-            spec.command,
-            name=f"ae3gis-{spec.purpose}-{spec.job_id[:8]}-{machine}-{uuid.uuid4().hex[:4]}",
-            network_mode=f"container:{node_container.id}",
-            cap_add=list(spec.cap_add),
+            image,
+            command,
             log_config=LogConfig(type=LogConfig.types.NONE),
             init=True,
-            labels=labels,
             detach=True,
+            **create,
         )
         try:
+            if files:
+                container.put_archive("/", files_tar(files))
             stream = client.api.attach(
                 container.id, stdout=True, stderr=True, stream=True, logs=False, demux=True
             )
@@ -104,7 +144,50 @@ class DockerSidecar:
             with contextlib.suppress(Exception):
                 container.remove(force=True)
             raise
-        return cls(client, container, stream, spec.node_id)
+        return cls(client, container, stream, node_id)
+
+    @classmethod
+    def start(
+        cls, client: Any, node_container: Any, spec: SidecarSpec, labels: dict[str, str]
+    ) -> DockerSidecar:
+        """A sidecar in ``node_container``'s network namespace."""
+        machine = node_container.labels.get("name") or spec.node_id
+        return cls._launch(
+            client,
+            spec.image,
+            spec.command,
+            spec.node_id,
+            name=f"ae3gis-{spec.purpose}-{spec.job_id[:8]}-{machine}-{uuid.uuid4().hex[:4]}",
+            network_mode=f"container:{node_container.id}",
+            cap_add=list(spec.cap_add),
+            labels=labels,
+        )
+
+    @classmethod
+    def start_helper(cls, client: Any, spec: HelperSpec) -> DockerSidecar:
+        """A helper container: no network of its own, host namespaces as asked."""
+        from docker.types import Ulimit
+
+        create: dict[str, Any] = {
+            "name": f"ae3gis-{spec.purpose}-{spec.job_id[:8]}-{uuid.uuid4().hex[:4]}",
+            "network_mode": "none",
+            "labels": helper_labels(spec),
+        }
+        if spec.cap_add:
+            create["cap_add"] = list(spec.cap_add)
+        if spec.security_opt:
+            create["security_opt"] = list(spec.security_opt)
+        if spec.pid_host:
+            create["pid_mode"] = "host"
+        if spec.cgroupns_host:
+            create["cgroupns"] = "host"
+        if spec.binds:
+            create["volumes"] = {
+                src: {"bind": dst, "mode": "ro"} for src, dst in spec.binds.items()
+            }
+        if spec.nofile:
+            create["ulimits"] = [Ulimit(name="nofile", soft=spec.nofile, hard=spec.nofile)]
+        return cls._launch(client, spec.image, spec.command, "", spec.files, **create)
 
     def _pump_sync(
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
@@ -163,30 +246,3 @@ class DockerSidecar:
                 self._stream.close()
 
         await asyncio.to_thread(_remove)
-
-
-def parse_stats(raw: dict[str, Any], target: str, kind: str) -> RawStats:
-    """Docker's ``stats(one_shot=True)`` payload → cumulative counters."""
-    cpu = raw.get("cpu_stats") or {}
-    mem = raw.get("memory_stats") or {}
-    mstats = mem.get("stats") or {}
-    inactive = mstats.get("inactive_file", mstats.get("total_inactive_file"))
-    ifaces = {
-        name: IfaceCounters(
-            **{k: int(v.get(k, 0) or 0) for k in IfaceCounters.__dataclass_fields__}
-        )
-        for name, v in (raw.get("networks") or {}).items()
-    }
-    return RawStats(
-        target=target,
-        kind=kind,  # type: ignore[arg-type]
-        ts=time.time(),
-        cpu_total_ns=int((cpu.get("cpu_usage") or {}).get("total_usage", 0) or 0),
-        system_cpu_ns=cpu.get("system_cpu_usage"),
-        online_cpus=cpu.get("online_cpus"),
-        mem_usage=int(mem.get("usage", 0) or 0),
-        mem_inactive_file=inactive,
-        mem_limit=mem.get("limit"),
-        pids=(raw.get("pids_stats") or {}).get("current"),
-        ifaces=ifaces,
-    )

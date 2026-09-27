@@ -60,6 +60,21 @@ class Settings(BaseSettings):
     # Packet summaries streamed to the browser per capture; the rest are counted.
     capture_ui_max_pps: int = 500
     traffic_max_seconds: int = 4 * 3600
+    # Flows one traffic run may expand to (patterns make many from one line).
+    traffic_max_flows: int = 2000
+    # Monitors (resource sampling) stop themselves after this long.
+    monitor_max_seconds: int = 24 * 3600
+    # The Docker host's cgroup v2 tree, bound read-only into the monitor's
+    # collector (a path on the Docker host / Docker Desktop VM, not here).
+    collector_cgroup_root: str = "/sys/fs/cgroup"
+    # The traffic driver enters node network namespaces with setns: setns
+    # needs CAP_SYS_ADMIN, and opening /proc/<pid>/ns/net of a node (Kathara
+    # gives nodes NET_ADMIN, SYS_ADMIN… the driver lacks) needs
+    # CAP_SYS_PTRACE. Still not a privileged container. On AppArmor/SELinux
+    # hosts that confine it, add e.g. ["apparmor=unconfined"] or
+    # ["label=disable"] (JSON in the environment).
+    driver_cap_add: list[str] = ["SYS_ADMIN", "SYS_PTRACE"]
+    driver_security_opt: list[str] = []
 
     # Recorded with every capture and traffic run so results from different
     # machines and code versions can be told apart. ``host_label`` names the

@@ -96,7 +96,7 @@ def test_tool_image_builds_from_the_repo(client, wait_jobs, fake_engine):
     import catalog
 
     ref = catalog.tool_image("capture")
-    assert ref == catalog.tool_image("iperf3") == "ae3gis.local/nettools"
+    assert ref == catalog.tool_image("driver") == "ae3gis.local/nettools"
     [job] = client.post("/api/v1/images/builds", json={"refs": [ref]}).json()
     wait_jobs()
     assert client.get(f"/api/v1/jobs/{job['id']}").json()["status"] == "succeeded"

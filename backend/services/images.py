@@ -398,9 +398,14 @@ class ImageManager:
         *,
         step: str = "images",
         stale_event: str = "deploy.images_stale",
+        rebuild_stale: bool = False,
     ) -> None:
         """Inside a job's ``step``: build (or join the running build of) what
-        AE3GIS builds, pull the rest, and warn about out-of-date images."""
+        AE3GIS builds, pull the rest, and warn about out-of-date images.
+
+        ``rebuild_stale`` rebuilds out-of-date images instead of warning: the
+        tools image must match the code that drives it (its scripts and their
+        output format), while a node image a user left stale is their call."""
         rows = await self.statuses(refs)
         unavailable = [r for r in rows if r["status"] == "unavailable"]
         if unavailable:
@@ -408,13 +413,10 @@ class ImageManager:
                 "Can't build "
                 + "; ".join(f"{r['display_name']} ({r['ref']}): {r['reason']}" for r in unavailable)
             )
-        to_build = [
-            r["ref"]
-            for r in rows
-            if r["kind"] == "build" and r["status"] in ("missing", "failed", "building")
-        ]
+        rebuild = ("missing", "failed", "building") + (("stale",) if rebuild_stale else ())
+        to_build = [r["ref"] for r in rows if r["kind"] == "build" and r["status"] in rebuild]
         to_pull = [r["ref"] for r in rows if r["kind"] == "registry" and r["status"] == "missing"]
-        stale = [r for r in rows if r["status"] == "stale"]
+        stale = [r for r in rows if r["status"] == "stale" and r["ref"] not in to_build]
         names = {r["ref"]: r["display_name"] for r in rows}
 
         builds: list[Job] = []
