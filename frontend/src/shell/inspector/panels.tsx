@@ -1,4 +1,4 @@
-import { Activity, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2 } from 'lucide-react';
+import { Activity, Gauge, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2 } from 'lucide-react';
 import type { Container, Site, Subnet } from '@/types/topology';
 import { useAppStore, undo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
@@ -17,6 +17,7 @@ import { IssuesSection } from './IssuesSection';
 import { DeploymentSection } from './DeploymentSection';
 import { openCaptureTab, stopCapture } from '@/features/capture/actions';
 import { openTrafficPanel } from '@/features/traffic/actions';
+import { openMonitorPanel } from '@/features/monitor/actions';
 
 export interface PanelContext {
   scope: Scope;
@@ -233,6 +234,7 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
         <Actions>
           <Button size="sm" variant="ghost" onClick={() => useAppStore.getState().openCaptureDialog({ kind: 'interface', nodeId: container.id })}><Radio /> Capture…</Button>
           <Button size="sm" variant="ghost" onClick={() => openTrafficPanel({ client: container.id })}><Activity /> Traffic…</Button>
+          <Button size="sm" variant="ghost" onClick={() => openMonitorPanel({ nodes: [container.id] })}><Gauge /> Monitor…</Button>
         </Actions>
       ) : null}
     </>

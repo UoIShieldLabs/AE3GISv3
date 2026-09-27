@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Activity as ActivityIcon, ChevronDown, ChevronUp, Radio, SquareTerminal, X } from 'lucide-react';
+import { Activity as ActivityIcon, ChevronDown, ChevronUp, Gauge, Radio, SquareTerminal, X } from 'lucide-react';
 import { useAppStore, type DockTab } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { cn } from '@/lib/cn';
@@ -9,8 +9,9 @@ import { IconButton, Spinner } from '@/ui';
 const TerminalSession = lazy(() => import('@/features/terminal/TerminalSession').then((m) => ({ default: m.TerminalSession })));
 const CaptureView = lazy(() => import('@/features/capture/CaptureView').then((m) => ({ default: m.CaptureView })));
 const TrafficPanel = lazy(() => import('@/features/traffic/TrafficPanel').then((m) => ({ default: m.TrafficPanel })));
+const MonitorPanel = lazy(() => import('@/features/monitor/MonitorPanel').then((m) => ({ default: m.MonitorPanel })));
 
-const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon } as const;
+const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon, monitor: Gauge } as const;
 
 function title(tab: DockTab): string {
   return tab.kind === 'terminal' ? tab.name : tab.title;
@@ -26,10 +27,12 @@ function Body({ tab, active }: { tab: DockTab; active: boolean }) {
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><CaptureView jobId={tab.jobId} /></div>;
     case 'traffic':
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><TrafficPanel tabId={tab.id} jobId={tab.jobId} /></div>;
+    case 'monitor':
+      return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><MonitorPanel tabId={tab.id} jobId={tab.jobId} /></div>;
   }
 }
 
-/** Bottom dock: a tab strip over terminals, live captures and traffic runs. */
+/** Bottom dock: a tab strip over terminals, live captures, traffic runs and monitors. */
 export function Dock() {
   const { tabs, activeId, minimized, live } = useAppShallow((s) => ({
     tabs: s.dockTabs,

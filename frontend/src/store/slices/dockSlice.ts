@@ -1,6 +1,6 @@
 import type { DockSlice, DockTab, SliceCreator } from '../types';
 
-/** The bottom dock's tabs: terminals, live captures, traffic runs. */
+/** The bottom dock's tabs: terminals, live captures, traffic runs, monitors. */
 export const createDockSlice: SliceCreator<DockSlice> = (set) => ({
   dockTabs: [],
   activeDockTabId: null,
@@ -54,3 +54,4 @@ export const createDockSlice: SliceCreator<DockSlice> = (set) => ({
 export const terminalTabId = (containerId: string) => `term:${containerId}`;
 export const captureTabId = (jobId: string) => `cap:${jobId}`;
 export const trafficTabId = (jobId?: string | null) => (jobId ? `traffic:${jobId}` : 'traffic:new');
+export const monitorTabId = (jobId?: string | null) => (jobId ? `monitor:${jobId}` : 'monitor:new');

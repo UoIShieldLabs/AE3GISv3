@@ -16,6 +16,7 @@ import { useResolvedTheme } from '@/app/theme';
 import { Button, EmptyState, toast } from '@/ui';
 import { openCaptureTab, stopCapture } from '@/features/capture/actions';
 import { openTrafficPanel } from '@/features/traffic/actions';
+import { openMonitorPanel } from '@/features/monitor/actions';
 import { activityIndex, project, expandableIds, toStoredPosition, type CanvasEdge, type CanvasNode, type GroupNodeData } from './projection';
 import { nodeTypes } from './nodes';
 import { edgeTypes, ConnectionLine } from './edges';
@@ -323,6 +324,7 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
         onOpenCapture={(jobId) => openCaptureTab(jobId)}
         onStopCapture={(jobId) => void stopCapture(jobId)}
         onTraffic={(nodeId) => openTrafficPanel({ client: nodeId })}
+        onMonitor={(nodeId) => openMonitorPanel({ nodes: [nodeId] })}
         onAdd={(item, at) => handleAdd(item, at)}
         onDrill={drillInto}
         onToggleExpand={actions.toggleExpand}

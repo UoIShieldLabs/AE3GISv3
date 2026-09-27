@@ -1,7 +1,8 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Activity, Boxes, Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square, Sun } from 'lucide-react';
+import { Activity, Gauge, Boxes, Building2, Download, Layers3, Library, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square, Sun } from 'lucide-react';
 import { openTrafficPanel } from '@/features/traffic/actions';
+import { openMonitorPanel } from '@/features/monitor/actions';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
@@ -64,7 +65,8 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 <CommandItem onSelect={run(() => st().setPurdueOpen(true))}><Layers3 /> Purdue model view</CommandItem>
                 <CommandItem onSelect={run(() => st().openImages())} keywords={['images', 'build', 'dockerfile', 'containers']}><Boxes /> Images</CommandItem>
                 <CommandItem onSelect={run(() => openTrafficPanel())} disabled={deployStatus !== 'deployed'} keywords={['iperf', 'traffic', 'load', 'throughput', 'performance']}><Activity /> New traffic run…</CommandItem>
-                <CommandItem onSelect={run(() => st().setRunsOpen(true))} disabled={!backendId} keywords={['capture', 'pcap', 'wireshark', 'traffic', 'runs']}><Radio /> Captures & traffic runs</CommandItem>
+                <CommandItem onSelect={run(() => openMonitorPanel())} disabled={deployStatus !== 'deployed'} keywords={['monitor', 'cpu', 'memory', 'resources', 'benchmark', 'stats']}><Gauge /> Start monitor…</CommandItem>
+                <CommandItem onSelect={run(() => st().setRunsOpen(true))} disabled={!backendId} keywords={['capture', 'pcap', 'wireshark', 'traffic', 'runs', 'monitor']}><Radio /> Monitors, captures & traffic runs</CommandItem>
               </CommandGroup>
 
               <CommandSeparator />

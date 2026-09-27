@@ -1,4 +1,4 @@
-import { Activity, ArrowDownRight, Cable, Copy, ListPlus, Maximize2, Minimize2, MousePointerSquareDashed, Plus, Radio, Sparkles, Square, Terminal, Trash2, Maximize } from 'lucide-react';
+import { Activity, ArrowDownRight, Cable, Copy, Gauge, ListPlus, Maximize2, Minimize2, MousePointerSquareDashed, Plus, Radio, Sparkles, Square, Terminal, Trash2, Maximize } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 import type { Position } from '@/types/topology';
 import type { Scope } from '@/lib/topology';
@@ -38,6 +38,7 @@ export interface CanvasContextMenuProps {
   onOpenCapture: (jobId: string) => void;
   onStopCapture: (jobId: string) => void;
   onTraffic: (nodeId: string) => void;
+  onMonitor: (nodeId: string) => void;
   onDuplicate: (ids: string[]) => void;
   onDelete: (nodeIds: string[], edgeIds: string[]) => void;
   onSelectAll: () => void;
@@ -48,7 +49,7 @@ export interface CanvasContextMenuProps {
 
 export function CanvasContextMenu({
   scope, target, readOnly, isExpanded, canOpenTerminal, canCapture, captureOf, children,
-  onAdd, onDrill, onToggleExpand, onTerminal, onCaptureLink, onCaptureNode, onOpenCapture, onStopCapture, onTraffic,
+  onAdd, onDrill, onToggleExpand, onTerminal, onCaptureLink, onCaptureNode, onOpenCapture, onStopCapture, onTraffic, onMonitor,
   onDuplicate, onDelete, onSelectAll, onAutoLayout, onBulkDevices, onBulkConnections,
 }: CanvasContextMenuProps) {
   const { fitView } = useReactFlow();
@@ -120,6 +121,7 @@ export function CanvasContextMenu({
             ) : null}
             <ContextMenuItem onSelect={() => onCaptureNode(n.id)} disabled={!canCapture}><Radio /> Capture packets…</ContextMenuItem>
             <ContextMenuItem onSelect={() => onTraffic(n.id)} disabled={!canCapture}><Activity /> Generate traffic from here…</ContextMenuItem>
+            <ContextMenuItem onSelect={() => onMonitor(n.id)} disabled={!canCapture}><Gauge /> Monitor this node…</ContextMenuItem>
           </>
         ) : null}
         {!readOnly ? (

@@ -151,11 +151,12 @@ export interface ViewSlice {
   clearSelection: () => void;
 }
 
-/** A tab in the bottom dock. Ids are namespaced: term:<container>, cap:<job>, traffic:<job>|traffic:new. */
+/** A tab in the bottom dock. Ids are namespaced: term:<container>, cap:<job>, traffic:<job>|traffic:new, monitor:<job>|monitor:new. */
 export type DockTab =
   | { kind: 'terminal'; id: string; containerId: string; name: string; ip?: string }
   | { kind: 'capture'; id: string; jobId: string; title: string }
-  | { kind: 'traffic'; id: string; jobId: string | null; title: string; seed?: { client?: string; nonce: number } };
+  | { kind: 'traffic'; id: string; jobId: string | null; title: string; seed?: { client?: string; nonce: number } }
+  | { kind: 'monitor'; id: string; jobId: string | null; title: string; seed?: { nodes?: string[]; nonce: number } };
 
 export interface DockSlice {
   dockTabs: DockTab[];

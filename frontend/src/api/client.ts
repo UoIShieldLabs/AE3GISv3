@@ -39,8 +39,15 @@ export type TrafficRunRequest = S['TrafficRunRequest'];
 export type Iperf3Flow = S['Iperf3Flow'];
 export type TrafficRun = S['TrafficRunOut'];
 export type FlowSample = S['FlowSampleOut'];
-export type NodeSample = S['NodeSampleOut'];
+export type TrafficTotals = S['TrafficTotalsOut'];
+export type TrafficPattern = S['TrafficPattern'];
 export type TrafficSamples = S['TrafficSamplesOut'];
+export type MonitorRequest = S['MonitorRequest'];
+export type Monitor = S['MonitorOut'];
+export type NodeSelector = S['NodeSelector'];
+export type MonitorSamples = S['MonitorSamplesOut'];
+export type Benchmark = S['BenchmarkOut'];
+export type BenchmarkRequest = S['BenchmarkRequest'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -299,10 +306,51 @@ export function trafficExportUrl(jobId: string): string {
   return `${V1}/traffic/runs/${encodeURIComponent(jobId)}/export`;
 }
 
+// ── Monitors ───────────────────────────────────────────────────────
+export function startMonitor(topologyId: string, body: MonitorRequest): Promise<Monitor> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/monitors`, json(body));
+}
+export function listMonitors(topologyId: string, limit = 50): Promise<Monitor[]> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/monitors?limit=${limit}`);
+}
+export function getMonitor(jobId: string): Promise<Monitor> {
+  return request(`${V1}/monitors/${encodeURIComponent(jobId)}`);
+}
+/** Recorded sweeps; `every` keeps every n-th one (long monitors). */
+export function monitorSamples(jobId: string, opts: { since?: number; nodes?: string[]; every?: number; hostOnly?: boolean } = {}): Promise<MonitorSamples> {
+  const q = new URLSearchParams();
+  if (opts.hostOnly) q.set('host_only', 'true');
+  if (opts.since !== undefined) q.set('since', String(opts.since));
+  if (opts.nodes?.length) q.set('nodes', opts.nodes.join(','));
+  if (opts.every && opts.every > 1) q.set('every', String(opts.every));
+  const qs = q.toString();
+  return request(`${V1}/monitors/${encodeURIComponent(jobId)}/samples${qs ? `?${qs}` : ''}`);
+}
+export function monitorExportUrl(jobId: string): string {
+  return `${V1}/monitors/${encodeURIComponent(jobId)}/export`;
+}
+
+// ── Benchmarks ─────────────────────────────────────────────────────
+export function listBenchmarks(limit = 50): Promise<Benchmark[]> {
+  return request(`${V1}/benchmarks?limit=${limit}`);
+}
+export function getBenchmark(jobId: string): Promise<Benchmark> {
+  return request(`${V1}/benchmarks/${encodeURIComponent(jobId)}`);
+}
+export function benchmarkExportUrl(jobId: string): string {
+  return `${V1}/benchmarks/${encodeURIComponent(jobId)}/export`;
+}
+export function benchmarkReportUrl(jobId: string): string {
+  return `${V1}/benchmarks/${encodeURIComponent(jobId)}/report.md`;
+}
+
 // ── Live channels (WebSocket paths; open with `wsUrl`) ─────────────
 export function captureWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/captures/${encodeURIComponent(jobId)}`;
 }
 export function trafficWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/traffic/${encodeURIComponent(jobId)}`;
+}
+export function monitorWsPath(topologyId: string, jobId: string): string {
+  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/monitors/${encodeURIComponent(jobId)}`;
 }

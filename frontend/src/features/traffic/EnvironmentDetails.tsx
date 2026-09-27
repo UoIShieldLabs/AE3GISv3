@@ -14,20 +14,20 @@ interface RunEnvironment {
   tool?: { versions?: Record<string, string> };
 }
 
-function useRunEnvironment(jobId: string): RunEnvironment | null {
+function useRunEnvironment(jobId: string, file: string): RunEnvironment | null {
   const [env, setEnv] = useState<RunEnvironment | null>(null);
   useEffect(() => {
     let live = true;
-    api.getArtifactJson<{ environment?: RunEnvironment }>(jobId, 'run.json')
+    api.getArtifactJson<{ environment?: RunEnvironment }>(jobId, file)
       .then((d) => { if (live) setEnv(d.environment ?? {}); })
       .catch(() => { if (live) setEnv({}); });
     return () => { live = false; };
-  }, [jobId]);
+  }, [jobId, file]);
   return env;
 }
 
-function Body({ jobId, fingerprint }: { jobId: string; fingerprint?: string }) {
-  const e = useRunEnvironment(jobId);
+function Body({ jobId, fingerprint, file }: { jobId: string; fingerprint?: string; file: string }) {
+  const e = useRunEnvironment(jobId, file);
   if (!e) return <div className="mt-1">Loading…</div>;
   const docker = e.engine?.docker ?? {};
   const kathara = e.engine?.kathara ?? {};
@@ -51,13 +51,14 @@ function Body({ jobId, fingerprint }: { jobId: string; fingerprint?: string }) {
   );
 }
 
-/** Where a run happened (host, versions, images): what makes results comparable. */
-export function EnvironmentDetails({ jobId, fingerprint }: { jobId: string; fingerprint?: string }) {
+/** Where a run happened (host, versions, images): what makes results comparable.
+ *  ``file`` is the job's artifact holding ``environment`` (run.json, monitor.json). */
+export function EnvironmentDetails({ jobId, fingerprint, file = 'run.json' }: { jobId: string; fingerprint?: string; file?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <details className="mt-5 text-2xs text-fg-muted" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary className="cursor-pointer select-none font-medium text-fg">Environment</summary>
-      {open ? <Body jobId={jobId} fingerprint={fingerprint} /> : null}
+      {open ? <Body jobId={jobId} fingerprint={fingerprint} file={file} /> : null}
     </details>
   );
 }
