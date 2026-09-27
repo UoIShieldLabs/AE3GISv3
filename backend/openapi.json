@@ -98,6 +98,335 @@
         "title": "ArtifactOut",
         "type": "object"
       },
+      "BenchmarkMonitor": {
+        "properties": {
+          "interval_s": {
+            "default": 5.0,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Interval S",
+            "type": "number"
+          }
+        },
+        "title": "BenchmarkMonitor",
+        "type": "object"
+      },
+      "BenchmarkOut": {
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "title": "Spec",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topology_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topology Id"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "live",
+          "topology_id",
+          "spec",
+          "job"
+        ],
+        "title": "BenchmarkOut",
+        "type": "object"
+      },
+      "BenchmarkRequest": {
+        "properties": {
+          "allow_busy_host": {
+            "default": false,
+            "title": "Allow Busy Host",
+            "type": "boolean"
+          },
+          "cooldown_s": {
+            "default": 20,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Cooldown S",
+            "type": "number"
+          },
+          "hold_s": {
+            "default": 60,
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Hold S",
+            "type": "number"
+          },
+          "keep_last": {
+            "default": false,
+            "title": "Keep Last",
+            "type": "boolean"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "monitor": {
+            "$ref": "#/components/schemas/BenchmarkMonitor"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "quiet_cpu_pct": {
+            "default": 10,
+            "exclusiveMinimum": 0.0,
+            "maximum": 100.0,
+            "title": "Quiet Cpu Pct",
+            "type": "number"
+          },
+          "quiet_timeout_s": {
+            "default": 300,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Quiet Timeout S",
+            "type": "number"
+          },
+          "repetitions": {
+            "default": 1,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Repetitions",
+            "type": "integer"
+          },
+          "scale": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Scale",
+            "type": "array"
+          },
+          "settle_s": {
+            "default": 20,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Settle S",
+            "type": "number"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/BenchmarkStop"
+          },
+          "topology": {
+            "$ref": "#/components/schemas/BenchmarkTopology"
+          },
+          "traffic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkTraffic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "BenchmarkRequest",
+        "type": "object"
+      },
+      "BenchmarkStop": {
+        "description": "When a step fails and the sweep ends (see domain/benchmark).",
+        "properties": {
+          "deploy_timeout_s": {
+            "default": 1800,
+            "minimum": 10.0,
+            "title": "Deploy Timeout S",
+            "type": "number"
+          },
+          "max_loss_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 5,
+            "title": "Max Loss Pct"
+          },
+          "max_mem_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 90,
+            "title": "Max Mem Pct"
+          },
+          "max_psi_mem_full": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 10,
+            "title": "Max Psi Mem Full"
+          },
+          "min_delivered_ratio": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 0.8,
+            "title": "Min Delivered Ratio"
+          },
+          "project_memory": {
+            "default": true,
+            "title": "Project Memory",
+            "type": "boolean"
+          },
+          "ready_timeout_s": {
+            "default": 300,
+            "minimum": 5.0,
+            "title": "Ready Timeout S",
+            "type": "number"
+          },
+          "stop_on_degraded": {
+            "default": true,
+            "title": "Stop On Degraded",
+            "type": "boolean"
+          }
+        },
+        "title": "BenchmarkStop",
+        "type": "object"
+      },
+      "BenchmarkTopology": {
+        "description": "What each step deploys: a generated topology of ``scale`` hosts, or an\nexisting (idle) topology repeated.",
+        "properties": {
+          "generate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeneratorSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topology_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topology Id"
+          }
+        },
+        "title": "BenchmarkTopology",
+        "type": "object"
+      },
+      "BenchmarkTraffic": {
+        "description": "Each step's load during its hold window (see TrafficPattern).",
+        "properties": {
+          "interval_s": {
+            "default": 5.0,
+            "maximum": 60.0,
+            "minimum": 0.5,
+            "title": "Interval S",
+            "type": "number"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficPattern"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Patterns",
+            "type": "array"
+          },
+          "ramp_s": {
+            "default": 10.0,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Ramp S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "patterns"
+        ],
+        "title": "BenchmarkTraffic",
+        "type": "object"
+      },
       "Body_import_json_api_v1_topologies_import_json_post": {
         "properties": {
           "file": {
@@ -870,6 +1199,116 @@
         "title": "FlowSampleOut",
         "type": "object"
       },
+      "GenerateRequest": {
+        "properties": {
+          "host_type": {
+            "default": "workstation",
+            "title": "Host Type",
+            "type": "string"
+          },
+          "hosts": {
+            "maximum": 14720.0,
+            "minimum": 1.0,
+            "title": "Hosts",
+            "type": "integer"
+          },
+          "hosts_per_subnet": {
+            "default": 200,
+            "maximum": 230.0,
+            "minimum": 1.0,
+            "title": "Hosts Per Subnet",
+            "type": "integer"
+          },
+          "hosts_per_switch": {
+            "default": 48,
+            "maximum": 230.0,
+            "minimum": 1.0,
+            "title": "Hosts Per Switch",
+            "type": "integer"
+          },
+          "name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "router_type": {
+            "default": "router",
+            "title": "Router Type",
+            "type": "string"
+          },
+          "server_type": {
+            "default": "workstation",
+            "title": "Server Type",
+            "type": "string"
+          },
+          "servers": {
+            "default": 1,
+            "maximum": 230.0,
+            "minimum": 0.0,
+            "title": "Servers",
+            "type": "integer"
+          },
+          "switch_type": {
+            "default": "switch",
+            "title": "Switch Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hosts"
+        ],
+        "title": "GenerateRequest",
+        "type": "object"
+      },
+      "GeneratorSpec": {
+        "description": "The shape of a generated topology (see domain/generator).",
+        "properties": {
+          "host_type": {
+            "default": "workstation",
+            "title": "Host Type",
+            "type": "string"
+          },
+          "hosts_per_subnet": {
+            "default": 200,
+            "maximum": 230.0,
+            "minimum": 1.0,
+            "title": "Hosts Per Subnet",
+            "type": "integer"
+          },
+          "hosts_per_switch": {
+            "default": 48,
+            "maximum": 230.0,
+            "minimum": 1.0,
+            "title": "Hosts Per Switch",
+            "type": "integer"
+          },
+          "router_type": {
+            "default": "router",
+            "title": "Router Type",
+            "type": "string"
+          },
+          "server_type": {
+            "default": "workstation",
+            "title": "Server Type",
+            "type": "string"
+          },
+          "servers": {
+            "default": 1,
+            "maximum": 230.0,
+            "minimum": 0.0,
+            "title": "Servers",
+            "type": "integer"
+          },
+          "switch_type": {
+            "default": "switch",
+            "title": "Switch Type",
+            "type": "string"
+          }
+        },
+        "title": "GeneratorSpec",
+        "type": "object"
+      },
       "GitSource": {
         "description": "A git repository the backend clones (and syncs on demand).",
         "properties": {
@@ -972,49 +1411,6 @@
           "detail"
         ],
         "title": "HostBuildOut",
-        "type": "object"
-      },
-      "IfaceRatesOut": {
-        "properties": {
-          "errors": {
-            "default": 0,
-            "title": "Errors",
-            "type": "integer"
-          },
-          "rx_bps": {
-            "title": "Rx Bps",
-            "type": "number"
-          },
-          "rx_dropped": {
-            "default": 0,
-            "title": "Rx Dropped",
-            "type": "integer"
-          },
-          "rx_pps": {
-            "title": "Rx Pps",
-            "type": "number"
-          },
-          "tx_bps": {
-            "title": "Tx Bps",
-            "type": "number"
-          },
-          "tx_dropped": {
-            "default": 0,
-            "title": "Tx Dropped",
-            "type": "integer"
-          },
-          "tx_pps": {
-            "title": "Tx Pps",
-            "type": "number"
-          }
-        },
-        "required": [
-          "rx_bps",
-          "tx_bps",
-          "rx_pps",
-          "tx_pps"
-        ],
-        "title": "IfaceRatesOut",
         "type": "object"
       },
       "ImageSpec": {
@@ -1898,77 +2294,270 @@
         "title": "LinkTarget",
         "type": "object"
       },
-      "NodeSampleOut": {
+      "MonitorOut": {
         "properties": {
-          "cpu_percent": {
+          "duration_s": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Cpu Percent"
+            "title": "Duration S"
           },
-          "ifaces": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/IfaceRatesOut"
-            },
-            "default": {},
-            "title": "Ifaces",
-            "type": "object"
-          },
-          "kind": {
-            "enum": [
-              "node",
-              "sidecar"
-            ],
-            "title": "Kind",
+          "id": {
+            "title": "Id",
             "type": "string"
           },
-          "mem_limit": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mem Limit"
-          },
-          "mem_used": {
-            "title": "Mem Used",
-            "type": "integer"
-          },
-          "pids": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pids"
-          },
-          "t": {
-            "title": "T",
+          "interval_s": {
+            "title": "Interval S",
             "type": "number"
           },
-          "target": {
-            "title": "Target",
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "monitored": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Monitored",
+            "type": "array"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "selector": {
+            "title": "Selector"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topology_id": {
+            "title": "Topology Id",
+            "type": "string"
+          },
+          "ws_path": {
+            "title": "Ws Path",
             "type": "string"
           }
         },
         "required": [
-          "t",
-          "target",
-          "kind",
-          "mem_used"
+          "id",
+          "topology_id",
+          "label",
+          "status",
+          "live",
+          "interval_s",
+          "duration_s",
+          "selector",
+          "monitored",
+          "job",
+          "ws_path"
         ],
-        "title": "NodeSampleOut",
+        "title": "MonitorOut",
+        "type": "object"
+      },
+      "MonitorRequest": {
+        "properties": {
+          "duration_s": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "interval_s": {
+            "default": 1.0,
+            "maximum": 60.0,
+            "minimum": 0.5,
+            "title": "Interval S",
+            "type": "number"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              }
+            ],
+            "default": "all",
+            "title": "Nodes"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "MonitorRequest",
+        "type": "object"
+      },
+      "MonitorSamplesOut": {
+        "description": "Recorded rows (see the monitor's CSV files); numbers are per sweep.",
+        "properties": {
+          "host": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Host",
+            "type": "array"
+          },
+          "ifaces": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ifaces",
+            "type": "array"
+          },
+          "markers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Markers",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "host",
+          "nodes",
+          "ifaces",
+          "markers"
+        ],
+        "title": "MonitorSamplesOut",
+        "type": "object"
+      },
+      "NodeSelector": {
+        "description": "Nodes by id and/or by type, subnet or role; ``exclude`` applies last.",
+        "properties": {
+          "exclude": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exclude"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "router",
+                    "switch",
+                    "host"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles"
+          },
+          "subnets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subnets"
+          },
+          "types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Types"
+          }
+        },
+        "title": "NodeSelector",
         "type": "object"
       },
       "NodeState": {
@@ -2368,33 +2957,6 @@
         "title": "RuntimeOut",
         "type": "object"
       },
-      "SidecarRoleOut": {
-        "properties": {
-          "flow_id": {
-            "title": "Flow Id",
-            "type": "string"
-          },
-          "node_id": {
-            "title": "Node Id",
-            "type": "string"
-          },
-          "role": {
-            "enum": [
-              "client",
-              "server"
-            ],
-            "title": "Role",
-            "type": "string"
-          }
-        },
-        "required": [
-          "flow_id",
-          "role",
-          "node_id"
-        ],
-        "title": "SidecarRoleOut",
-        "type": "object"
-      },
       "SourceOut": {
         "properties": {
           "active_job": {
@@ -2677,6 +3239,161 @@
         "title": "TopologyUpdate",
         "type": "object"
       },
+      "TrafficPattern": {
+        "description": "Many flows from one line (see domain/traffic/patterns): each client\nsends to a server (``clients_to_servers``), or each node to the next\n``fanout`` nodes on a ring (``mesh``). Node sets are selectors like a\nmonitor's: ``\"all\"``, a list of ids, or ``{types, subnets, roles\u2026}``;\nclients and mesh nodes default to every host.",
+        "properties": {
+          "bitrate": {
+            "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
+            "title": "Bitrate",
+            "type": "string"
+          },
+          "clients": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clients"
+          },
+          "direction": {
+            "default": "forward",
+            "enum": [
+              "forward",
+              "reverse",
+              "bidir"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "each": {
+            "default": "one",
+            "enum": [
+              "one",
+              "all"
+            ],
+            "title": "Each",
+            "type": "string"
+          },
+          "fanout": {
+            "default": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Fanout",
+            "type": "integer"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,16}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "clients_to_servers",
+              "mesh"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "maximum": 65507.0,
+                "minimum": 16.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "omit_s": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Omit S",
+            "type": "integer"
+          },
+          "parallel": {
+            "default": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Parallel",
+            "type": "integer"
+          },
+          "protocol": {
+            "default": "tcp",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          },
+          "servers": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servers"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "bitrate"
+        ],
+        "title": "TrafficPattern",
+        "type": "object"
+      },
       "TrafficRunOut": {
         "properties": {
           "duration_s": {
@@ -2689,6 +3406,10 @@
               }
             ],
             "title": "Duration S"
+          },
+          "flow_count": {
+            "title": "Flow Count",
+            "type": "integer"
           },
           "flows": {
             "items": {
@@ -2717,12 +3438,19 @@
             "title": "Live",
             "type": "boolean"
           },
-          "monitored": {
+          "patterns": {
+            "default": [],
             "items": {
-              "type": "string"
+              "additionalProperties": true,
+              "type": "object"
             },
-            "title": "Monitored",
+            "title": "Patterns",
             "type": "array"
+          },
+          "ramp_s": {
+            "default": 0.0,
+            "title": "Ramp S",
+            "type": "number"
           },
           "result": {
             "anyOf": [
@@ -2735,14 +3463,6 @@
               }
             ],
             "title": "Result"
-          },
-          "sidecars": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/SidecarRoleOut"
-            },
-            "default": {},
-            "title": "Sidecars",
-            "type": "object"
           },
           "status": {
             "title": "Status",
@@ -2764,9 +3484,9 @@
           "status",
           "live",
           "flows",
+          "flow_count",
           "duration_s",
           "interval_s",
-          "monitored",
           "job",
           "ws_path"
         ],
@@ -2792,14 +3512,13 @@
             "items": {
               "$ref": "#/components/schemas/Iperf3Flow"
             },
-            "maxItems": 8,
-            "minItems": 1,
+            "maxItems": 64,
             "title": "Flows",
             "type": "array"
           },
           "interval_s": {
             "default": 1.0,
-            "maximum": 10.0,
+            "maximum": 60.0,
             "minimum": 0.5,
             "title": "Interval S",
             "type": "number"
@@ -2810,35 +3529,28 @@
             "title": "Label",
             "type": "string"
           },
-          "monitor_nodes": {
-            "anyOf": [
-              {
-                "enum": [
-                  "all",
-                  "flows"
-                ],
-                "type": "string"
-              },
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              }
-            ],
-            "default": "all",
-            "title": "Monitor Nodes"
-          },
           "notes": {
             "default": "",
             "maxLength": 2000,
             "title": "Notes",
             "type": "string"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficPattern"
+            },
+            "maxItems": 16,
+            "title": "Patterns",
+            "type": "array"
+          },
+          "ramp_s": {
+            "default": 0.0,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Ramp S",
+            "type": "number"
           }
         },
-        "required": [
-          "flows"
-        ],
         "title": "TrafficRunRequest",
         "type": "object"
       },
@@ -2851,19 +3563,54 @@
             "title": "Flows",
             "type": "array"
           },
-          "nodes": {
+          "totals": {
             "items": {
-              "$ref": "#/components/schemas/NodeSampleOut"
+              "$ref": "#/components/schemas/TrafficTotalsOut"
             },
-            "title": "Nodes",
+            "title": "Totals",
             "type": "array"
           }
         },
         "required": [
           "flows",
-          "nodes"
+          "totals"
         ],
         "title": "TrafficSamplesOut",
+        "type": "object"
+      },
+      "TrafficTotalsOut": {
+        "description": "All flows at one moment: what arrived (receiver-measured) vs. what was asked.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "delivered_bps": {
+            "title": "Delivered Bps",
+            "type": "number"
+          },
+          "offered_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offered Bps"
+          },
+          "t": {
+            "title": "T",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t",
+          "delivered_bps",
+          "active"
+        ],
+        "title": "TrafficTotalsOut",
         "type": "object"
       },
       "ValidateBody": {
@@ -2948,6 +3695,301 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/benchmarks": {
+      "get": {
+        "operationId": "list_benchmarks_api_v1_benchmarks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkOut"
+                  },
+                  "title": "Response List Benchmarks Api V1 Benchmarks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Benchmarks",
+        "tags": [
+          "benchmarks"
+        ]
+      },
+      "post": {
+        "description": "Start a sweep. One benchmark at a time (409 ``benchmark_active``); it\nfails at its first step if other labs or jobs load the host, unless\n``allow_busy_host``.",
+        "operationId": "start_benchmark_api_v1_benchmarks_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenchmarkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Benchmark",
+        "tags": [
+          "benchmarks"
+        ]
+      }
+    },
+    "/api/v1/benchmarks/{job_id}": {
+      "get": {
+        "operationId": "get_benchmark_api_v1_benchmarks__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Benchmark",
+        "tags": [
+          "benchmarks"
+        ]
+      }
+    },
+    "/api/v1/benchmarks/{job_id}/export": {
+      "get": {
+        "description": "Everything: benchmark.json, results.csv, report.md, the monitor's CSVs,\neach step's topology, and the job log.",
+        "operationId": "export_benchmark_api_v1_benchmarks__job_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Benchmark",
+        "tags": [
+          "benchmarks"
+        ]
+      }
+    },
+    "/api/v1/benchmarks/{job_id}/report.md": {
+      "get": {
+        "description": "The results as Markdown (so far, while it runs).",
+        "operationId": "get_report_api_v1_benchmarks__job_id__report_md_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Report",
+        "tags": [
+          "benchmarks"
+        ]
+      }
+    },
     "/api/v1/captures/{job_id}": {
       "get": {
         "operationId": "get_capture_api_v1_captures__job_id__get",
@@ -3704,6 +4746,234 @@
         ]
       }
     },
+    "/api/v1/monitors/{job_id}": {
+      "get": {
+        "operationId": "get_monitor_api_v1_monitors__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Monitor",
+        "tags": [
+          "monitors"
+        ]
+      }
+    },
+    "/api/v1/monitors/{job_id}/export": {
+      "get": {
+        "description": "The monitor as a zip: monitor.json (request, environment, summary), the\nCSV files and the job log.",
+        "operationId": "export_monitor_api_v1_monitors__job_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Monitor",
+        "tags": [
+          "monitors"
+        ]
+      }
+    },
+    "/api/v1/monitors/{job_id}/samples": {
+      "get": {
+        "description": "Recorded sweeps of a monitor (live or finished).",
+        "operationId": "get_samples_api_v1_monitors__job_id__samples_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only sweeps after this time (s)",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": -1.0,
+              "description": "Only sweeps after this time (s)",
+              "title": "Since",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Comma-separated node ids",
+            "in": "query",
+            "name": "nodes",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated node ids",
+              "title": "Nodes"
+            }
+          },
+          {
+            "description": "Keep every n-th sweep",
+            "in": "query",
+            "name": "every",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Keep every n-th sweep",
+              "maximum": 3600,
+              "minimum": 1,
+              "title": "Every",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Leave out node and interface rows",
+            "in": "query",
+            "name": "host_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Leave out node and interface rows",
+              "title": "Host Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorSamplesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Samples",
+        "tags": [
+          "monitors"
+        ]
+      }
+    },
     "/api/v1/presets": {
       "get": {
         "operationId": "list_presets_api_v1_presets_get",
@@ -4224,6 +5494,66 @@
           }
         },
         "summary": "Create Topology",
+        "tags": [
+          "topologies"
+        ]
+      }
+    },
+    "/api/v1/topologies/generate": {
+      "post": {
+        "description": "Create a topology from a few numbers (the benchmarks' generator): a\nservers subnet behind a core router, client subnets behind their own\nrouters, access switches under a distribution switch per subnet.",
+        "operationId": "generate_topology_api_v1_topologies_generate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Topology",
         "tags": [
           "topologies"
         ]
@@ -5138,6 +6468,147 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/monitors": {
+      "get": {
+        "operationId": "list_monitors_api_v1_topologies__topology_id__monitors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MonitorOut"
+                  },
+                  "title": "Response List Monitors Api V1 Topologies  Topology Id  Monitors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Monitors",
+        "tags": [
+          "monitors"
+        ]
+      },
+      "post": {
+        "description": "Start recording CPU, memory and network of the selected nodes and of the\nhost every ``interval_s``. One monitor at a time per topology (409\n``monitor_active``).",
+        "operationId": "start_monitor_api_v1_topologies__topology_id__monitors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Monitor",
+        "tags": [
+          "monitors"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/plan": {
       "get": {
         "description": "The engine-agnostic lab plan: what deploy would instantiate.",
@@ -5515,7 +6986,7 @@
     },
     "/api/v1/traffic/runs/{job_id}/export": {
       "get": {
-        "description": "The run as a zip: run.json (request, environment, summary), the samples,\niperf3's raw output and the job log.",
+        "description": "The run as a zip: run.json (request, environment, summary), the samples\nand totals, the driver's raw output and the job log.",
         "operationId": "export_run_api_v1_traffic_runs__job_id__export_get",
         "parameters": [
           {
@@ -5570,7 +7041,7 @@
     },
     "/api/v1/traffic/runs/{job_id}/samples": {
       "get": {
-        "description": "Every flow and node sample of a run (live or finished).",
+        "description": "A run's flow samples and its all-flow totals (live or finished). Runs of\nmany flows: ask for ``totals_only`` or a few ``flows``.",
         "operationId": "get_samples_api_v1_traffic_runs__job_id__samples_get",
         "parameters": [
           {
@@ -5592,6 +7063,36 @@
               "description": "Only samples after this run time (s)",
               "title": "Since",
               "type": "number"
+            }
+          },
+          {
+            "description": "Comma-separated flow ids",
+            "in": "query",
+            "name": "flows",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated flow ids",
+              "title": "Flows"
+            }
+          },
+          {
+            "description": "Leave out per-flow samples",
+            "in": "query",
+            "name": "totals_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Leave out per-flow samples",
+              "title": "Totals Only",
+              "type": "boolean"
             }
           },
           {
