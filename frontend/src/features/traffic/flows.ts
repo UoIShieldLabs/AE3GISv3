@@ -2,7 +2,7 @@
 import type { Iperf3Flow } from '@/api/client';
 import type { SavedFlow } from '@/types/topology';
 
-export const MAX_FLOWS = 8;
+export const MAX_FLOWS = 64;
 const BITRATE = /^\d+(\.\d+)?[KMGkmg]?$/;
 
 export function nextFlowId(flows: readonly SavedFlow[]): string {

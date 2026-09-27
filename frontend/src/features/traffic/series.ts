@@ -1,5 +1,5 @@
 // Pure transforms from traffic samples to chart-ready, x-aligned series.
-import type { FlowSample, NodeSample } from '@/api/client';
+import type { FlowSample, TrafficTotals } from '@/api/client';
 import type { ChartData } from '@/ui/charts/types';
 
 export type { ChartData, ChartSeries } from '@/ui/charts/types';
@@ -39,49 +39,15 @@ export function throughputSeries(samples: readonly FlowSample[], flowIds: readon
   return { x, series: rows.map((r) => ({ key: r.key, label: r.label, slot: r.slot, dash: r.dash, values: values.get(r.key)! })) };
 }
 
-export type NodeMetric = 'cpu' | 'mem' | 'rx' | 'tx';
-
-export function metricOf(s: NodeSample, metric: NodeMetric): number | null {
-  switch (metric) {
-    case 'cpu':
-      return s.cpu_percent ?? null;
-    case 'mem':
-      return s.mem_used / 1e6;
-    case 'rx':
-    case 'tx': {
-      const ifaces = Object.values(s.ifaces ?? {});
-      if (!ifaces.length) return null;
-      return ifaces.reduce((sum, i) => sum + (metric === 'rx' ? i.rx_bps : i.tx_bps), 0) / 1e6;
-    }
-  }
-}
-
-/** One metric for the `limit` busiest targets (by peak), plus how many were left out.
- *  Slots follow the target's position in `order` so a target keeps its colour. */
-export function nodeSeries(
-  samples: readonly NodeSample[],
-  metric: NodeMetric,
-  labelOf: (target: string) => string,
-  order: readonly string[],
-  limit = 6,
-): ChartData & { hidden: number } {
-  const byTarget = new Map<string, Map<number, number>>();
-  for (const s of samples) {
-    const v = metricOf(s, metric);
-    if (v === null) continue;
-    let m = byTarget.get(s.target);
-    if (!m) byTarget.set(s.target, (m = new Map()));
-    m.set(round(s.t), v);
-  }
-  const peak = (m: Map<number, number>) => Math.max(0, ...m.values());
-  const ranked = [...byTarget.entries()].sort((a, b) => peak(b[1]) - peak(a[1]));
-  const shown = ranked.slice(0, limit).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-  const { x, values } = align(shown.map(([key, points]) => ({ key, points })));
-  return {
-    x,
-    series: shown.map(([key], i) => ({ key, label: labelOf(key), slot: (i % 6) + 1, values: values.get(key)! })),
-    hidden: Math.max(0, ranked.length - limit),
-  };
+/** All flows together in Mb/s: what arrived (receiver-measured) and, when every
+ *  running flow has a target rate, what was asked (dashed). */
+export function totalsSeries(totals: readonly TrafficTotals[]): ChartData {
+  const x = totals.map((r) => round(r.t));
+  const series = [
+    { key: 'delivered', label: 'Delivered', slot: 1, values: totals.map((r) => r.delivered_bps / 1e6) },
+    { key: 'offered', label: 'Asked', slot: 2, dash: true, values: totals.map((r) => (r.offered_bps === null || r.offered_bps === undefined ? null : r.offered_bps / 1e6)) },
+  ].filter((sr) => sr.values.some((v) => v !== null));
+  return { x, series };
 }
 
 /** Latest receiver rate per flow direction, in b/s. */
