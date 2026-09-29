@@ -105,9 +105,6 @@ The first criterion met ends the sweep (after removing the step's lab):
 
 - **One benchmark per machine at a time, nothing else running.** Close what
   you can; the report records other labs and jobs if you allowed them.
-- **Close the Docker Desktop window.** With a few hundred containers something
-  kept dockerd and containerd busy (~3.5 cores) while the lab sat idle; the
-  dashboard's per-container stats are the likely cause. The *Docker cores* column shows what Docker itself used.
 - **Docker Desktop:** the host is its Linux VM. Give it the memory and CPUs you
   want to measure (Settings → Resources) and note them; they appear in the
   report (`8 CPUs · 8215 MB`). macOS itself is not measured: it runs the VM plus
