@@ -1,0 +1,17 @@
+{
+  "name": "random",
+  "description": "The image census, then 5 random-mix idle climbs (every type with equal odds), each to its own ceiling, from the images the census found usable on this host.",
+  "restart_docker": true,
+  "rest_wait_s": 60,
+  "items": [
+    { "id": "census", "spec": "random/image-census.json" },
+    {
+      "id": "random-idle",
+      "spec": "random/random-idle.json",
+      "runs": 5,
+      "seeds": [1, 2, 3, 4, 5],
+      "pool_from": "census",
+      "start_from_previous": 0.7
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "label": "burst matrix",
+  "notes": "100 hosts deployed once; every cell runs paced bursts (bitrate × interval bytes at once, every interval) for 60 s: 5 rates × 5 intervals × TCP/UDP × clients → servers (2 servers, 5-6 links per path) / mesh (2 peers each, mostly within a subnet). Cells run in a seeded shuffled order after a quiet idle gap.",
+  "topology": {
+    "generate": { "servers": 2, "hosts_per_subnet": 200, "hosts_per_switch": 48, "host_type": "workstation" }
+  },
+  "scale": [100],
+  "matrix": {
+    "patterns": [
+      { "id": "cs", "kind": "clients_to_servers", "servers": ["srv-1", "srv-2"] },
+      { "id": "mesh", "kind": "mesh", "fanout": 2, "nodes": { "roles": ["host"], "exclude": ["srv-1", "srv-2"] } }
+    ],
+    "axes": {
+      "pattern": ["cs", "mesh"],
+      "protocol": ["tcp", "udp"],
+      "bitrate": ["50K", "100K", "250K", "500K", "1M"],
+      "burst_interval_ms": [100, 250, 500, 1000, 2000]
+    },
+    "grid": ["bitrate", "burst_interval_ms"],
+    "interval_s": 10,
+    "ramp_s": 5,
+    "gap_s": 10,
+    "shuffle": true,
+    "seed": 1
+  },
+  "rest_s": 30,
+  "cooldown_s": 20,
+  "settle_s": 20,
+  "hold_s": 60,
+  "monitor": { "interval_s": 5 },
+  "stop": { "max_mem_pct": 90, "max_psi_mem_full": 10, "min_delivered_ratio": 0.8, "max_loss_pct": 5 }
+}

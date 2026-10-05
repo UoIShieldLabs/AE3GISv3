@@ -1,0 +1,14 @@
+{
+  "label": "image census",
+  "notes": "Every catalog type · image (hidden ones aside) alone: 5 nodes of it as the client hosts of a small campus, deployed, checked and measured. Says which images run on this host (the random idle runs leave the others out) and what a node of each costs.",
+  "topology": {
+    "generate": { "hosts_per_subnet": 200, "hosts_per_switch": 48 }
+  },
+  "census": { "per_image": 5 },
+  "rest_s": 30,
+  "cooldown_s": 20,
+  "settle_s": 30,
+  "hold_s": 30,
+  "monitor": { "interval_s": 5 },
+  "stop": { "max_mem_pct": 95, "max_psi_mem_full": 10, "project_memory": false, "deploy_timeout_s": 900, "ready_timeout_s": 300 }
+}

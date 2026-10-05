@@ -1,0 +1,52 @@
+{
+  "label": "random idle",
+  "notes": "Every node is one of the 15 catalog types with equal odds (networking types too), then one of that type's images with equal odds; switches and routers draw from their own pools (routers must forward, so no default-drop firewalls there). Idle, no traffic. Adaptive: climbs to this mix's ceiling. Run several times with different seeds: some mixes come out heavier than others, on purpose.",
+  "topology": {
+    "generate": {
+      "servers": 0,
+      "hosts_per_subnet": 200,
+      "hosts_per_switch": 48,
+      "seed": 1,
+      "random": {
+        "hosts": [
+          { "type": "router", "images": ["kathara/frr"] },
+          { "type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"] },
+          { "type": "firewall", "images": ["kathara/frr", "ae3gis.local/iptables", "ae3gis.local/nftables", "ae3gis.local/firehol"] },
+          { "type": "ids", "images": ["ae3gis.local/suricata", "ae3gis.local/snort3", "ae3gis.local/snort2", "ae3gis.local/zeek"] },
+          { "type": "siem", "images": ["ae3gis.local/wazuh-manager"] },
+          { "type": "web-server", "images": ["httpd:alpine", "ae3gis.local/apache", "ae3gis.local/nginx"] },
+          { "type": "file-server", "images": ["kathara/base", "ae3gis.local/samba"] },
+          { "type": "ftp-server", "images": ["ae3gis.local/vsftpd"] },
+          { "type": "database-server", "images": ["postgres:alpine"] },
+          { "type": "dns-server", "images": ["kathara/base"] },
+          { "type": "dhcp-server", "images": ["ae3gis.local/isc-dhcp"] },
+          { "type": "workstation", "images": ["kathara/base", "ae3gis.local/benign-client", "ae3gis.local/wazuh-agent", "ae3gis.local/firefox"] },
+          { "type": "attacker", "images": ["ae3gis.local/malicious-client"] },
+          { "type": "plc", "images": ["kathara/base", "ae3gis.local/openplc"] },
+          { "type": "hmi", "images": ["kathara/base"] }
+        ],
+        "switches": [{ "type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"] }],
+        "routers": [
+          { "type": "router", "images": ["kathara/frr"] },
+          { "type": "firewall", "images": ["kathara/frr", "ae3gis.local/iptables"] }
+        ]
+      }
+    }
+  },
+  "adaptive": {
+    "start": 100,
+    "target_mem_pct": 93,
+    "reach_mem_pct": 90,
+    "approach": 0.6,
+    "max_factor": 2.0,
+    "min_step": 10,
+    "confirm": 0,
+    "descend": 0.7
+  },
+  "rest_s": 30,
+  "cooldown_s": 20,
+  "settle_s": 60,
+  "hold_s": 30,
+  "monitor": { "interval_s": 5 },
+  "stop": { "max_mem_pct": 95, "max_psi_mem_full": 10, "project_memory": false, "deploy_timeout_s": 1800, "ready_timeout_s": 300 }
+}

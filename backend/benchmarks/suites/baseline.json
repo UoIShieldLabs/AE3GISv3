@@ -1,0 +1,11 @@
+{
+  "name": "baseline",
+  "description": "The three sweeps of the 2026-09-30 macOS baseline: idle, clients → servers (TCP) and mesh (UDP), 3 repetitions each.",
+  "restart_docker": true,
+  "rest_wait_s": 60,
+  "items": [
+    { "id": "idle", "spec": "baseline/idle-sweep.json" },
+    { "id": "clients-servers", "spec": "baseline/clients-servers-sweep.json" },
+    { "id": "mesh", "spec": "baseline/mesh-sweep.json" }
+  ]
+}
