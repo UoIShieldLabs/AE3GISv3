@@ -58,7 +58,15 @@ from db.models import Event, Job, Topology
 from domain import benchmark as bm
 from domain import monitor as m
 from domain import selectors
-from domain.generator import GeneratorError, GeneratorParams, check, generate
+from domain.generator import (
+    GeneratorError,
+    GeneratorParams,
+    check,
+    check_types,
+    counts,
+    generate,
+    max_hosts,
+)
 from domain.topology import images_in
 from engine.base import EngineState
 from services import deployment, environment, events, jobs, netns_driver, topologies, traffic
@@ -102,6 +110,9 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
             )
         topo_spec = spec.get("topology") or {}
         label = spec.get("label") or "benchmark"
+        extra: dict[str, Any] = {}
+        if topo_spec.get("topology_id") and spec.get("adaptive"):
+            raise Invalid("An adaptive benchmark needs a generated topology", code="bad_adaptive")
         if topo_spec.get("topology_id"):
             topo = topologies.get_or_404(db, topo_spec["topology_id"])
             if topo.status != "idle" or jobs.active_job(db, topo.id):
@@ -113,19 +124,33 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
             generated = False
             scale = [len(selectors.node_index(topo.data))]
         else:
+            adaptive = spec.get("adaptive")
             scale = list(spec.get("scale") or [])
-            if not scale:
+            if adaptive:
+                scale = []
+            elif not scale:
                 raise Invalid("A generated benchmark needs a scale list", code="no_scale")
+            first = int(adaptive["start"]) if adaptive else scale[0]
             try:
-                for hosts in (min(scale), max(scale)):
+                for hosts in [first] if adaptive else [min(scale), max(scale)]:
                     check(_gen_params(spec, hosts))
+                check_types(_gen_params(spec, first), set(catalog.node_types()))
             except (GeneratorError, TypeError) as exc:
                 raise Invalid(str(exc), code="bad_generator") from exc
+            if adaptive:
+                # The largest topology the generator makes with these params.
+                extra["max_scale"] = max_hosts(_gen_params(spec, first))
             topo, _ = topologies.create(
-                db, name=f"bench: {label}", data=generate(_gen_params(spec, scale[0]))
+                db, name=f"bench: {label}", data=generate(_gen_params(spec, first))
             )
             generated = True
-        params = {**spec, "scale": scale, "topology_id": topo.id, "generated": generated}
+        params = {
+            **spec,
+            **extra,
+            "scale": scale,
+            "topology_id": topo.id,
+            "generated": generated,
+        }
         job = jobs.create_job(db, KIND, subject=SUBJECT, params=params)
         events.record(
             db,
@@ -161,6 +186,11 @@ class Bench:
         self.session: monitor_service.MonitorSession | None = None
         self.rows: list[dict[str, Any]] = []
         self.agg: list[dict[str, Any]] = []
+        # The current step's node id → image, and per-sweep per-image numbers.
+        self.image_of: dict[str, str] = {}
+        self.by_image: list[dict[str, Any]] = []
+        # How an adaptive sweep's climb ended.
+        self.limit: str | None = None
         self.armed = False
         self.trip: tuple[str, str] | None = None
         self.tripped = asyncio.Event()
@@ -181,6 +211,8 @@ class Bench:
                 "rx_sum": (sel.get("rx_bps") or {}).get("sum"),
             }
         )
+        if self.image_of:
+            self.by_image += bm.image_sweep(result.t, result.nodes, self.image_of)
         if self.armed and self.trip is None:
             hit = self.watch.check(result.host, payload)
             if hit is not None:
@@ -341,6 +373,8 @@ async def run_step(b: Bench, name: str, scale: int, rep: int) -> dict[str, Any]:
     plan = topologies.plan_for(topo)
     row["nodes"] = len(plan.nodes)
     row["links"] = len(plan.collision_domains)
+    b.image_of = {n.id: n.image for n in plan.nodes}
+    b.by_image = []
     windows: dict[str, tuple[float, float] | None] = {"pre": None, "settle": None, "hold": None}
 
     # 1. pre: the reference, nothing deployed, once the host is quiet.
@@ -499,6 +533,7 @@ async def run_step(b: Bench, name: str, scale: int, rep: int) -> dict[str, Any]:
         if b.trip is not None:
             fail("stopped", *b.trip)
         row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
+        row["by_image"] = bm.image_metrics(b.by_image, windows)
         await _stop_traffic(runner, topology_id)
         last = row["outcome"] != "ok" or b.is_last
         if not (last and spec.get("keep_last")):
@@ -516,7 +551,7 @@ async def run_step(b: Bench, name: str, scale: int, rep: int) -> dict[str, Any]:
 def _write_results(directory: Path, rows: list[dict[str, Any]]) -> None:
     flat = []
     for r in rows:
-        f = {k: v for k, v in r.items() if k != "deploy_phases"}
+        f = {k: v for k, v in r.items() if k not in ("deploy_phases", "by_image")}
         for phase, secs in (r.get("deploy_phases") or {}).items():
             f[f"deploy_{phase}_s"] = secs
         flat.append(f)
@@ -553,6 +588,56 @@ async def _preflight(b: Bench) -> dict[str, Any]:
     return {"labs": labs, "jobs": busy_jobs}
 
 
+def _halts(b: Bench, row: dict[str, Any]) -> bool:
+    """Whether a step's outcome ends the sweep."""
+    return row["outcome"] != "ok" and (
+        row["outcome"] != "degraded" or b.stop.get("stop_on_degraded", True)
+    )
+
+
+async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
+    """An adaptive sweep: each step's scale follows from the last one's memory
+    (``bm.next_scale``) until memory peaks at the target or a step fails, then
+    the highest passing scale runs ``confirm`` more times."""
+    runner, spec = b.runner, b.spec
+    max_scale = int(spec.get("max_scale") or adaptive["start"])
+    scale: int | None = min(int(adaptive["start"]), max_scale)
+    stopped_by = "max_steps"
+    for _ in range(int(adaptive.get("max_steps") or 20)):
+        assert scale is not None
+        row = await step(scale, 1, f"{scale} hosts")
+        if runner.stop_requested(b.job_id):
+            return runner.stop_code(b.job_id) or "user"
+        if _halts(b, row):
+            stopped_by = f"criterion:{row['reason']}"
+            b.limit = f"{scale} hosts failed ({row['reason']})"
+            break
+        host = b.session.host_rows[-1] if b.session and b.session.host_rows else {}
+        scale, code, why = bm.next_scale(
+            row,
+            adaptive,
+            mem_total=host.get("mem_total"),
+            nodes_for=lambda h: counts(_gen_params(spec, h))["nodes"],
+            max_scale=max_scale,
+        )
+        row["next"] = why
+        b.mark(why)
+        persist()
+        if scale is None:
+            stopped_by, b.limit = code, why
+            break
+    best = max((r["scale"] for r in b.rows if r["outcome"] == "ok"), default=None)
+    for rep in range(2, int(adaptive.get("confirm") or 0) + 2):
+        if best is None:
+            break
+        row = await step(best, rep, f"{best} hosts #{rep}")
+        if runner.stop_requested(b.job_id):
+            return runner.stop_code(b.job_id) or "user"
+        if _halts(b, row):
+            break
+    return stopped_by
+
+
 async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     settings, store, hub = runner.settings, runner.artifacts, runner.live
     assert settings is not None and store is not None and hub is not None
@@ -567,6 +652,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     result: dict[str, Any] = {}
     scales = [int(s) for s in spec["scale"]]
     reps = int(spec.get("repetitions") or 1)
+    adaptive = spec.get("adaptive") or None
+    first_adaptive = int(adaptive["start"]) if adaptive else 0
 
     def snapshot(final: bool = False) -> dict[str, Any]:
         last = next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
@@ -581,6 +668,7 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             "reason": last["reason"] if last else None,
             "detail": last["detail"] if last else None,
             "stopped_by": stopped_by,
+            "limit": b.limit,
             "phase": None if final else b.phase,
             "environment_fingerprint": env.get("fingerprint"),
         }
@@ -620,7 +708,7 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
         async with runner.step(job_id, "images"):
             assert runner.images is not None
             if spec.get("generated"):
-                data = generate(_gen_params(spec, max(scales)))
+                data = generate(_gen_params(spec, max(scales) if scales else first_adaptive))
             else:
                 data = _topo(runner, spec["topology_id"]).data
             await runner.images.ensure_images(runner, job_id, images_in(data))
@@ -651,10 +739,7 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             await b.session.start()
             b.mark("benchmark started")
 
-        plan = [(s, r) for s in scales for r in range(1, reps + 1)]
-        for i, (scale, rep) in enumerate(plan):
-            b.is_last = i == len(plan) - 1
-            name = f"{scale} hosts" + (f" #{rep}" if reps > 1 else "")
+        async def step(scale: int, rep: int, name: str) -> dict[str, Any]:
             async with runner.step(job_id, name):
                 row = await run_step(b, name, scale, rep)
                 b.rows.append(row)
@@ -664,16 +749,24 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
                     name,
                     row["outcome"] + (f": {row['detail']}" if row.get("detail") else ""),
                 )
-            if row["outcome"] != "ok" and (
-                row["outcome"] != "degraded" or b.stop.get("stop_on_degraded", True)
-            ):
-                stopped_by = f"criterion:{row['reason']}"
-                break
-            if runner.stop_requested(job_id):
-                stopped_by = runner.stop_code(job_id) or "user"
-                break
+            return row
+
+        if adaptive:
+            stopped_by = await _climb(b, adaptive, step, persist)
         else:
-            stopped_by = "completed"
+            plan = [(s, r) for s in scales for r in range(1, reps + 1)]
+            for i, (scale, rep) in enumerate(plan):
+                b.is_last = i == len(plan) - 1
+                name = f"{scale} hosts" + (f" #{rep}" if reps > 1 else "")
+                row = await step(scale, rep, name)
+                if _halts(b, row):
+                    stopped_by = f"criterion:{row['reason']}"
+                    break
+                if runner.stop_requested(job_id):
+                    stopped_by = runner.stop_code(job_id) or "user"
+                    break
+            else:
+                stopped_by = "completed"
     finally:
         b.armed = False
         with contextlib.suppress(Exception):
