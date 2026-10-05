@@ -90,6 +90,13 @@ def test_traffic_sweep_measures_delivery(client, wait_jobs, fast):
     assert row["offered_bps"] == 10e6 and row["delivered_ratio"] > 0.8
     run = client.get(f"/api/v1/traffic/runs/{row['traffic_job']}").json()
     assert run["result"]["stopped_by"] == "benchmark"
+    # The network side is in the row, the report, and the export (run summaries).
+    assert row["slowest_flow"] and row["bytes_received"] > 0 and row["flow_ratio_min"] > 0.8
+    md = client.get(f"/api/v1/benchmarks/{bench['id']}/report.md").text
+    assert "| Hosts | # | Flows | Asked Mb/s |" in md and "| 2 | 1 | 2 | 10.00 |" in md
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"/api/v1/benchmarks/{bench['id']}/export").content))
+    assert {"traffic/2-1/run.json", "traffic/2-1/totals.ndjson"} <= set(z.namelist())
+    assert "traffic/2-1/flows.ndjson" not in z.namelist()  # keep_samples is off
 
 
 def test_images_a_small_step_leaves_out_are_prepared_too(client, wait_jobs, fast):

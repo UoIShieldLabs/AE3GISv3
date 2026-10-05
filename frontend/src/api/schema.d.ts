@@ -1121,6 +1121,11 @@ export interface components {
              */
             keep_last: boolean;
             /**
+             * Keep Samples
+             * @default false
+             */
+            keep_samples: boolean;
+            /**
              * Label
              * @default
              */

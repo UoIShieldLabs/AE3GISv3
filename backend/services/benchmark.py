@@ -33,7 +33,8 @@ and destroy jobs stay attached to it).
 Artifacts (``data/artifacts/<job>/``): ``benchmark.json`` (spec, environment,
 rows, outcome), ``results.csv`` (a row per step), ``report.md``, the monitor's
 ``host.csv`` / ``nodes.csv`` / ``ifaces.csv`` / ``markers.csv`` (with a
-``step`` column), and ``topologies/<step>.json``.
+``step`` column), ``topologies/<step>.json``, and per traffic step
+``traffic/<step>/`` (the run's ``run.json`` and ``totals.ndjson``).
 """
 
 from __future__ import annotations
@@ -44,6 +45,8 @@ import csv
 import io
 import json
 import logging
+import re
+import shutil
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -538,15 +541,8 @@ async def _hold(
     windows["hold"] = (t2, b.now())
     done = await _stop_traffic(runner, topology_id)
     totals = ((done.result or {}) if done else {}).get("totals") or {}
-    row.update(
-        flows=totals.get("flows"),
-        offered_bps=totals.get("offered_bps"),
-        delivered_bps=totals.get("delivered_bps"),
-        delivered_ratio=totals.get("delivered_ratio"),
-        lost_percent=totals.get("lost_percent"),
-        retransmits=totals.get("retransmits"),
-        flows_with_errors=totals.get("flows_with_errors"),
-    )
+    row.update({k: totals.get(k) for k in bm.TRAFFIC_ROW_KEYS})
+    _keep_traffic(b, row["traffic_job"], load.get("slug") or str(row["step"]))
     if done is not None and done.status == "failed":
         _fail(row, "failed", "traffic_failed", done.error or "the traffic run failed")
     if tripped:
@@ -554,6 +550,28 @@ async def _hold(
     verdict = bm.traffic_verdict(totals, b.stop)
     if verdict:
         _fail(row, "degraded", *verdict)
+
+
+def _keep_traffic(b: Bench, run_id: str, slug: str) -> None:
+    """Copy a step's traffic run summary (``run.json``: every flow's summary;
+    ``totals.ndjson``: what arrived per interval; ``flows.ndjson`` too with
+    ``keep_samples``) into ``traffic/<slug>/``, so the benchmark's export
+    holds its network results."""
+    store = b.runner.artifacts
+    assert store is not None
+    names = [traffic.RUN_NAME, traffic.TOTALS_NAME]
+    if b.spec.get("keep_samples"):
+        names.append(traffic.FLOWS_NAME)
+    dest = store.dir(b.job_id) / "traffic" / _slug(slug)
+    for name in names:
+        src = store.dir(run_id) / name
+        if src.exists():
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dest / name)
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-") or "step"
 
 
 async def _finish(b: Bench, row: dict[str, Any], windows: dict[str, Window]) -> None:
@@ -611,7 +629,10 @@ async def run_step(
         if state is None or not await _ready(b, row, name, topo.data, state):
             return row
         windows["settle"] = await _settle(b, name)
-        await _hold(b, row, name, windows, float(spec.get("hold_s") or 0), spec.get("traffic"))
+        load = spec.get("traffic")
+        if load:
+            load = {**load, "slug": f"{scale}-{rep}"}
+        await _hold(b, row, name, windows, float(spec.get("hold_s") or 0), load)
     except Tripped:
         pass
     finally:

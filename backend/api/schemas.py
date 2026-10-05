@@ -762,6 +762,8 @@ class BenchmarkRequest(BaseModel):
     allow_busy_host: bool = False
     # Leave the last step's lab deployed for inspection.
     keep_last: bool = False
+    # Also copy each traffic run's per-interval samples into the export (big).
+    keep_samples: bool = False
 
     @field_validator("scale")
     @classmethod

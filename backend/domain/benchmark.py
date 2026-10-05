@@ -318,6 +318,29 @@ def image_metrics(
 
 # ── across steps ──────────────────────────────────────────────────────
 
+# What a step copies from its traffic run's totals (services/traffic.totals).
+TRAFFIC_ROW_KEYS = (
+    "flows",
+    "offered_bps",
+    "delivered_bps",
+    "delivered_ratio",
+    "bytes_received",
+    "lost_percent",
+    "retransmits",
+    "flows_with_errors",
+    "rtt_ms_p50",
+    "rtt_ms_p95",
+    "rtt_ms_max",
+    "jitter_ms_p50",
+    "jitter_ms_p95",
+    "jitter_ms_max",
+    "flow_loss_pct_max",
+    "flow_ratio_min",
+    "flow_ratio_p05",
+    "slowest_flow",
+    "slowest_flow_bps",
+)
+
 SCALE_METRICS = (
     "deploy_s",
     "ready_s",
@@ -326,9 +349,12 @@ SCALE_METRICS = (
     "docker_mem_per_node",
     "node_mem_mean",
     "hold_cpu_mean",
+    "hold_docker_cpu_mean",
     "hold_mem_pct_max",
     "hold_psi_mem_full_max",
     "delivered_ratio",
+    "rtt_ms_p95",
+    "jitter_ms_p95",
 )
 
 
@@ -435,6 +461,7 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
             f"| {'–' if delivered is None else f'{delivered * 100:.1f}%'} "
             f"| {outcome} |"
         )
+    lines += _traffic_table(rows)
     lines += _image_table(rows)
     lines += [
         "",
@@ -458,6 +485,40 @@ def _steps_line(spec: dict[str, Any]) -> str:
         f"projected gap per step, ≥ {a.get('min_step', 25)} hosts, ≤ ×{a.get('max_factor', 2):g}), "
         f"ceiling rerun ×{a.get('confirm', 2)}"
     )
+
+
+def _bps(x: float | None) -> str:
+    return "–" if x is None else f"{x / 1e6:.2f}"
+
+
+def _pct(x: float | None) -> str:
+    return "–" if x is None else f"{x * 100:.1f}%"
+
+
+def _traffic_table(rows: list[dict[str, Any]]) -> list[str]:
+    """The network side of traffic steps, from iperf3's own measurements."""
+    rows = [r for r in rows if r.get("flows")]
+    if not rows:
+        return []
+    lines = [
+        "",
+        "Network (iperf3, over the whole run): RTT for TCP flows, jitter and loss for UDP; "
+        "median and p95 of the flows' own medians, and the highest reading.",
+        "",
+        "| Hosts | # | Flows | Asked Mb/s | Delivered | Data MB | Slowest flow Mb/s "
+        "| RTT ms (p50 / p95 / max) | Retransmits | Jitter ms (p50 / p95 / max) | Loss % (all / worst flow) |",
+        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for r in rows:
+        rtt = " / ".join(_num(r.get(f"rtt_ms_{k}"), 1) for k in ("p50", "p95", "max"))
+        jit = " / ".join(_num(r.get(f"jitter_ms_{k}"), 2) for k in ("p50", "p95", "max"))
+        lines.append(
+            f"| {r['scale']} | {r['rep']} | {r['flows']} | {_bps(r.get('offered_bps'))} "
+            f"| {_pct(r.get('delivered_ratio'))} | {_mb(r.get('bytes_received'))} "
+            f"| {_bps(r.get('slowest_flow_bps'))} | {rtt} | {r.get('retransmits', '–')} | {jit} "
+            f"| {_num(r.get('lost_percent'), 2)} / {_num(r.get('flow_loss_pct_max'), 2)} |"
+        )
+    return lines
 
 
 def _image_table(rows: list[dict[str, Any]]) -> list[str]:
@@ -547,7 +608,10 @@ def _traffic_line(spec: dict[str, Any]) -> str:
     for p in t.get("patterns") or []:
         what = "mesh" if p.get("kind") == "mesh" else "clients → servers"
         extra = f", {p.get('fanout', 1)} peer(s) each" if p.get("kind") == "mesh" else ""
+        burst = (
+            f" in bursts every {p['burst_interval_ms']} ms" if p.get("burst_interval_ms") else ""
+        )
         parts.append(
-            f"{what}{extra}, {p.get('protocol', 'tcp').upper()} {p.get('bitrate')} per flow"
+            f"{what}{extra}, {p.get('protocol', 'tcp').upper()} {p.get('bitrate')} per flow{burst}"
         )
     return "; ".join(parts) + f" (ramp {t.get('ramp_s', 0)}s)"
