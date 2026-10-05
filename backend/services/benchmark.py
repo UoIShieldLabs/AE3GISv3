@@ -73,6 +73,8 @@ from domain.generator import (
     max_hosts,
 )
 from domain.topology import images_in
+from domain.traffic.iperf3 import burst_shape
+from domain.traffic.patterns import PatternError, expand
 from engine.base import EngineState
 from services import deployment, environment, events, jobs, netns_driver, topologies, traffic
 from services import monitor as monitor_service
@@ -127,6 +129,28 @@ def _census_params(spec: dict[str, Any], case: dict[str, Any]) -> GeneratorParam
     k = int((spec.get("census") or {}).get("per_image") or 5)
     mix = [{"type": case["type"], "image": case["image"], "weight": 1}]
     return GeneratorParams(hosts=k, **{**g, "host_mix": mix})
+
+
+def _check_matrix(
+    matrix: dict[str, Any], data: dict[str, Any] | None, spec: dict[str, Any], scale: list[int]
+) -> None:
+    """Every cell must make flows on the step's topology, in shapes iperf3 can
+    send, before anything is deployed (a refused cell mid-run wastes the run)."""
+    if data is None:
+        data = generate(_gen_params(spec, scale[0]))
+    nodes = list(selectors.node_index(data))
+    for cell in bm.matrix_cells(matrix):
+        pattern = bm.matrix_pattern(matrix, cell)
+        flows = expand([pattern], lambda sel: selectors.resolve(data, nodes, sel or "all"))
+        for f in flows[:1]:
+            if f.get("burst_interval_ms"):
+                udp = f.get("protocol") == "udp"
+                burst_shape(
+                    str(f.get("bitrate") or ("1M" if udp else "")),
+                    f["burst_interval_ms"],
+                    "udp" if udp else "tcp",
+                    f.get("length"),
+                )
 
 
 def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job:
@@ -188,6 +212,11 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 db, name=f"bench: {label}", data=generate(_gen_params(spec, first))
             )
             generated = True
+        if spec.get("matrix"):
+            try:
+                _check_matrix(spec["matrix"], topo.data if not generated else None, spec, scale)
+            except (PatternError, ValueError) as exc:
+                raise Invalid(str(exc), code="bad_matrix") from exc
         params = {
             **spec,
             **extra,
@@ -481,13 +510,7 @@ async def _deploy(b: Bench, row: dict[str, Any], name: str) -> EngineState | Non
         _fail(row, "stopped", "deploy_slow", f"deploy took {row['deploy_s']:.0f}s")
     state = EngineState.from_dict(_topo(runner, topology_id).engine_state)
     assert state is not None
-    b.session.set_scope(
-        m.Scope(
-            lab_hash=state.lab_hash,
-            node_for_machine={mn: nid for nid, mn in state.nodes.items()},
-            step=name,
-        )
-    )
+    b.session.set_scope(_lab_scope(state, name))
     b.mark(f"{name}: deployed in {row['deploy_s']}s")
     return state
 
@@ -561,21 +584,26 @@ async def _hold(
             raise Tripped
         return
     b.progress(name, "starting traffic")
-    with runner.session_factory() as db:
-        run = traffic.start_run(
-            db,
-            runner,
-            db.get(Topology, topology_id),
-            {
-                "label": f"benchmark {name}",
-                "patterns": load.get("patterns") or [],
-                "flows": [],
-                "duration_s": None,
-                "interval_s": load.get("interval_s") or b.interval,
-                "ramp_s": load.get("ramp_s") or 0.0,
-            },
-        )
-        row["traffic_job"] = run.id
+    try:
+        with runner.session_factory() as db:
+            run = traffic.start_run(
+                db,
+                runner,
+                db.get(Topology, topology_id),
+                {
+                    "label": f"benchmark {name}",
+                    "patterns": load.get("patterns") or [],
+                    "flows": [],
+                    "duration_s": None,
+                    "interval_s": load.get("interval_s") or b.interval,
+                    "ramp_s": load.get("ramp_s") or 0.0,
+                },
+            )
+            row["traffic_job"] = run.id
+    except (Conflict, Invalid) as exc:
+        windows["hold"] = None
+        _fail(row, "failed", "traffic_refused", str(exc))
+        return
     ramp = float(load.get("ramp_s") or 0.0)
     b.progress(name, f"traffic: ramp {ramp:.0f}s + hold {hold_s:g}s")
     tripped = await b.pause(ramp)
@@ -831,6 +859,122 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     return stopped_by
 
 
+async def _matrix(b: Bench, persist) -> str:
+    """Per repetition: deploy once (a row of its own: deploy, ready, memory),
+    then every cell in its order (a row each: a quiet idle gap, then the
+    cell's traffic for ``hold_s``), then destroy. A failed or degraded cell
+    doesn't stop the matrix; a stop criterion (the host ran out) does."""
+    runner, spec, job_id = b.runner, b.spec, b.job_id
+    mx = spec["matrix"]
+    scale = int(spec["scale"][0])
+    reps = int(spec.get("repetitions") or 1)
+    cells = bm.matrix_cells(mx)
+    hold_s = float(spec.get("hold_s") or 0)
+    stopped_by = "completed"
+
+    def suffix(rep: int) -> str:
+        return f" #{rep}" if reps > 1 else ""
+
+    for rep in range(1, reps + 1):
+        name = f"deploy{suffix(rep)}"
+        row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
+        row["reason"] = row["detail"] = None
+        state: EngineState | None = None
+        async with runner.step(job_id, name):
+            data = generate(_gen_params(spec, scale)) if spec.get("generated") else None
+            topo = _place(b, row, data, f"{scale}-{rep}")
+            windows: dict[str, Window] = {"pre": None, "settle": None, "hold": None}
+            windows["pre"] = await _reference(b, row, name)
+            try:
+                state = await _deploy(b, row, name)
+                if state is not None and await _ready(b, row, name, topo.data, state):
+                    windows["settle"] = await _settle(b, name)
+            except Tripped:
+                pass
+            await _finish(b, row, windows)
+            b.rows.append(row)
+            persist()
+        if row["outcome"] == "ok" and state is not None:
+            stopped_by = await _cells(b, state, row, rep, cells, hold_s, suffix(rep), persist)
+        name = f"teardown{suffix(rep)}"
+        async with runner.step(job_id, name):
+            await _teardown(b, row, name, last=rep == reps or stopped_by != "completed")
+            persist()
+        if row["outcome"] != "ok":
+            return f"criterion:{row['reason']}"
+        if stopped_by != "completed":
+            return stopped_by
+    return stopped_by
+
+
+async def _cells(
+    b: Bench,
+    state: EngineState,
+    deployed: dict[str, Any],
+    rep: int,
+    cells: list[dict[str, Any]],
+    hold_s: float,
+    suffix: str,
+    persist,
+) -> str:
+    runner, spec, job_id = b.runner, b.spec, b.job_id
+    assert b.session is not None
+    mx = spec["matrix"]
+    order = bm.matrix_order(cells, int(mx.get("seed") or 0), rep, mx.get("shuffle", True))
+    for i, cell in enumerate(order, 1):
+        name = f"cell {i:03d}/{len(order)} {cell['id']}{suffix}"
+        row: dict[str, Any] = {"step": name, "scale": deployed["scale"], "rep": rep}
+        row.update(outcome="ok", reason=None, detail=None, case=cell["id"], order=i)
+        row.update(cell={k: v for k, v in cell.items() if k != "id"})
+        row.update(nodes=deployed.get("nodes"), links=deployed.get("links"))
+        async with runner.step(job_id, name):
+            b.session.set_scope(_lab_scope(state, name))
+            b.progress(name, "waiting for the host to go quiet")
+            row["quiet_wait_s"] = await b.quiet(
+                float(spec.get("quiet_cpu_pct") or 10), float(spec.get("quiet_timeout_s") or 300)
+            )
+            b.progress(name, f"idle ({mx.get('gap_s', 10):g}s)")
+            t0 = b.now()
+            await asyncio.sleep(float(mx.get("gap_s") or 0))
+            windows: dict[str, Window] = {"pre": None, "settle": (t0, b.now()), "hold": None}
+            load = {
+                "patterns": [bm.matrix_pattern(mx, cell)],
+                "interval_s": mx.get("interval_s") or 10,
+                "ramp_s": mx.get("ramp_s") or 0,
+                "slug": f"{i:03d}-{cell['id']}{'-' + str(rep) if suffix else ''}",
+            }
+            b.arm()
+            try:
+                await _hold(b, row, name, windows, hold_s, load)
+            except Tripped:
+                pass
+            await _finish(b, row, windows)
+            row["idle_cpu_mean"] = bm.window_mean(
+                b.session.host_rows, windows["settle"], "vm_cpu_pct"
+            )
+            if row.get("hold_cpu_mean") is not None and row["idle_cpu_mean"] is not None:
+                row["cpu_delta"] = round(row["hold_cpu_mean"] - row["idle_cpu_mean"], 2)
+            b.rows.append(row)
+            persist()
+            runner.progress(
+                job_id, name, row["outcome"] + (f": {row['detail']}" if row.get("detail") else "")
+            )
+        if row["outcome"] == "stopped":
+            return f"criterion:{row['reason']}"
+        if runner.stop_requested(job_id):
+            return runner.stop_code(job_id) or "user"
+    return "completed"
+
+
+def _lab_scope(state: EngineState, step: str) -> m.Scope:
+    """The monitor's scope for a step of a deployed lab."""
+    return m.Scope(
+        lab_hash=state.lab_hash,
+        node_for_machine={mn: nid for nid, mn in state.nodes.items()},
+        step=step,
+    )
+
+
 async def _census(b: Bench, step) -> str:
     """Every case in turn (× ``repetitions``); a case whose image could not be
     prepared is skipped, and no outcome stops the census (a user stop does)."""
@@ -909,8 +1053,14 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
 
     def snapshot(final: bool = False) -> dict[str, Any]:
         census = spec.get("census")
+        matrix = spec.get("matrix")
         # A census goes on past failed cases: they are in its table, not "the reason".
-        last = None if census else next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
+        # A matrix goes on past degraded or failed cells (in its table too).
+        last = (
+            None
+            if census or matrix
+            else next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
+        )
         out = {
             "label": spec.get("label") or "",
             "kind": bm.kind_of(spec),
@@ -918,8 +1068,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             "ended_at": datetime.now(UTC).isoformat() if final else None,
             "topology_id": spec["topology_id"],
             "rows": b.rows,
-            "by_scale": None if census else bm.by_scale(b.rows),
-            "ceiling": None if census else bm.ceiling(b.rows),
+            "by_scale": None if census or matrix else bm.by_scale(b.rows),
+            "ceiling": None if census or matrix else bm.ceiling(b.rows),
             "reason": last["reason"] if last else None,
             "detail": last["detail"] if last else None,
             "stopped_by": stopped_by,
@@ -930,6 +1080,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
         }
         if census:
             out["census"] = bm.census_table(b.rows, int(census.get("per_image") or 5))
+        if matrix:
+            out["matrix"] = bm.matrix_table(b.rows)
         return out
 
     def persist(final: bool = False) -> None:
@@ -1037,6 +1189,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
 
         if spec.get("census"):
             stopped_by = await _census(b, step)
+        elif spec.get("matrix"):
+            stopped_by = await _matrix(b, persist)
         elif adaptive:
             stopped_by = await _climb(b, adaptive, step, persist)
         else:

@@ -207,6 +207,93 @@ def test_an_image_census(client, wait_jobs, fast):
     assert client.post("/api/v1/benchmarks", json={**body, "scale": [2]}).status_code == 422
 
 
+MATRIX = {
+    "patterns": [
+        {"id": "cs", "kind": "clients_to_servers", "servers": ["srv-1", "srv-2"]},
+        {
+            "id": "mesh",
+            "kind": "mesh",
+            "fanout": 2,
+            "nodes": {"roles": ["host"], "exclude": ["srv-1", "srv-2"]},
+        },
+    ],
+    "axes": {
+        "pattern": ["cs", "mesh"],
+        "protocol": ["tcp", "udp"],
+        "bitrate": ["50K", "1M"],
+        "burst_interval_ms": [100, 2000],
+    },
+    "interval_s": 0.5,
+    "ramp_s": 0,
+    "gap_s": 0.05,
+    "seed": 1,
+}
+
+
+def test_a_traffic_matrix_runs_every_cell_on_one_deployment(client, wait_jobs, fast):
+    gen = {"servers": 2, "hosts_per_subnet": 4}
+    r = _start(client, scale=[4], topology={"generate": gen}, matrix=MATRIX)
+    assert r.status_code == 202, r.text
+    bench = r.json()
+    assert bench["kind"] == "matrix"
+    wait_jobs()
+    done = _done(client, bench["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    result = done["result"]
+    assert result["stopped_by"] == "completed" and result["ceiling"] is None
+    deploy, *cells = result["rows"]
+    assert deploy["step"] == "deploy" and deploy["deploy_s"] is not None
+    assert deploy["destroy_s"] is not None and deploy["marginal_mem_per_node"] is not None
+    assert len(cells) == 16 and all(c["outcome"] == "ok" for c in cells), [
+        (c["case"], c["outcome"], c.get("detail")) for c in cells
+    ]
+    ids = [c["case"] for c in cells]
+    assert len(set(ids)) == 16 and "cs·tcp·50K·100ms" in ids
+    from domain.benchmark import matrix_cells
+
+    assert ids != [c["id"] for c in matrix_cells(MATRIX)]  # run in a shuffled order
+    mesh = next(c for c in cells if c["case"] == "mesh·udp·1M·2000ms")
+    assert mesh["flows"] == 8 and mesh["cell"]["burst_interval_ms"] == 2000  # 4 hosts × 2
+    assert mesh["offered_bps"] == 8e6 and mesh["idle_cpu_mean"] is not None
+    run = client.get(f"/api/v1/traffic/runs/{mesh['traffic_job']}").json()
+    assert run["result"]["flows"][0]["burst"]["count"] == 179
+    names = [st["name"] for st in done["job"]["steps"]]
+    assert names[:4] == ["preflight", "images", "baseline", "deploy"]
+    assert names[4].startswith("cell 001/16 ") and names[-1] == "teardown"
+    # Deployed once for all the cells.
+    jobs = client.get(f"/api/v1/topologies/{bench['topology_id']}/jobs").json()
+    assert sum(1 for j in jobs if j["kind"] == "deploy") == 1
+    assert len(result["matrix"]) == 16
+    md = client.get(f"/api/v1/benchmarks/{bench['id']}/report.md").text
+    assert "**pattern cs · protocol tcp — Delivered (% of asked)**" in md
+    assert "**pattern mesh · protocol udp — Loss %**" in md
+    assert "16 of 16 cells passed" in md and "Cells in run order:" in md
+    assert md.index("**pattern cs · protocol tcp") < md.index("**pattern mesh · protocol udp")
+    assert "| 50K | " in md and "| bitrate \\ burst_interval_ms | 100ms | 2000ms |" in md
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"/api/v1/benchmarks/{bench['id']}/export").content))
+    assert sum(1 for n in z.namelist() if n.startswith("traffic/") and n.endswith("run.json")) == 16
+    assert fast.labs == {}
+
+
+def test_matrix_refusals(client):
+    gen = {"topology": {"generate": {"servers": 2, "hosts_per_subnet": 4}}}
+    bad_axis = {**MATRIX, "axes": {"colour": ["red"]}}
+    assert _start(client, scale=[4], matrix=bad_axis, **gen).status_code == 422
+    assert _start(client, scale=[4, 8], matrix=MATRIX, **gen).status_code == 422
+    huge = {
+        **MATRIX,
+        "axes": {"bitrate": ["1G"], "burst_interval_ms": [10000], "protocol": ["udp"]},
+    }
+    r = _start(client, scale=[4], matrix=huge, **gen)
+    assert r.status_code == 422 and r.json()["code"] == "bad_matrix"
+    ghost = {
+        **MATRIX,
+        "patterns": [{**MATRIX["patterns"][0], "servers": ["ghost"]}, MATRIX["patterns"][1]],
+    }
+    r = _start(client, scale=[4], matrix=ghost, **gen)
+    assert r.status_code == 422 and r.json()["code"] == "bad_matrix"
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()

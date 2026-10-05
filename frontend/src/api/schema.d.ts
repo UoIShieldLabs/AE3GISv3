@@ -1088,6 +1088,48 @@ export interface components {
              */
             per_image: number;
         };
+        /**
+         * BenchmarkMatrix
+         * @description Traffic cells on one deployment: every combination of the ``axes``
+         *     values (``pattern``: ids of ``patterns``, default all of them; the others
+         *     override the pattern's field) runs in turn for ``hold_s``, in a seeded
+         *     shuffled order unless ``shuffle`` is off, after a quiet ``gap_s``.
+         */
+        BenchmarkMatrix: {
+            /** Axes */
+            axes?: {
+                [key: string]: unknown[];
+            };
+            /**
+             * Gap S
+             * @default 10
+             */
+            gap_s: number;
+            /** Grid */
+            grid?: string[] | null;
+            /**
+             * Interval S
+             * @default 10
+             */
+            interval_s: number;
+            /** Patterns */
+            patterns: components["schemas"]["MatrixPattern"][];
+            /**
+             * Ramp S
+             * @default 5
+             */
+            ramp_s: number;
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /**
+             * Shuffle
+             * @default true
+             */
+            shuffle: boolean;
+        };
         /** BenchmarkMonitor */
         BenchmarkMonitor: {
             /**
@@ -1152,12 +1194,13 @@ export interface components {
              */
             keep_samples: boolean;
             /** Kind */
-            kind?: ("sweep" | "adaptive" | "census") | null;
+            kind?: ("sweep" | "adaptive" | "census" | "matrix") | null;
             /**
              * Label
              * @default
              */
             label: string;
+            matrix?: components["schemas"]["BenchmarkMatrix"] | null;
             monitor?: components["schemas"]["BenchmarkMonitor"];
             /**
              * Notes
@@ -2038,6 +2081,64 @@ export interface components {
              * @enum {string}
              */
             kind: "link";
+        };
+        /**
+         * MatrixPattern
+         * @description A traffic matrix's pattern: its axes may give the bitrate (and burst).
+         */
+        MatrixPattern: {
+            /** Bitrate */
+            bitrate?: string | null;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
+            /** Clients */
+            clients?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Direction
+             * @default forward
+             * @enum {string}
+             */
+            direction: "forward" | "reverse" | "bidir";
+            /**
+             * Each
+             * @default one
+             * @enum {string}
+             */
+            each: "one" | "all";
+            /**
+             * Fanout
+             * @default 1
+             */
+            fanout: number;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "clients_to_servers" | "mesh";
+            /** Length */
+            length?: number | null;
+            /** Nodes */
+            nodes?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Omit S
+             * @default 0
+             */
+            omit_s: number;
+            /**
+             * Parallel
+             * @default 1
+             */
+            parallel: number;
+            /**
+             * Protocol
+             * @default tcp
+             * @enum {string}
+             */
+            protocol: "tcp" | "udp";
+            /** Servers */
+            servers?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
         };
         /**
          * MixEntry

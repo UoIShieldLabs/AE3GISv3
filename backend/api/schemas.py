@@ -760,6 +760,81 @@ class BenchmarkAdaptive(BaseModel):
         return self
 
 
+class MatrixPattern(TrafficPattern):
+    """A traffic matrix's pattern: its axes may give the bitrate (and burst)."""
+
+    bitrate: str | None = Field(default=None, pattern=r"^\d+(\.\d+)?[KMGkmg]?$")
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):  # checked per cell, once the axes fill it in
+        return self
+
+
+# What a matrix axis may vary: the pattern (by id) or a pattern field.
+MATRIX_AXES = (
+    "pattern",
+    "bitrate",
+    "burst_interval_ms",
+    "protocol",
+    "length",
+    "parallel",
+    "direction",
+)
+MATRIX_MAX_CELLS = 500
+
+
+class BenchmarkMatrix(BaseModel):
+    """Traffic cells on one deployment: every combination of the ``axes``
+    values (``pattern``: ids of ``patterns``, default all of them; the others
+    override the pattern's field) runs in turn for ``hold_s``, in a seeded
+    shuffled order unless ``shuffle`` is off, after a quiet ``gap_s``."""
+
+    patterns: list[MatrixPattern] = Field(min_length=1, max_length=8)
+    axes: dict[str, list[Any]] = Field(default_factory=dict)
+    # The two axes the report draws as a grid (rows, columns); default: the
+    # first two axes other than pattern and protocol.
+    grid: list[str] | None = Field(default=None, min_length=2, max_length=2)
+    # iperf3's report interval: a multiple of every burst interval keeps the
+    # bursts per sample even.
+    interval_s: float = Field(default=10, ge=0.5, le=60)
+    ramp_s: float = Field(default=5, ge=0, le=600)
+    gap_s: float = Field(default=10, ge=0, le=3600)
+    shuffle: bool = True
+    seed: int = 0
+
+    @model_validator(mode="after")
+    def _cells(self) -> BenchmarkMatrix:
+        ids = [p.id for p in self.patterns]
+        if len(set(ids)) != len(ids):
+            raise ValueError("matrix pattern ids must be unique")
+        for name, values in self.axes.items():
+            if name not in MATRIX_AXES:
+                raise ValueError(f"unknown matrix axis {name!r} (one of {', '.join(MATRIX_AXES)})")
+            if not values or len({str(v) for v in values}) != len(values):
+                raise ValueError(f"matrix axis {name!r} needs distinct values")
+        unknown = set(map(str, self.axes.get("pattern") or [])) - set(ids)
+        if unknown:
+            raise ValueError(f"matrix axis pattern names unknown pattern(s) {sorted(unknown)}")
+        if self.grid and not set(self.grid) <= set(self.axes):
+            raise ValueError("matrix grid must name two of its axes")
+        n = len(self.axes.get("pattern") or ids)
+        for name, values in self.axes.items():
+            if name != "pattern":
+                n *= len(values)
+        if n > MATRIX_MAX_CELLS:
+            raise ValueError(f"the matrix has {n} cells; at most {MATRIX_MAX_CELLS}")
+        # Every cell must be a valid pattern (e.g. a burst needs a bitrate).
+        base = {p.id: p.model_dump(exclude_none=True) for p in self.patterns}
+        for pid in self.axes.get("pattern") or ids:
+            others = [(k, v) for k, v in self.axes.items() if k != "pattern"]
+            combos: list[dict[str, Any]] = [{}]
+            for k, vs in others:
+                combos = [{**c, k: v} for c in combos for v in vs]
+            for c in combos:
+                TrafficPattern.model_validate({**base[str(pid)], **c})
+        return self
+
+
 class CensusCase(BaseModel):
     type: str = Field(min_length=1)
     image: str = Field(min_length=1)
@@ -780,7 +855,7 @@ class BenchmarkRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
     # What the benchmark does; inferred from the spec when omitted.
-    kind: Literal["sweep", "adaptive", "census"] | None = None
+    kind: Literal["sweep", "adaptive", "census", "matrix"] | None = None
     topology: BenchmarkTopology = Field(
         default_factory=lambda: BenchmarkTopology(generate=GeneratorSpec())
     )
@@ -790,6 +865,8 @@ class BenchmarkRequest(BaseModel):
     adaptive: BenchmarkAdaptive | None = None
     # Or survey node images, one step each (no scale, adaptive or traffic).
     census: BenchmarkCensus | None = None
+    # Or run traffic cells on one deployment (one scale; no adaptive or traffic).
+    matrix: BenchmarkMatrix | None = None
     repetitions: int = Field(default=1, ge=1, le=20)
     cooldown_s: float = Field(default=20, ge=0, le=3600)
     # Before each step's reference window, wait (up to quiet_timeout_s) until
@@ -830,9 +907,18 @@ class BenchmarkRequest(BaseModel):
             self.scale or self.adaptive or self.traffic or self.topology.generate is None
         ):
             raise ValueError("a census takes no scale, adaptive or traffic, and generates")
+        if self.matrix is not None and (
+            self.census
+            or self.adaptive
+            or self.traffic
+            or (self.topology.generate is not None and len(self.scale) != 1)
+        ):
+            raise ValueError("a matrix takes one scale and no census, adaptive or traffic")
         inferred = (
             "census"
             if self.census is not None
+            else "matrix"
+            if self.matrix is not None
             else "adaptive"
             if self.adaptive is not None
             else "sweep"

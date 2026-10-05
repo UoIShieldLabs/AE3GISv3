@@ -22,6 +22,7 @@ Definitions (the plan's; docs/benchmarks/README.md explains them):
 from __future__ import annotations
 
 import math
+import random
 from collections.abc import Callable
 from typing import Any
 
@@ -39,6 +40,12 @@ SUSTAINED = 3  # sweeps a host threshold must hold before it stops the sweep
 
 def mean(xs: list[float]) -> float | None:
     return sum(xs) / len(xs) if xs else None
+
+
+def window_mean(
+    rows: list[dict[str, Any]], span: tuple[float, float] | None, key: str
+) -> float | None:
+    return _r(mean(window(rows, span, key)), 2)
 
 
 def window(rows: list[dict[str, Any]], span: tuple[float, float] | None, key: str) -> list[float]:
@@ -476,6 +483,91 @@ def census_table(rows: list[dict[str, Any]], per_image: int) -> list[dict[str, A
     return out
 
 
+# ── traffic matrix ──
+
+
+def _short(name: str, value: Any) -> str:
+    if name == "burst_interval_ms":
+        return f"{value}ms"
+    if name == "length":
+        return f"{value}B"
+    if name == "parallel":
+        return f"P{value}"
+    return str(value)
+
+
+def matrix_cells(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every combination of the matrix's axes, as ``{id, pattern, <axis>:
+    value…}`` (``pattern``: a pattern id), in axis order. Ids read like
+    ``cs·tcp·250K·500ms``."""
+    axes = dict(matrix.get("axes") or {})
+    patterns = [str(x) for x in axes.pop("pattern", None) or [p["id"] for p in matrix["patterns"]]]
+    cells: list[dict[str, Any]] = [{"pattern": pid} for pid in patterns]
+    for name, values in axes.items():
+        cells = [{**c, name: v} for c in cells for v in values]
+    for c in cells:
+        c["id"] = "·".join(_short(k, v) for k, v in c.items())
+    return cells
+
+
+def matrix_order(cells: list[dict[str, Any]], seed: int, rep: int, shuffle: bool) -> list[dict]:
+    """The order a repetition runs its cells in: shuffled (per seed and
+    repetition) so drift over the run doesn't line up with an axis."""
+    order = list(cells)
+    if shuffle:
+        random.Random(f"{seed}:{rep}").shuffle(order)
+    return order
+
+
+def matrix_pattern(matrix: dict[str, Any], cell: dict[str, Any]) -> dict[str, Any]:
+    """The traffic pattern a cell runs: its pattern with the cell's values."""
+    base = next(p for p in matrix["patterns"] if p["id"] == cell["pattern"])
+    over = {k: v for k, v in cell.items() if k not in ("id", "pattern")}
+    return {**{k: v for k, v in base.items() if v is not None}, **over}
+
+
+CELL_METRICS = (
+    "delivered_ratio",
+    "flow_ratio_min",
+    "lost_percent",
+    "retransmits",
+    "rtt_ms_p50",
+    "rtt_ms_p95",
+    "jitter_ms_p50",
+    "jitter_ms_p95",
+    "hold_cpu_mean",
+    "idle_cpu_mean",
+    "cpu_delta",
+    "hold_docker_cpu_mean",
+    "hold_mem_pct_max",
+)
+
+
+def matrix_table(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One entry per cell, its repetitions averaged (cell rows carry ``cell``)."""
+    by_cell: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        if r.get("cell"):
+            by_cell.setdefault(r["case"], []).append(r)
+    out = []
+    for cid, rs in by_cell.items():
+        bad = next((r for r in rs if r["outcome"] != "ok"), None)
+        entry: dict[str, Any] = {
+            "id": cid,
+            "cell": rs[0]["cell"],
+            "runs": len(rs),
+            "ok": sum(1 for r in rs if r["outcome"] == "ok"),
+            "outcome": bad["outcome"] if bad else "ok",
+            "reason": bad["reason"] if bad else None,
+            "flows": rs[0].get("flows"),
+            "offered_bps": rs[0].get("offered_bps"),
+        }
+        for key in CELL_METRICS:
+            entry[key] = _r(mean([r[key] for r in rs if r.get(key) is not None]), 4)
+        out.append(entry)
+    return out
+
+
 def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[str, Any]:
     """The host at rest before the first step, nothing of ours deployed: what
     an earlier run or a leak left behind (memory the engine never gave back,
@@ -621,6 +713,9 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
     ]
     if kind_of(spec) == "census":
         return "\n".join(lines + _census_md(result.get("census") or [], spec))
+    matrix = result.get("matrix")
+    if matrix is not None:
+        rows = [r for r in rows if not r.get("cell")]  # the deployments; cells below
     lines += [
         "",
         "| Hosts | # | Nodes | Links | Deploy s | Ready s | Destroy s | Marginal MB/node | Docker MB/node "
@@ -643,6 +738,9 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
             f"| {'–' if delivered is None else f'{delivered * 100:.1f}%'} "
             f"| {outcome} |"
         )
+    if matrix is not None:
+        lines += _matrix_md(matrix, spec)
+        lines += _cells_md([r for r in result.get("rows") or [] if r.get("cell")])
     lines += _spread_table(result.get("by_scale") or [])
     lines += _traffic_table(rows)
     lines += _image_table(rows)
@@ -658,7 +756,42 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
     return "\n".join(lines)
 
 
+def _cells_md(rows: list[dict[str, Any]]) -> list[str]:
+    """Every cell in the order it ran (drift over the run shows here)."""
+    if not rows:
+        return []
+    lines = [
+        "",
+        "Cells in run order:",
+        "",
+        "| # | Cell | Flows | Asked Mb/s | Delivered | Slowest flow | RTT p95 ms | Jitter p95 ms "
+        "| Loss % | Host CPU % (idle → load) | Docker cores | Outcome |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    for r in rows:
+        docker = r.get("hold_docker_cpu_mean")
+        outcome = r["outcome"] + (f": {r['detail']}" if r.get("detail") else "")
+        lines.append(
+            f"| {r.get('order', '–')} | `{r['case']}` | {r.get('flows', '–')} "
+            f"| {_bps(r.get('offered_bps'))} | {_pct(r.get('delivered_ratio'))} "
+            f"| {_pct(r.get('flow_ratio_min'))} | {_num(r.get('rtt_ms_p95'))} "
+            f"| {_num(r.get('jitter_ms_p95'), 2)} | {_num(r.get('lost_percent'), 2)} "
+            f"| {_num(r.get('idle_cpu_mean'))} → {_num(r.get('hold_cpu_mean'))} "
+            f"| {_num(None if docker is None else docker / 100, 2)} | {outcome} |"
+        )
+    return lines
+
+
 def _outcome(result: dict[str, Any]) -> str:
+    matrix = result.get("matrix")
+    if matrix is not None:
+        counts: dict[str, int] = {}
+        for c in matrix:
+            counts[c["outcome"]] = counts.get(c["outcome"], 0) + 1
+        rest = ", ".join(f"{n} {o}" for o, n in counts.items() if o != "ok")
+        return f"{counts.get('ok', 0)} of {len(matrix)} cells passed" + (
+            f" ({rest})" if rest else ""
+        )
     census = result.get("census")
     if census is not None:
         usable = sum(1 for c in census if c["usable"])
@@ -690,6 +823,82 @@ def _census_md(census: list[dict[str, Any]], spec: dict[str, Any]) -> list[str]:
     return [*lines, ""]
 
 
+# The matrix grids: (title, the cell's figure, which protocol it applies to).
+_GRIDS: list[tuple[str, Callable[[dict[str, Any]], str], str | None]] = [
+    ("Delivered (% of asked)", lambda c: _pct(c.get("delivered_ratio")), None),
+    ("Slowest flow (% of asked)", lambda c: _pct(c.get("flow_ratio_min")), None),
+    ("RTT p95 (ms)", lambda c: _num(c.get("rtt_ms_p95")), "tcp"),
+    ("Retransmits", lambda c: _num(c.get("retransmits"), 0), "tcp"),
+    ("Jitter p95 (ms)", lambda c: _num(c.get("jitter_ms_p95"), 2), "udp"),
+    ("Loss %", lambda c: _num(c.get("lost_percent"), 2), "udp"),
+    ("Host CPU % over idle", lambda c: _num(c.get("cpu_delta")), None),
+    (
+        "Docker cores",
+        lambda c: _num(
+            None if c.get("hold_docker_cpu_mean") is None else c["hold_docker_cpu_mean"] / 100, 2
+        ),
+        None,
+    ),
+]
+
+
+def _matrix_md(cells: list[dict[str, Any]], spec: dict[str, Any]) -> list[str]:
+    """A grid per group (the axes besides the grid's two) and figure, then
+    every cell in the order it ran."""
+    m = spec.get("matrix") or {}
+    axes = list((m.get("axes") or {}).keys())
+    grid = m.get("grid") or [a for a in axes if a not in ("pattern", "protocol")][:2]
+    if len(grid) < 2 or not cells:
+        return []
+    row_axis, col_axis = grid
+    rows_v, cols_v = m["axes"][row_axis], m["axes"][col_axis]
+    groups: dict[tuple, list[dict[str, Any]]] = {}
+    for c in cells:
+        key = tuple((k, v) for k, v in c["cell"].items() if k not in (row_axis, col_axis, "id"))
+        groups.setdefault(key, []).append(c)
+    rank = {k: [str(x) for x in vs] for k, vs in (m.get("axes") or {}).items()}
+    if "pattern" not in rank:
+        rank["pattern"] = [p["id"] for p in m.get("patterns") or []]
+
+    def order(key: tuple) -> list[int]:  # the spec's axis order, not the run's
+        return [rank.get(k, []).index(str(v)) if str(v) in rank.get(k, []) else 0 for k, v in key]
+
+    groups = dict(sorted(groups.items(), key=lambda kv: order(kv[0])))
+    lines = [
+        "",
+        f"Traffic matrix: {len(cells)} cells, {row_axis} (rows) × {col_axis} (columns), "
+        f"per {', '.join(k for k, _ in next(iter(groups))) or 'cell'}; each cell held "
+        f"{spec.get('hold_s')}s after a {m.get('ramp_s', 5)}s ramp and a {m.get('gap_s', 10)}s "
+        "idle gap (host CPU over idle compares the two).",
+    ]
+    for key, group in groups.items():
+        at = {(c["cell"].get(row_axis), c["cell"].get(col_axis)): c for c in group}
+        protocol = dict(key).get("protocol") or next(
+            (c["cell"].get("protocol") for c in group if c["cell"].get("protocol")), None
+        )
+        title = " · ".join(f"{k} {v}" for k, v in key)
+        for name, fig, only in _GRIDS:
+            if only and protocol and protocol != only:
+                continue
+            lines += [
+                "",
+                f"**{title} — {name}**",
+                "",
+                f"| {row_axis} \\ {col_axis} | "
+                + " | ".join(_short(col_axis, v) for v in cols_v)
+                + " |",
+                "|---|" + "---:|" * len(cols_v),
+            ]
+            for rv in rows_v:
+                cells_row = [at.get((rv, cv)) for cv in cols_v]
+                lines.append(
+                    f"| {_short(row_axis, rv)} | "
+                    + " | ".join(fig(c) if c else "–" for c in cells_row)
+                    + " |"
+                )
+    return lines
+
+
 def _rest_line(rest: dict[str, Any] | None) -> list[str]:
     if not rest or not rest.get("samples"):
         return []
@@ -702,6 +911,12 @@ def _rest_line(rest: dict[str, Any] | None) -> list[str]:
 
 
 def _steps_line(spec: dict[str, Any]) -> str:
+    if spec.get("matrix"):
+        n = len(matrix_cells(spec["matrix"]))
+        return (
+            f"traffic matrix of {n} cells on one deployment of {(spec.get('scale') or ['?'])[0]} hosts "
+            f"× {spec.get('repetitions', 1)}"
+        )
     if spec.get("census"):
         c = spec["census"]
         cases = len(c.get("cases") or [])
@@ -891,6 +1106,16 @@ def _random_line(g: dict[str, Any], shape: str) -> str:
 
 
 def _traffic_line(spec: dict[str, Any]) -> str:
+    m = spec.get("matrix")
+    if m:
+        pats = "; ".join(
+            f"{p['id']}: {'mesh' if p.get('kind') == 'mesh' else 'clients → servers'}"
+            for p in m["patterns"]
+        )
+        axes = ", ".join(
+            f"{k} {' / '.join(_short(k, v) for v in vs)}" for k, vs in (m.get("axes") or {}).items()
+        )
+        return f"per cell: {pats}; axes: {axes} (iperf3 report every {m.get('interval_s', 10):g}s)"
     t = spec.get("traffic")
     if not t:
         return "idle (no traffic)"

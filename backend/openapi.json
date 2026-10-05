@@ -198,6 +198,80 @@
         "title": "BenchmarkCensus",
         "type": "object"
       },
+      "BenchmarkMatrix": {
+        "description": "Traffic cells on one deployment: every combination of the ``axes``\nvalues (``pattern``: ids of ``patterns``, default all of them; the others\noverride the pattern's field) runs in turn for ``hold_s``, in a seeded\nshuffled order unless ``shuffle`` is off, after a quiet ``gap_s``.",
+        "properties": {
+          "axes": {
+            "additionalProperties": {
+              "items": {},
+              "type": "array"
+            },
+            "title": "Axes",
+            "type": "object"
+          },
+          "gap_s": {
+            "default": 10,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Gap S",
+            "type": "number"
+          },
+          "grid": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid"
+          },
+          "interval_s": {
+            "default": 10,
+            "maximum": 60.0,
+            "minimum": 0.5,
+            "title": "Interval S",
+            "type": "number"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/MatrixPattern"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Patterns",
+            "type": "array"
+          },
+          "ramp_s": {
+            "default": 5,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Ramp S",
+            "type": "number"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "shuffle": {
+            "default": true,
+            "title": "Shuffle",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "patterns"
+        ],
+        "title": "BenchmarkMatrix",
+        "type": "object"
+      },
       "BenchmarkMonitor": {
         "properties": {
           "interval_s": {
@@ -346,7 +420,8 @@
                 "enum": [
                   "sweep",
                   "adaptive",
-                  "census"
+                  "census",
+                  "matrix"
                 ],
                 "type": "string"
               },
@@ -361,6 +436,16 @@
             "maxLength": 80,
             "title": "Label",
             "type": "string"
+          },
+          "matrix": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkMatrix"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "monitor": {
             "$ref": "#/components/schemas/BenchmarkMonitor"
@@ -2671,6 +2756,180 @@
           "connection_id"
         ],
         "title": "LinkTarget",
+        "type": "object"
+      },
+      "MatrixPattern": {
+        "description": "A traffic matrix's pattern: its axes may give the bitrate (and burst).",
+        "properties": {
+          "bitrate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bitrate"
+          },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
+          },
+          "clients": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clients"
+          },
+          "direction": {
+            "default": "forward",
+            "enum": [
+              "forward",
+              "reverse",
+              "bidir"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "each": {
+            "default": "one",
+            "enum": [
+              "one",
+              "all"
+            ],
+            "title": "Each",
+            "type": "string"
+          },
+          "fanout": {
+            "default": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Fanout",
+            "type": "integer"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,16}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "clients_to_servers",
+              "mesh"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "maximum": 65507.0,
+                "minimum": 16.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "omit_s": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Omit S",
+            "type": "integer"
+          },
+          "parallel": {
+            "default": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Parallel",
+            "type": "integer"
+          },
+          "protocol": {
+            "default": "tcp",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          },
+          "servers": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servers"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "MatrixPattern",
         "type": "object"
       },
       "MixEntry": {

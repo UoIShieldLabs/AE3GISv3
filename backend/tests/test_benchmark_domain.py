@@ -298,3 +298,34 @@ def test_census_table_estimates_a_case_nodes_host_memory():
     assert table["ids · zeek"]["usable"]  # only the host ran out
     assert not table["plc · openplc"]["usable"] and not table["attacker · x"]["usable"]
     assert table["attacker · x"]["reason"] == "image_unavailable"
+
+
+def test_matrix_cells_order_and_patterns():
+    matrix = {
+        "patterns": [
+            {"id": "cs", "kind": "clients_to_servers", "servers": ["srv-1"], "bitrate": None},
+            {"id": "mesh", "kind": "mesh", "fanout": 2},
+        ],
+        "axes": {"protocol": ["tcp", "udp"], "bitrate": ["50K", "1M"], "burst_interval_ms": [100]},
+    }
+    cells = bm.matrix_cells(matrix)  # no pattern axis: every pattern
+    assert len(cells) == 8 and cells[0]["id"] == "cs·tcp·50K·100ms"
+    assert cells[-1] == {
+        "pattern": "mesh",
+        "protocol": "udp",
+        "bitrate": "1M",
+        "burst_interval_ms": 100,
+        "id": "mesh·udp·1M·100ms",
+    }
+    a, b = bm.matrix_order(cells, 1, 1, True), bm.matrix_order(cells, 1, 2, True)
+    assert sorted(c["id"] for c in a) == sorted(c["id"] for c in cells) and a != b
+    assert a == bm.matrix_order(cells, 1, 1, True) and bm.matrix_order(cells, 1, 1, False) == cells
+    pattern = bm.matrix_pattern(matrix, cells[1])
+    assert pattern == {
+        "id": "cs",
+        "kind": "clients_to_servers",
+        "servers": ["srv-1"],
+        "protocol": "tcp",
+        "bitrate": "1M",
+        "burst_interval_ms": 100,
+    }
