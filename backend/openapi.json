@@ -168,6 +168,36 @@
         "title": "BenchmarkAdaptive",
         "type": "object"
       },
+      "BenchmarkCensus": {
+        "description": "One step per node image: ``per_image`` nodes of a type \u00b7 image as the\nclient hosts of a small generated campus (base router, switches and one\nserver around them), deployed, checked and measured alone. ``cases``\ndefaults to every catalog type's non-hidden images; workstation \u00b7\nkathara/base always runs first, as the reference. Failures don't stop it.",
+        "properties": {
+          "cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CensusCase"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cases"
+          },
+          "per_image": {
+            "default": 5,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Per Image",
+            "type": "integer"
+          }
+        },
+        "title": "BenchmarkCensus",
+        "type": "object"
+      },
       "BenchmarkMonitor": {
         "properties": {
           "interval_s": {
@@ -276,6 +306,16 @@
             "title": "Allow Busy Host",
             "type": "boolean"
           },
+          "census": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkCensus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "cooldown_s": {
             "default": 20,
             "maximum": 3600.0,
@@ -305,7 +345,8 @@
               {
                 "enum": [
                   "sweep",
-                  "adaptive"
+                  "adaptive",
+                  "census"
                 ],
                 "type": "string"
               },
@@ -983,6 +1024,26 @@
           "label"
         ],
         "title": "CategorySpec",
+        "type": "object"
+      },
+      "CensusCase": {
+        "properties": {
+          "image": {
+            "minLength": 1,
+            "title": "Image",
+            "type": "string"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "image"
+        ],
+        "title": "CensusCase",
         "type": "object"
       },
       "ContextOut": {

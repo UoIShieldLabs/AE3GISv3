@@ -1,5 +1,7 @@
 """Benchmark metrics, stop criteria and the report."""
 
+import pytest
+
 from domain import benchmark as bm
 
 STOP = {"max_mem_pct": 90, "max_psi_mem_full": 10, "min_delivered_ratio": 0.8, "max_loss_pct": 5}
@@ -248,3 +250,51 @@ def test_next_scale_stays_below_a_failed_scale():
     assert (nxt, code) == (375, "next") and "below 400" in why
     nxt, code, why = bm.next_scale({**row, "scale": 375}, adaptive, cap=400, **common)
     assert nxt is None and code == "bracketed" and "between 375 and 400" in why
+
+
+def test_census_cases():
+    types = {
+        "router": {"images": ["kathara/frr"]},
+        "workstation": {"images": ["kathara/base", "ae3gis.local/firefox"]},
+        "hmi": {"images": ["kathara/base", "ae3gis.local/scadabr"]},
+    }
+    cases = bm.census_cases(types, {"ae3gis.local/scadabr"}, None)
+    assert cases[0] == bm.CENSUS_REFERENCE  # the reference first, once
+    assert [bm.case_label(c) for c in cases[1:]] == [
+        "router · kathara/frr",
+        "workstation · ae3gis.local/firefox",
+        "hmi · kathara/base",
+    ]
+    given = bm.census_cases(types, set(), [{"type": "router", "image": "kathara/frr"}])
+    assert given == [bm.CENSUS_REFERENCE, {"type": "router", "image": "kathara/frr"}]
+    with pytest.raises(ValueError, match="has no image"):
+        bm.census_cases(types, set(), [{"type": "router", "image": "kathara/base"}])
+    with pytest.raises(ValueError, match="Unknown"):
+        bm.census_cases(types, set(), [{"type": "toaster", "image": "x"}])
+
+
+def test_census_table_estimates_a_case_nodes_host_memory():
+    def row(case, outcome="ok", reason=None, delta=None, nodes=10, own=None):
+        t, image = case.split(" · ")
+        r = {"case": case, "case_type": t, "case_image": image, "outcome": outcome}
+        r.update(reason=reason, detail=reason, nodes=nodes, deploy_s=2.0, ready_s=0.5)
+        if delta is not None:
+            r.update(mem_pre=1e9, mem_settle=1e9 + delta)
+        r["by_image"] = {case: {"count": 5, "mem_mean": own, "cpu_mean": 0.1}} if own else {}
+        return r
+
+    ref = "workstation · kathara/base"
+    rows = [
+        row(ref, delta=100e6, own=1e6),  # 10 nodes: 10 MB each
+        row("siem · wazuh", delta=50e6 + 5 * 650e6, own=640e6),  # 5 base + 5 heavy
+        row("ids · zeek", outcome="stopped", reason="memory"),
+        row("plc · openplc", outcome="failed", reason="not_ready"),
+        row("attacker · x", outcome="skipped", reason="image_unavailable"),
+    ]
+    table = {c["case"]: c for c in bm.census_table(rows, per_image=5)}
+    assert table[ref]["host_mem_per_node"] == 10e6
+    assert table["siem · wazuh"]["host_mem_per_node"] == 650e6
+    assert table["siem · wazuh"]["cgroup_mem_per_node"] == 640e6
+    assert table["ids · zeek"]["usable"]  # only the host ran out
+    assert not table["plc · openplc"]["usable"] and not table["attacker · x"]["usable"]
+    assert table["attacker · x"]["reason"] == "image_unavailable"

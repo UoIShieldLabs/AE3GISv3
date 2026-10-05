@@ -1071,6 +1071,23 @@ export interface components {
              */
             target_mem_pct: number;
         };
+        /**
+         * BenchmarkCensus
+         * @description One step per node image: ``per_image`` nodes of a type · image as the
+         *     client hosts of a small generated campus (base router, switches and one
+         *     server around them), deployed, checked and measured alone. ``cases``
+         *     defaults to every catalog type's non-hidden images; workstation ·
+         *     kathara/base always runs first, as the reference. Failures don't stop it.
+         */
+        BenchmarkCensus: {
+            /** Cases */
+            cases?: components["schemas"]["CensusCase"][] | null;
+            /**
+             * Per Image
+             * @default 5
+             */
+            per_image: number;
+        };
         /** BenchmarkMonitor */
         BenchmarkMonitor: {
             /**
@@ -1113,6 +1130,7 @@ export interface components {
              * @default false
              */
             allow_busy_host: boolean;
+            census?: components["schemas"]["BenchmarkCensus"] | null;
             /**
              * Cooldown S
              * @default 20
@@ -1134,7 +1152,7 @@ export interface components {
              */
             keep_samples: boolean;
             /** Kind */
-            kind?: ("sweep" | "adaptive") | null;
+            kind?: ("sweep" | "adaptive" | "census") | null;
             /**
              * Label
              * @default
@@ -1432,6 +1450,13 @@ export interface components {
             id: string;
             /** Label */
             label: string;
+        };
+        /** CensusCase */
+        CensusCase: {
+            /** Image */
+            image: string;
+            /** Type */
+            type: string;
         };
         /** ContextOut */
         ContextOut: {

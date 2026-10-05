@@ -377,6 +377,105 @@ def composition(kinds) -> dict[str, int]:
     return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
+# ── census ──
+
+CENSUS_REFERENCE = {"type": "workstation", "image": "kathara/base"}
+# Census failures that say the host ran out, not that the image is broken: its
+# nodes may still go into random mixes, a few at a time.
+CENSUS_HOST_LIMITS = frozenset({"memory", "memory_pressure", "projected_memory", "monitor_lag"})
+
+
+def case_label(case: dict[str, Any]) -> str:
+    return f"{case['type']} · {case['image']}"
+
+
+def census_cases(
+    types: dict[str, dict[str, Any]], hidden: set[str], given: list[dict[str, Any]] | None
+) -> list[dict[str, str]]:
+    """The census's cases in order, the reference first: ``given`` (checked
+    against the catalog ``types``), or every type's images but ``hidden``
+    ones. ValueError for a case the catalog can't deploy."""
+    if given:
+        cases = [{"type": c["type"], "image": c["image"]} for c in given]
+        for c in cases:
+            spec = types.get(c["type"])
+            if spec is None:
+                raise ValueError(f"Unknown node type {c['type']!r}")
+            if c["image"] not in (spec.get("images") or []):
+                raise ValueError(f"{c['type']!r} has no image {c['image']}")
+    else:
+        cases = [
+            {"type": t, "image": image}
+            for t, spec in types.items()
+            for image in spec.get("images") or []
+            if image not in hidden
+        ]
+    out = [dict(CENSUS_REFERENCE)]
+    for c in cases:
+        if c not in out:
+            out.append(c)
+    return out
+
+
+def census_table(rows: list[dict[str, Any]], per_image: int) -> list[dict[str, Any]]:
+    """One entry per case, its repetitions averaged: the outcome, whether its
+    image is ``usable`` (it passed, or only the host ran out), deploy and ready
+    seconds, the case nodes' own cgroup memory and CPU, and the host memory a
+    node of it costs: the step's memory change less its base nodes (router,
+    switches, server), costed at the reference step's memory per node."""
+    by_case: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        if r.get("case"):
+            by_case.setdefault(r["case"], []).append(r)
+
+    def delta(r: dict[str, Any]) -> float | None:
+        if r.get("mem_settle") is None or r.get("mem_pre") is None:
+            return None
+        return r["mem_settle"] - r["mem_pre"]
+
+    ref = [
+        delta(r) / r["nodes"]
+        for r in by_case.get(case_label(CENSUS_REFERENCE), [])
+        if r["outcome"] == "ok" and delta(r) is not None and r.get("nodes")
+    ]
+    ref_node = mean(ref)
+    out = []
+    for case, rs in by_case.items():
+        ok = [r for r in rs if r["outcome"] == "ok"]
+        bad = next((r for r in rs if r["outcome"] != "ok"), None)
+        costs = [
+            (delta(r) - (r["nodes"] - per_image) * ref_node) / per_image
+            for r in ok
+            if ref_node is not None and delta(r) is not None
+        ]
+        own = [r["by_image"][case] for r in ok if case in (r.get("by_image") or {})]
+        out.append(
+            {
+                "case": case,
+                "type": rs[0].get("case_type"),
+                "image": rs[0].get("case_image"),
+                "runs": len(rs),
+                "ok": len(ok),
+                "outcome": bad["outcome"] if bad else "ok",
+                "reason": bad["reason"] if bad else None,
+                "detail": bad["detail"] if bad else None,
+                "usable": bool(ok) or (bad is not None and bad["reason"] in CENSUS_HOST_LIMITS),
+                "deploy_s": _r(
+                    mean([r["deploy_s"] for r in ok if r.get("deploy_s") is not None]), 2
+                ),
+                "ready_s": _r(mean([r["ready_s"] for r in ok if r.get("ready_s") is not None]), 2),
+                "host_mem_per_node": _r(mean(costs), 0),
+                "cgroup_mem_per_node": _r(
+                    mean([x["mem_mean"] for x in own if x.get("mem_mean") is not None]), 0
+                ),
+                "cpu_pct_per_node": _r(
+                    mean([x["cpu_mean"] for x in own if x.get("cpu_mean") is not None]), 3
+                ),
+            }
+        )
+    return out
+
+
 def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[str, Any]:
     """The host at rest before the first step, nothing of ours deployed: what
     an earlier run or a leak left behind (memory the engine never gave back,
@@ -510,7 +609,7 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
         f"{(spec.get('monitor') or {}).get('interval_s')}s",
         f"- **Load:** {_traffic_line(spec)}",
         *_rest_line(result.get("rest")),
-        f"- **Outcome:** ceiling {result.get('ceiling') or '–'} hosts"
+        f"- **Outcome:** {_outcome(result)}"
         + (f" · climb: {result['limit']}" if result.get("limit") else "")
         + (
             f" · stopped: {result.get('reason')} ({result.get('detail')})"
@@ -519,6 +618,10 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
         )
         + f" · {(result.get('started_at') or '')[:19]} → "
         f"{(result.get('ended_at') or 'still running')[:19]}",
+    ]
+    if kind_of(spec) == "census":
+        return "\n".join(lines + _census_md(result.get("census") or [], spec))
+    lines += [
         "",
         "| Hosts | # | Nodes | Links | Deploy s | Ready s | Destroy s | Marginal MB/node | Docker MB/node "
         "| Node cgroup MB (mean / p95) | Host CPU % | Docker cores | Host mem % max | Mem stall % max "
@@ -555,6 +658,38 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
     return "\n".join(lines)
 
 
+def _outcome(result: dict[str, Any]) -> str:
+    census = result.get("census")
+    if census is not None:
+        usable = sum(1 for c in census if c["usable"])
+        return f"{usable} of {len(census)} cases usable"
+    return f"ceiling {result.get('ceiling') or '–'} hosts"
+
+
+def _census_md(census: list[dict[str, Any]], spec: dict[str, Any]) -> list[str]:
+    k = (spec.get("census") or {}).get("per_image", 5)
+    lines = [
+        "",
+        f"One step per case: {k} nodes of it as the client hosts of a small campus (a base "
+        "router and switches, one base server). Host MB / node is estimated: the step's memory "
+        "change less its base nodes, costed at the reference (workstation · kathara/base) per "
+        "node. Cgroup MB is the nodes' own; CPU is over the hold (100 = one core). Usable: it "
+        "passed, or only the host ran out of memory.",
+        "",
+        "| Case | Outcome | Deploy s | Ready s | Host MB / node (est.) | Cgroup MB / node "
+        "| CPU % / node | Usable |",
+        "|---|---|---:|---:|---:|---:|---:|---|",
+    ]
+    for c in census:
+        outcome = c["outcome"] + (f": {c['detail']}" if c.get("detail") else "")
+        lines.append(
+            f"| `{c['case']}` | {outcome} | {_num(c.get('deploy_s'))} | {_num(c.get('ready_s'), 2)} "
+            f"| {_mb(c.get('host_mem_per_node'))} | {_mb(c.get('cgroup_mem_per_node'))} "
+            f"| {_num(c.get('cpu_pct_per_node'), 2)} | {'yes' if c['usable'] else 'no'} |"
+        )
+    return [*lines, ""]
+
+
 def _rest_line(rest: dict[str, Any] | None) -> list[str]:
     if not rest or not rest.get("samples"):
         return []
@@ -567,6 +702,10 @@ def _rest_line(rest: dict[str, Any] | None) -> list[str]:
 
 
 def _steps_line(spec: dict[str, Any]) -> str:
+    if spec.get("census"):
+        c = spec["census"]
+        cases = len(c.get("cases") or [])
+        return f"census of {cases} cases, {c.get('per_image', 5)} nodes each × {spec.get('repetitions', 1)}"
     a = spec.get("adaptive")
     if not a:
         return f"scale {spec.get('scale')} × {spec.get('repetitions', 1)}"

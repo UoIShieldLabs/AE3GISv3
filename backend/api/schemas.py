@@ -760,11 +760,27 @@ class BenchmarkAdaptive(BaseModel):
         return self
 
 
+class CensusCase(BaseModel):
+    type: str = Field(min_length=1)
+    image: str = Field(min_length=1)
+
+
+class BenchmarkCensus(BaseModel):
+    """One step per node image: ``per_image`` nodes of a type · image as the
+    client hosts of a small generated campus (base router, switches and one
+    server around them), deployed, checked and measured alone. ``cases``
+    defaults to every catalog type's non-hidden images; workstation ·
+    kathara/base always runs first, as the reference. Failures don't stop it."""
+
+    per_image: int = Field(default=5, ge=1, le=50)
+    cases: list[CensusCase] | None = Field(default=None, min_length=1, max_length=200)
+
+
 class BenchmarkRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
     # What the benchmark does; inferred from the spec when omitted.
-    kind: Literal["sweep", "adaptive"] | None = None
+    kind: Literal["sweep", "adaptive", "census"] | None = None
     topology: BenchmarkTopology = Field(
         default_factory=lambda: BenchmarkTopology(generate=GeneratorSpec())
     )
@@ -772,6 +788,8 @@ class BenchmarkRequest(BaseModel):
     scale: list[int] = Field(default_factory=list, max_length=100)
     # Or let the sweep pick each step's scale until memory is nearly full.
     adaptive: BenchmarkAdaptive | None = None
+    # Or survey node images, one step each (no scale, adaptive or traffic).
+    census: BenchmarkCensus | None = None
     repetitions: int = Field(default=1, ge=1, le=20)
     cooldown_s: float = Field(default=20, ge=0, le=3600)
     # Before each step's reference window, wait (up to quiet_timeout_s) until
@@ -808,7 +826,17 @@ class BenchmarkRequest(BaseModel):
 
     @model_validator(mode="after")
     def _kind(self) -> BenchmarkRequest:
-        inferred = "adaptive" if self.adaptive is not None else "sweep"
+        if self.census is not None and (
+            self.scale or self.adaptive or self.traffic or self.topology.generate is None
+        ):
+            raise ValueError("a census takes no scale, adaptive or traffic, and generates")
+        inferred = (
+            "census"
+            if self.census is not None
+            else "adaptive"
+            if self.adaptive is not None
+            else "sweep"
+        )
         if self.kind is not None and self.kind != inferred:
             raise ValueError(f"kind {self.kind!r} does not match the spec (a {inferred})")
         self.kind = inferred

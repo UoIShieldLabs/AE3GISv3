@@ -104,6 +104,31 @@ def _gen_params(spec: dict[str, Any], hosts: int) -> GeneratorParams:
     return GeneratorParams(hosts=hosts, **g)
 
 
+def _hidden_images() -> set[str]:
+    model = catalog.load_model()
+    return {ref for ref, img in model.images.items() if img.stability == "hidden"}
+
+
+def _census_params(spec: dict[str, Any], case: dict[str, Any]) -> GeneratorParams:
+    """A census case's topology: ``per_image`` client hosts of the case's type
+    and image, around them the plain campus (router, switches, one server)."""
+    g = dict((spec.get("topology") or {}).get("generate") or {})
+    for key in (
+        "hosts",
+        "host_mix",
+        "random",
+        "server_mix",
+        "switch_mix",
+        "core_type",
+        "core_image",
+    ):
+        g.pop(key, None)
+    g["servers"] = 1
+    k = int((spec.get("census") or {}).get("per_image") or 5)
+    mix = [{"type": case["type"], "image": case["image"], "weight": 1}]
+    return GeneratorParams(hosts=k, **{**g, "host_mix": mix})
+
+
 def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job:
     with runner.admission:
         existing = jobs.active_for_subject(db, SUBJECT)
@@ -128,6 +153,20 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 )
             generated = False
             scale = [len(selectors.node_index(topo.data))]
+        elif spec.get("census"):
+            census = dict(spec["census"])
+            try:
+                census["cases"] = bm.census_cases(
+                    catalog.node_types(), _hidden_images(), census.get("cases")
+                )
+                first_case = _census_params(spec, census["cases"][0])
+                check(first_case)
+            except (GeneratorError, ValueError, TypeError) as exc:
+                raise Invalid(str(exc), code="bad_census") from exc
+            extra["census"] = census
+            scale = [int(census.get("per_image") or 5)]
+            topo, _ = topologies.create(db, name=f"bench: {label}", data=generate(first_case))
+            generated = True
         else:
             adaptive = spec.get("adaptive")
             scale = list(spec.get("scale") or [])
@@ -198,6 +237,8 @@ class Bench:
         self.limit: str | None = None
         # The host at rest before the first step (``rest_s``).
         self.rest: dict[str, Any] | None = None
+        # A census's images that could not be prepared: image → (reason, detail).
+        self.image_errors: dict[str, tuple[str, str]] = {}
         self.armed = False
         self.trip: tuple[str, str] | None = None
         self.tripped = asyncio.Event()
@@ -613,6 +654,7 @@ async def run_step(
     *,
     data: dict[str, Any] | None = None,
     artifact: str | None = None,
+    case: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One step: place, reference, deploy, ready, settle, hold, measure,
     destroy. ``data``: the step's topology (default: generated at ``scale``,
@@ -622,9 +664,15 @@ async def run_step(
     spec = b.spec
     row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
     row["reason"] = row["detail"] = None
+    if case:
+        row.update(case=bm.case_label(case), case_type=case["type"], case_image=case["image"])
     if data is None and spec.get("generated"):
         data = generate(_gen_params(spec, scale))
     topo = _place(b, row, data, artifact or f"{scale}-{rep}")
+    if case:
+        # Per-image numbers of the case's own nodes (the generated client
+        # hosts), not of the base router, switches and server around them.
+        b.image_of = {nid: row["case"] for nid in b.image_of if nid.startswith("h")}
     windows: dict[str, Window] = {"pre": None, "settle": None, "hold": None}
     windows["pre"] = await _reference(b, row, name)
     try:
@@ -783,6 +831,65 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     return stopped_by
 
 
+async def _census(b: Bench, step) -> str:
+    """Every case in turn (× ``repetitions``); a case whose image could not be
+    prepared is skipped, and no outcome stops the census (a user stop does)."""
+    runner, spec = b.runner, b.spec
+    cases = spec["census"]["cases"]
+    k = int(spec["census"].get("per_image") or 5)
+    reps = int(spec.get("repetitions") or 1)
+    plan = [(c, r) for c in cases for r in range(1, reps + 1)]
+    for i, (case, rep) in enumerate(plan):
+        label = bm.case_label(case)
+        name = label + (f" #{rep}" if reps > 1 else "")
+        failed = b.image_errors.get(case["image"])
+        if failed:
+            row = {"step": name, "scale": k, "rep": rep, "outcome": "skipped"}
+            row.update(case=label, case_type=case["type"], case_image=case["image"])
+            row.update(reason=failed[0], detail=failed[1])
+            await step(k, rep, name, skip=row)
+            continue
+        data = generate(_census_params(spec, case))
+        await step(
+            k,
+            rep,
+            name,
+            lambda r, last=i == len(plan) - 1: last,
+            data=data,
+            artifact=_slug(f"{label}-{rep}"),
+            case=case,
+        )
+        if runner.stop_requested(b.job_id):
+            return runner.stop_code(b.job_id) or "user"
+    return "completed"
+
+
+async def _prepare_census_images(b: Bench, job_id: str, images: list[str]) -> None:
+    """Prepare every case's image, recording (not raising) the ones that
+    can't run here (``b.image_errors``: image → (reason, detail))."""
+    manager = b.runner.images
+    assert manager is not None
+    rows = await manager.statuses(images)
+    for r in rows:
+        if r["status"] == "unavailable":
+            b.image_errors[r["ref"]] = ("image_unavailable", r.get("reason") or "unavailable")
+    ok = [r["ref"] for r in rows if r["ref"] not in b.image_errors]
+    try:
+        await manager.ensure_images(b.runner, job_id, ok)
+    except Exception:  # find which: one at a time (joining builds still running)
+        for ref in ok:
+            try:
+                await manager.ensure_images(b.runner, job_id, [ref])
+            except Exception as exc:
+                b.image_errors[ref] = ("image_failed", str(exc))
+    if b.image_errors:
+        b.runner.log(
+            job_id,
+            "Skipping cases of: "
+            + ", ".join(f"{ref} ({why})" for ref, (why, _) in b.image_errors.items()),
+        )
+
+
 async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     settings, store, hub = runner.settings, runner.artifacts, runner.live
     assert settings is not None and store is not None and hub is not None
@@ -801,7 +908,9 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     first_adaptive = int(adaptive["start"]) if adaptive else 0
 
     def snapshot(final: bool = False) -> dict[str, Any]:
-        last = next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
+        census = spec.get("census")
+        # A census goes on past failed cases: they are in its table, not "the reason".
+        last = None if census else next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
         out = {
             "label": spec.get("label") or "",
             "kind": bm.kind_of(spec),
@@ -809,8 +918,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             "ended_at": datetime.now(UTC).isoformat() if final else None,
             "topology_id": spec["topology_id"],
             "rows": b.rows,
-            "by_scale": bm.by_scale(b.rows),
-            "ceiling": bm.ceiling(b.rows),
+            "by_scale": None if census else bm.by_scale(b.rows),
+            "ceiling": None if census else bm.ceiling(b.rows),
             "reason": last["reason"] if last else None,
             "detail": last["detail"] if last else None,
             "stopped_by": stopped_by,
@@ -819,6 +928,8 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             "phase": None if final else b.phase,
             "environment_fingerprint": env.get("fingerprint"),
         }
+        if census:
+            out["census"] = bm.census_table(b.rows, int(census.get("per_image") or 5))
         return out
 
     def persist(final: bool = False) -> None:
@@ -854,15 +965,22 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
 
         async with runner.step(job_id, "images"):
             assert runner.images is not None
-            if spec.get("generated"):
-                p = _gen_params(spec, max(scales) if scales else first_adaptive)
-                needed = images_in(generate(p)) + [
-                    catalog.resolve_image(t, img) for t, img in kinds_used(p)
-                ]
+            if spec.get("census"):
+                cases = spec["census"]["cases"]
+                # The campus around the cases must come up; the cases may fail.
+                base = images_in(generate(_census_params(spec, cases[0])))
+                await runner.images.ensure_images(runner, job_id, base)
+                await _prepare_census_images(b, job_id, [c["image"] for c in cases])
             else:
-                needed = images_in(_topo(runner, spec["topology_id"]).data)
-            needed = list(dict.fromkeys(i for i in needed if i))
-            await runner.images.ensure_images(runner, job_id, needed)
+                if spec.get("generated"):
+                    p = _gen_params(spec, max(scales) if scales else first_adaptive)
+                    needed = images_in(generate(p)) + [
+                        catalog.resolve_image(t, img) for t, img in kinds_used(p)
+                    ]
+                else:
+                    needed = images_in(_topo(runner, spec["topology_id"]).data)
+                needed = list(dict.fromkeys(i for i in needed if i))
+                await runner.images.ensure_images(runner, job_id, needed)
             tools = list(
                 dict.fromkeys([catalog.tool_image("collector"), catalog.tool_image("driver")])
             )
@@ -898,10 +1016,16 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
                 persist()
 
         async def step(
-            scale: int, rep: int, name: str, ends: Callable[[dict[str, Any]], bool] | None = None
+            scale: int,
+            rep: int,
+            name: str,
+            ends: Callable[[dict[str, Any]], bool] | None = None,
+            *,
+            skip: dict[str, Any] | None = None,
+            **kw: Any,
         ) -> dict[str, Any]:
             async with runner.step(job_id, name):
-                row = await run_step(b, name, scale, rep, ends)
+                row = skip or await run_step(b, name, scale, rep, ends, **kw)
                 b.rows.append(row)
                 persist()
                 runner.progress(
@@ -911,7 +1035,9 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
                 )
             return row
 
-        if adaptive:
+        if spec.get("census"):
+            stopped_by = await _census(b, step)
+        elif adaptive:
             stopped_by = await _climb(b, adaptive, step, persist)
         else:
             plan = [(s, r) for s in scales for r in range(1, reps + 1)]

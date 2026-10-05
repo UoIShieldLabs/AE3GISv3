@@ -163,6 +163,50 @@ def test_a_random_sweep_records_each_steps_composition(client, wait_jobs, fast):
     assert _start(client, scale=[6], topology={"generate": bad}).json()["code"] == "bad_generator"
 
 
+def test_an_image_census(client, wait_jobs, fast):
+    fast.platform = "linux/arm64"  # malicious-client builds only for amd64
+    fast.fail_build = {"ae3gis.local/nginx": "boom"}
+    cases = [
+        {"type": "web-server", "image": "httpd:alpine"},
+        {"type": "web-server", "image": "ae3gis.local/nginx"},
+        {"type": "attacker", "image": "ae3gis.local/malicious-client"},
+    ]
+    body = {"label": "census", **FAST, "census": {"per_image": 3, "cases": cases}}
+    r = client.post("/api/v1/benchmarks", json=body)
+    assert r.status_code == 202, r.text
+    assert r.json()["kind"] == "census" and len(r.json()["spec"]["census"]["cases"]) == 4
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    result = done["result"]
+    assert result["stopped_by"] == "completed" and result["ceiling"] is None
+    rows = {row["case"]: row for row in result["rows"]}
+    ref, httpd = rows["workstation · kathara/base"], rows["web-server · httpd:alpine"]
+    assert result["rows"][0]["case"] == "workstation · kathara/base"  # the reference first
+    assert ref["outcome"] == httpd["outcome"] == "ok" and httpd["nodes"] == 3 + 5
+    assert set(httpd["by_image"]) == {"web-server · httpd:alpine"}  # only the case's nodes
+    assert httpd["by_image"]["web-server · httpd:alpine"]["count"] == 3
+    nginx = rows["web-server · ae3gis.local/nginx"]
+    attacker = rows["attacker · ae3gis.local/malicious-client"]
+    assert (nginx["outcome"], nginx["reason"]) == ("skipped", "image_failed")
+    assert (attacker["outcome"], attacker["reason"]) == ("skipped", "image_unavailable")
+    table = {c["case"]: c for c in result["census"]}
+    assert table["web-server · httpd:alpine"]["usable"] and not table[nginx["case"]]["usable"]
+    # The fake charges 10 MB a node: the estimate takes the base nodes out.
+    assert table["web-server · httpd:alpine"]["host_mem_per_node"] == pytest.approx(10e6, rel=0.1)
+    md = client.get(f"/api/v1/benchmarks/{r.json()['id']}/report.md").text
+    assert "2 of 4 cases usable" in md and "| `web-server · httpd:alpine` | ok |" in md
+    names = [st["name"] for st in done["job"]["steps"]]
+    assert names[3:] == list(rows)
+    assert fast.labs == {}
+    bad = client.post(
+        "/api/v1/benchmarks",
+        json={**body, "census": {"cases": [{"type": "router", "image": "httpd:alpine"}]}},
+    )
+    assert bad.status_code == 422 and bad.json()["code"] == "bad_census"
+    assert client.post("/api/v1/benchmarks", json={**body, "scale": [2]}).status_code == 422
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()
