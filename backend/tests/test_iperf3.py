@@ -141,3 +141,28 @@ def test_interrupted_runs_report_errors_the_runner_ignores():
 def test_garbage_lines_are_skipped():
     p = Iperf3StreamParser("f", "client")
     assert p.feed(b'not json\n[1,2]\n{"event": "weird"}\n')[0].kind == "other"
+
+
+def test_run_aggregates():
+    from domain.traffic.summary import run_aggregates
+
+    def flow(fid, proto, rate, bps, **extra):
+        d = {"bps": {"mean": bps}, "bytes": int(bps * 10 / 8), **extra}
+        return {"id": fid, "protocol": proto, "bitrate": rate}, {"summary": {"fwd": d}}
+
+    pairs = [
+        flow("t1", "tcp", "1M", 1e6, rtt_ms={"p50": 4.0, "max": 9.0}),
+        flow("t2", "tcp", "1M", 0.5e6, rtt_ms={"p50": 200.0, "max": 460.0}),
+        flow("u1", "udp", "2M", 2e6, jitter_ms={"p50": 0.1, "max": 0.3}, lost_percent=0.0),
+        flow("u2", "udp", "2M", 1.8e6, jitter_ms={"p50": 16.0, "max": 360.0}, lost_percent=8.1),
+        flow("x", "tcp", None, 5e6),  # no rate: not in the ratios
+    ]
+    agg = run_aggregates([f for f, _ in pairs], [r for _, r in pairs])
+    assert agg["rtt_ms_p50"] == 102.0 and agg["rtt_ms_max"] == 460.0
+    assert agg["jitter_ms_p95"] == pytest.approx(15.205) and agg["jitter_ms_max"] == 360.0
+    assert agg["flow_loss_pct_max"] == 8.1
+    assert agg["flow_ratio_min"] == 0.5 and agg["slowest_flow"] == "t2"
+    assert agg["slowest_flow_bps"] == 0.5e6
+    assert agg["bytes_received"] == sum(r["summary"]["fwd"]["bytes"] for _, r in pairs)
+    empty = run_aggregates([], [])
+    assert empty["rtt_ms_p50"] is None and empty["flow_ratio_p05"] is None

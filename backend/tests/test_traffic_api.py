@@ -169,6 +169,9 @@ def test_patterns_expand_into_flows(client, topology, wait_jobs, fake_engine, ap
     totals = done["result"]["totals"]
     assert totals["flows"] == 13 and totals["processes"] == 26
     assert totals["offered_bps"] == 1e6 + 12 * 2e6 and 0 < totals["delivered_ratio"] <= 1.05
+    # Run-wide latency and jitter from the flows (fake: UDP jitter 0.21 ms).
+    assert totals["jitter_ms_p50"] == 0.21 and totals["bytes_received"] > 0
+    assert 0 < totals["flow_ratio_min"] <= totals["flow_ratio_p05"] and totals["slowest_flow"]
 
     app.state.settings.traffic_max_flows = 10
     big = _run(

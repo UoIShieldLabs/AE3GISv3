@@ -45,7 +45,7 @@ from domain import selectors
 from domain.topology import find_container
 from domain.traffic.iperf3 import Iperf3StreamParser, burst_shape, is_interrupt
 from domain.traffic.patterns import PatternError, assign_ports, expand, offered_bps
-from domain.traffic.summary import FlowSummary
+from domain.traffic.summary import FlowSummary, run_aggregates
 from engine.base import EngineState
 from services import environment, events, jobs, monitor
 from services.jobs import JobRunner
@@ -658,6 +658,7 @@ def totals(flows: list[dict[str, Any]], per_flow: list[dict[str, Any]], processe
         "lost_percent": round(100 * lost / packets, 4) if packets else None,
         "flows_with_errors": sum(1 for r in per_flow if r["errors"]),
         "flows_without_data": no_data,
+        **run_aggregates(flows, per_flow),
     }
 
 

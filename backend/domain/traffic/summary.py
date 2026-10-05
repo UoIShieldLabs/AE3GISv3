@@ -3,7 +3,9 @@
 ``FlowSummary`` takes samples one at a time and keeps only what the summary
 needs (one float per interval for medians), so a run of thousands of flows
 over hours never holds its samples in memory; ``summarize_flow`` is the same
-over a finished list.
+over a finished list. ``run_aggregates`` sums a run up from its flows'
+summaries: the typical and the worst flows' latency, jitter and loss, and the
+slowest flow against what it asked for.
 """
 
 from __future__ import annotations
@@ -11,6 +13,9 @@ from __future__ import annotations
 from array import array
 from statistics import median
 from typing import Any
+
+from domain.monitor import percentile
+from domain.traffic.patterns import offered_bps
 
 
 def _stats(values) -> dict[str, float] | None:
@@ -110,3 +115,50 @@ def summarize_flow(samples: list[dict[str, Any]]) -> dict[str, Any]:
     for s in samples:
         summary.add(s)
     return summary.result()
+
+
+def _r(x: float | None, digits: int = 3) -> float | None:
+    return None if x is None else round(x, digits)
+
+
+def run_aggregates(flows: list[dict[str, Any]], per_flow: list[dict[str, Any]]) -> dict[str, Any]:
+    """Run-wide figures from per-flow summaries (``per_flow[i]`` is
+    ``flows[i]``'s result). Latency and jitter: the median and p95 of the
+    flows' own medians (a typical flow, the worst 5%) and the highest single
+    reading. ``flow_ratio_*``: each flow's delivered rate over what it asked
+    for (flows without a rate are left out)."""
+    rtt, rtt_max, jitter, jitter_max, losses, ratios = [], [], [], [], [], []
+    received = 0
+    slowest: tuple[float, str, float] | None = None
+    for flow, r in zip(flows, per_flow, strict=True):
+        dirs = r["summary"].values()
+        for d in dirs:
+            received += d.get("bytes") or 0
+            if d.get("rtt_ms"):
+                rtt.append(d["rtt_ms"]["p50"])
+                rtt_max.append(d["rtt_ms"]["max"])
+            if d.get("jitter_ms"):
+                jitter.append(d["jitter_ms"]["p50"])
+                jitter_max.append(d["jitter_ms"]["max"])
+            if d.get("lost_percent") is not None:
+                losses.append(d["lost_percent"])
+        asked = offered_bps(flow)
+        if asked:
+            got = sum((d.get("bps") or {}).get("mean") or 0.0 for d in dirs)
+            ratios.append(got / asked)
+            if slowest is None or got / asked < slowest[0]:
+                slowest = (got / asked, flow["id"], got)
+    return {
+        "bytes_received": received,
+        "rtt_ms_p50": _r(median(rtt)) if rtt else None,
+        "rtt_ms_p95": _r(percentile(rtt, 95)),
+        "rtt_ms_max": _r(max(rtt_max)) if rtt_max else None,
+        "jitter_ms_p50": _r(median(jitter)) if jitter else None,
+        "jitter_ms_p95": _r(percentile(jitter, 95)),
+        "jitter_ms_max": _r(max(jitter_max)) if jitter_max else None,
+        "flow_loss_pct_max": _r(max(losses), 4) if losses else None,
+        "flow_ratio_min": _r(min(ratios), 4) if ratios else None,
+        "flow_ratio_p05": _r(percentile(ratios, 5), 4),
+        "slowest_flow": slowest[1] if slowest else None,
+        "slowest_flow_bps": round(slowest[2], 1) if slowest else None,
+    }
