@@ -9,6 +9,10 @@ now (the benchmark still removes what it deployed).
         [--base-url http://localhost:8000] [--token T] [--label macbook-idle] \\
         [--scale 10,25,50] [--out-dir ../docs/benchmarks]
 
+``--attach <benchmark id>`` (no spec) follows a benchmark that is already
+running, e.g. after this script was interrupted: the benchmark itself runs in
+the backend and does not need it.
+
 Run the backend without auto-reload while a benchmark runs (a reload kills
 it): ``docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d``.
 Stdlib only (urllib), so it runs from any Python 3.11+ without the venv.
@@ -28,6 +32,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+RETRIES = 10  # ~4 minutes of backoff
+
 
 class Api:
     def __init__(self, base: str, token: str | None) -> None:
@@ -43,12 +49,22 @@ class Api:
         return req
 
     def raw(self, method: str, path: str, body: Any = None) -> bytes:
-        try:
-            with urllib.request.urlopen(self._req(method, path, body), timeout=120) as res:
-                return res.read()
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode(errors="replace")
-            raise SystemExit(f"{method} {path}: {exc.code} {detail}") from None
+        # A loaded host (hundreds of containers starting) can drop a connection
+        # now and then: reads are retried for a few minutes, writes never are.
+        tries = RETRIES if method == "GET" else 1
+        for attempt in range(1, tries + 1):
+            try:
+                with urllib.request.urlopen(self._req(method, path, body), timeout=120) as res:
+                    return res.read()
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode(errors="replace")
+                raise SystemExit(f"{method} {path}: {exc.code} {detail}") from None
+            except (urllib.error.URLError, OSError) as exc:  # reset, refused, timeout
+                if attempt == tries:
+                    raise
+                print(f"  (retrying {method} {path}: {exc})", file=sys.stderr)
+                time.sleep(min(30, 2**attempt))
+        raise AssertionError("unreachable")
 
     def call(self, method: str, path: str, body: Any = None) -> Any:
         raw = self.raw(method, path, body)
@@ -83,7 +99,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("spec", type=Path, help="benchmark spec (JSON)")
+    ap.add_argument("spec", type=Path, nargs="?", help="benchmark spec (JSON)")
+    ap.add_argument("--attach", metavar="ID", help="follow a running benchmark instead")
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--token")
     ap.add_argument("--label", help="overrides the spec's label")
@@ -94,15 +111,30 @@ def main() -> None:
     # Progress as it happens, also when piped to a file or `tee`.
     sys.stdout.reconfigure(line_buffering=True)
 
-    spec = json.loads(args.spec.read_text())
-    if args.label:
-        spec["label"] = args.label
-    if args.scale:
-        spec["scale"] = [int(x) for x in args.scale.split(",") if x.strip()]
     api = Api(args.base_url, args.token)
-    bench = api.call("POST", "/benchmarks", spec)
+    if args.attach:
+        bench = api.call("GET", f"/benchmarks/{args.attach}")
+        spec = dict(bench["spec"])
+        if args.label:
+            spec["label"] = args.label
+    else:
+        if args.spec is None:
+            ap.error("give a spec, or --attach a running benchmark")
+        spec = json.loads(args.spec.read_text())
+        if args.label:
+            spec["label"] = args.label
+        if args.scale:
+            spec["scale"] = [int(x) for x in args.scale.split(",") if x.strip()]
+            spec.pop("adaptive", None)  # an explicit scale list replaces a climb
+        bench = api.call("POST", "/benchmarks", spec)
     bid = bench["id"]
-    print(f"benchmark {bid}: {spec.get('label') or 'unnamed'} · scale {bench['spec']['scale']}")
+    adaptive = bench["spec"].get("adaptive")
+    steps = (
+        f"adaptive from {adaptive['start']} hosts"
+        if adaptive
+        else f"scale {bench['spec']['scale']}"
+    )
+    print(f"benchmark {bid}: {spec.get('label') or 'unnamed'} · {steps}")
 
     interrupts = 0
 
@@ -124,6 +156,8 @@ def main() -> None:
         rows = (b.get("result") or {}).get("rows") or []
         for r in rows[shown:]:
             print(row_line(r))
+            if r.get("next"):  # an adaptive sweep's choice
+                print(f"  → {r['next']}")
         shown = len(rows)
         if b["current"] and b["current"] != last_phase:
             print(f"  … {b['current']}")

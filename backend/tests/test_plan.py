@@ -84,6 +84,38 @@ def test_switch_builds_bridge():
     assert any("br0 type bridge" in c for c in swA.startup)
 
 
+def test_switch_with_own_bridge_is_only_addressed():
+    topo = _two_subnet_topology()
+    sw = topo["sites"][0]["subnets"][0]["containers"][1]
+    sw["image"] = "ae3gis.local/open-vswitch"  # builds br0 itself
+    plan = build_lab_plan(topo, "demo-lab")
+    swA = _node(plan, "swA")
+    assert not any("type bridge" in c or "master" in c for c in swA.startup)
+    assert "until ip link show br0" in swA.startup[0]
+    assert "ip addr replace 10.0.1.2/24 dev br0" in swA.startup
+    # the other switch still bridges its ports itself
+    assert any("br0 type bridge" in c for c in _node(plan, "swB").startup)
+
+
+def test_nodes_carry_their_image_env():
+    topo = _two_subnet_topology()
+    topo["sites"][0]["subnets"][0]["containers"][2].update(
+        type="database-server", image="postgres:alpine"
+    )
+    plan = build_lab_plan(topo, "demo-lab")
+    assert _node(plan, "hA").env == {"POSTGRES_PASSWORD": "pass"}
+    assert _node(plan, "hB").env == {}
+    assert _node(plan, "hA").to_dict()["env"] == {"POSTGRES_PASSWORD": "pass"}
+
+
+def test_images_without_bash_name_their_shell():
+    topo = _two_subnet_topology()
+    topo["sites"][0]["subnets"][0]["containers"][2].update(type="web-server", image="httpd:alpine")
+    plan = build_lab_plan(topo, "demo-lab")
+    assert _node(plan, "hA").shell == "/bin/sh"
+    assert _node(plan, "hB").shell is None
+
+
 def test_point_to_point_collision_domains_have_two_endpoints():
     plan = build_lab_plan(_two_subnet_topology(), "demo-lab")
     counts = {}

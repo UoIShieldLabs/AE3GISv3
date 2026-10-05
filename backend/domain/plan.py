@@ -27,6 +27,8 @@ log = logging.getLogger(__name__)
 
 # Point-to-point WAN links between routers are numbered out of this /24.
 _PTP_BASE = "10.255.0"
+# How long a switch's startup waits for an image-built bridge to appear.
+OWN_BRIDGE_WAIT_S = 60
 
 
 @dataclass
@@ -65,6 +67,10 @@ class NodePlan:
     image: str
     interfaces: list[Interface] = field(default_factory=list)
     startup: list[str] = field(default_factory=list)
+    # Environment the container starts with (from the image's catalog entry).
+    env: dict[str, str] = field(default_factory=dict)
+    # Shell for the boot commands if the image has no bash (None: engine default).
+    shell: str | None = None
 
     @property
     def machine_name(self) -> str:
@@ -80,6 +86,8 @@ class NodePlan:
             "image": self.image,
             "interfaces": [i.to_dict() for i in self.interfaces],
             "startup": list(self.startup),
+            "env": dict(self.env),
+            "shell": self.shell,
         }
 
 
@@ -491,6 +499,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
             remap.get(old_home) if old_home in remap else (new_ifaces[0] if new_ifaces else None)
         )
 
+        image = container_image.get(cid, catalog.default_image_for(ctype))
         startup = _startup_commands(
             role=role,
             ifaces=new_ifaces,
@@ -500,6 +509,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
             home=new_home,
             iface_ips=new_iface_ips,
             static_routes=router_static_routes.get(cid, []),
+            own_bridge=catalog.own_bridge(image),
         )
 
         plan.nodes.append(
@@ -508,9 +518,11 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 name=container_name.get(cid, cid),
                 type=ctype,
                 role=role,
-                image=container_image.get(cid, catalog.default_image_for(ctype)),
+                image=image,
                 interfaces=interfaces,
                 startup=startup,
+                env=catalog.image_env(image),
+                shell=catalog.image_shell(image),
             )
         )
     return plan
@@ -526,15 +538,30 @@ def _startup_commands(
     home: str | None,
     iface_ips: dict[str, tuple[str, str]],
     static_routes: list[tuple[str, str]],
+    own_bridge: str | None = None,
 ) -> list[str]:
     """Return the ordered Linux boot commands for a node.
 
     These run inside the container at startup (engine `exec`). They are plain
     iproute2/sysctl commands, portable across orchestrators and architectures.
+    A switch whose image builds its own bridge (``own_bridge``, e.g. Open
+    vSwitch) is only addressed: bridging its ports here would race the image.
     """
     cmds: list[str] = []
 
-    if role == "switch":
+    if role == "switch" and own_bridge:
+        # Wait (bounded) for the image to create its bridge, then address it.
+        cmds.append(
+            f"i=0; until ip link show {own_bridge} >/dev/null 2>&1 || [ $i -ge {OWN_BRIDGE_WAIT_S} ]; "
+            "do i=$((i+1)); sleep 1; done; "
+            f"ip link set {own_bridge} up 2>/dev/null || true"
+        )
+        if ip:
+            cmds.append(f"ip addr replace {ip}/{pfx} dev {own_bridge}")
+        if gateway:
+            cmds.append(f"ip route replace default via {gateway}")
+
+    elif role == "switch":
         if ifaces:
             iface_list = " ".join(ifaces)
             first = ifaces[0]

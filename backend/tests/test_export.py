@@ -50,6 +50,22 @@ def test_containerlab_yaml_uses_eth1_and_pairs_links():
         assert all(":eth" in e and ":eth0" not in e for e in link["endpoints"])
 
 
+def test_exports_carry_image_env():
+    plan = _plan()
+    plan.nodes[0].env = {"POSTGRES_PASSWORD": "pass"}
+    plan.nodes[0].shell = "/bin/sh"
+    name = plan.nodes[0].machine_name
+    conf = kathara.render_lab_conf(plan)
+    assert f'{name}[env]="POSTGRES_PASSWORD=pass"' in conf
+    assert f'{name}[shell]="/bin/sh"' in conf
+    assert conf.count("[shell]") == 1
+    doc = yaml.safe_load(containerlab.render_clab_yaml(plan))
+    assert doc["topology"]["nodes"][name]["env"] == {"POSTGRES_PASSWORD": "pass"}
+    assert "env" not in doc["topology"]["nodes"][plan.nodes[1].machine_name]
+    spec = labspec.to_labspec(plan, topology_id="t1", topology_name="Demo")
+    assert spec["nodes"][0]["env"] == {"POSTGRES_PASSWORD": "pass"}
+
+
 def test_labspec_shape():
     spec = labspec.to_labspec(_plan(), topology_id="t1", topology_name="Demo")
     assert spec["labspec_version"] == 1 and spec["lab"] == "ae3gis_demo"

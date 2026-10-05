@@ -115,3 +115,117 @@ def test_report_of_a_running_sweep():
         {},
     )
     assert "→ still running" in md
+
+
+def test_per_image_numbers_and_table():
+    image_of = {"h1": "ae3gis.local/firefox", "h2": "kathara/base", "h3": "kathara/base"}
+    rows = []
+    for t, firefox_mb in ((10, 300e6), (20, 320e6), (40, 999e6)):
+        nodes = [
+            {"target": "h1", "kind": "node", "mem_used": firefox_mb, "cpu_pct": 2.0},
+            {"target": "h2", "kind": "node", "mem_used": 1e6, "cpu_pct": 0.0},
+            {"target": "h3", "kind": "node", "mem_used": 3e6, "cpu_pct": None},
+            {"target": "collector", "kind": "tool", "mem_used": 8e6, "cpu_pct": 1.0},
+            {"target": "gone", "kind": "node", "mem_used": 5e6, "cpu_pct": 1.0},
+        ]
+        rows += bm.image_sweep(t, nodes, image_of)
+    assert {r["image"] for r in rows} == {"ae3gis.local/firefox", "kathara/base"}
+    windows = {"settle": (5, 25), "hold": (30, 45)}
+    by_image = bm.image_metrics(rows, windows)
+    assert by_image["ae3gis.local/firefox"] == {"count": 1, "mem_mean": 310e6, "cpu_mean": 2.0}
+    assert by_image["kathara/base"] == {"count": 2, "mem_mean": 2e6, "cpu_mean": 0.0}
+
+    steps = [
+        {"scale": 10, "rep": 1, "outcome": "ok", "by_image": by_image},
+        {"scale": 20, "rep": 1, "outcome": "failed", "by_image": {"x": {"count": 1}}},
+    ]
+    spec = {
+        "label": "mixed",
+        "scale": [10, 20],
+        "topology": {
+            "generate": {
+                "host_mix": [
+                    {"type": "workstation", "image": "ae3gis.local/firefox", "weight": 1},
+                    {"type": "workstation", "weight": 3},
+                ],
+                "server_mix": [
+                    {"type": "dns-server", "count": 1},
+                    {"type": "web-server", "image": "ae3gis.local/nginx", "per_hosts": 50},
+                ],
+                "core_type": "firewall",
+                "core_image": "ae3gis.local/iptables",
+                "seed": 1,
+            }
+        },
+    }
+    md = bm.markdown_report({"rows": steps}, spec, {})
+    assert "Per image at 10 hosts" in md
+    assert "| `ae3gis.local/firefox` | 1 | 310.0 | 98.7% | 2.00 |" in md
+    assert "| `kathara/base` | 2 | 2.0 | 1.3% | 0.00 |" in md
+    assert "`x`" not in md  # only the largest passing scale
+    assert "Hosts: workstation · firefox 25%, workstation 75%" in md
+    assert "dns-server ×1, web-server · nginx 1/50 hosts" in md
+    assert "Core: firewall · iptables" in md
+    # a custom core alone is reported too
+    core_only = {"label": "fw", "topology": {"generate": {"core_type": "firewall"}}}
+    assert "Core: firewall" in bm.markdown_report({"rows": []}, core_only, {})
+
+
+def test_next_scale_climbs_fast_then_slows_near_the_target():
+    a = {"target_mem_pct": 93, "reach_mem_pct": 90, "approach": 0.6, "max_factor": 2.0}
+    a["min_step"] = 25
+    total = 16e9
+
+    def nodes_for(hosts):  # ~1.1 nodes per host, like the generated campus
+        return round(hosts * 1.1) + 5
+
+    def row(scale, peak, per_node=12e6, pre=1e9):
+        return {
+            "scale": scale,
+            "hold_mem_pct_max": peak,
+            "marginal_mem_per_node": per_node,
+            "mem_pre": pre,
+        }
+
+    # 93% of 16 GB with 1 GB resting at 12 MB/node: ~1156 nodes, 1046 hosts
+    nxt, code, why = bm.next_scale(
+        row(400, 35), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
+    )
+    assert code == "next" and nxt == 800  # 400 + 0.6 × 646 ≈ 788, in steps of 25
+    assert "projected at 1046 hosts" in why
+    nxt, _, _ = bm.next_scale(
+        row(200, 18), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
+    )
+    assert nxt == 400  # at most ×2
+    nxt, _, _ = bm.next_scale(
+        row(1000, 88), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
+    )
+    assert nxt == 1025  # 0.6 × 48 → rounds to the 25-host minimum
+    nxt, code, why = bm.next_scale(
+        row(1050, 89), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
+    )
+    assert (nxt, code) == (1075, "next") and "+25" in why  # projected at/below: nudge
+    # done: the peak reached the target, or the generator's largest topology
+    assert bm.next_scale(row(1075, 90.4), a, mem_total=total, nodes_for=nodes_for, max_scale=14720)[
+        :2
+    ] == (None, "limit_reached")
+    assert bm.next_scale(row(500, 40), a, mem_total=total, nodes_for=nodes_for, max_scale=500)[
+        :2
+    ] == (None, "max_scale")
+    nxt, _, _ = bm.next_scale(row(400, 40), a, mem_total=total, nodes_for=nodes_for, max_scale=450)
+    assert nxt == 425  # the projection stops at the largest topology: 400 + 0.6 × 50
+    nxt, _, why = bm.next_scale(
+        row(400, 35, per_node=None), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
+    )
+    assert nxt == 600 and "×1.5" in why
+    # ×max_factor caps min_step and its rounding too
+    nxt, _, _ = bm.next_scale(
+        row(100, 35),
+        {**a, "max_factor": 1.1},
+        mem_total=total,
+        nodes_for=nodes_for,
+        max_scale=14720,
+    )
+    assert nxt == 110  # not 125
+    nxt, _, _ = bm.next_scale(row(10, 2), a, mem_total=total, nodes_for=nodes_for, max_scale=14720)
+    assert nxt == 20  # ×2 from 10 hosts, though the minimum step is 25

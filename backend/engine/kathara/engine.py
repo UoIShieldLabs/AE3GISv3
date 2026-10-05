@@ -83,6 +83,38 @@ def _map_state(raw: str) -> str:
     return "stopped"
 
 
+def _local_image_checks(manager: Any) -> None:
+    """Make Kathara check a lab's images locally only.
+
+    Before a deploy Kathara asks each image's registry for a newer version.
+    AE3GIS has already made sure every image is present (the deploy's
+    ``images`` step), and a locally built ``ae3gis.local/…`` ref has no
+    registry: on Docker's containerd image store, where such images carry a
+    digest, each lookup fails only after ~15 s, per image, per deploy.
+    ``_check_and_pull(ref, pull=False)`` keeps Kathara's presence and
+    architecture checks without the lookup. Kathara's ``DockerImage`` has
+    ``__slots__``, so the instance moves to a subclass instead of taking an
+    attribute. Left alone if Kathara's internals change shape.
+    """
+    images = getattr(getattr(manager, "manager", None), "docker_image", None)
+    if images is None or not hasattr(images, "_check_and_pull"):
+        return
+    base = type(images)
+    if getattr(base, "_ae3gis_local_checks", False):
+        return
+
+    class LocalChecks(base):  # type: ignore[misc, valid-type]
+        __slots__ = ()
+        _ae3gis_local_checks = True
+
+        def check_from_list(self, refs: Any) -> None:
+            for ref in refs:
+                self._check_and_pull(ref, pull=False)
+
+    with contextlib.suppress(TypeError):
+        images.__class__ = LocalChecks
+
+
 class KatharaEngine:
     name = "kathara"
 
@@ -90,7 +122,9 @@ class KatharaEngine:
     def _manager(self):
         from Kathara.manager.Kathara import Kathara  # lazy import
 
-        return Kathara.get_instance()
+        manager = Kathara.get_instance()
+        _local_image_checks(manager)
+        return manager
 
     def _docker(self):
         import docker  # lazy import

@@ -118,6 +118,71 @@ def test_a_step_that_would_exhaust_memory_is_not_deployed(client, wait_jobs, fas
     assert "deploy_job" not in second and done["result"]["ceiling"] == 2
 
 
+def test_an_adaptive_sweep_climbs_to_the_memory_target(client, wait_jobs, fast):
+    # 50 MB a node on the fake 8 GiB host (1 GiB resting): 90% is ~133 nodes,
+    # and a few hosts more add ~1% (coarser steps could jump past 95%)
+    fast.fake_mem_per_node = 50_000_000
+    gen = {"servers": 1, "hosts_per_subnet": 20}
+    adaptive = {"start": 20, "min_step": 2, "confirm": 1}
+    stop = {"max_mem_pct": 95, "project_memory": False}
+    r = _start(client, scale=[], topology={"generate": gen}, adaptive=adaptive, stop=stop)
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    result = done["result"]
+    rows = result["rows"]
+    climb, confirm = rows[:-1], rows[-1]
+    assert all(r["outcome"] == "ok" for r in rows), [
+        (r["scale"], r["outcome"], r.get("detail"), r.get("hold_mem_pct_max")) for r in rows
+    ]
+    scales = [r["scale"] for r in climb]
+    assert scales[0] == 20 and scales == sorted(set(scales)) and len(scales) >= 3
+    assert scales[1] == 40  # far from the target: at most ×2
+    assert climb[-1]["hold_mem_pct_max"] >= 90 > climb[-2]["hold_mem_pct_max"]
+    assert all("next" in r for r in climb)
+    assert result["stopped_by"] == "limit_reached" and result["limit"].startswith("memory peaked")
+    assert (confirm["scale"], confirm["rep"]) == (scales[-1], 2)
+    assert result["ceiling"] == scales[-1]
+    names = [s["name"] for s in done["job"]["steps"]]
+    assert names[-1] == f"{scales[-1]} hosts #2"
+    assert fast.labs == {}
+
+
+@pytest.mark.parametrize("confirm", [0, 1])
+def test_an_adaptive_sweep_keeps_its_last_lab(client, wait_jobs, fast, confirm):
+    # The last step is the climb's last (no confirm runs) or the last confirm run.
+    fast.fake_mem_per_node = 50_000_000
+    gen = {"servers": 1, "hosts_per_subnet": 20}
+    adaptive = {"start": 60, "min_step": 2, "confirm": confirm}
+    stop = {"max_mem_pct": 95, "project_memory": False}
+    r = _start(
+        client, scale=[], topology={"generate": gen}, adaptive=adaptive, stop=stop, keep_last=True
+    )
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    rows = done["result"]["rows"]
+    assert len(rows) >= 2 and all(r["outcome"] == "ok" for r in rows)
+    assert all("destroy_s" in r for r in rows[:-1]) and "destroy_s" not in rows[-1]
+    (lab,) = fast.labs.values()
+    assert lab.plan is not None and len(lab.plan.nodes) == rows[-1]["nodes"]
+    topo = client.get(f"/api/v1/topologies/{done['topology_id']}").json()
+    assert topo["status"] == "deployed"
+
+
+def test_adaptive_needs_a_generated_topology(client, topology):
+    bad = [
+        {"scale": [2], "adaptive": {"start": 2}},  # one or the other
+        {"topology": {"topology_id": topology["id"]}, "adaptive": {"start": 2}},
+        {"adaptive": {"start": 2, "reach_mem_pct": 95, "target_mem_pct": 90}},
+    ]
+    for body in bad:
+        r = client.post("/api/v1/benchmarks", json={"label": "t", **FAST, **body})
+        assert r.status_code == 422, r.text
+
+
 def test_unreachable_hosts_fail_the_step(client, wait_jobs, fast):
     fast.unreachable = {"h0-2"}
     bench = _start(client, scale=[2], stop={"ready_timeout_s": 5}).json()

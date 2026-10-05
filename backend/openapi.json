@@ -98,6 +98,69 @@
         "title": "ArtifactOut",
         "type": "object"
       },
+      "BenchmarkAdaptive": {
+        "description": "Scales chosen step by step until the host's memory is nearly full\n(generated topologies; replaces ``scale``). Start at ``start`` hosts; after\neach step, project from its marginal memory per node the hosts at which\nmemory would reach ``target_mem_pct`` and close ``approach`` of the gap (at\nleast ``min_step`` hosts, but never past \u00d7``max_factor``). The climb is\nover once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the\nhighest passing scale is then run ``confirm`` more times.",
+        "properties": {
+          "approach": {
+            "default": 0.6,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Approach",
+            "type": "number"
+          },
+          "confirm": {
+            "default": 2,
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Confirm",
+            "type": "integer"
+          },
+          "max_factor": {
+            "default": 2.0,
+            "exclusiveMinimum": 1.0,
+            "maximum": 10.0,
+            "title": "Max Factor",
+            "type": "number"
+          },
+          "max_steps": {
+            "default": 20,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Steps",
+            "type": "integer"
+          },
+          "min_step": {
+            "default": 25,
+            "minimum": 1.0,
+            "title": "Min Step",
+            "type": "integer"
+          },
+          "reach_mem_pct": {
+            "default": 90,
+            "exclusiveMinimum": 0.0,
+            "maximum": 100.0,
+            "title": "Reach Mem Pct",
+            "type": "number"
+          },
+          "start": {
+            "minimum": 1.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "target_mem_pct": {
+            "default": 93,
+            "exclusiveMinimum": 0.0,
+            "maximum": 100.0,
+            "title": "Target Mem Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "start"
+        ],
+        "title": "BenchmarkAdaptive",
+        "type": "object"
+      },
       "BenchmarkMonitor": {
         "properties": {
           "interval_s": {
@@ -186,6 +249,16 @@
       },
       "BenchmarkRequest": {
         "properties": {
+          "adaptive": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkAdaptive"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "allow_busy_host": {
             "default": false,
             "title": "Allow Busy Host",
@@ -1201,6 +1274,43 @@
       },
       "GenerateRequest": {
         "properties": {
+          "core_image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Core Image"
+          },
+          "core_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Core Type"
+          },
+          "host_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Mix"
+          },
           "host_type": {
             "default": "workstation",
             "title": "Host Type",
@@ -1237,6 +1347,26 @@
             "title": "Router Type",
             "type": "string"
           },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "server_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ServerMixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Mix"
+          },
           "server_type": {
             "default": "workstation",
             "title": "Server Type",
@@ -1248,6 +1378,21 @@
             "minimum": 0.0,
             "title": "Servers",
             "type": "integer"
+          },
+          "switch_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Switch Mix"
           },
           "switch_type": {
             "default": "switch",
@@ -1264,6 +1409,43 @@
       "GeneratorSpec": {
         "description": "The shape of a generated topology (see domain/generator).",
         "properties": {
+          "core_image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Core Image"
+          },
+          "core_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Core Type"
+          },
+          "host_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Mix"
+          },
           "host_type": {
             "default": "workstation",
             "title": "Host Type",
@@ -1288,6 +1470,26 @@
             "title": "Router Type",
             "type": "string"
           },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "server_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ServerMixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Mix"
+          },
           "server_type": {
             "default": "workstation",
             "title": "Server Type",
@@ -1299,6 +1501,21 @@
             "minimum": 0.0,
             "title": "Servers",
             "type": "integer"
+          },
+          "switch_mix": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MixEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Switch Mix"
           },
           "switch_type": {
             "default": "switch",
@@ -1424,6 +1641,24 @@
             "title": "Displayname",
             "type": "string"
           },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Env",
+            "type": "object"
+          },
+          "ownBridge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownbridge"
+          },
           "platforms": {
             "anyOf": [
               {
@@ -1437,6 +1672,17 @@
               }
             ],
             "title": "Platforms"
+          },
+          "shell": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shell"
           },
           "source": {
             "discriminator": {
@@ -2294,6 +2540,38 @@
         "title": "LinkTarget",
         "type": "object"
       },
+      "MixEntry": {
+        "description": "A share of the hosts (or switches): ``weight`` relative to the others.",
+        "properties": {
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          },
+          "weight": {
+            "exclusiveMinimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "weight"
+        ],
+        "title": "MixEntry",
+        "type": "object"
+      },
       "MonitorOut": {
         "properties": {
           "duration_s": {
@@ -2955,6 +3233,57 @@
           "nodes"
         ],
         "title": "RuntimeOut",
+        "type": "object"
+      },
+      "ServerMixEntry": {
+        "description": "Servers of one kind: a fixed ``count``, or one per ``per_hosts`` hosts.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 230.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "per_hosts": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Hosts"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ServerMixEntry",
         "type": "object"
       },
       "SourceOut": {

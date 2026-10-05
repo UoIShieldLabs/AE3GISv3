@@ -1016,6 +1016,55 @@ export interface components {
             /** Size */
             size: number;
         };
+        /**
+         * BenchmarkAdaptive
+         * @description Scales chosen step by step until the host's memory is nearly full
+         *     (generated topologies; replaces ``scale``). Start at ``start`` hosts; after
+         *     each step, project from its marginal memory per node the hosts at which
+         *     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
+         *     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
+         *     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
+         *     highest passing scale is then run ``confirm`` more times.
+         */
+        BenchmarkAdaptive: {
+            /**
+             * Approach
+             * @default 0.6
+             */
+            approach: number;
+            /**
+             * Confirm
+             * @default 2
+             */
+            confirm: number;
+            /**
+             * Max Factor
+             * @default 2
+             */
+            max_factor: number;
+            /**
+             * Max Steps
+             * @default 20
+             */
+            max_steps: number;
+            /**
+             * Min Step
+             * @default 25
+             */
+            min_step: number;
+            /**
+             * Reach Mem Pct
+             * @default 90
+             */
+            reach_mem_pct: number;
+            /** Start */
+            start: number;
+            /**
+             * Target Mem Pct
+             * @default 93
+             */
+            target_mem_pct: number;
+        };
         /** BenchmarkMonitor */
         BenchmarkMonitor: {
             /**
@@ -1050,6 +1099,7 @@ export interface components {
         };
         /** BenchmarkRequest */
         BenchmarkRequest: {
+            adaptive?: components["schemas"]["BenchmarkAdaptive"] | null;
             /**
              * Allow Busy Host
              * @default false
@@ -1485,6 +1535,12 @@ export interface components {
         };
         /** GenerateRequest */
         GenerateRequest: {
+            /** Core Image */
+            core_image?: string | null;
+            /** Core Type */
+            core_type?: string | null;
+            /** Host Mix */
+            host_mix?: components["schemas"]["MixEntry"][] | null;
             /**
              * Host Type
              * @default workstation
@@ -1513,6 +1569,13 @@ export interface components {
              */
             router_type: string;
             /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /** Server Mix */
+            server_mix?: components["schemas"]["ServerMixEntry"][] | null;
+            /**
              * Server Type
              * @default workstation
              */
@@ -1522,6 +1585,8 @@ export interface components {
              * @default 1
              */
             servers: number;
+            /** Switch Mix */
+            switch_mix?: components["schemas"]["MixEntry"][] | null;
             /**
              * Switch Type
              * @default switch
@@ -1533,6 +1598,12 @@ export interface components {
          * @description The shape of a generated topology (see domain/generator).
          */
         GeneratorSpec: {
+            /** Core Image */
+            core_image?: string | null;
+            /** Core Type */
+            core_type?: string | null;
+            /** Host Mix */
+            host_mix?: components["schemas"]["MixEntry"][] | null;
             /**
              * Host Type
              * @default workstation
@@ -1554,6 +1625,13 @@ export interface components {
              */
             router_type: string;
             /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /** Server Mix */
+            server_mix?: components["schemas"]["ServerMixEntry"][] | null;
+            /**
              * Server Type
              * @default workstation
              */
@@ -1563,6 +1641,8 @@ export interface components {
              * @default 1
              */
             servers: number;
+            /** Switch Mix */
+            switch_mix?: components["schemas"]["MixEntry"][] | null;
             /**
              * Switch Type
              * @default switch
@@ -1627,8 +1707,16 @@ export interface components {
             description: string;
             /** Displayname */
             displayName: string;
+            /** Env */
+            env?: {
+                [key: string]: string;
+            };
+            /** Ownbridge */
+            ownBridge?: string | null;
             /** Platforms */
             platforms?: string[] | null;
+            /** Shell */
+            shell?: string | null;
             /** Source */
             source?: components["schemas"]["BuildSource"] | components["schemas"]["RegistrySource"];
             /**
@@ -1902,6 +1990,18 @@ export interface components {
              */
             kind: "link";
         };
+        /**
+         * MixEntry
+         * @description A share of the hosts (or switches): ``weight`` relative to the others.
+         */
+        MixEntry: {
+            /** Image */
+            image?: string | null;
+            /** Type */
+            type: string;
+            /** Weight */
+            weight: number;
+        };
         /** MonitorOut */
         MonitorOut: {
             /** Duration S */
@@ -2169,6 +2269,20 @@ export interface components {
             topology_id: string;
             /** Version */
             version: number;
+        };
+        /**
+         * ServerMixEntry
+         * @description Servers of one kind: a fixed ``count``, or one per ``per_hosts`` hosts.
+         */
+        ServerMixEntry: {
+            /** Count */
+            count?: number | null;
+            /** Image */
+            image?: string | null;
+            /** Per Hosts */
+            per_hosts?: number | null;
+            /** Type */
+            type: string;
         };
         /** SourceOut */
         SourceOut: {

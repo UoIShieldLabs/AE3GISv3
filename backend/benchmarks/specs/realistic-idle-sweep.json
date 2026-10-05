@@ -1,0 +1,52 @@
+{
+  "label": "realistic idle sweep",
+  "notes": "A campus of mixed images (workstations, servers, an IDS, Open vSwitch and Linux-bridge switches, a firewall core; heavy outliers such as the Wazuh manager and Firefox desktops left out), deployed and reachable with each image's own services running but no traffic between nodes: memory per node, deploy and destroy time. Adaptive: climbs from 400 hosts until a step peaks at 90% memory or more, then reruns that ceiling twice.",
+  "topology": {
+    "generate": {
+      "hosts_per_subnet": 200,
+      "hosts_per_switch": 48,
+      "seed": 1,
+      "host_mix": [
+        { "type": "workstation", "image": "ae3gis.local/benign-client", "weight": 65 },
+        { "type": "workstation", "image": "kathara/base", "weight": 20 },
+        { "type": "workstation", "image": "ae3gis.local/wazuh-agent", "weight": 15 }
+      ],
+      "server_mix": [
+        { "type": "dns-server", "image": "kathara/base", "count": 1 },
+        { "type": "dhcp-server", "image": "ae3gis.local/isc-dhcp", "count": 1 },
+        { "type": "ids", "image": "ae3gis.local/suricata", "per_hosts": 200 },
+        { "type": "web-server", "image": "ae3gis.local/nginx", "per_hosts": 50 },
+        { "type": "web-server", "image": "ae3gis.local/apache", "per_hosts": 100 },
+        { "type": "web-server", "image": "httpd:alpine", "per_hosts": 200 },
+        { "type": "database-server", "image": "postgres:alpine", "per_hosts": 100 },
+        { "type": "ftp-server", "image": "ae3gis.local/vsftpd", "per_hosts": 200 }
+      ],
+      "switch_mix": [
+        { "type": "switch", "image": "kathara/base", "weight": 75 },
+        { "type": "switch", "image": "ae3gis.local/open-vswitch", "weight": 25 }
+      ],
+      "core_type": "firewall",
+      "core_image": "ae3gis.local/iptables"
+    }
+  },
+  "adaptive": {
+    "start": 400,
+    "target_mem_pct": 93,
+    "reach_mem_pct": 90,
+    "approach": 0.6,
+    "max_factor": 2.0,
+    "min_step": 25,
+    "confirm": 2
+  },
+  "cooldown_s": 20,
+  "settle_s": 60,
+  "hold_s": 30,
+  "monitor": { "interval_s": 5 },
+  "stop": {
+    "max_mem_pct": 95,
+    "max_psi_mem_full": 10,
+    "project_memory": false,
+    "deploy_timeout_s": 1800,
+    "ready_timeout_s": 300
+  }
+}
