@@ -347,48 +347,41 @@ def readiness_probes(data: dict[str, Any], pids: dict[str, int]) -> list[dict[st
     return probes
 
 
-async def run_step(
-    b: Bench,
-    name: str,
-    scale: int,
-    rep: int,
-    ends: Callable[[dict[str, Any]], bool] | None = None,
-) -> dict[str, Any]:
-    """One step. ``ends``: whether the sweep ends after this step (``keep_last``
-    keeps its lab), asked once the step is measured; by default a step that
-    did not pass, or the plan's last (``b.is_last``)."""
-    runner, spec = b.runner, b.spec
-    settings = runner.settings
-    assert settings is not None and b.session is not None
-    topology_id = spec["topology_id"]
-    row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
-    row["reason"] = row["detail"] = None
+Window = tuple[float, float] | None
 
-    def fail(outcome: str, reason: str, detail: str) -> None:
-        if row["outcome"] == "ok":
-            row.update(outcome=outcome, reason=reason, detail=detail)
 
-    # The step's topology.
-    topo = _topo(runner, topology_id)
-    if spec.get("generated"):
-        data = generate(_gen_params(spec, scale))
+def _fail(row: dict[str, Any], outcome: str, reason: str, detail: str) -> None:
+    """Record a step's outcome; the first one that isn't ``ok`` sticks."""
+    if row["outcome"] == "ok":
+        row.update(outcome=outcome, reason=reason, detail=detail)
+
+
+def _place(b: Bench, row: dict[str, Any], data: dict[str, Any] | None, artifact: str) -> Topology:
+    """Put the step's topology (``data``; None keeps the stored one) on the
+    benchmark's library row, keep a copy as ``topologies/<artifact>.json``,
+    and note its size and images."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    if data is not None:
         with runner.session_factory() as db:
-            t = db.get(Topology, topology_id)
-            topologies.update(db, t, data=data)
+            topologies.update(db, db.get(Topology, topology_id), data=data)
         store = runner.artifacts
         assert store is not None
         tdir = store.dir(b.job_id) / "topologies"
         tdir.mkdir(exist_ok=True)
-        (tdir / f"{scale}-{rep}.json").write_text(json.dumps(data))
-        topo = _topo(runner, topology_id)
+        (tdir / f"{artifact}.json").write_text(json.dumps(data))
+    topo = _topo(runner, topology_id)
     plan = topologies.plan_for(topo)
     row["nodes"] = len(plan.nodes)
     row["links"] = len(plan.collision_domains)
     b.image_of = {n.id: n.image for n in plan.nodes}
     b.by_image = []
-    windows: dict[str, tuple[float, float] | None] = {"pre": None, "settle": None, "hold": None}
+    return topo
 
-    # 1. pre: the reference, nothing deployed, once the host is quiet.
+
+async def _reference(b: Bench, row: dict[str, Any], name: str) -> Window:
+    """The reference window: nothing of ours deployed, once the host is quiet."""
+    spec = b.spec
+    assert b.session is not None
     b.session.set_scope(m.Scope(step=name))
     b.progress(name, "waiting for the host to go quiet")
     row["quiet_wait_s"] = await b.quiet(
@@ -397,165 +390,234 @@ async def run_step(
     b.progress(name, f"reference ({spec.get('cooldown_s', 20)}s, nothing deployed)")
     t0 = b.now()
     await asyncio.sleep(float(spec.get("cooldown_s") or 0))
-    windows["pre"] = (t0, b.now())
+    return (t0, b.now())
 
+
+async def _deploy(b: Bench, row: dict[str, Any], name: str) -> EngineState | None:
+    """Deploy the step's topology (arming the stop criteria); its engine state,
+    or None when it was not deployed (projected to exhaust the host, refused,
+    failed or partial). A slow deploy is marked but goes on."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    assert b.session is not None
+    # Would this step exhaust the host? (A deploy cannot be interrupted.)
+    latest = b.session.host_rows[-1] if b.session.host_rows else None
+    projected = bm.projected_memory(b.rows, latest, row["nodes"], b.stop)
+    if projected is not None:
+        _fail(row, "stopped", *projected)
+        b.mark(f"{name}: not deployed ({projected[1]})")
+        return None
+    b.arm()
+    b.mark(f"{name}: deploy ({row['nodes']} nodes, {row['links']} links)")
+    b.progress(name, f"deploying {row['nodes']} nodes")
     try:
-        # Would this step exhaust the host? (A deploy cannot be interrupted.)
-        latest = b.session.host_rows[-1] if b.session.host_rows else None
-        projected = bm.projected_memory(b.rows, latest, row["nodes"], b.stop)
-        if projected is not None:
-            fail("stopped", *projected)
-            b.mark(f"{name}: not deployed ({projected[1]})")
-            return row
-
-        # 2. deploy
-        b.arm()
-        b.mark(f"{name}: deploy ({row['nodes']} nodes, {row['links']} links)")
-        b.progress(name, f"deploying {row['nodes']} nodes")
-        try:
-            deploy = await _run_job(
-                runner,
-                lambda db: deployment.start_deploy(db, runner, db.get(Topology, topology_id)),
-            )
-        except (Conflict, Invalid) as exc:  # e.g. the topology does not validate
-            fail("failed", "deploy_refused", str(exc))
-            return row
-        row["deploy_job"] = deploy.id
-        row["deploy_s"] = _elapsed(deploy)
-        row["deploy_phases"] = bm.deploy_phases(deploy.steps or [])
-        if deploy.status != "succeeded":
-            fail("failed", "deploy_failed", deploy.error or deploy.status)
-            return row
-        with runner.session_factory() as db:
-            partial = db.scalars(
-                select(Event).where(Event.job_id == deploy.id, Event.type == "deploy.partial")
-            ).first()
-        if partial is not None:
-            fail("failed", "deploy_partial", partial.message)
-            return row
-        if row["deploy_s"] and row["deploy_s"] > float(b.stop.get("deploy_timeout_s") or 1e9):
-            fail("stopped", "deploy_slow", f"deploy took {row['deploy_s']:.0f}s")
-        topo = _topo(runner, topology_id)
-        state = EngineState.from_dict(topo.engine_state)
-        assert state is not None
-        b.session.set_scope(
-            m.Scope(
-                lab_hash=state.lab_hash,
-                node_for_machine={mn: nid for nid, mn in state.nodes.items()},
-                step=name,
-            )
+        deploy = await _run_job(
+            runner,
+            lambda db: deployment.start_deploy(db, runner, db.get(Topology, topology_id)),
         )
-        b.mark(f"{name}: deployed in {row['deploy_s']}s")
-
-        # 3. network ready
-        pids = await runner.engine.node_pids(state)
-        probes = readiness_probes(topo.data, pids)
-        b.progress(name, f"checking {len(probes)} paths")
-        ready = await netns_driver.probe(
-            runner.engine,
-            settings,
-            image=catalog.tool_image("driver"),
-            job_id=b.job_id,
-            owner=settings.ensure_instance_id(),
+    except (Conflict, Invalid) as exc:  # e.g. the topology does not validate
+        _fail(row, "failed", "deploy_refused", str(exc))
+        return None
+    row["deploy_job"] = deploy.id
+    row["deploy_s"] = _elapsed(deploy)
+    row["deploy_phases"] = bm.deploy_phases(deploy.steps or [])
+    if deploy.status != "succeeded":
+        _fail(row, "failed", "deploy_failed", deploy.error or deploy.status)
+        return None
+    with runner.session_factory() as db:
+        partial = db.scalars(
+            select(Event).where(Event.job_id == deploy.id, Event.type == "deploy.partial")
+        ).first()
+    if partial is not None:
+        _fail(row, "failed", "deploy_partial", partial.message)
+        return None
+    if row["deploy_s"] and row["deploy_s"] > float(b.stop.get("deploy_timeout_s") or 1e9):
+        _fail(row, "stopped", "deploy_slow", f"deploy took {row['deploy_s']:.0f}s")
+    state = EngineState.from_dict(_topo(runner, topology_id).engine_state)
+    assert state is not None
+    b.session.set_scope(
+        m.Scope(
             lab_hash=state.lab_hash,
-            probes=probes,
-            timeout_s=float(b.stop.get("ready_timeout_s") or 300),
+            node_for_machine={mn: nid for nid, mn in state.nodes.items()},
+            step=name,
         )
-        ok_t = [r["t"] for r in ready["results"] if r.get("ok")]
-        row["ready_s"] = max(ok_t) if ok_t else None
-        row["probes"] = len(probes)
-        row["probes_failed"] = ready["failed"]
-        if ready.get("error"):
-            fail("failed", "probe_error", ready["error"])
-        elif ready["failed"]:
-            bad = sorted({r["node"] for r in ready["results"] if not r.get("ok")})
-            fail(
-                "failed",
-                "not_ready",
-                f"{ready['failed']} path(s) unreachable from {', '.join(bad[:5])}",
-            )
-        b.mark(f"{name}: network ready in {row['ready_s']}s")
-        if row["outcome"] != "ok":
-            return row
+    )
+    b.mark(f"{name}: deployed in {row['deploy_s']}s")
+    return state
 
-        # 4. settle
-        b.progress(name, f"settling ({spec.get('settle_s', 20)}s)")
-        t1 = b.now()
-        if await b.pause(float(spec.get("settle_s") or 0)):
+
+async def _ready(
+    b: Bench, row: dict[str, Any], name: str, data: dict[str, Any], state: EngineState
+) -> bool:
+    """Network ready: every host reaches its gateway and a far host in time.
+    True when the step can go on."""
+    runner = b.runner
+    settings = runner.settings
+    assert settings is not None
+    pids = await runner.engine.node_pids(state)
+    probes = readiness_probes(data, pids)
+    b.progress(name, f"checking {len(probes)} paths")
+    ready = await netns_driver.probe(
+        runner.engine,
+        settings,
+        image=catalog.tool_image("driver"),
+        job_id=b.job_id,
+        owner=settings.ensure_instance_id(),
+        lab_hash=state.lab_hash,
+        probes=probes,
+        timeout_s=float(b.stop.get("ready_timeout_s") or 300),
+    )
+    ok_t = [r["t"] for r in ready["results"] if r.get("ok")]
+    row["ready_s"] = max(ok_t) if ok_t else None
+    row["probes"] = len(probes)
+    row["probes_failed"] = ready["failed"]
+    if ready.get("error"):
+        _fail(row, "failed", "probe_error", ready["error"])
+    elif ready["failed"]:
+        bad = sorted({r["node"] for r in ready["results"] if not r.get("ok")})
+        _fail(
+            row,
+            "failed",
+            "not_ready",
+            f"{ready['failed']} path(s) unreachable from {', '.join(bad[:5])}",
+        )
+    b.mark(f"{name}: network ready in {row['ready_s']}s")
+    return row["outcome"] == "ok"
+
+
+async def _settle(b: Bench, name: str) -> Window:
+    """Deployed and idle for ``settle_s``; raises Tripped."""
+    b.progress(name, f"settling ({b.spec.get('settle_s', 20)}s)")
+    t1 = b.now()
+    if await b.pause(float(b.spec.get("settle_s") or 0)):
+        raise Tripped
+    return (t1, b.now())
+
+
+async def _hold(
+    b: Bench,
+    row: dict[str, Any],
+    name: str,
+    windows: dict[str, Window],
+    hold_s: float,
+    load: dict[str, Any] | None,
+) -> None:
+    """``hold_s`` idle, or under ``load`` (``patterns``, ``interval_s``,
+    ``ramp_s``: one traffic run, its ramp left out of the window). Sets
+    ``windows["hold"]``, then raises Tripped if a criterion fired."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    t2 = b.now()
+    if not load:
+        b.progress(name, f"holding idle ({hold_s:g}s)")
+        tripped = await b.pause(hold_s)
+        windows["hold"] = (t2, b.now())
+        if tripped:
             raise Tripped
-        windows["settle"] = (t1, b.now())
+        return
+    b.progress(name, "starting traffic")
+    with runner.session_factory() as db:
+        run = traffic.start_run(
+            db,
+            runner,
+            db.get(Topology, topology_id),
+            {
+                "label": f"benchmark {name}",
+                "patterns": load.get("patterns") or [],
+                "flows": [],
+                "duration_s": None,
+                "interval_s": load.get("interval_s") or b.interval,
+                "ramp_s": load.get("ramp_s") or 0.0,
+            },
+        )
+        row["traffic_job"] = run.id
+    ramp = float(load.get("ramp_s") or 0.0)
+    b.progress(name, f"traffic: ramp {ramp:.0f}s + hold {hold_s:g}s")
+    tripped = await b.pause(ramp)
+    t2 = b.now()
+    if not tripped:
+        tripped = await b.pause(hold_s)
+    windows["hold"] = (t2, b.now())
+    done = await _stop_traffic(runner, topology_id)
+    totals = ((done.result or {}) if done else {}).get("totals") or {}
+    row.update(
+        flows=totals.get("flows"),
+        offered_bps=totals.get("offered_bps"),
+        delivered_bps=totals.get("delivered_bps"),
+        delivered_ratio=totals.get("delivered_ratio"),
+        lost_percent=totals.get("lost_percent"),
+        retransmits=totals.get("retransmits"),
+        flows_with_errors=totals.get("flows_with_errors"),
+    )
+    if done is not None and done.status == "failed":
+        _fail(row, "failed", "traffic_failed", done.error or "the traffic run failed")
+    if tripped:
+        raise Tripped
+    verdict = bm.traffic_verdict(totals, b.stop)
+    if verdict:
+        _fail(row, "degraded", *verdict)
 
-        # 5. hold
-        t_spec = spec.get("traffic")
-        t2 = b.now()
-        if t_spec:
-            b.progress(name, "starting traffic")
-            with runner.session_factory() as db:
-                run = traffic.start_run(
-                    db,
-                    runner,
-                    db.get(Topology, topology_id),
-                    {
-                        "label": f"benchmark {name}",
-                        "patterns": t_spec.get("patterns") or [],
-                        "flows": [],
-                        "duration_s": None,
-                        "interval_s": t_spec.get("interval_s") or b.interval,
-                        "ramp_s": t_spec.get("ramp_s") or 0.0,
-                    },
-                )
-                run_id = run.id
-            row["traffic_job"] = run_id
-            ramp = float(t_spec.get("ramp_s") or 0.0)
-            b.progress(name, f"traffic: ramp {ramp:.0f}s + hold {spec.get('hold_s', 60)}s")
-            tripped = await b.pause(ramp)
-            t2 = b.now()
-            if not tripped:
-                tripped = await b.pause(float(spec.get("hold_s") or 0))
-            windows["hold"] = (t2, b.now())
-            done = await _stop_traffic(runner, topology_id)
-            totals = ((done.result or {}) if done else {}).get("totals") or {}
-            row.update(
-                flows=totals.get("flows"),
-                offered_bps=totals.get("offered_bps"),
-                delivered_bps=totals.get("delivered_bps"),
-                delivered_ratio=totals.get("delivered_ratio"),
-                lost_percent=totals.get("lost_percent"),
-                retransmits=totals.get("retransmits"),
-                flows_with_errors=totals.get("flows_with_errors"),
-            )
-            if done is not None and done.status == "failed":
-                fail("failed", "traffic_failed", done.error or "the traffic run failed")
-            if tripped:
-                raise Tripped
-            verdict = bm.traffic_verdict(totals, b.stop)
-            if verdict:
-                fail("degraded", *verdict)
-        else:
-            b.progress(name, f"holding idle ({spec.get('hold_s', 60)}s)")
-            if await b.pause(float(spec.get("hold_s") or 0)):
-                windows["hold"] = (t2, b.now())
-                raise Tripped
-            windows["hold"] = (t2, b.now())
+
+async def _finish(b: Bench, row: dict[str, Any], windows: dict[str, Window]) -> None:
+    """Disarm, measure the step's windows and stop its traffic."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    assert b.session is not None
+    b.armed = False
+    if b.trip is not None:
+        _fail(row, "stopped", *b.trip)
+    row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
+    row["by_image"] = bm.image_metrics(b.by_image, windows)
+    await _stop_traffic(runner, topology_id)
+
+
+async def _teardown(b: Bench, row: dict[str, Any], name: str, last: bool) -> None:
+    """Destroy the step's lab unless it is the sweep's ``last`` and
+    ``keep_last`` keeps it."""
+    if last and b.spec.get("keep_last"):
+        return
+    b.progress(name, "destroying")
+    destroy = await _destroy(b.runner, b.spec["topology_id"])
+    if destroy is not None:
+        row["destroy_job"] = destroy.id
+        row["destroy_s"] = _elapsed(destroy)
+        if destroy.status != "succeeded":
+            _fail(row, "failed", "destroy_failed", destroy.error or destroy.status)
+    b.mark(f"{name}: destroyed")
+
+
+async def run_step(
+    b: Bench,
+    name: str,
+    scale: int,
+    rep: int,
+    ends: Callable[[dict[str, Any]], bool] | None = None,
+    *,
+    data: dict[str, Any] | None = None,
+    artifact: str | None = None,
+) -> dict[str, Any]:
+    """One step: place, reference, deploy, ready, settle, hold, measure,
+    destroy. ``data``: the step's topology (default: generated at ``scale``,
+    or the stored one). ``ends``: whether the sweep ends after this step
+    (``keep_last`` keeps its lab), asked once the step is measured; by
+    default a step that did not pass, or the plan's last (``b.is_last``)."""
+    spec = b.spec
+    row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
+    row["reason"] = row["detail"] = None
+    if data is None and spec.get("generated"):
+        data = generate(_gen_params(spec, scale))
+    topo = _place(b, row, data, artifact or f"{scale}-{rep}")
+    windows: dict[str, Window] = {"pre": None, "settle": None, "hold": None}
+    windows["pre"] = await _reference(b, row, name)
+    try:
+        state = await _deploy(b, row, name)
+        if state is None or not await _ready(b, row, name, topo.data, state):
+            return row
+        windows["settle"] = await _settle(b, name)
+        await _hold(b, row, name, windows, float(spec.get("hold_s") or 0), spec.get("traffic"))
     except Tripped:
         pass
     finally:
-        b.armed = False
-        if b.trip is not None:
-            fail("stopped", *b.trip)
-        row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
-        row["by_image"] = bm.image_metrics(b.by_image, windows)
-        await _stop_traffic(runner, topology_id)
+        await _finish(b, row, windows)
         last = ends(row) if ends else (row["outcome"] != "ok" or b.is_last)
-        if not (last and spec.get("keep_last")):
-            b.progress(name, "destroying")
-            destroy = await _destroy(runner, topology_id)
-            if destroy is not None:
-                row["destroy_job"] = destroy.id
-                row["destroy_s"] = _elapsed(destroy)
-                if destroy.status != "succeeded":
-                    fail("failed", "destroy_failed", destroy.error or destroy.status)
-            b.mark(f"{name}: destroyed")
+        await _teardown(b, row, name, last)
     return row
 
 
