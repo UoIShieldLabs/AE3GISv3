@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Header, Query, Response, UploadFil
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+import catalog
 from api.deps import get_db, get_engine
 from api.errors import Invalid
 from api.schemas import (
@@ -28,7 +29,7 @@ from auth import require_any_auth, require_instructor
 from db.models import Topology
 from domain import validation
 from domain.export import containerlab, kathara, labspec
-from domain.generator import GeneratorError, GeneratorParams, generate
+from domain.generator import GeneratorError, GeneratorParams, check_types, generate
 from engine.base import DeploymentEngine
 from services import deployment, events, topologies
 
@@ -68,7 +69,9 @@ def generate_topology(
     servers subnet behind a core router, client subnets behind their own
     routers, access switches under a distribution switch per subnet."""
     try:
-        data = generate(GeneratorParams(**body.model_dump()))
+        params = GeneratorParams(**body.model_dump())
+        check_types(params, set(catalog.node_types()))
+        data = generate(params)
     except GeneratorError as exc:
         raise Invalid(str(exc), code="bad_generator") from exc
     topo, diags = topologies.create(db, name=data["name"], data=data)

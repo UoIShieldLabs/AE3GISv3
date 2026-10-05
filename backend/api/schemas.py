@@ -598,6 +598,29 @@ class MonitorSamplesOut(BaseModel):
 # ── generated topologies and benchmarks ──────────────────────────────
 
 
+class MixEntry(BaseModel):
+    """A share of the hosts (or switches): ``weight`` relative to the others."""
+
+    type: str = Field(min_length=1)
+    image: str | None = None  # None: the type's default image
+    weight: float = Field(gt=0)
+
+
+class ServerMixEntry(BaseModel):
+    """Servers of one kind: a fixed ``count``, or one per ``per_hosts`` hosts."""
+
+    type: str = Field(min_length=1)
+    image: str | None = None
+    count: int | None = Field(default=None, ge=0, le=230)
+    per_hosts: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def _one(self) -> ServerMixEntry:
+        if (self.count is None) == (self.per_hosts is None):
+            raise ValueError("give either count or per_hosts")
+        return self
+
+
 class GeneratorSpec(BaseModel):
     """The shape of a generated topology (see domain/generator)."""
 
@@ -609,6 +632,15 @@ class GeneratorSpec(BaseModel):
     server_type: str = "workstation"
     router_type: str = "router"
     switch_type: str = "switch"
+    # A mixed topology: hosts and switches split by weight, servers by count or
+    # per hosts (replacing ``servers``), the core router's type and image, and
+    # the seed that places them.
+    host_mix: list[MixEntry] | None = Field(default=None, min_length=1)
+    server_mix: list[ServerMixEntry] | None = Field(default=None, min_length=1)
+    switch_mix: list[MixEntry] | None = Field(default=None, min_length=1)
+    core_type: str | None = None
+    core_image: str | None = None
+    seed: int = 0
 
 
 class GenerateRequest(GeneratorSpec):
@@ -659,6 +691,31 @@ class BenchmarkStop(BaseModel):
     project_memory: bool = True
 
 
+class BenchmarkAdaptive(BaseModel):
+    """Scales chosen step by step until the host's memory is nearly full
+    (generated topologies; replaces ``scale``). Start at ``start`` hosts; after
+    each step, project from its marginal memory per node the hosts at which
+    memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
+    least ``min_step`` hosts, at most ×``max_factor``). The climb is over once
+    a step's memory peaks at ``reach_mem_pct`` (or a step fails); the highest
+    passing scale is then run ``confirm`` more times."""
+
+    start: int = Field(ge=1)
+    target_mem_pct: float = Field(default=93, gt=0, le=100)
+    reach_mem_pct: float = Field(default=90, gt=0, le=100)
+    approach: float = Field(default=0.6, gt=0, le=1)
+    max_factor: float = Field(default=2.0, gt=1, le=10)
+    min_step: int = Field(default=25, ge=1)
+    max_steps: int = Field(default=20, ge=1, le=100)
+    confirm: int = Field(default=2, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def _reach_below_target(self) -> BenchmarkAdaptive:
+        if self.reach_mem_pct > self.target_mem_pct:
+            raise ValueError("reach_mem_pct cannot be above target_mem_pct")
+        return self
+
+
 class BenchmarkRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
@@ -667,6 +724,8 @@ class BenchmarkRequest(BaseModel):
     )
     # Hosts per step, increasing (generated topologies only).
     scale: list[int] = Field(default_factory=list, max_length=100)
+    # Or let the sweep pick each step's scale until memory is nearly full.
+    adaptive: BenchmarkAdaptive | None = None
     repetitions: int = Field(default=1, ge=1, le=20)
     cooldown_s: float = Field(default=20, ge=0, le=3600)
     # Before each step's reference window, wait (up to quiet_timeout_s) until
@@ -690,6 +749,12 @@ class BenchmarkRequest(BaseModel):
         if any(x < 1 for x in v) or any(b <= a for a, b in zip(v, v[1:], strict=False)):
             raise ValueError("scale must be positive and strictly increasing")
         return v
+
+    @model_validator(mode="after")
+    def _adaptive_generates(self) -> BenchmarkRequest:
+        if self.adaptive is not None and (self.scale or self.topology.generate is None):
+            raise ValueError("adaptive replaces scale and needs a generated topology")
+        return self
 
 
 class BenchmarkOut(BaseModel):
