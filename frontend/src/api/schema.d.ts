@@ -1080,6 +1080,8 @@ export interface components {
             /** Id */
             id: string;
             job: components["schemas"]["JobOut"];
+            /** Kind */
+            kind: string;
             /** Label */
             label: string;
             /** Live */
@@ -1125,6 +1127,8 @@ export interface components {
              * @default false
              */
             keep_samples: boolean;
+            /** Kind */
+            kind?: ("sweep" | "adaptive") | null;
             /**
              * Label
              * @default

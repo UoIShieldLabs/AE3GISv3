@@ -32,6 +32,7 @@ def test_idle_sweep(client, wait_jobs, fast):
     assert r.status_code == 202, r.text
     bench = r.json()
     assert bench["job"]["subject"] == "benchmark" and bench["topology_id"]
+    assert bench["kind"] == "sweep" and bench["spec"]["kind"] == "sweep"
     wait_jobs()
     done = _done(client, bench["id"])
     assert done["status"] == "succeeded", done["job"]["error"]
@@ -126,6 +127,17 @@ def test_the_host_at_rest_is_recorded(client, wait_jobs, fast):
     assert _done(client, plain["id"])["result"]["rest"] is None
 
 
+def test_repetitions_fold_into_a_spread_table(client, wait_jobs, fast):
+    bench = _start(client, scale=[2], repetitions=2).json()
+    wait_jobs()
+    done = _done(client, bench["id"])
+    assert done["result"]["kind"] == "sweep" and len(done["result"]["rows"]) == 2
+    md = client.get(f"/api/v1/benchmarks/{bench['id']}/report.md").text
+    assert "Per scale over its repetitions (mean ± std):" in md and "| 2 | 2 (2) |" in md
+    wrong = _start(client, scale=[2], kind="adaptive")
+    assert wrong.status_code == 422
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()
@@ -165,6 +177,7 @@ def test_an_adaptive_sweep_climbs_to_the_memory_target(client, wait_jobs, fast):
     done = _done(client, r.json()["id"])
     assert done["status"] == "succeeded", done["job"]["error"]
     result = done["result"]
+    assert done["kind"] == "adaptive" and result["kind"] == "adaptive"
     rows = result["rows"]
     climb, confirm = rows[:-1], rows[-1]
     assert all(r["outcome"] == "ok" for r in rows), [

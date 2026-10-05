@@ -739,6 +739,8 @@ class BenchmarkAdaptive(BaseModel):
 class BenchmarkRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
+    # What the benchmark does; inferred from the spec when omitted.
+    kind: Literal["sweep", "adaptive"] | None = None
     topology: BenchmarkTopology = Field(
         default_factory=lambda: BenchmarkTopology(generate=GeneratorSpec())
     )
@@ -780,10 +782,19 @@ class BenchmarkRequest(BaseModel):
             raise ValueError("adaptive replaces scale and needs a generated topology")
         return self
 
+    @model_validator(mode="after")
+    def _kind(self) -> BenchmarkRequest:
+        inferred = "adaptive" if self.adaptive is not None else "sweep"
+        if self.kind is not None and self.kind != inferred:
+            raise ValueError(f"kind {self.kind!r} does not match the spec (a {inferred})")
+        self.kind = inferred
+        return self
+
 
 class BenchmarkOut(BaseModel):
     id: str  # the benchmark's job id
     label: str
+    kind: str  # sweep | adaptive | census | matrix
     status: str
     live: bool
     topology_id: str | None

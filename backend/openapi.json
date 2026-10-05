@@ -194,6 +194,10 @@
           "job": {
             "$ref": "#/components/schemas/JobOut"
           },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
           "label": {
             "title": "Label",
             "type": "string"
@@ -238,6 +242,7 @@
         "required": [
           "id",
           "label",
+          "kind",
           "status",
           "live",
           "topology_id",
@@ -287,6 +292,21 @@
             "default": false,
             "title": "Keep Samples",
             "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sweep",
+                  "adaptive"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
           },
           "label": {
             "default": "",

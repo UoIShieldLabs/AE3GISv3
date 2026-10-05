@@ -319,6 +319,13 @@ def image_metrics(
 # ── across steps ──────────────────────────────────────────────────────
 
 
+def kind_of(spec: dict[str, Any]) -> str:
+    """What a benchmark does: ``sweep`` (fixed scales), ``adaptive`` (a climb),
+    ``census`` (one step per catalog image) or ``matrix`` (traffic cells on one
+    deployment). Specs from before ``kind`` existed are sweeps or climbs."""
+    return spec.get("kind") or ("adaptive" if spec.get("adaptive") else "sweep")
+
+
 def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[str, Any]:
     """The host at rest before the first step, nothing of ours deployed: what
     an earlier run or a leak left behind (memory the engine never gave back,
@@ -482,6 +489,7 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
             f"| {'–' if delivered is None else f'{delivered * 100:.1f}%'} "
             f"| {outcome} |"
         )
+    lines += _spread_table(result.get("by_scale") or [])
     lines += _traffic_table(rows)
     lines += _image_table(rows)
     lines += [
@@ -525,6 +533,38 @@ def _bps(x: float | None) -> str:
 
 def _pct(x: float | None) -> str:
     return "–" if x is None else f"{x * 100:.1f}%"
+
+
+def _pm(spread: dict[str, Any] | None, f) -> str:
+    if not spread or spread.get("mean") is None:
+        return "–"
+    return f"{f(spread['mean'])} ± {f(spread['std'] or 0)}"
+
+
+def _spread_table(entries: list[dict[str, Any]]) -> list[str]:
+    """Repetitions folded per scale (mean ± sample std), when a scale ran more than once."""
+    entries = [e for e in entries if e.get("runs", 0) > 1]
+    if not entries:
+        return []
+    lines = [
+        "",
+        "Per scale over its repetitions (mean ± std):",
+        "",
+        "| Hosts | Runs (ok) | Nodes | Deploy s | Ready s | Destroy s | Marginal MB/node "
+        "| Host CPU % | Docker cores | Host mem % max | Delivered |",
+        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for e in entries:
+        lines.append(
+            f"| {e['scale']} | {e['runs']} ({e['ok']}) | {e.get('nodes', '–')} "
+            f"| {_pm(e.get('deploy_s'), _num)} | {_pm(e.get('ready_s'), lambda x: _num(x, 2))} "
+            f"| {_pm(e.get('destroy_s'), _num)} | {_pm(e.get('marginal_mem_per_node'), _mb)} "
+            f"| {_pm(e.get('hold_cpu_mean'), _num)} "
+            f"| {_pm(e.get('hold_docker_cpu_mean'), lambda x: _num(x / 100, 2))} "
+            f"| {_pm(e.get('hold_mem_pct_max'), _num)} "
+            f"| {_pm(e.get('delivered_ratio'), _pct)} |"
+        )
+    return lines
 
 
 def _traffic_table(rows: list[dict[str, Any]]) -> list[str]:

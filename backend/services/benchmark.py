@@ -778,6 +778,7 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
         last = next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
         out = {
             "label": spec.get("label") or "",
+            "kind": bm.kind_of(spec),
             "started_at": started.isoformat(),
             "ended_at": datetime.now(UTC).isoformat() if final else None,
             "topology_id": spec["topology_id"],
