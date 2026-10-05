@@ -31,6 +31,7 @@ to get numbers you can trust and compare between machines.
    | `idle-sweep.json` | none | memory per node, deploy/destroy time, how many idle nodes fit |
    | `client-server-sweep.json` | each host → one of two servers, 1 Mb/s TCP | the same under many-to-few traffic, and whether it still gets through |
    | `mesh-sweep.json` | each host → the next two hosts, 1 Mb/s UDP | east-west load across subnets |
+   | `realistic-idle-sweep.json` | none, but every image runs its own services | how many nodes of a mixed campus (workstations, servers, an IDS, Open vSwitch, a firewall core) fit: an adaptive sweep that climbs until memory is over 90% |
 
 3. **Run it** (from `backend/`, any Python 3.11+, no venv needed):
 
@@ -42,6 +43,9 @@ to get numbers you can trust and compare between machines.
    report) and `<date>-<label>.zip` (everything recorded). Ctrl-C once finishes
    the current step and stops; twice cancels now. Either way the benchmark
    removes what it deployed. `--scale 10,25,50` overrides the spec's steps.
+   The benchmark runs in the backend, not in this script: if the script dies
+   (or you close the terminal), `python scripts/bench.py --attach <id> --out-dir …`
+   follows it again and saves the results at the end.
 
 The benchmark refuses to start while other labs run or other jobs load the
 host (`allow_busy_host: true` overrides, and is recorded with the results).
@@ -68,6 +72,63 @@ behind their own routers, each linked to the core; per subnet a distribution
 switch and access switches of up to `hosts_per_switch` hosts. `POST
 /topologies/generate` makes the same topology in the library, to look at a
 small one in the editor.
+
+### Adaptive sweeps: climb to the limit
+
+Instead of a `scale` list, `adaptive` picks each step's size from the last
+one, to find the edge without guessing it:
+
+```jsonc
+"adaptive": {
+  "start": 400,            // first step (hosts)
+  "target_mem_pct": 93,    // aim: memory this full
+  "reach_mem_pct": 90,     // done once a step's memory peaks here
+  "approach": 0.6,         // close this share of the projected gap per step
+  "max_factor": 2.0,       // never more than double
+  "min_step": 25,          // steps in multiples of this, at least this
+  "confirm": 2             // then rerun the highest passing scale this often
+},
+"stop": { "max_mem_pct": 95, "project_memory": false, … }
+```
+
+After each step it projects, from that step's resting memory and marginal
+memory per node, the hosts at which memory would reach the target, and takes
+`approach` of the way there: large steps far from the edge, smaller ones near
+it. The climb ends at a step whose memory peaked at `reach_mem_pct` (it passes
+and is the ceiling), at a failing step, or at the generator's largest topology;
+the report says which (*climb: …*). Keep `max_mem_pct` above `reach_mem_pct`
+as the safety stop, and `project_memory` off (the climb never jumps past its
+own projection).
+
+### Mixed topologies
+
+By default every host is one type on its type's default image. A spec can
+instead mix types and images, as `realistic-idle-sweep.json` does:
+
+```jsonc
+"generate": {
+  "seed": 1,                                   // placement; same seed, same topology
+  "host_mix": [                                // the scale's hosts, split by weight
+    { "type": "workstation", "image": "ae3gis.local/benign-client", "weight": 60 },
+    { "type": "workstation", "weight": 20 }    // no image: the type's default
+  ],
+  "server_mix": [                              // the servers subnet (replaces "servers")
+    { "type": "dns-server", "count": 1 },      // a fixed number
+    { "type": "web-server", "image": "ae3gis.local/nginx", "per_hosts": 50 }  // 1 per 50 hosts, at least 1
+  ],
+  "switch_mix": [{ "type": "switch", "weight": 3 }, { "type": "switch", "image": "ae3gis.local/open-vswitch", "weight": 1 }],
+  "core_type": "firewall", "core_image": "ae3gis.local/iptables"    // the core router
+}
+```
+
+Weights split the hosts (and switches) exactly (largest remainder), so every
+scale has the same composition and the memory projection between steps holds;
+only *where* each kind lands is shuffled. Small scales round small shares away
+(5% of 10 hosts is none). The report adds a per-image table (cgroup memory,
+CPU, share of node memory) for the largest scale that passed. Build the mix's
+images beforehand (Images sheet, or `POST /api/v1/images/builds`); otherwise
+the benchmark's `images` step builds them before the first step, which only
+delays the start.
 
 ## What the numbers mean
 
@@ -149,3 +210,5 @@ namespaces*; set `AE3GIS_DRIVER_SECURITY_OPT='["apparmor=unconfined"]'` (or
   it is a planned benchmark variable.
 - Nodes have no CPU or memory limits: an idle node uses almost nothing, so
   *nodes per host* depends on the load you apply. Per-node limits are planned.
+- The servers subnet holds at most 230 servers, which caps how far a
+  `server_mix` with `per_hosts` entries can scale (the spec is refused beyond).
