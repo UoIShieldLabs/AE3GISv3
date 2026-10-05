@@ -143,6 +143,22 @@ def test_mixed_topology_is_seeded():
     assert _composition(a, "h") == _composition(c, "h")  # same mix, different places
 
 
+def test_kinds_used_lists_every_placeable_kind():
+    from domain.generator import kinds_used
+
+    kinds = kinds_used(GeneratorParams(hosts=2, **MIX))
+    # Every mix entry counts, even those a 2-host topology leaves out.
+    assert ("workstation", "ae3gis.local/firefox") in kinds
+    assert ("web-server", "ae3gis.local/nginx") in kinds and ("switch", None) in kinds
+    assert ("router", None) in kinds and ("firewall", "ae3gis.local/iptables") in kinds
+    assert len(kinds) == len(set(kinds))
+    assert kinds_used(GeneratorParams(hosts=2)) == [
+        ("router", None),
+        ("workstation", None),
+        ("switch", None),
+    ]
+
+
 def test_no_mix_keeps_the_plain_topology():
     data = generate(GeneratorParams(hosts=60, servers=2))
     assert all("image" not in c for c in _containers(data))

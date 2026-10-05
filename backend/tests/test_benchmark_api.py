@@ -92,6 +92,20 @@ def test_traffic_sweep_measures_delivery(client, wait_jobs, fast):
     assert run["result"]["stopped_by"] == "benchmark"
 
 
+def test_images_a_small_step_leaves_out_are_prepared_too(client, wait_jobs, fast):
+    # 2 hosts at 99:1 place no postgres node, but a larger step would: the
+    # images step pulls it up front instead of inside a later deploy.
+    fast.present_images = {"kathara/base", "kathara/frr"}
+    mix = [
+        {"type": "workstation", "weight": 99},
+        {"type": "database-server", "image": "postgres:alpine", "weight": 1},
+    ]
+    bench = _start(client, scale=[2], topology={"generate": {"host_mix": mix}}).json()
+    wait_jobs()
+    assert _done(client, bench["id"])["status"] == "succeeded"
+    assert "postgres:alpine" in fast.present_images
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()

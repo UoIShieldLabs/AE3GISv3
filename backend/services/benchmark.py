@@ -66,6 +66,7 @@ from domain.generator import (
     check_types,
     counts,
     generate,
+    kinds_used,
     max_hosts,
 )
 from domain.topology import images_in
@@ -741,10 +742,14 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
         async with runner.step(job_id, "images"):
             assert runner.images is not None
             if spec.get("generated"):
-                data = generate(_gen_params(spec, max(scales) if scales else first_adaptive))
+                p = _gen_params(spec, max(scales) if scales else first_adaptive)
+                needed = images_in(generate(p)) + [
+                    catalog.resolve_image(t, img) for t, img in kinds_used(p)
+                ]
             else:
-                data = _topo(runner, spec["topology_id"]).data
-            await runner.images.ensure_images(runner, job_id, images_in(data))
+                needed = images_in(_topo(runner, spec["topology_id"]).data)
+            needed = list(dict.fromkeys(i for i in needed if i))
+            await runner.images.ensure_images(runner, job_id, needed)
             tools = list(
                 dict.fromkeys([catalog.tool_image("collector"), catalog.tool_image("driver")])
             )

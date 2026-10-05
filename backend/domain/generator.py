@@ -183,13 +183,23 @@ def _check_mix(name: str, mix: list[dict[str, Any]] | None, *, weighted: bool) -
             raise GeneratorError(f"{name} entry {e['type']!r}: count cannot be negative")
 
 
+def kinds_used(p: GeneratorParams) -> list[Kind]:
+    """Every (type, image) these params can place at any scale, in a stable
+    order (an image of None is the type's default). A small step may leave a
+    mix entry out, so a benchmark prepares these, not one step's images."""
+    kinds: list[Kind] = [(p.router_type, None), (p.core_type or p.router_type, p.core_image)]
+    for mix, default in (
+        (p.host_mix, p.host_type),
+        (p.switch_mix, p.switch_type),
+        (p.server_mix, p.server_type),
+    ):
+        kinds += [(e["type"], e.get("image") or None) for e in mix] if mix else [(default, None)]
+    return list(dict.fromkeys(kinds))
+
+
 def types_used(p: GeneratorParams) -> set[str]:
     """Every node type the topology would contain (to check against a catalog)."""
-    used = {p.router_type, p.core_type or p.router_type}
-    used |= {e["type"] for e in p.host_mix} if p.host_mix else {p.host_type}
-    used |= {e["type"] for e in p.switch_mix} if p.switch_mix else {p.switch_type}
-    used |= {e["type"] for e in p.server_mix} if p.server_mix else {p.server_type}
-    return used
+    return {t for t, _ in kinds_used(p)}
 
 
 def check_types(p: GeneratorParams, known: set[str]) -> None:
