@@ -122,6 +122,9 @@ class ImageSpec(BaseModel):
                 raise ValueError(f"env name must be a shell variable name: {key!r}")
             if "\n" in value or "\r" in value:
                 raise ValueError(f"env value of {key!r} must be one line")
+            # Kathara's lab.conf (the export) has no way to quote a quote.
+            if '"' in value or "'" in value:
+                raise ValueError(f"env value of {key!r} cannot contain quotes")
         return v
 
 

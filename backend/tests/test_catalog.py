@@ -107,6 +107,8 @@ def test_image_env_and_own_bridge():
     for field, value in (
         ("env", {"BAD-NAME": "x"}),
         ("env", {"OK": "two\nlines"}),
+        ("env", {"OK": 'say "hi"'}),  # lab.conf cannot hold quotes
+        ("env", {"OK": "it's"}),
         ("ownBridge", "br0; reboot"),
         ("shell", "sh"),
     ):
