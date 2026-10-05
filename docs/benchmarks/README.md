@@ -267,7 +267,11 @@ fragments; TCP: writes up to 64 KiB). `-l` is always set, because iperf3's
 default 128 KB TCP write would turn a small cell into one write every few
 seconds. Shapes iperf3 can't send (more than 1000 writes per burst) are
 refused. Keep the iperf3 report interval a multiple of every burst interval
-(the matrix uses 10 s).
+(the matrix uses 10 s). The first burst goes out at once, so a run carries one
+burst more than its duration asks for: *delivered* can read a few percent over
+100% for long intervals and short runs (1 Mb/s every 2 s over 13 s: 108%; over
+a 65 s cell: ~103%). Checked on a real lab: the bursts leave a node intact
+(2.001 s apart, 250,063 bytes in 179 datagrams within 1.1 ms).
 
 ## What the numbers mean
 

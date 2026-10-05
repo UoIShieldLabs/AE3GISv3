@@ -1055,10 +1055,13 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
         census = spec.get("census")
         matrix = spec.get("matrix")
         # A census goes on past failed cases: they are in its table, not "the reason".
-        # A matrix goes on past degraded or failed cells (in its table too).
+        # A matrix goes on past degraded or failed cells (in its table too),
+        # and a climb past steps it retried lower: only a failure that ended
+        # it is "the reason".
+        retried = adaptive and not str(stopped_by or "").startswith("criterion:")
         last = (
             None
-            if census or matrix
+            if census or matrix or retried
             else next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
         )
         out = {

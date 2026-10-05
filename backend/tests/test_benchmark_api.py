@@ -371,6 +371,7 @@ def test_a_climb_steps_down_from_a_start_too_big(client, wait_jobs, fast):
     ceiling = done["result"]["ceiling"]
     assert ceiling == max(r["scale"] for r in rows if r["outcome"] == "ok") and ceiling >= 100
     assert done["result"]["stopped_by"] in ("limit_reached", "bracketed")
+    assert done["result"]["reason"] is None  # the retried step didn't end the climb
     assert fast.labs == {}
 
 
