@@ -229,3 +229,22 @@ def test_next_scale_climbs_fast_then_slows_near_the_target():
     assert nxt == 110  # not 125
     nxt, _, _ = bm.next_scale(row(10, 2), a, mem_total=total, nodes_for=nodes_for, max_scale=14720)
     assert nxt == 20  # ×2 from 10 hosts, though the minimum step is 25
+
+
+def test_retry_scale_steps_down_then_bisects():
+    assert bm.retry_scale(None, 400, 0.7, 25) == 275  # a first step too big: 70% of it
+    assert bm.retry_scale(None, 30, 0.7, 25) is None  # nothing left below
+    assert bm.retry_scale(400, 700, 0.7, 25) == 550  # halfway to the best pass
+    assert bm.retry_scale(400, 425, 0.7, 25) is None  # bracketed
+    assert bm.retry_scale(None, 400, 0, 25) is None  # descend 0: no retries
+
+
+def test_next_scale_stays_below_a_failed_scale():
+    row = {"scale": 300, "marginal_mem_per_node": 10e6, "mem_pre": 1e9, "hold_mem_pct_max": 50}
+    adaptive = {"min_step": 25, "max_factor": 2.0}
+    common = {"mem_total": 16e9, "nodes_for": lambda h: h, "max_scale": 5000}
+    assert bm.next_scale(row, adaptive, **common)[0] == 600
+    nxt, code, why = bm.next_scale(row, adaptive, cap=400, **common)
+    assert (nxt, code) == (375, "next") and "below 400" in why
+    nxt, code, why = bm.next_scale({**row, "scale": 375}, adaptive, cap=400, **common)
+    assert nxt is None and code == "bracketed" and "between 375 and 400" in why

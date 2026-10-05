@@ -123,6 +123,40 @@ def projected_memory(
     )
 
 
+# Step failures that say the host ran out (not that something is broken): a
+# climb retries below them instead of ending.
+HOST_LIMITS = frozenset(
+    {
+        "memory",
+        "memory_pressure",
+        "oom",
+        "node_exited",
+        "projected_memory",
+        "monitor_lag",
+        "deploy_slow",
+        "deploy_partial",
+        "deploy_failed",
+        "not_ready",
+    }
+)
+
+
+def retry_scale(best: int | None, failed: int, descend: float, unit: int) -> int | None:
+    """After a climb step failed on a host limit at ``failed`` hosts: the scale
+    to try instead. With no passing step yet, ``descend`` of it (a start too
+    big for this host); otherwise halfway between the best passing scale and
+    it. In multiples of ``unit``; None when no such scale is left (or
+    ``descend`` is 0: no retries)."""
+    unit = max(1, unit)
+    if not descend:
+        return None
+    if best is None:
+        nxt = math.floor(failed * descend / unit) * unit
+        return nxt if unit <= nxt < failed else None
+    nxt = round((best + failed) / 2 / unit) * unit
+    return nxt if best < nxt < failed else None
+
+
 def next_scale(
     row: dict[str, Any],
     adaptive: dict[str, Any],
@@ -130,6 +164,7 @@ def next_scale(
     mem_total: float | None,
     nodes_for: Callable[[int], int],
     max_scale: int,
+    cap: int | None = None,
 ) -> tuple[int | None, str, str]:
     """An adaptive sweep's next scale after a passing step: (scale or None when
     the climb is over, code, why).
@@ -140,6 +175,8 @@ def next_scale(
     gap: large steps while far, smaller ones near the edge (at least
     ``min_step`` hosts, in multiples of ``min_step``, and never past
     ×``max_factor``: from a small scale the step may be less than ``min_step``).
+    ``cap``: a scale that already failed; the climb stays below it and is
+    over (bracketed) once no step is left between.
     """
     last = int(row["scale"])
     reach = float(adaptive.get("reach_mem_pct") or 90)
@@ -173,6 +210,11 @@ def next_scale(
             )
     nxt = max(last + unit, round(nxt / unit) * unit)
     nxt = min(nxt, max(last + 1, math.floor(last * factor)), max_scale)
+    if cap is not None and nxt >= cap:
+        nxt = (cap - 1) // unit * unit
+        if nxt <= last:
+            return None, "bracketed", f"ceiling between {last} and {cap} hosts ({cap} failed)"
+        why += f"; below {cap}, which failed"
     return nxt, "next", f"next {nxt} hosts: {why}"
 
 
@@ -532,6 +574,7 @@ def _steps_line(spec: dict[str, Any]) -> str:
         f"adaptive from {a.get('start')} hosts toward {a.get('target_mem_pct', 93):g}% memory, "
         f"done at ≥ {a.get('reach_mem_pct', 90):g}% (closing {a.get('approach', 0.6):g} of the "
         f"projected gap per step, ≥ {a.get('min_step', 25)} hosts, ≤ ×{a.get('max_factor', 2):g}), "
+        f"failures on a host limit retried lower (descend {a.get('descend', 0.7):g}), "
         f"ceiling rerun ×{a.get('confirm', 2)}"
     )
 

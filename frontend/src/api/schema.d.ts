@@ -1024,7 +1024,8 @@ export interface components {
          *     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
          *     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
          *     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
-         *     highest passing scale is then run ``confirm`` more times.
+         *     highest passing scale is then run ``confirm`` more times. A step that fails
+         *     on a host limit is retried lower (``descend``).
          */
         BenchmarkAdaptive: {
             /**
@@ -1037,6 +1038,11 @@ export interface components {
              * @default 2
              */
             confirm: number;
+            /**
+             * Descend
+             * @default 0.7
+             */
+            descend: number;
             /**
              * Max Factor
              * @default 2

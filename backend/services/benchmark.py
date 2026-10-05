@@ -695,17 +695,29 @@ def _halts(b: Bench, row: dict[str, Any]) -> bool:
 async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     """An adaptive sweep: each step's scale follows from the last one's memory
     (``bm.next_scale``) until memory peaks at the target or a step fails, then
-    the highest passing scale runs ``confirm`` more times."""
+    the highest passing scale runs ``confirm`` more times. A step that fails
+    on a host limit is retried lower (``bm.retry_scale``: ``descend`` of a
+    first step too big for the host, else halfway down to the best passing
+    scale), and the climb stays below it."""
     runner, spec = b.runner, b.spec
     max_scale = int(spec.get("max_scale") or adaptive["start"])
     scale: int | None = min(int(adaptive["start"]), max_scale)
     confirm = int(adaptive.get("confirm") or 0)
     max_steps = int(adaptive.get("max_steps") or 20)
+    descend = float(adaptive.get("descend") or 0)
+    unit = max(1, int(adaptive.get("min_step") or 25))
     stopped_by = "max_steps"
     nxt: tuple[int | None, str, str] | None = None
+    cap: int | None = None  # the lowest scale that failed on a host limit
 
     def passed(row: dict[str, Any]) -> bool:  # a scale for the confirm runs
         return any(r["outcome"] == "ok" for r in [*b.rows, row])
+
+    def retry(row: dict[str, Any]) -> int | None:
+        if row["reason"] not in bm.HOST_LIMITS:
+            return None
+        best = max((r["scale"] for r in b.rows if r["outcome"] == "ok"), default=None)
+        return bm.retry_scale(best, int(row["scale"]), descend, unit)
 
     def climb_ends(final: bool) -> Callable[[dict[str, Any]], bool]:
         # A climb step's own memory decides whether the climb goes on, so the
@@ -713,6 +725,8 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
         def ends(row: dict[str, Any]) -> bool:
             nonlocal nxt
             if _halts(b, row):
+                if not final and retry(row) is not None:
+                    return False
                 return not (confirm and passed(row))
             host = b.session.host_rows[-1] if b.session and b.session.host_rows else {}
             nxt = bm.next_scale(
@@ -721,6 +735,7 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
                 mem_total=host.get("mem_total"),
                 nodes_for=lambda h: counts(_gen_params(spec, h))["nodes"],
                 max_scale=max_scale,
+                cap=cap,
             )
             return (final or nxt[0] is None) and not (confirm and passed(row))
 
@@ -729,13 +744,23 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     for i in range(max_steps):
         assert scale is not None
         nxt = None
-        row = await step(scale, 1, f"{scale} hosts", climb_ends(i == max_steps - 1))
+        final = i == max_steps - 1
+        row = await step(scale, 1, f"{scale} hosts", climb_ends(final))
         if runner.stop_requested(b.job_id):
             return runner.stop_code(b.job_id) or "user"
         if _halts(b, row):
-            stopped_by = f"criterion:{row['reason']}"
-            b.limit = f"{scale} hosts failed ({row['reason']})"
-            break
+            lower = None if final else retry(row)
+            if lower is None:
+                stopped_by = f"criterion:{row['reason']}"
+                b.limit = f"{scale} hosts failed ({row['reason']})"
+                break
+            cap = scale if cap is None else min(cap, scale)
+            why = f"{scale} hosts failed ({row['reason']}): trying {lower} hosts"
+            row["next"] = why
+            b.mark(why)
+            persist()
+            scale = lower
+            continue
         assert nxt is not None
         scale, code, why = nxt
         row["next"] = why

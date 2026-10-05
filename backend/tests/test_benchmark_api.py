@@ -221,6 +221,28 @@ def test_an_adaptive_sweep_climbs_to_the_memory_target(client, wait_jobs, fast):
     assert fast.labs == {}
 
 
+def test_a_climb_steps_down_from_a_start_too_big(client, wait_jobs, fast):
+    # 50 MB a node on the fake 8 GiB host: 200 hosts (~230 nodes) can't fit.
+    fast.fake_mem_per_node = 50_000_000
+    gen = {"servers": 1, "hosts_per_subnet": 20}
+    adaptive = {"start": 200, "min_step": 2, "confirm": 0, "descend": 0.5}
+    stop = {"max_mem_pct": 95, "project_memory": False}
+    r = _start(client, scale=[], topology={"generate": gen}, adaptive=adaptive, stop=stop)
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    rows = done["result"]["rows"]
+    first = rows[0]
+    assert first["scale"] == 200 and first["outcome"] == "stopped"
+    assert first["reason"] == "memory" and first["next"].endswith("trying 100 hosts")
+    assert rows[1]["scale"] == 100 and rows[1]["outcome"] == "ok"
+    assert all(r["scale"] < 200 for r in rows[1:])  # the climb stays below what failed
+    ceiling = done["result"]["ceiling"]
+    assert ceiling == max(r["scale"] for r in rows if r["outcome"] == "ok") and ceiling >= 100
+    assert done["result"]["stopped_by"] in ("limit_reached", "bracketed")
+    assert fast.labs == {}
+
+
 @pytest.mark.parametrize("confirm", [0, 1])
 def test_an_adaptive_sweep_keeps_its_last_lab(client, wait_jobs, fast, confirm):
     # The last step is the climb's last (no confirm runs) or the last confirm run.

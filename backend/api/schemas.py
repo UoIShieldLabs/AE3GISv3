@@ -737,7 +737,8 @@ class BenchmarkAdaptive(BaseModel):
     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
-    highest passing scale is then run ``confirm`` more times."""
+    highest passing scale is then run ``confirm`` more times. A step that fails
+    on a host limit is retried lower (``descend``)."""
 
     start: int = Field(ge=1)
     target_mem_pct: float = Field(default=93, gt=0, le=100)
@@ -747,6 +748,10 @@ class BenchmarkAdaptive(BaseModel):
     min_step: int = Field(default=25, ge=1)
     max_steps: int = Field(default=20, ge=1, le=100)
     confirm: int = Field(default=2, ge=0, le=10)
+    # A step that fails on a host limit (memory, a slow or failed deploy…) is
+    # retried lower: this fraction of a first step that was too big, else
+    # halfway down to the best passing scale. 0 ends the climb instead.
+    descend: float = Field(default=0.7, ge=0, lt=1)
 
     @model_validator(mode="after")
     def _reach_below_target(self) -> BenchmarkAdaptive:
