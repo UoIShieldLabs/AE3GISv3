@@ -29,7 +29,7 @@ from auth import require_any_auth, require_instructor
 from db.models import Topology
 from domain import validation
 from domain.export import containerlab, kathara, labspec
-from domain.generator import GeneratorError, GeneratorParams, check_types, generate
+from domain.generator import GeneratorError, GeneratorParams, check_catalog, generate
 from engine.base import DeploymentEngine
 from services import deployment, events, topologies
 
@@ -70,7 +70,7 @@ def generate_topology(
     routers, access switches under a distribution switch per subnet."""
     try:
         params = GeneratorParams(**body.model_dump())
-        check_types(params, set(catalog.node_types()))
+        check_catalog(params, catalog.node_types())
         data = generate(params)
     except GeneratorError as exc:
         raise Invalid(str(exc), code="bad_generator") from exc

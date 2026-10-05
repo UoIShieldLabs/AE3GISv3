@@ -1577,6 +1577,7 @@ export interface components {
              * @default
              */
             name: string;
+            random?: components["schemas"]["RandomPools"] | null;
             /**
              * Router Type
              * @default router
@@ -1633,6 +1634,7 @@ export interface components {
              * @default 48
              */
             hosts_per_switch: number;
+            random?: components["schemas"]["RandomPools"] | null;
             /**
              * Router Type
              * @default router
@@ -2217,6 +2219,16 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * PoolEntry
+         * @description A node type and the images it may run (each drawn with equal odds).
+         */
+        PoolEntry: {
+            /** Images */
+            images: string[];
+            /** Type */
+            type: string;
+        };
         /** PresetList */
         PresetList: {
             /** Presets */
@@ -2250,6 +2262,19 @@ export interface components {
             lab_hash: string;
             /** Topology Id */
             topology_id?: string | null;
+        };
+        /**
+         * RandomPools
+         * @description Random topologies: each node draws a pool entry with equal odds, then
+         *     one of its images (see domain/generator).
+         */
+        RandomPools: {
+            /** Hosts */
+            hosts: components["schemas"]["PoolEntry"][];
+            /** Routers */
+            routers?: components["schemas"]["PoolEntry"][] | null;
+            /** Switches */
+            switches?: components["schemas"]["PoolEntry"][] | null;
         };
         /** ReconcileResult */
         ReconcileResult: {

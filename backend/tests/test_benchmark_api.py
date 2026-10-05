@@ -138,6 +138,31 @@ def test_repetitions_fold_into_a_spread_table(client, wait_jobs, fast):
     assert wrong.status_code == 422
 
 
+def test_a_random_sweep_records_each_steps_composition(client, wait_jobs, fast):
+    pools = {
+        "hosts": [
+            {"type": "workstation", "images": ["kathara/base"]},
+            {"type": "web-server", "images": ["httpd:alpine"]},
+            {"type": "router", "images": ["kathara/frr"]},
+        ],
+        "routers": [{"type": "firewall", "images": ["kathara/frr"]}],
+    }
+    gen = {"servers": 0, "hosts_per_subnet": 4, "random": pools, "seed": 3}
+    bench = _start(client, scale=[6], topology={"generate": gen}).json()
+    wait_jobs()
+    done = _done(client, bench["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    [row] = done["result"]["rows"]
+    assert sum(row["composition"].values()) == row["nodes"]
+    assert row["composition"]["firewall · kathara/frr"] == 3  # core + 2 subnet routers
+    md = client.get(f"/api/v1/benchmarks/{bench['id']}/report.md").text
+    assert "generated, random (seed 3)" in md and "Hosts (3 types)" in md
+    csv_head = client.get(f"/api/v1/jobs/{bench['id']}/artifacts/results.csv").text.splitlines()[0]
+    assert "composition" not in csv_head
+    bad = {**gen, "random": {"hosts": [{"type": "router", "images": ["httpd:alpine"]}]}}
+    assert _start(client, scale=[6], topology={"generate": bad}).json()["code"] == "bad_generator"
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()

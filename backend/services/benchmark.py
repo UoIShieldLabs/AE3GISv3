@@ -66,7 +66,7 @@ from domain.generator import (
     GeneratorError,
     GeneratorParams,
     check,
-    check_types,
+    check_catalog,
     counts,
     generate,
     kinds_used,
@@ -139,7 +139,7 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
             try:
                 for hosts in [first] if adaptive else [min(scale), max(scale)]:
                     check(_gen_params(spec, hosts))
-                check_types(_gen_params(spec, first), set(catalog.node_types()))
+                check_catalog(_gen_params(spec, first), catalog.node_types())
             except (GeneratorError, TypeError) as exc:
                 raise Invalid(str(exc), code="bad_generator") from exc
             if adaptive:
@@ -378,6 +378,7 @@ def _place(b: Bench, row: dict[str, Any], data: dict[str, Any] | None, artifact:
     plan = topologies.plan_for(topo)
     row["nodes"] = len(plan.nodes)
     row["links"] = len(plan.collision_domains)
+    row["composition"] = bm.composition((n.type, n.image) for n in plan.nodes)
     b.image_of = {n.id: n.image for n in plan.nodes}
     b.by_image = []
     return topo
@@ -647,7 +648,7 @@ async def run_step(
 def _write_results(directory: Path, rows: list[dict[str, Any]]) -> None:
     flat = []
     for r in rows:
-        f = {k: v for k, v in r.items() if k not in ("deploy_phases", "by_image")}
+        f = {k: v for k, v in r.items() if k not in ("deploy_phases", "by_image", "composition")}
         for phase, secs in (r.get("deploy_phases") or {}).items():
             f[f"deploy_{phase}_s"] = secs
         flat.append(f)

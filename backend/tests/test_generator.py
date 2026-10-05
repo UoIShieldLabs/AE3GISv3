@@ -210,3 +210,110 @@ def test_max_hosts():
     generate(GeneratorParams(**{**p.to_dict(), "hosts": most}))
     with pytest.raises(GeneratorError):
         generate(GeneratorParams(**{**p.to_dict(), "hosts": most + 1}))
+
+
+# Every catalog type as a leaf (networking types too), as the random benchmark does.
+RANDOM = {
+    "hosts": [
+        {"type": "workstation", "images": ["kathara/base", "ae3gis.local/benign-client"]},
+        {"type": "web-server", "images": ["httpd:alpine", "ae3gis.local/nginx"]},
+        {"type": "database-server", "images": ["postgres:alpine"]},
+        {"type": "router", "images": ["kathara/frr"]},
+        {"type": "firewall", "images": ["kathara/frr", "ae3gis.local/nftables"]},
+        {"type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"]},
+    ],
+    "switches": [{"type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"]}],
+    "routers": [
+        {"type": "router", "images": ["kathara/frr"]},
+        {"type": "firewall", "images": ["kathara/frr", "ae3gis.local/iptables"]},
+    ],
+}
+
+
+def _hosts(data):
+    return {c["id"]: (c["type"], c["image"]) for c in _containers(data) if c["id"].startswith("h")}
+
+
+@pytest.mark.parametrize("hosts", [1, 60, 450])
+def test_random_topology_validates_plans_and_matches_counts(hosts):
+    p = GeneratorParams(hosts=hosts, servers=0, random=RANDOM, seed=4)
+    data = generate(p)
+    diags = validation.validate(data)
+    assert not validation.has_errors(diags), [d.message for d in diags if d.severity == "error"][:3]
+    plan = build_lab_plan(data, "bench")
+    c = counts(p)
+    assert len(plan.nodes) == c["nodes"] and len(plan.collision_domains) == c["links"]
+    # Every node carries its drawn image; structural slots come from their pools.
+    nodes = {n.id: n for n in plan.nodes}
+    assert {nodes["core"].type, nodes["r0"].type} <= {"router", "firewall"}
+    assert all(nodes[i].image != "ae3gis.local/nftables" for i in nodes if i.startswith("r"))
+    assert nodes["sw0"].role == "switch"
+    # Hosts drawn as routers still get the subnet's gateway as theirs; the
+    # subnet's hosts keep the real gateway router.
+    assert data["sites"][0]["subnets"][1]["gateway"] == "10.1.0.1"
+
+
+def test_random_topology_is_seeded_and_prefix_stable():
+    a = generate(GeneratorParams(hosts=120, random=RANDOM, seed=1))
+    assert a == generate(GeneratorParams(hosts=120, random=RANDOM, seed=1))
+    assert _hosts(a) != _hosts(generate(GeneratorParams(hosts=120, random=RANDOM, seed=2)))
+    small = _hosts(generate(GeneratorParams(hosts=50, random=RANDOM, seed=1)))
+    assert all(_hosts(a)[h] == kind for h, kind in small.items())  # a climb keeps its hosts
+
+
+def test_random_draws_give_types_equal_odds():
+    pool = [
+        {"type": f"t{i}", "images": [f"img{i}-{j}" for j in range(i % 3 + 1)]} for i in range(15)
+    ]
+    data = generate(GeneratorParams(hosts=9000, hosts_per_subnet=230, random={"hosts": pool}))
+    kinds = list(_hosts(data).values())
+    by_type: dict[str, int] = {}
+    for t, _ in kinds:
+        by_type[t] = by_type.get(t, 0) + 1
+    assert len(by_type) == 15
+    assert all(abs(n / len(kinds) - 1 / 15) < 0.015 for n in by_type.values())  # ~4 sigma
+    # Within a type, images too (t2 has 3).
+    t2 = [img for t, img in kinds if t == "t2"]
+    assert all(abs(t2.count(f"img2-{j}") / len(t2) - 1 / 3) < 0.07 for j in range(3))
+
+
+def test_random_errors_and_catalog_checks():
+    from domain.generator import check, check_catalog, kinds_used
+
+    bad = [
+        {"random": {"switches": RANDOM["switches"]}},
+        {"random": {"hosts": [{"type": "workstation", "images": []}]}},
+        {"random": {"hosts": RANDOM["hosts"], "extra": []}},
+        {"random": RANDOM, "host_mix": [{"type": "workstation", "weight": 1}]},
+        {"random": RANDOM, "core_type": "firewall"},
+    ]
+    for extra in bad:
+        with pytest.raises(GeneratorError):
+            check(GeneratorParams(hosts=10, **extra))
+    import catalog
+
+    types = catalog.node_types()
+    check_catalog(GeneratorParams(hosts=10, random=RANDOM), types)
+    wrong_role = {**RANDOM, "switches": [{"type": "workstation", "images": ["kathara/base"]}]}
+    with pytest.raises(GeneratorError, match="not a switch"):
+        check_catalog(GeneratorParams(hosts=10, random=wrong_role), types)
+    foreign = {"hosts": [{"type": "router", "images": ["ae3gis.local/nginx"]}]}
+    with pytest.raises(GeneratorError, match="has no image"):
+        check_catalog(GeneratorParams(hosts=10, random=foreign), types)
+    kinds = kinds_used(GeneratorParams(hosts=1, servers=0, random=RANDOM))
+    assert ("firewall", "ae3gis.local/nftables") in kinds and (
+        "firewall",
+        "ae3gis.local/iptables",
+    ) in kinds
+    assert ("workstation", None) not in kinds  # the pool replaces host_type
+
+
+def test_generate_endpoint_with_random_pools(client):
+    body = {"hosts": 40, "name": "random", "random": RANDOM, "seed": 9}
+    r = client.post("/api/v1/topologies/generate", json=body)
+    assert r.status_code == 201, r.text
+    assert {c["type"] for c in _containers(r.json()["data"]) if c["id"].startswith("h")} > {
+        "router"
+    }
+    wrong = {**body, "random": {"hosts": [{"type": "router", "images": ["httpd:alpine"]}]}}
+    assert client.post("/api/v1/topologies/generate", json=wrong).json()["code"] == "bad_generator"

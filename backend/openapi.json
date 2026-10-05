@@ -1374,6 +1374,16 @@
             "title": "Name",
             "type": "string"
           },
+          "random": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RandomPools"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "router_type": {
             "default": "router",
             "title": "Router Type",
@@ -1496,6 +1506,16 @@
             "minimum": 1.0,
             "title": "Hosts Per Switch",
             "type": "integer"
+          },
+          "random": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RandomPools"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "router_type": {
             "default": "router",
@@ -3127,6 +3147,30 @@
         "title": "PlanOut",
         "type": "object"
       },
+      "PoolEntry": {
+        "description": "A node type and the images it may run (each drawn with equal odds).",
+        "properties": {
+          "images": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Images",
+            "type": "array"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "images"
+        ],
+        "title": "PoolEntry",
+        "type": "object"
+      },
       "PresetList": {
         "properties": {
           "presets": {
@@ -3198,6 +3242,54 @@
           "lab_hash"
         ],
         "title": "PurgeResult",
+        "type": "object"
+      },
+      "RandomPools": {
+        "description": "Random topologies: each node draws a pool entry with equal odds, then\none of its images (see domain/generator).",
+        "properties": {
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/PoolEntry"
+            },
+            "minItems": 1,
+            "title": "Hosts",
+            "type": "array"
+          },
+          "routers": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PoolEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routers"
+          },
+          "switches": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PoolEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Switches"
+          }
+        },
+        "required": [
+          "hosts"
+        ],
+        "title": "RandomPools",
         "type": "object"
       },
       "ReconcileResult": {

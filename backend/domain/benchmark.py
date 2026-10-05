@@ -326,6 +326,15 @@ def kind_of(spec: dict[str, Any]) -> str:
     return spec.get("kind") or ("adaptive" if spec.get("adaptive") else "sweep")
 
 
+def composition(kinds) -> dict[str, int]:
+    """How many nodes of each ``type · image`` a step placed (most first)."""
+    counts: dict[str, int] = {}
+    for t, image in kinds:
+        key = f"{t} · {image}"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
 def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[str, Any]:
     """The host at rest before the first step, nothing of ours deployed: what
     an earlier run or a leak left behind (memory the engine never gave back,
@@ -646,6 +655,8 @@ def _topology_line(spec: dict[str, Any]) -> str:
         f"≤ {g.get('hosts_per_subnet', 200)} hosts per subnet, "
         f"≤ {g.get('hosts_per_switch', 48)} per switch"
     )
+    if g.get("random"):
+        return _random_line(g, shape)
     custom = ("host_mix", "server_mix", "switch_mix", "core_type", "core_image")
     if not any(g.get(k) for k in custom):
         return (
@@ -670,6 +681,31 @@ def _topology_line(spec: dict[str, Any]) -> str:
         f"generated, mixed (seed {g.get('seed', 0)}), {shape}. Hosts: {hosts}. "
         f"Servers: {servers}. Switches: {switches}. Core: {core}"
     )
+
+
+def _pool_text(pool: list[dict[str, Any]]) -> str:
+    return ", ".join(
+        f"{e['type']} ({' / '.join(i.split('/')[-1] for i in e['images'])})" for e in pool
+    )
+
+
+def _random_line(g: dict[str, Any], shape: str) -> str:
+    r = g["random"]
+    parts = [
+        f"generated, random (seed {g.get('seed', 0)}), {shape}: each node draws a type of its "
+        f"pool with equal odds, then one of its images. Hosts ({len(r['hosts'])} types): "
+        f"{_pool_text(r['hosts'])}"
+    ]
+    if r.get("switches"):
+        parts.append(f"Switches: {_pool_text(r['switches'])}")
+    if r.get("routers"):
+        parts.append(f"Routers: {_pool_text(r['routers'])}")
+    servers = g.get("servers", 1) if not g.get("server_mix") else None
+    if servers:
+        parts.append(f"Servers: {servers} × {g.get('server_type', 'workstation')}")
+    elif g.get("server_mix"):
+        parts.append("Servers: " + ", ".join(_kind(e) for e in g["server_mix"]))
+    return ". ".join(parts)
 
 
 def _traffic_line(spec: dict[str, Any]) -> str:

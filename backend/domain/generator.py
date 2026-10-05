@@ -27,6 +27,19 @@ Mixed topologies (all optional; without them every host is ``host_type``):
 - ``core_type`` / ``core_image``: the core router (e.g. a firewall)
 
 An entry's ``image`` (else the type's default) becomes the container's image.
+
+Random topologies (``random``): pools of ``{type, images}`` entries. Each
+node draws an entry with equal odds (so every type is as likely as any other,
+however many images it has), then one of its images with equal odds,
+independently of the other nodes, so the mix varies from seed to seed:
+
+- ``hosts``: every client host (it replaces ``host_mix``)
+- ``switches``: every switch (replaces ``switch_mix``)
+- ``routers``: the core and every client subnet's router (replaces ``core_*``;
+  a structural router must forward, so leave default-drop firewalls out)
+
+Each pool draws from its own stream of the seed, host after host: a bigger
+topology keeps a smaller one's hosts, so a climb's steps stay comparable.
 """
 
 from __future__ import annotations
@@ -65,6 +78,7 @@ class GeneratorParams:
     core_type: str | None = None
     core_image: str | None = None
     seed: int = 0
+    random: dict[str, Any] | None = None  # {hosts, switches?, routers?}: pools of {type, images}
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -98,6 +112,22 @@ def _kinds(
         kinds += [(entry["type"], entry.get("image") or None)] * k
     rng.shuffle(kinds)
     return kinds
+
+
+POOLS = ("hosts", "switches", "routers")
+
+
+def _pool(p: GeneratorParams, name: str) -> list[dict[str, Any]] | None:
+    return (p.random or {}).get(name) or None
+
+
+def _draw(n: int, pool: list[dict[str, Any]], rng: random.Random) -> list[Kind]:
+    """``n`` kinds drawn one by one: an entry with equal odds, then one of its images."""
+    out: list[Kind] = []
+    for _ in range(n):
+        entry = rng.choice(pool)
+        out.append((entry["type"], rng.choice(entry["images"])))
+    return out
 
 
 def server_counts(p: GeneratorParams) -> list[int]:
@@ -187,13 +217,25 @@ def kinds_used(p: GeneratorParams) -> list[Kind]:
     """Every (type, image) these params can place at any scale, in a stable
     order (an image of None is the type's default). A small step may leave a
     mix entry out, so a benchmark prepares these, not one step's images."""
-    kinds: list[Kind] = [(p.router_type, None), (p.core_type or p.router_type, p.core_image)]
-    for mix, default in (
-        (p.host_mix, p.host_type),
-        (p.switch_mix, p.switch_type),
-        (p.server_mix, p.server_type),
+
+    def pooled(name: str) -> list[Kind] | None:
+        pool = _pool(p, name)
+        return [(e["type"], i) for e in pool for i in e["images"]] if pool else None
+
+    kinds: list[Kind] = pooled("routers") or [
+        (p.router_type, None),
+        (p.core_type or p.router_type, p.core_image),
+    ]
+    for name, mix, default in (
+        ("hosts", p.host_mix, p.host_type),
+        ("switches", p.switch_mix, p.switch_type),
+        (None, p.server_mix, p.server_type if p.servers else None),
     ):
-        kinds += [(e["type"], e.get("image") or None) for e in mix] if mix else [(default, None)]
+        if not (mix or default):
+            continue
+        kinds += (name and pooled(name)) or (
+            [(e["type"], e.get("image") or None) for e in mix] if mix else [(default, None)]
+        )
     return list(dict.fromkeys(kinds))
 
 
@@ -209,7 +251,54 @@ def check_types(p: GeneratorParams, known: set[str]) -> None:
         raise GeneratorError(f"Unknown node type(s): {', '.join(unknown)}")
 
 
+def check_catalog(p: GeneratorParams, types: dict[str, dict[str, Any]]) -> None:
+    """Refuse what a catalog (``types``: name → spec with ``role`` and
+    ``images``) can't deploy: unknown types, pool images a type doesn't list,
+    and structural pools of the wrong role (a switch slot needs a switch)."""
+    check_types(p, set(types))
+    for name, role in (("hosts", None), ("switches", "switch"), ("routers", "router")):
+        for e in _pool(p, name) or []:
+            spec = types[e["type"]]
+            if role and spec.get("role") != role:
+                raise GeneratorError(f"random.{name}: {e['type']!r} is not a {role}")
+            foreign = [i for i in e["images"] if i not in (spec.get("images") or [])]
+            if foreign:
+                raise GeneratorError(
+                    f"random.{name}: {e['type']!r} has no image {', '.join(foreign)}"
+                )
+
+
+def _check_random(p: GeneratorParams) -> None:
+    if p.random is None:
+        return
+    if not isinstance(p.random, dict) or set(p.random) - set(POOLS):
+        raise GeneratorError(f"random takes pools {', '.join(POOLS)}")
+    if not _pool(p, "hosts"):
+        raise GeneratorError("random needs a hosts pool")
+    for name in POOLS:
+        for e in _pool(p, name) or []:
+            if not isinstance(e, dict) or not str(e.get("type") or "").strip():
+                raise GeneratorError(f"every random.{name} entry needs a type")
+            images = e.get("images")
+            if (
+                not isinstance(images, list)
+                or not images
+                or not all(isinstance(i, str) and i for i in images)
+            ):
+                raise GeneratorError(f"random.{name} entry {e['type']!r} needs images")
+    clashes = {
+        "hosts": p.host_mix,
+        "switches": p.switch_mix,
+        "routers": p.core_type or p.core_image,
+    }
+    for name, other in clashes.items():
+        if _pool(p, name) and other:
+            replaced = {"hosts": "host_mix", "switches": "switch_mix", "routers": "core_*"}[name]
+            raise GeneratorError(f"random.{name} replaces {replaced}; give one of them")
+
+
 def check(p: GeneratorParams) -> None:
+    _check_random(p)
     _check_mix("host_mix", p.host_mix, weighted=True)
     _check_mix("switch_mix", p.switch_mix, weighted=True)
     _check_mix("server_mix", p.server_mix, weighted=False)
@@ -324,6 +413,14 @@ def _node(fields: dict[str, Any], kind: Kind) -> dict[str, Any]:
     return node
 
 
+def _router(k: int, kind: Kind) -> dict[str, Any]:
+    """Client subnet ``k``'s gateway router (fields in their historic order)."""
+    router = {"id": f"r{k}", "name": f"Router {k}", "type": kind[0], "ip": f"10.1.{k}.1"}
+    if kind[1]:
+        router["image"] = kind[1]
+    return router
+
+
 def _server_kinds(p: GeneratorParams, rng: random.Random) -> list[Kind]:
     if not p.server_mix:
         return [(p.server_type, None)] * p.servers
@@ -343,12 +440,21 @@ def generate(p: GeneratorParams) -> dict[str, Any]:
     host_kinds = _kinds(p.hosts, p.host_mix, p.host_type, rng)
     server_kinds = _server_kinds(p, rng)
     switch_kinds = iter(_kinds(counts(p)["switches"], p.switch_mix, p.switch_type, rng))
+    n_subnets = math.ceil(p.hosts / per) if p.hosts else 0
+    router_kinds = iter(
+        [(p.core_type or p.router_type, p.core_image)] + [(p.router_type, None)] * n_subnets
+    )
+    # Random pools draw from streams of their own (string seeds are stable
+    # across processes), leaving the mixes' draws above as they were.
+    if pool := _pool(p, "hosts"):
+        host_kinds = _draw(p.hosts, pool, random.Random(f"{p.seed}:hosts"))
+    if pool := _pool(p, "switches"):
+        switch_kinds = iter(_draw(counts(p)["switches"], pool, random.Random(f"{p.seed}:switches")))
+    if pool := _pool(p, "routers"):
+        router_kinds = iter(_draw(n_subnets + 1, pool, random.Random(f"{p.seed}:routers")))
     subnets: list[dict[str, Any]] = []
     servers = [(f"srv-{i}", f"Server {i}", kind) for i, kind in enumerate(server_kinds, start=1)]
-    core = _node(
-        {"id": "core", "name": "Core router", "ip": "10.0.0.1"},
-        (p.core_type or p.router_type, p.core_image),
-    )
+    core = _node({"id": "core", "name": "Core router", "ip": "10.0.0.1"}, next(router_kinds))
     subnets.append(
         _lan(
             subnet_id="sub-srv",
@@ -364,7 +470,6 @@ def generate(p: GeneratorParams) -> dict[str, Any]:
         )
     )
     links: list[dict[str, Any]] = []
-    n_subnets = math.ceil(p.hosts / per) if p.hosts else 0
     grid = max(1, math.ceil(math.sqrt(n_subnets + 1)))
     for k in range(n_subnets):
         first = k * per
@@ -378,12 +483,7 @@ def generate(p: GeneratorParams) -> dict[str, Any]:
                 subnet_id=f"sub-{k}",
                 name=f"Clients {k}",
                 prefix=f"10.1.{k}",
-                router={
-                    "id": f"r{k}",
-                    "name": f"Router {k}",
-                    "type": p.router_type,
-                    "ip": f"10.1.{k}.1",
-                },
+                router=_router(k, next(router_kinds)),
                 switch_prefix=f"sw{k}",
                 members=hosts,
                 switch_kinds=switch_kinds,

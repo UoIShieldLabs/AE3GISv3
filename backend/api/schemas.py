@@ -641,6 +641,23 @@ class ServerMixEntry(BaseModel):
         return self
 
 
+class PoolEntry(BaseModel):
+    """A node type and the images it may run (each drawn with equal odds)."""
+
+    type: str = Field(min_length=1)
+    images: list[str] = Field(min_length=1)
+
+
+class RandomPools(BaseModel):
+    """Random topologies: each node draws a pool entry with equal odds, then
+    one of its images (see domain/generator)."""
+
+    hosts: list[PoolEntry] = Field(min_length=1)  # every client host
+    switches: list[PoolEntry] | None = Field(default=None, min_length=1)  # every switch
+    # The core and the client subnets' routers (they must forward traffic).
+    routers: list[PoolEntry] | None = Field(default=None, min_length=1)
+
+
 class GeneratorSpec(BaseModel):
     """The shape of a generated topology (see domain/generator)."""
 
@@ -661,6 +678,8 @@ class GeneratorSpec(BaseModel):
     core_type: str | None = None
     core_image: str | None = None
     seed: int = 0
+    # A random topology instead (replaces host_mix, switch_mix, core_* per pool).
+    random: RandomPools | None = None
 
 
 class GenerateRequest(GeneratorSpec):
