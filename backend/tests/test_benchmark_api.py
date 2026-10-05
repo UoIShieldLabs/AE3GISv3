@@ -149,6 +149,29 @@ def test_an_adaptive_sweep_climbs_to_the_memory_target(client, wait_jobs, fast):
     assert fast.labs == {}
 
 
+@pytest.mark.parametrize("confirm", [0, 1])
+def test_an_adaptive_sweep_keeps_its_last_lab(client, wait_jobs, fast, confirm):
+    # The last step is the climb's last (no confirm runs) or the last confirm run.
+    fast.fake_mem_per_node = 50_000_000
+    gen = {"servers": 1, "hosts_per_subnet": 20}
+    adaptive = {"start": 60, "min_step": 2, "confirm": confirm}
+    stop = {"max_mem_pct": 95, "project_memory": False}
+    r = _start(
+        client, scale=[], topology={"generate": gen}, adaptive=adaptive, stop=stop, keep_last=True
+    )
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    rows = done["result"]["rows"]
+    assert len(rows) >= 2 and all(r["outcome"] == "ok" for r in rows)
+    assert all("destroy_s" in r for r in rows[:-1]) and "destroy_s" not in rows[-1]
+    (lab,) = fast.labs.values()
+    assert lab.plan is not None and len(lab.plan.nodes) == rows[-1]["nodes"]
+    topo = client.get(f"/api/v1/topologies/{done['topology_id']}").json()
+    assert topo["status"] == "deployed"
+
+
 def test_adaptive_needs_a_generated_topology(client, topology):
     bad = [
         {"scale": [2], "adaptive": {"start": 2}},  # one or the other

@@ -45,6 +45,7 @@ import io
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -345,7 +346,16 @@ def readiness_probes(data: dict[str, Any], pids: dict[str, int]) -> list[dict[st
     return probes
 
 
-async def run_step(b: Bench, name: str, scale: int, rep: int) -> dict[str, Any]:
+async def run_step(
+    b: Bench,
+    name: str,
+    scale: int,
+    rep: int,
+    ends: Callable[[dict[str, Any]], bool] | None = None,
+) -> dict[str, Any]:
+    """One step. ``ends``: whether the sweep ends after this step (``keep_last``
+    keeps its lab), asked once the step is measured; by default a step that
+    did not pass, or the plan's last (``b.is_last``)."""
     runner, spec = b.runner, b.spec
     settings = runner.settings
     assert settings is not None and b.session is not None
@@ -535,7 +545,7 @@ async def run_step(b: Bench, name: str, scale: int, rep: int) -> dict[str, Any]:
         row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
         row["by_image"] = bm.image_metrics(b.by_image, windows)
         await _stop_traffic(runner, topology_id)
-        last = row["outcome"] != "ok" or b.is_last
+        last = ends(row) if ends else (row["outcome"] != "ok" or b.is_last)
         if not (last and spec.get("keep_last")):
             b.progress(name, "destroying")
             destroy = await _destroy(runner, topology_id)
@@ -602,24 +612,45 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     runner, spec = b.runner, b.spec
     max_scale = int(spec.get("max_scale") or adaptive["start"])
     scale: int | None = min(int(adaptive["start"]), max_scale)
+    confirm = int(adaptive.get("confirm") or 0)
+    max_steps = int(adaptive.get("max_steps") or 20)
     stopped_by = "max_steps"
-    for _ in range(int(adaptive.get("max_steps") or 20)):
+    nxt: tuple[int | None, str, str] | None = None
+
+    def passed(row: dict[str, Any]) -> bool:  # a scale for the confirm runs
+        return any(r["outcome"] == "ok" for r in [*b.rows, row])
+
+    def climb_ends(final: bool) -> Callable[[dict[str, Any]], bool]:
+        # A climb step's own memory decides whether the climb goes on, so the
+        # step asks once it is measured, before its destroy (keep_last).
+        def ends(row: dict[str, Any]) -> bool:
+            nonlocal nxt
+            if _halts(b, row):
+                return not (confirm and passed(row))
+            host = b.session.host_rows[-1] if b.session and b.session.host_rows else {}
+            nxt = bm.next_scale(
+                row,
+                adaptive,
+                mem_total=host.get("mem_total"),
+                nodes_for=lambda h: counts(_gen_params(spec, h))["nodes"],
+                max_scale=max_scale,
+            )
+            return (final or nxt[0] is None) and not (confirm and passed(row))
+
+        return ends
+
+    for i in range(max_steps):
         assert scale is not None
-        row = await step(scale, 1, f"{scale} hosts")
+        nxt = None
+        row = await step(scale, 1, f"{scale} hosts", climb_ends(i == max_steps - 1))
         if runner.stop_requested(b.job_id):
             return runner.stop_code(b.job_id) or "user"
         if _halts(b, row):
             stopped_by = f"criterion:{row['reason']}"
             b.limit = f"{scale} hosts failed ({row['reason']})"
             break
-        host = b.session.host_rows[-1] if b.session and b.session.host_rows else {}
-        scale, code, why = bm.next_scale(
-            row,
-            adaptive,
-            mem_total=host.get("mem_total"),
-            nodes_for=lambda h: counts(_gen_params(spec, h))["nodes"],
-            max_scale=max_scale,
-        )
+        assert nxt is not None
+        scale, code, why = nxt
         row["next"] = why
         b.mark(why)
         persist()
@@ -627,10 +658,12 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
             stopped_by, b.limit = code, why
             break
     best = max((r["scale"] for r in b.rows if r["outcome"] == "ok"), default=None)
-    for rep in range(2, int(adaptive.get("confirm") or 0) + 2):
+    for rep in range(2, confirm + 2):
         if best is None:
             break
-        row = await step(best, rep, f"{best} hosts #{rep}")
+        row = await step(
+            best, rep, f"{best} hosts #{rep}", lambda r, rep=rep: rep == confirm + 1 or _halts(b, r)
+        )
         if runner.stop_requested(b.job_id):
             return runner.stop_code(b.job_id) or "user"
         if _halts(b, row):
@@ -739,9 +772,11 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             await b.session.start()
             b.mark("benchmark started")
 
-        async def step(scale: int, rep: int, name: str) -> dict[str, Any]:
+        async def step(
+            scale: int, rep: int, name: str, ends: Callable[[dict[str, Any]], bool] | None = None
+        ) -> dict[str, Any]:
             async with runner.step(job_id, name):
-                row = await run_step(b, name, scale, rep)
+                row = await run_step(b, name, scale, rep, ends)
                 b.rows.append(row)
                 persist()
                 runner.progress(
