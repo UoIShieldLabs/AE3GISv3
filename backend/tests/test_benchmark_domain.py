@@ -166,6 +166,9 @@ def test_per_image_numbers_and_table():
     assert "Hosts: workstation · firefox 25%, workstation 75%" in md
     assert "dns-server ×1, web-server · nginx 1/50 hosts" in md
     assert "Core: firewall · iptables" in md
+    # a custom core alone is reported too
+    core_only = {"label": "fw", "topology": {"generate": {"core_type": "firewall"}}}
+    assert "Core: firewall" in bm.markdown_report({"rows": []}, core_only, {})
 
 
 def test_next_scale_climbs_fast_then_slows_near_the_target():
@@ -215,3 +218,14 @@ def test_next_scale_climbs_fast_then_slows_near_the_target():
         row(400, 35, per_node=None), a, mem_total=total, nodes_for=nodes_for, max_scale=14720
     )
     assert nxt == 600 and "×1.5" in why
+    # ×max_factor caps min_step and its rounding too
+    nxt, _, _ = bm.next_scale(
+        row(100, 35),
+        {**a, "max_factor": 1.1},
+        mem_total=total,
+        nodes_for=nodes_for,
+        max_scale=14720,
+    )
+    assert nxt == 110  # not 125
+    nxt, _, _ = bm.next_scale(row(10, 2), a, mem_total=total, nodes_for=nodes_for, max_scale=14720)
+    assert nxt == 20  # ×2 from 10 hosts, though the minimum step is 25

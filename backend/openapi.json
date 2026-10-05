@@ -99,7 +99,7 @@
         "type": "object"
       },
       "BenchmarkAdaptive": {
-        "description": "Scales chosen step by step until the host's memory is nearly full\n(generated topologies; replaces ``scale``). Start at ``start`` hosts; after\neach step, project from its marginal memory per node the hosts at which\nmemory would reach ``target_mem_pct`` and close ``approach`` of the gap (at\nleast ``min_step`` hosts, at most \u00d7``max_factor``). The climb is over once\na step's memory peaks at ``reach_mem_pct`` (or a step fails); the highest\npassing scale is then run ``confirm`` more times.",
+        "description": "Scales chosen step by step until the host's memory is nearly full\n(generated topologies; replaces ``scale``). Start at ``start`` hosts; after\neach step, project from its marginal memory per node the hosts at which\nmemory would reach ``target_mem_pct`` and close ``approach`` of the gap (at\nleast ``min_step`` hosts, but never past \u00d7``max_factor``). The climb is\nover once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the\nhighest passing scale is then run ``confirm`` more times.",
         "properties": {
           "approach": {
             "default": 0.6,

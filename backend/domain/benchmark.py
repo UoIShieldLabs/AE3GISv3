@@ -138,7 +138,8 @@ def next_scale(
     from the step's resting memory and marginal memory per node, the hosts at
     which memory would reach ``target_mem_pct``, and close ``approach`` of the
     gap: large steps while far, smaller ones near the edge (at least
-    ``min_step`` hosts, at most ×``max_factor``, in multiples of ``min_step``).
+    ``min_step`` hosts, in multiples of ``min_step``, and never past
+    ×``max_factor``: from a small scale the step may be less than ``min_step``).
     """
     last = int(row["scale"])
     reach = float(adaptive.get("reach_mem_pct") or 90)
@@ -171,7 +172,7 @@ def next_scale(
                 f"({per_node / 1e6:.1f} MB/node, peak {peak if peak is not None else 0:.1f}% now)"
             )
     nxt = max(last + unit, round(nxt / unit) * unit)
-    nxt = min(nxt, max_scale)
+    nxt = min(nxt, max(last + 1, math.floor(last * factor)), max_scale)
     return nxt, "next", f"next {nxt} hosts: {why}"
 
 
@@ -512,7 +513,8 @@ def _topology_line(spec: dict[str, Any]) -> str:
         f"≤ {g.get('hosts_per_subnet', 200)} hosts per subnet, "
         f"≤ {g.get('hosts_per_switch', 48)} per switch"
     )
-    if not (g.get("host_mix") or g.get("server_mix") or g.get("switch_mix")):
+    custom = ("host_mix", "server_mix", "switch_mix", "core_type", "core_image")
+    if not any(g.get(k) for k in custom):
         return (
             f"generated: {g.get('servers', 1)} server(s), {shape}, "
             f"hosts `{g.get('host_type', 'workstation')}`"

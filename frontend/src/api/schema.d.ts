@@ -1022,9 +1022,9 @@ export interface components {
          *     (generated topologies; replaces ``scale``). Start at ``start`` hosts; after
          *     each step, project from its marginal memory per node the hosts at which
          *     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
-         *     least ``min_step`` hosts, at most ×``max_factor``). The climb is over once
-         *     a step's memory peaks at ``reach_mem_pct`` (or a step fails); the highest
-         *     passing scale is then run ``confirm`` more times.
+         *     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
+         *     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
+         *     highest passing scale is then run ``confirm`` more times.
          */
         BenchmarkAdaptive: {
             /**
