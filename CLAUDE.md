@@ -20,6 +20,7 @@ Developer onboarding and the full architecture rationale live in
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
+./bench.sh <suite> --host <name>             # a benchmark suite on this host (./bench.sh list)
 cd backend && python -m pytest && ruff check . && ruff format --check .   # backend checks (CI)
 cd backend && python -m uvicorn main:create_app --factory --reload --port 8000
 cd backend && python scripts/export_openapi.py   # regenerate openapi.json after API changes
@@ -52,12 +53,14 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `topo.clab.yml`; ContainerLab uses `iface_base=1`). Plan links carry their
   `connection_id`; `links.py` resolves capture targets against them. Also
   `pcap.py`/`packets.py` (pcap framing, packet summaries), `traffic/` (iperf3
-  argv + json-stream parser, `patterns` → flows, incremental flow summaries),
+  argv incl. paced bursts `-b rate/N -l len` + json-stream parser, `patterns` → flows, incremental flow summaries),
   `telemetry.py` (counters → rates), `monitor.py` (collector sweeps → host
   rates, container groups, aggregates), `selectors.py` (node sets by id /
   type / subnet / role), `generator.py` (parametric benchmark topologies,
-  optionally a seeded mix of types/images by weight),
-  `benchmark.py` (step metrics, stop criteria, adaptive next scale, report),
+  optionally a seeded mix of types/images by weight, or random pools: each
+  node draws a type with equal odds, then an image),
+  `benchmark.py` (step metrics, stop criteria, adaptive next scale and
+  retries, census table, matrix cells, report per kind),
   `environment.py` (run environment + fingerprint).
 - `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
@@ -75,8 +78,9 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   helper → `MonitorSession`: CSVs + live sweeps; benchmarks embed one),
   `traffic` (+ `traffic_generators`; flows/patterns through the netns driver),
   `netns_driver` (the driver helper: iperf3 runs, readiness pings),
-  `benchmark` (scale sweeps: generate → deploy → probe → settle → hold →
-  destroy, stop criteria; see `docs/benchmarks/`); `live` (per-job WebSocket
+  `benchmark` (kinds sweep | adaptive | census | matrix; a step is place →
+  reference → deploy → ready → settle → hold → destroy, helpers shared by all
+  kinds; a matrix deploys once and runs its cells; see `docs/benchmarks/`); `live` (per-job WebSocket
   fan-out), `activity` (running captures/runs/monitors; destroy stops them
   first), `environment` (run
   metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
@@ -273,9 +277,12 @@ tables record every long operation.
   WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}` and
   `…/monitors/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
   race every wait against client disconnect, see `api/live_ws.py`).
-- `topologies/generate` (a parametric topology), `benchmarks` (202 + a sweep
-  job), `benchmarks/{id}[/report.md|/export]`; headless via
-  `backend/scripts/bench.py` with specs in `backend/benchmarks/specs/` and
+- `topologies/generate` (a parametric topology), `benchmarks` (202 + a
+  sweep, climb, census or matrix job), `benchmarks/{id}[/report.md|/export]`;
+  headless via `./bench.sh` (`backend/scripts/bench_suite.py`: a suite from
+  `backend/benchmarks/suites/` per host, Docker restarted between benchmarks,
+  results in `backend/benchmark-results/<host>/`) or `backend/scripts/bench.py`
+  (one spec from `backend/benchmarks/specs/<category>/`), with
   `docker-compose.bench.yml` (no `--reload`: a reload kills a benchmark).
 - `images?topology_id=` (build support, sources, per-image status),
   `images/builds` (202 + build jobs), `sources/{name}/sync` (202 + a job).
