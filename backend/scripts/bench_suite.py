@@ -547,8 +547,10 @@ def keep_awake(log: Log):
 
 
 def compose_up(env: dict[str, str], *, recreate: bool) -> None:
-    argv = [*COMPOSE, "up", "-d", "--build", *(["--force-recreate"] if recreate else []), "backend"]
-    _run(argv, check=True, env={**os.environ, **env})
+    """The backend in bench mode: built and recreated at the start of a suite
+    (this commit's code and labels); after a Docker restart only started."""
+    extra = ["--build", "--force-recreate"] if recreate else []
+    _run([*COMPOSE, "up", "-d", *extra, "backend"], check=True, env={**os.environ, **env})
 
 
 def wait_healthy(api: bench.Api, timeout: float = 600, sleep=time.sleep) -> dict[str, Any]:
