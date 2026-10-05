@@ -2002,6 +2002,19 @@
             ],
             "title": "Bitrate"
           },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
+          },
           "client": {
             "maxLength": 128,
             "minLength": 1,
@@ -3575,6 +3588,19 @@
             "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
             "title": "Bitrate",
             "type": "string"
+          },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
           },
           "clients": {
             "anyOf": [

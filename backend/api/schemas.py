@@ -458,6 +458,18 @@ class Iperf3Flow(BaseModel):
     direction: Literal["forward", "reverse", "bidir"] = "forward"
     # Seconds of warm-up left out of the results.
     omit_s: int = Field(default=0, ge=0, le=60)
+    # Paced bursts: send bitrate × interval at once, every this many ms.
+    burst_interval_ms: int | None = Field(default=None, ge=10, le=60000)
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):
+        if self.burst_interval_ms and self.protocol == "tcp" and _unlimited(self.bitrate):
+            raise ValueError("burst_interval_ms needs a bitrate")
+        return self
+
+
+def _unlimited(bitrate: str | None) -> bool:
+    return not bitrate or float(bitrate.rstrip("KMGkmg") or 0) == 0
 
 
 class TrafficPattern(BaseModel):
@@ -482,6 +494,14 @@ class TrafficPattern(BaseModel):
     length: int | None = Field(default=None, ge=16, le=65507)
     direction: Literal["forward", "reverse", "bidir"] = "forward"
     omit_s: int = Field(default=0, ge=0, le=60)
+    # Paced bursts: each flow sends bitrate × interval at once, every this many ms.
+    burst_interval_ms: int | None = Field(default=None, ge=10, le=60000)
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):
+        if self.burst_interval_ms and _unlimited(self.bitrate):
+            raise ValueError("burst_interval_ms needs a bitrate")
+        return self
 
 
 class TrafficRunRequest(BaseModel):

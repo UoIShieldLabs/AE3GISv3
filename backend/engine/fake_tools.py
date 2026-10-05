@@ -82,6 +82,7 @@ class IperfArgs:
     def _rate(self, raw: str | None) -> float:
         if not raw:
             return 1e6 if self.udp else 95e6
+        raw = raw.split("/")[0]  # "250K/12": a paced burst, same mean rate
         mult = {"K": 1e3, "M": 1e6, "G": 1e9}.get(raw[-1].upper(), 1)
         return float(raw.rstrip("KMGkmg") or 0) * mult or 95e6
 

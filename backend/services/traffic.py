@@ -43,7 +43,7 @@ from api.errors import Conflict, Invalid
 from db.models import Job, Topology
 from domain import selectors
 from domain.topology import find_container
-from domain.traffic.iperf3 import Iperf3StreamParser, is_interrupt
+from domain.traffic.iperf3 import Iperf3StreamParser, burst_shape, is_interrupt
 from domain.traffic.patterns import PatternError, assign_ports, expand, offered_bps
 from domain.traffic.summary import FlowSummary
 from engine.base import EngineState
@@ -306,6 +306,18 @@ def plan_flows(
         f["bind_server"] = not f.get("server_address")
         f["server_address"] = str(server_ip)
         f.setdefault("generator", "iperf3")
+        if f.get("burst_interval_ms"):
+            udp = f.get("protocol") == "udp"
+            try:
+                n, length = burst_shape(
+                    str(f.get("bitrate") or ("1M" if udp else "")),
+                    f["burst_interval_ms"],
+                    "udp" if udp else "tcp",
+                    f.get("length"),
+                )
+            except ValueError as exc:
+                raise Invalid(f"Flow {f['id']!r}: {exc}", code="bad_burst") from exc
+            f["burst"] = {"count": n, "length": length, "bytes": n * length}
     assign_ports(flows)
     return flows
 
@@ -611,6 +623,8 @@ def _flow_result(f: dict[str, Any], recorder: RunRecorder) -> dict[str, Any]:
         "protocol": f.get("protocol") or "tcp",
         "direction": f.get("direction") or "forward",
         "bitrate": f.get("bitrate"),
+        "burst_interval_ms": f.get("burst_interval_ms"),
+        "burst": f.get("burst"),
         "port": f.get("port"),
         "summary": recorder.summaries[f["id"]].result(),
         "errors": recorder.errors(f["id"]),

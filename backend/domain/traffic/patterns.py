@@ -24,10 +24,18 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from domain.traffic.iperf3 import DEFAULT_PORT
+from domain.traffic.iperf3 import DEFAULT_PORT, bitrate_bps
 
 # Per-flow iperf3 parameters a pattern passes on to each of its flows.
-FLOW_PARAMS = ("protocol", "bitrate", "parallel", "length", "direction", "omit_s")
+FLOW_PARAMS = (
+    "protocol",
+    "bitrate",
+    "parallel",
+    "length",
+    "direction",
+    "omit_s",
+    "burst_interval_ms",
+)
 
 Pick = Callable[[Any], list[str]]  # selector -> node ids (deployed, topology order)
 HOSTS = {"roles": ["host"]}
@@ -97,22 +105,6 @@ def assign_ports(flows: list[dict[str, Any]], base: int = DEFAULT_PORT) -> None:
         n = used.get(f["server"], 0)
         used[f["server"]] = n + 1
         f["port"] = base + n
-
-
-_MULT = {"K": 1e3, "M": 1e6, "G": 1e9}
-
-
-def bitrate_bps(raw: str | None) -> float | None:
-    """``"10M"`` → 10e6; None for unset (TCP: unlimited)."""
-    if not raw:
-        return None
-    raw = str(raw).strip()
-    mult = _MULT.get(raw[-1].upper(), 1.0)
-    try:
-        value = float(raw.rstrip("KMGkmg")) * mult
-    except ValueError:
-        return None
-    return value or None
 
 
 def offered_bps(flow: dict[str, Any]) -> float | None:

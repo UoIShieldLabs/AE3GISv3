@@ -180,6 +180,30 @@ def test_patterns_expand_into_flows(client, topology, wait_jobs, fake_engine, ap
     assert big.json()["flows"] == 30
 
 
+def test_burst_patterns(client, topology, wait_jobs, fake_engine):
+    _deploy(client, wait_jobs, topology)
+    tid = topology["id"]
+    burst = {"id": "b", "kind": "mesh", "nodes": "all", "bitrate": "250K", "protocol": "udp"}
+    run = _run(client, tid, duration_s=1, patterns=[{**burst, "burst_interval_ms": 500}])
+    assert run.status_code == 202, run.text
+    flow = run.json()["flows"][0]
+    assert flow["burst"] == {"count": 12, "length": 1302, "bytes": 15624}
+    wait_jobs()
+    _, doc = _driver_spec(fake_engine)
+    argv = next(p["argv"] for p in doc["procs"] if p["role"] == "client")
+    assert argv[argv.index("-b") + 1] == "250K/12" and argv[argv.index("-l") + 1] == "1302"
+    wait_jobs()
+    done = client.get(f"/api/v1/traffic/runs/{run.json()['id']}").json()
+    assert done["status"] == "succeeded", done["job"]["error"]
+    assert done["result"]["totals"]["offered_bps"] == 6 * 250e3  # bursts keep the mean rate
+    assert done["result"]["flows"][0]["burst"]["count"] == 12
+
+    huge = _run(client, tid, patterns=[{**burst, "bitrate": "1G", "burst_interval_ms": 10000}])
+    assert huge.status_code == 422 and huge.json()["code"] == "bad_burst"
+    unlimited = _run(client, tid, patterns=[{**burst, "bitrate": "0", "burst_interval_ms": 100}])
+    assert unlimited.status_code == 422
+
+
 def test_large_runs_keep_the_job_row_lean(client, topology, wait_jobs, fake_engine):
     _deploy(client, wait_jobs, topology)
     patterns = [

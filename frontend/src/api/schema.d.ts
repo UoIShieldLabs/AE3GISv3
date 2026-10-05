@@ -1814,6 +1814,8 @@ export interface components {
         Iperf3Flow: {
             /** Bitrate */
             bitrate?: string | null;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
             /** Client */
             client: string;
             /**
@@ -2402,6 +2404,8 @@ export interface components {
         TrafficPattern: {
             /** Bitrate */
             bitrate: string;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
             /** Clients */
             clients?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
             /**
