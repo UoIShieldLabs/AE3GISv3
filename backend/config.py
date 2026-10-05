@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Deployment engine: "kathara" (default) or "fake" (in-memory, for tests
     # and for running the UI without Docker).
     engine: str = "kathara"
+    # Seconds AE3GIS's Docker API calls may take (docker-py defaults to 60,
+    # too short for listing ~1000 containers on a loaded host).
+    docker_timeout_s: float = 300
 
     log_level: str = "INFO"
 

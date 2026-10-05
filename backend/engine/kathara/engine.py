@@ -118,6 +118,12 @@ def _local_image_checks(manager: Any) -> None:
 class KatharaEngine:
     name = "kathara"
 
+    def __init__(self, docker_timeout_s: float = 300) -> None:
+        # docker-py's default 60 s is too short at scale: listing ~1000
+        # containers on the containerd image store took longer and failed a
+        # deploy's verify step. Kathara's own client has no timeout at all.
+        self.docker_timeout_s = docker_timeout_s
+
     # ── clients ──
     def _manager(self):
         from Kathara.manager.Kathara import Kathara  # lazy import
@@ -129,7 +135,7 @@ class KatharaEngine:
     def _docker(self):
         import docker  # lazy import
 
-        return docker.from_env()
+        return docker.from_env(timeout=self.docker_timeout_s)
 
     @staticmethod
     def _hash(state: EngineState) -> str:

@@ -62,7 +62,9 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
 
     run_migrations(settings.database_url)
     session_factory = make_session_factory(make_engine(settings.database_url))
-    engine = engine or make_deployment_engine(settings.engine)
+    engine = engine or make_deployment_engine(
+        settings.engine, docker_timeout_s=settings.docker_timeout_s
+    )
     logs = JobLogStore(settings.job_logs_dir, max_bytes=settings.job_log_max_bytes)
     artifacts = ArtifactStore(settings.artifacts_dir)
     runner = JobRunner(session_factory, engine, logs)

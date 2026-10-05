@@ -54,3 +54,15 @@ def test_kathara_checks_images_locally_only():
     images.check_from_list(["ae3gis.local/suricata", "kathara/base"])
     assert calls == [("ae3gis.local/suricata", False), ("kathara/base", False)]
     _local_image_checks(SimpleNamespace())  # another shape: left alone
+
+
+def test_docker_client_gets_the_configured_timeout(monkeypatch):
+    import docker
+
+    from engine.fake import make_engine
+
+    seen = {}
+    monkeypatch.setattr(docker, "from_env", lambda **kw: seen.update(kw) or "client")
+    engine = make_engine("kathara", docker_timeout_s=420)
+    assert engine._docker() == "client"
+    assert seen == {"timeout": 420}

@@ -552,7 +552,7 @@ class FakeEngine:
         }
 
 
-def make_engine(name: str):
+def make_engine(name: str, *, docker_timeout_s: float = 300):
     """Engine factory used by the app (``Settings.engine``)."""
     if name == "fake":
         engine = FakeEngine()
@@ -561,4 +561,4 @@ def make_engine(name: str):
         return engine
     from engine.kathara.engine import KatharaEngine
 
-    return KatharaEngine()
+    return KatharaEngine(docker_timeout_s=docker_timeout_s)
