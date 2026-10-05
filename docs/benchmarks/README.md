@@ -70,7 +70,9 @@ twice: cancel now. `--resume` keeps finished runs, follows a benchmark still
 running, and reruns failed ones with `--retry-failed`. A suite item can run
 several times (`runs`, `seeds`), take the images a census found usable
 (`pool_from`), start a climb near the previous run's ceiling
-(`start_from_previous`), and override spec fields (`overrides`).
+(`start_from_previous`), and override spec fields (`overrides`). A suite of
+your own can live anywhere (`./bench.sh path/to/suite.json …`); its specs are
+paths under `backend/benchmarks/specs/`, or absolute.
 
 **A new host, before the first run:** give Docker Desktop the CPUs and memory
 you want to measure and note them (the report records what Docker sees; the

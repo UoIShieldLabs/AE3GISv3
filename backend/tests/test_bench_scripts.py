@@ -111,6 +111,8 @@ def test_load_suite_checks_items(tmp_path):
         ],
     )
     assert ok["restart_docker"] is True and len(ok["_sha"]) == 64
+    elsewhere = _suite(tmp_path, [{"id": "a", "spec": str(tmp_path / "specs" / "sweep.json")}])
+    assert elsewhere["items"][0]["_spec"] == {"scale": [2]}  # an absolute spec path
     bad = [
         [{"id": "a", "spec": "sweep.json"}, {"id": "a", "spec": "sweep.json"}],
         [{"id": "a", "spec": "nope.json"}],

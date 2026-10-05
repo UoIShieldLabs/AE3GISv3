@@ -100,6 +100,8 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
         iid = str(item.get("id") or "")
         if not iid or iid in seen:
             raise SuiteError(f"Suite items need unique ids ({iid!r})")
+        # A spec path is relative to the specs folder, or absolute (a suite of
+        # your own specs kept elsewhere).
         spec_path = specs_root / str(item.get("spec") or "")
         if not spec_path.is_file():
             raise SuiteError(f"Item {iid!r}: no spec {spec_path}")
