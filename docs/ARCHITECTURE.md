@@ -200,7 +200,13 @@ that model, so the frontend's catalog types are generated from OpenAPI too.
     "displayName": "nftables", "stability": "stable",            // | experimental | hidden
     "source": { "kind": "build", "repo": "ae3gis-containers", "context": "nftables", "dockerfile": "dockerfile" },
     "platforms": ["linux/amd64", "linux/arm64"]                  // optional
-  }
+  },
+  "postgres:alpine": { "displayName": "PostgreSQL (Alpine)",
+    "env": { "POSTGRES_PASSWORD": "pass" } },                    // optional: every node's environment
+  "ae3gis.local/open-vswitch": { "displayName": "Open vSwitch", …,
+    "ownBridge": "br0" },                                        // optional: the image bridges its ports
+  "httpd:alpine": { "displayName": "httpd (Alpine)",
+    "shell": "/bin/sh" }                                         // optional: boot shell if the image has no bash
 },
 "types": {
   "firewall": {
@@ -218,6 +224,13 @@ A type's `images` are its **variants**: interchangeable images for the same job
 between them). `images` at the top level describes image refs; a ref it does not
 list is pulled from a registry as before, and one with a `build` source is built
 by AE3GIS (§5.6). Unknown types degrade to `host` rather than blocking a deploy.
+An image's `env` is set on every node that runs it (some entrypoints refuse to
+start without a variable). `ownBridge` marks an image that builds a bridge over
+all its ethN itself (Open vSwitch): as a switch it is only addressed (IP on that
+bridge), never given AE3GIS's Linux bridge, which would race it for the ports.
+`shell` names the shell boot commands run through where an image has no bash
+(Kathará defaults to bash and silently skips a node's boot without it, leaving
+it unaddressed).
 
 **Adding a node type should be a one-line JSON edit.** It appears in the
 palette, add menus, inspector type picker, and Purdue view automatically (they

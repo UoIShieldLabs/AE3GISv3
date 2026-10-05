@@ -55,8 +55,9 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   argv + json-stream parser, `patterns` → flows, incremental flow summaries),
   `telemetry.py` (counters → rates), `monitor.py` (collector sweeps → host
   rates, container groups, aggregates), `selectors.py` (node sets by id /
-  type / subnet / role), `generator.py` (parametric benchmark topologies),
-  `benchmark.py` (step metrics, stop criteria, report),
+  type / subnet / role), `generator.py` (parametric benchmark topologies,
+  optionally a seeded mix of types/images by weight),
+  `benchmark.py` (step metrics, stop criteria, adaptive next scale, report),
   `environment.py` (run environment + fingerprint).
 - `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
@@ -97,6 +98,12 @@ visible across container recreation. Lab names depend only on the topology id
 (`ae3gis_<id[:12]>`), never the display name. Status polling is one
 `GET /runtime` call (status + active job + nodes). `persistencePaths` and
 `config` are stored but not applied by the Kathara engine (validation warns).
+Node boot commands go in `/ae3gis-init.sh`, run by the machine's Kathara
+`.startup` file (not an `exec` meta: Kathara logs those with `&>>`, which
+BusyBox ash rejects) through bash, or the image's catalog `shell`. The engine
+makes Kathara check images locally only (`_local_image_checks`): its
+per-deploy registry lookup costs ~15 s per `ae3gis.local/…` image on Docker's
+containerd image store, and the deploy's `images` step has already ensured them.
 
 ### Deployment engine (the key seam)
 `backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
@@ -133,7 +140,10 @@ would slow every poll and load the daemon being measured.
 `backend/catalog/node_types.json` (schema v2, validated by `catalog/models.py`
 and served typed at `GET /api/v1/catalog`) defines ordered `categories`, image
 `sources`, `images` (display name, `stability` stable|experimental|hidden,
-`source` registry|build, optional `platforms`) and every node type: `role`
+`source` registry|build, optional `platforms`, `env` set on every node of the
+image, `ownBridge` for images that bridge their own ports, e.g. Open vSwitch,
+whose switches AE3GIS then only addresses, `shell` for images without bash,
+e.g. `httpd:alpine` → `/bin/sh`) and every node type: `role`
 (router|switch|host), `defaultImage`, `images` (its **variants**), `color`,
 `label`, `icon`, `category`, optional `webUiPort`/`purdueLevel`. **Images live
 here as data, never hardcoded in source.** The frontend consumes it via
