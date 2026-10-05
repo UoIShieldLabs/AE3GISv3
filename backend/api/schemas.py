@@ -755,6 +755,8 @@ class BenchmarkRequest(BaseModel):
     quiet_timeout_s: float = Field(default=300, ge=0, le=3600)
     settle_s: float = Field(default=20, ge=0, le=3600)
     hold_s: float = Field(default=60, ge=0, le=86400)
+    # Seconds the host is measured at rest before the first step (0 = not).
+    rest_s: float = Field(default=0, ge=0, le=600)
     monitor: BenchmarkMonitor = Field(default_factory=BenchmarkMonitor)
     traffic: BenchmarkTraffic | None = None
     stop: BenchmarkStop = Field(default_factory=BenchmarkStop)

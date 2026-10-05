@@ -318,6 +318,26 @@ def image_metrics(
 
 # ── across steps ──────────────────────────────────────────────────────
 
+
+def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[str, Any]:
+    """The host at rest before the first step, nothing of ours deployed: what
+    an earlier run or a leak left behind (memory the engine never gave back,
+    a busy daemon) shows up here, so runs on one host can be compared."""
+    rows = [r for r in host if span[0] <= r["t"] <= span[1]]
+    docker = [
+        sum(r.get(k) or 0 for k in DOCKER_RSS) for r in rows if any(r.get(k) for k in DOCKER_RSS)
+    ]
+    totals = [r["mem_total"] for r in rows if r.get("mem_total")]
+    return {
+        "samples": len(rows),
+        "mem_used": _r(mean(window(host, span, "mem_used")), 0),
+        "mem_total": totals[-1] if totals else None,
+        "mem_used_pct": _r(mean(window(host, span, "mem_used_pct")), 2),
+        "vm_cpu_pct": _r(mean(window(host, span, "vm_cpu_pct")), 2),
+        "docker_rss": _r(mean(docker), 0),
+    }
+
+
 # What a step copies from its traffic run's totals (services/traffic.totals).
 TRAFFIC_ROW_KEYS = (
     "flows",
@@ -431,6 +451,7 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
         f"settle {spec.get('settle_s')}s, hold {spec.get('hold_s')}s · monitor every "
         f"{(spec.get('monitor') or {}).get('interval_s')}s",
         f"- **Load:** {_traffic_line(spec)}",
+        *_rest_line(result.get("rest")),
         f"- **Outcome:** ceiling {result.get('ceiling') or '–'} hosts"
         + (f" · climb: {result['limit']}" if result.get("limit") else "")
         + (
@@ -473,6 +494,17 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
         "",
     ]
     return "\n".join(lines)
+
+
+def _rest_line(rest: dict[str, Any] | None) -> list[str]:
+    if not rest or not rest.get("samples"):
+        return []
+    return [
+        f"- **At rest (before the first step):** {_mb(rest.get('mem_used'))} of "
+        f"{_mb(rest.get('mem_total'))} MB used ({_num(rest.get('mem_used_pct'))}%) · "
+        f"host CPU {_num(rest.get('vm_cpu_pct'))}% · Docker processes "
+        f"{_mb(rest.get('docker_rss'))} MB"
+    ]
 
 
 def _steps_line(spec: dict[str, Any]) -> str:

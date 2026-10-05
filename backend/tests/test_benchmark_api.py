@@ -113,6 +113,19 @@ def test_images_a_small_step_leaves_out_are_prepared_too(client, wait_jobs, fast
     assert "postgres:alpine" in fast.present_images
 
 
+def test_the_host_at_rest_is_recorded(client, wait_jobs, fast):
+    bench = _start(client, scale=[2], rest_s=0.3).json()
+    wait_jobs()
+    done = _done(client, bench["id"])
+    rest = done["result"]["rest"]
+    assert rest["samples"] > 0 and rest["mem_used"] > 0 and rest["mem_total"] > rest["mem_used"]
+    md = client.get(f"/api/v1/benchmarks/{bench['id']}/report.md").text
+    assert "**At rest (before the first step):**" in md
+    plain = _start(client, scale=[2]).json()  # rest_s 0: not measured
+    wait_jobs()
+    assert _done(client, plain["id"])["result"]["rest"] is None
+
+
 def test_a_stop_criterion_ends_the_sweep(client, wait_jobs, fast):
     fast.oom_nodes = {"h0-1"}
     bench = _start(client, scale=[2, 4, 8]).json()

@@ -1151,6 +1151,11 @@ export interface components {
              * @default 1
              */
             repetitions: number;
+            /**
+             * Rest S
+             * @default 0
+             */
+            rest_s: number;
             /** Scale */
             scale?: number[];
             /**

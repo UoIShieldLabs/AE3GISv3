@@ -196,6 +196,8 @@ class Bench:
         self.by_image: list[dict[str, Any]] = []
         # How an adaptive sweep's climb ended.
         self.limit: str | None = None
+        # The host at rest before the first step (``rest_s``).
+        self.rest: dict[str, Any] | None = None
         self.armed = False
         self.trip: tuple[str, str] | None = None
         self.tripped = asyncio.Event()
@@ -786,6 +788,7 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             "detail": last["detail"] if last else None,
             "stopped_by": stopped_by,
             "limit": b.limit,
+            "rest": b.rest,
             "phase": None if final else b.phase,
             "environment_fingerprint": env.get("fingerprint"),
         }
@@ -859,6 +862,13 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             monitor_service.register_session(job_id, b.session)
             await b.session.start()
             b.mark("benchmark started")
+            rest_s = float(spec.get("rest_s") or 0)
+            if rest_s:
+                runner.progress(job_id, "baseline", f"the host at rest ({rest_s:g}s)")
+                t0 = b.now()
+                await asyncio.sleep(rest_s)
+                b.rest = bm.rest_metrics(b.session.host_rows, (t0, b.now()))
+                persist()
 
         async def step(
             scale: int, rep: int, name: str, ends: Callable[[dict[str, Any]], bool] | None = None
