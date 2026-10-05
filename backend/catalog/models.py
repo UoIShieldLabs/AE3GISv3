@@ -14,6 +14,7 @@ types are generated from OpenAPI rather than written by hand.
 
 from __future__ import annotations
 
+import re
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
@@ -89,6 +90,39 @@ class ImageSpec(BaseModel):
     source: ImageSource = Field(default_factory=RegistrySource)
     # Docker platforms the image builds for (e.g. "linux/amd64"); None = any.
     platforms: list[str] | None = None
+    # Environment every node of this image starts with (e.g. a password the
+    # image's entrypoint insists on).
+    env: dict[str, str] = Field(default_factory=dict)
+    # The image builds this bridge from all its ethN interfaces itself (e.g.
+    # Open vSwitch): as a switch, AE3GIS only addresses it, never bridges.
+    ownBridge: str | None = None
+    # The shell the engine runs boot commands with, for images without bash
+    # (e.g. Alpine's /bin/sh, BusyBox ash). None: the engine's default (bash).
+    shell: str | None = None
+
+    @field_validator("shell")
+    @classmethod
+    def _shell_path(cls, v: str | None) -> str | None:
+        if v is not None and not re.fullmatch(r"/[A-Za-z0-9_./-]+", v):
+            raise ValueError(f"shell must be an absolute path: {v!r}")
+        return v
+
+    @field_validator("ownBridge")
+    @classmethod
+    def _bridge_name(cls, v: str | None) -> str | None:
+        if v is not None and not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", v):
+            raise ValueError(f"ownBridge must be an interface name: {v!r}")
+        return v
+
+    @field_validator("env")
+    @classmethod
+    def _env(cls, v: dict[str, str]) -> dict[str, str]:
+        for key, value in v.items():
+            if not re.fullmatch(r"[A-Za-z_]\w*", key):
+                raise ValueError(f"env name must be a shell variable name: {key!r}")
+            if "\n" in value or "\r" in value:
+                raise ValueError(f"env value of {key!r} must be one line")
+        return v
 
 
 class NodeTypeSpec(BaseModel):

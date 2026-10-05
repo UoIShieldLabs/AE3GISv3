@@ -20,6 +20,8 @@ def render_clab_yaml(plan: LabPlan, *, name: str | None = None) -> str:
     nodes: dict[str, Any] = {}
     for node in plan.nodes:
         entry: dict[str, Any] = {"kind": "linux", "image": node.image}
+        if node.env:
+            entry["env"] = dict(node.env)
         if node.startup:
             entry["exec"] = list(node.startup)
         nodes[node.machine_name] = entry

@@ -97,6 +97,24 @@ def image_spec(ref: str) -> ImageSpec | None:
     return load_model().images.get((ref or "").strip())
 
 
+def image_env(ref: str) -> dict[str, str]:
+    """The environment the catalog gives every node of image ``ref``."""
+    spec = image_spec(ref)
+    return dict(spec.env) if spec else {}
+
+
+def own_bridge(ref: str) -> str | None:
+    """The bridge image ``ref`` builds itself as a switch (None: AE3GIS bridges)."""
+    spec = image_spec(ref)
+    return spec.ownBridge if spec else None
+
+
+def image_shell(ref: str) -> str | None:
+    """The shell image ``ref`` needs for boot commands (None: the engine's default)."""
+    spec = image_spec(ref)
+    return spec.shell if spec else None
+
+
 def sources() -> dict[str, SourceSpec]:
     return load_model().sources
 

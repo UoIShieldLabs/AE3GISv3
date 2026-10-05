@@ -24,6 +24,10 @@ def render_lab_conf(plan: LabPlan, *, description: str | None = None) -> str:
         for iface in sorted(node.interfaces, key=lambda i: i.index):
             lines.append(f'{m}[{iface.index}]="{iface.collision_domain}"')
         lines.append(f'{m}[image]="{node.image}"')
+        for key, value in node.env.items():
+            lines.append(f'{m}[env]="{key}={value}"')
+        if node.shell:
+            lines.append(f'{m}[shell]="{node.shell}"')
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

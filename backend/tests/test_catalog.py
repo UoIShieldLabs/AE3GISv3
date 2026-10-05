@@ -94,6 +94,28 @@ def test_catalog_validation_rejects_inconsistencies():
             catalog.parse_catalog(raw)
 
 
+def test_image_env_and_own_bridge():
+    import pytest
+
+    assert catalog.image_env("postgres:alpine") == {"POSTGRES_PASSWORD": "pass"}
+    assert catalog.image_env("kathara/base") == {}
+    assert catalog.image_env("some/random:tag") == {}
+    assert catalog.own_bridge("ae3gis.local/open-vswitch") == "br0"
+    assert catalog.own_bridge("kathara/base") is None
+    assert catalog.image_shell("httpd:alpine") == "/bin/sh"
+    assert catalog.image_shell("kathara/base") is None
+    for field, value in (
+        ("env", {"BAD-NAME": "x"}),
+        ("env", {"OK": "two\nlines"}),
+        ("ownBridge", "br0; reboot"),
+        ("shell", "sh"),
+    ):
+        raw = _minimal()
+        raw["images"]["ae3gis.local/x"][field] = value
+        with pytest.raises(catalog.CatalogError):
+            catalog.parse_catalog(raw)
+
+
 def test_type_without_images_lists_its_default():
     raw = _minimal()
     del raw["types"]["box"]["images"]
