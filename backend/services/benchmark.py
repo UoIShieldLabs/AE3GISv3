@@ -139,7 +139,7 @@ def _check_matrix(
     if data is None:
         data = generate(_gen_params(spec, scale[0]))
     nodes = list(selectors.node_index(data))
-    for cell in bm.matrix_cells(matrix):
+    for cell in bm.selected_cells(matrix):
         pattern = bm.matrix_pattern(matrix, cell)
         flows = expand([pattern], lambda sel: selectors.resolve(data, nodes, sel or "all"))
         for f in flows[:1]:
@@ -868,7 +868,7 @@ async def _matrix(b: Bench, persist) -> str:
     mx = spec["matrix"]
     scale = int(spec["scale"][0])
     reps = int(spec.get("repetitions") or 1)
-    cells = bm.matrix_cells(mx)
+    cells = bm.selected_cells(mx)
     hold_s = float(spec.get("hold_s") or 0)
     stopped_by = "completed"
 

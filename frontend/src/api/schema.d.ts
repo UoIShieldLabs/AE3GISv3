@@ -1100,6 +1100,8 @@ export interface components {
             axes?: {
                 [key: string]: unknown[];
             };
+            /** Cells */
+            cells?: string[] | null;
             /**
              * Gap S
              * @default 10

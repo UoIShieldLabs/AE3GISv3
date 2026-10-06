@@ -288,8 +288,11 @@ class FakeDriver(FakeHelper):
             else:
                 self.line({"k": "listening", "p": s["id"]})
         self.line({"k": "servers_ready", "n": len(servers) - len(failed), "failed": failed})
+        offered = sum(tools.IperfArgs(c["argv"]).bitrate for c in clients)
+        cap = self.engine.traffic_capacity_bps
+        share = min(1.0, cap / offered) if cap and offered else 1.0
         await asyncio.gather(
-            *(self._client(c, servers.get(c["id"][:-2] + ".s"), failed) for c in clients)
+            *(self._client(c, servers.get(c["id"][:-2] + ".s"), failed, share) for c in clients)
         )
         for s in servers.values():
             if s["id"] not in failed and s["id"] not in self._served:
@@ -297,12 +300,17 @@ class FakeDriver(FakeHelper):
         self.line({"k": "done", "exited": {}, "never_started": []})
 
     async def _client(
-        self, c: dict[str, Any], server: dict[str, Any] | None, failed: list[str]
+        self,
+        c: dict[str, Any],
+        server: dict[str, Any] | None,
+        failed: list[str],
+        share: float = 1.0,
     ) -> None:
         cid, sid = c["id"], (server or {}).get("id")
         now = lambda: round(time.time(), 3)  # noqa: E731
         self.line({"k": "started", "p": cid, "t": now(), "attempt": 1})
         args = tools.IperfArgs(c["argv"])
+        args.bitrate *= share  # what the fake network lets through
         if server is None or sid in failed:
             self.out(
                 cid,

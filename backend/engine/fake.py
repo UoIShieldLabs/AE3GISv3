@@ -215,6 +215,9 @@ class FakeEngine:
         self.monitor_interval: float | None = None
         self.fake_mem_per_node = 10_000_000
         self.fake_disk_per_node = 1_000_000  # what each node writes to Docker's disk
+        # The fake network's capacity per traffic run (b/s): above it every
+        # flow delivers its share. None: everything gets through.
+        self.traffic_capacity_bps: float | None = None
         self.oom_nodes: set[str] = set()
         self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail

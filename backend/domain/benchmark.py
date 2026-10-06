@@ -533,6 +533,22 @@ def matrix_cells(matrix: dict[str, Any]) -> list[dict[str, Any]]:
     return cells
 
 
+def selected_cells(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    """The cells a matrix runs: all of them, or only those its ``cells`` lists
+    (by id; a limit search runs each size with just the cells that want it).
+    ValueError for an id the axes don't make."""
+    cells = matrix_cells(matrix)
+    wanted = matrix.get("cells")
+    if not wanted:
+        return cells
+    known = {c["id"] for c in cells}
+    unknown = [c for c in wanted if c not in known]
+    if unknown:
+        raise ValueError(f"the matrix has no cell(s) {', '.join(unknown[:5])}")
+    keep = set(wanted)
+    return [c for c in cells if c["id"] in keep]
+
+
 def matrix_order(cells: list[dict[str, Any]], seed: int, rep: int, shuffle: bool) -> list[dict]:
     """The order a repetition runs its cells in: shuffled (per seed and
     repetition) so drift over the run doesn't line up with an axis."""
@@ -939,7 +955,7 @@ def _rest_line(rest: dict[str, Any] | None) -> list[str]:
 
 def _steps_line(spec: dict[str, Any]) -> str:
     if spec.get("matrix"):
-        n = len(matrix_cells(spec["matrix"]))
+        n = len(selected_cells(spec["matrix"]))
         return (
             f"traffic matrix of {n} cells on one deployment of {(spec.get('scale') or ['?'])[0]} hosts "
             f"× {spec.get('repetitions', 1)}"

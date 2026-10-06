@@ -275,6 +275,28 @@ def test_a_traffic_matrix_runs_every_cell_on_one_deployment(client, wait_jobs, f
     assert fast.labs == {}
 
 
+def test_a_matrix_can_run_only_some_cells(client, wait_jobs, fast):
+    # The fake network carries 6 Mb/s: 4 hosts × 1M of clients → servers fits,
+    # 4 × 2 mesh flows of 1M don't.
+    fast.traffic_capacity_bps = 6e6
+    gen = {"servers": 2, "hosts_per_subnet": 4}
+    wanted = ["cs·udp·1M·100ms", "mesh·udp·1M·100ms"]
+    r = _start(client, scale=[4], topology={"generate": gen}, matrix={**MATRIX, "cells": wanted})
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    cells = {row["case"]: row for row in done["result"]["rows"] if row.get("cell")}
+    assert set(cells) == set(wanted)
+    assert cells["cs·udp·1M·100ms"]["outcome"] == "ok"
+    mesh = cells["mesh·udp·1M·100ms"]
+    assert mesh["outcome"] == "degraded" and mesh["reason"] == "traffic_short"
+    assert mesh["delivered_ratio"] == pytest.approx(0.75, abs=0.03)
+    bad = _start(
+        client, scale=[4], topology={"generate": gen}, matrix={**MATRIX, "cells": ["nope"]}
+    )
+    assert bad.status_code == 422 and bad.json()["code"] == "bad_matrix"
+
+
 def test_matrix_refusals(client):
     gen = {"topology": {"generate": {"servers": 2, "hosts_per_subnet": 4}}}
     bad_axis = {**MATRIX, "axes": {"colour": ["red"]}}

@@ -804,6 +804,8 @@ class BenchmarkMatrix(BaseModel):
     gap_s: float = Field(default=10, ge=0, le=3600)
     shuffle: bool = True
     seed: int = 0
+    # Run only these cells (their ids, e.g. "cs·tcp·250K·500ms"); default all.
+    cells: list[str] | None = Field(default=None, min_length=1, max_length=MATRIX_MAX_CELLS)
 
     @model_validator(mode="after")
     def _cells(self) -> BenchmarkMatrix:
