@@ -1,6 +1,6 @@
 {
   "label": "random idle",
-  "notes": "Every node is one of the 15 catalog types with equal odds (networking types too), then one of that type's images with equal odds; switches and routers draw from their own pools (routers must forward, so no default-drop firewalls there). Idle, no traffic. Adaptive: climbs to this mix's ceiling. Run several times with different seeds: some mixes come out heavier than others, on purpose.",
+  "notes": "Every node is one of the catalog's types with equal odds (networking types too), then one of that type's images with equal odds; the SIEM (Wazuh manager) is left out: each one downloads and unpacks Wazuh's CVE feed (~2-3 GB of disk), which made Docker's disk, not memory, the limit; switches and routers draw from their own pools (routers must forward, so no default-drop firewalls there). Idle, no traffic. Adaptive: climbs to this mix's ceiling. Run several times with different seeds: some mixes come out heavier than others, on purpose.",
   "topology": {
     "generate": {
       "servers": 0,
@@ -13,7 +13,6 @@
           { "type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"] },
           { "type": "firewall", "images": ["kathara/frr", "ae3gis.local/iptables", "ae3gis.local/nftables", "ae3gis.local/firehol"] },
           { "type": "ids", "images": ["ae3gis.local/suricata", "ae3gis.local/snort3", "ae3gis.local/snort2", "ae3gis.local/zeek"] },
-          { "type": "siem", "images": ["ae3gis.local/wazuh-manager"] },
           { "type": "web-server", "images": ["httpd:alpine", "ae3gis.local/apache", "ae3gis.local/nginx"] },
           { "type": "file-server", "images": ["kathara/base", "ae3gis.local/samba"] },
           { "type": "ftp-server", "images": ["ae3gis.local/vsftpd"] },
