@@ -317,3 +317,169 @@ def test_a_suite_end_to_end_and_resume(client, fake_engine, tmp_path):
     # Resume: everything is done, nothing runs again.
     before = len(api.call("GET", "/benchmarks"))
     assert make().run() == 0 and len(api.call("GET", "/benchmarks")) == before
+
+
+# ── traffic limit search ──────────────────────────────────────────────
+
+
+def test_cell_ids_match_the_backends():
+    from domain.benchmark import matrix_cells
+
+    matrix = json.loads(
+        (
+            Path(__file__).resolve().parents[1] / "benchmarks/specs/traffic/burst-limits.json"
+        ).read_text()
+    )["matrix"]
+    assert [c["id"] for c in suites.matrix_cell_ids(matrix)] == [
+        c["id"] for c in matrix_cells(matrix)
+    ]
+
+
+def _search(limit: int | None, estimate: int, cfg: dict) -> tuple[dict, list[int]]:
+    """Drive one cell whose traffic gets through up to ``limit`` hosts."""
+    state = {"cell": {}, "estimate": estimate, "pass": {}, "fail": {}, "unrun": {}}
+    sizes = []
+    while (size := suites.next_probe(state, cfg)) is not None:
+        sizes.append(size)
+        assert len(sizes) < 30
+        if limit is None or size <= limit:
+            state["pass"][str(size)] = state["pass"].get(str(size), 0) + 1
+        else:
+            state["fail"][str(size)] = "traffic_short"
+    return state, sizes
+
+
+@pytest.mark.parametrize(
+    ("limit", "estimate"),
+    [(330, 400), (330, 100), (330, 2000), (75, 85), (20, 300), (None, 500), (970, 900)],
+)
+def test_the_search_brackets_each_limit_within_a_step(limit, estimate):
+    cfg = {**suites.LIMIT_DEFAULTS, "max_hosts": 1000}
+    state, sizes = _search(limit, estimate, cfg)
+    r = suites.limit_result("c", state, cfg)
+    assert r["done"]
+    if limit is None or limit >= 1000:
+        assert (r["comfortable"], r["fails_at"]) == (1000, None) and r["confirmed"]
+    elif limit < 50:
+        assert (r["comfortable"], r["fails_at"]) == (None, 50)
+    else:
+        assert r["comfortable"] == limit // 50 * 50 and r["fails_at"] == r["comfortable"] + 50
+        assert r["confirmed"] and sizes.count(r["comfortable"]) == 2
+    assert len(sizes) <= 12
+
+
+def test_record_probe():
+    def st():
+        return {"cell": {}, "estimate": 100, "pass": {}, "fail": {}, "unrun": {}}
+
+    states = {k: st() for k in ("a", "b", "c", "d")}
+    rows = [
+        {"case": None, "outcome": "ok"},
+        {"case": "a", "cell": {"x": 1}, "outcome": "ok"},
+        {"case": "b", "cell": {"x": 1}, "outcome": "degraded", "reason": "traffic_short"},
+        {"case": "c", "cell": {"x": 1}, "outcome": "stopped", "reason": "memory"},
+    ]
+    suites.record_probe(states, 200, ["a", "b", "c", "d"], {"rows": rows})
+    assert states["a"]["pass"] == {"200": 1} and states["b"]["fail"] == {"200": "traffic_short"}
+    assert states["c"]["fail"] == {"200": "memory"} and states["d"]["unrun"] == {"200": 1}
+    suites.record_probe(states, 200, ["d"], {"rows": rows[:1]})
+    assert states["d"]["fail"] == {"200": "not_run"}  # asked twice, never reached
+    deploy_failed = [{"case": None, "outcome": "stopped", "reason": "memory"}]
+    suites.record_probe(states, 900, ["a"], {"rows": deploy_failed})
+    assert states["a"]["fail"]["900"] == "memory"
+    results = [suites.limit_result(k, s, suites.LIMIT_DEFAULTS) for k, s in states.items()]
+    assert results[2]["bound"] == "host" and results[1]["bound"] == "traffic"
+
+
+def test_a_limit_search_end_to_end(client, fake_engine, tmp_path):
+    fake_engine.monitor_interval = 0.02
+    fake_engine.traffic_capacity_bps = 25e6  # 1 Mb/s flows: 25 clients get through
+    spec = {
+        **FAST,
+        "hold_s": 0.2,
+        "quiet_timeout_s": 0.2,  # the fake host's CPU grows with nodes; don't wait for it
+        "topology": {
+            "generate": {
+                "hosts_per_subnet": 50,
+                "server_mix": [{"type": "workstation", "per_hosts": 10}],
+            }
+        },
+        "scale": [10],
+        "matrix": {
+            "patterns": [
+                {
+                    "id": "cs",
+                    "kind": "clients_to_servers",
+                    "servers": {"subnets": ["sub-srv"], "roles": ["host"]},
+                }
+            ],
+            "axes": {"protocol": ["udp"], "bitrate": ["1M", "100K"], "burst_interval_ms": [100]},
+            "interval_s": 0.5,
+            "ramp_s": 0,
+            "gap_s": 0.05,
+        },
+        "stop": {"min_delivered_ratio": 0.95, "max_loss_pct": 1, "project_memory": False},
+    }
+    _write(tmp_path / "specs", {"limits.json": spec})
+    limits = {
+        "step": 10,
+        "max_hosts": 60,
+        "cost": {"cs": {"udp": [0.0, 25.0]}},  # makes the 1M estimate ~18 hosts
+        "flows_per_host": {"cs": 1},
+        "mem_per_host": {"cs": 16e6},
+    }
+    suite = _suite(
+        tmp_path, [{"id": "lim", "spec": "limits.json", "limits": limits}], rest_wait_s=0
+    )
+    out = tmp_path / "results"
+
+    class Lines(suites.Log):
+        def __call__(self, text: str = "") -> None:
+            pass
+
+    runner = suites.Runner(
+        suite,
+        ClientApi(client),
+        out,
+        host="m4",
+        log=Lines(None),
+        poll=0.05,
+        allow_dirty=True,
+        sleep=lambda s: None,
+        prebuild=False,
+    )
+    assert runner.run() == 0
+    manifest = json.loads((out / "manifest.json").read_text())
+    [run] = manifest["runs"]
+    assert run["status"] == "done" and run["probes"]
+    results = {r["id"]: r for r in json.loads((out / "limits-lim.json").read_text())}
+    fast = results["cs·udp·1M·100ms"]
+    assert (fast["comfortable"], fast["fails_at"], fast["bound"]) == (20, 30, "traffic")
+    assert fast["confirmed"] and fast["reason"] == "traffic_short"
+    slow = results["cs·udp·100K·100ms"]
+    assert (slow["comfortable"], slow["fails_at"]) == (60, None) and slow["confirmed"]
+    summary = (out / "summary.md").read_text()
+    assert (
+        "## Traffic limits: `lim`" in summary
+        and "| 1M | 20 / 30 |" in summary
+        and "≥ 60" in summary
+    )
+    # Each probe ran only the cells that wanted its size.
+    first = run["probes"][0]
+    b = json.loads((out / first["dir"] / "benchmark.json").read_text())
+    assert {r["case"] for r in b["result"]["rows"] if r.get("cell")} == set(first["cells"])
+    # Resumed: nothing left to probe.
+    again = suites.Runner(
+        suite,
+        ClientApi(client),
+        out,
+        host="m4",
+        log=Lines(None),
+        poll=0.05,
+        allow_dirty=True,
+        sleep=lambda s: None,
+        prebuild=False,
+    )
+    before = len(run["probes"])
+    assert again.run() == 0
+    assert len(json.loads((out / "manifest.json").read_text())["runs"][0]["probes"]) == before

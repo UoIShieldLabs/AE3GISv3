@@ -23,7 +23,7 @@ the other. The same suites run on every machine, so their results compare:
 | `baseline` | `baseline/idle-sweep`, `clients-servers-sweep`, `mesh-sweep` (3 repetitions each) | memory per node, deploy/destroy time, how many idle nodes fit; when 1 Mb/s per host stops getting through (TCP to two servers, UDP mesh) |
 | `realistic` | `realistic/realistic-idle-sweep` | how many nodes of a chosen mixed campus fit (a climb to over 90% memory) |
 | `random` | `random/image-census`, then 10 × `random/random-idle` | which images run here and what each costs; how many nodes of a random mix of every type fit, and how much that varies with the mix |
-| `traffic` | `traffic/burst-matrix` | how 100 hosts cope with bursty traffic: 5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh |
+| `traffic` | `traffic/burst-limits` (a limit search) | for each of 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts it comfortably supports and where it starts to fail, 50 hosts apart |
 | `full` | all of the above | two days or more on a 16 GB Docker Desktop VM |
 
 From the repository root:
@@ -262,6 +262,41 @@ draws, per pattern × protocol, a rate × interval grid of: delivered, slowest
 flow, RTT p95 and retransmits (TCP), jitter p95 and loss (UDP), host CPU over
 idle and Docker cores; then the cells in run order. Each cell's `run.json`
 (every flow's summary) is in the export under `traffic/`.
+
+### Traffic limits: each cell's ceiling
+
+A suite item with `limits` searches, for every cell of a matrix spec, the most
+hosts at which the cell's traffic still gets through (delivered ≥
+`min_delivered_ratio`, UDP loss ≤ `max_loss_pct`) and the fewest at which it
+doesn't, `step` hosts apart (`traffic/burst-limits.json` in the `traffic`
+suite):
+
+```jsonc
+{ "id": "burst-limits", "spec": "traffic/burst-limits.json",
+  "limits": {
+    "step": 50, "growth": 0.25, "start_fraction": 0.8, "max_hosts": 1000,
+    "cpu_budget": 0.7, "mem_budget": 0.85,
+    // Docker cores = a + b per 100 Mb/s, measured once (100 hosts, M4): only a starting point
+    "cost": { "cs": { "tcp": [0.7, 5.7], "udp": [0.6, 3.5] }, "mesh": { "tcp": [0.3, 2.3], "udp": [0.5, 1.0] } },
+    "flows_per_host": { "cs": 1, "mesh": 2 },
+    "mem_per_host": { "cs": 16000000, "mesh": 19000000 } } }
+```
+
+Each cell starts at `start_fraction` of its estimate (where its traffic would
+need `cpu_budget` of the host's CPUs, or memory would run out, scaled to the
+host the run finds), grows by `growth` while it passes, halves the gap once it
+fails until the last pass and the first failure are `step` apart, and passes
+its comfortable size a second time to confirm it. The runner plans rounds:
+every unfinished cell asks for its next size, and each size is one matrix
+benchmark (after a Docker restart) running only the cells that want it
+(`matrix.cells`), so cells with similar limits share deployments. A step a
+host limit stops (memory, disk…) counts as a failure marked `mem`; a cell
+that passes at `max_hosts` is reported as `≥ max_hosts`. The summary draws a
+rate × interval grid of *comfortable / fails* per pattern × protocol;
+`limits-<item>.json` holds every cell's result and the manifest every probe.
+Clients → servers there has one server per 50 clients (`server_mix` with
+`per_hosts`), so its limit is the routed path through the core, not two busy
+server links; mesh stays inside each LAN.
 
 **Paced bursts.** `burst_interval_ms` on a pattern (or flow) makes each flow
 send `bitrate × interval` bytes at once, every interval, keeping the mean

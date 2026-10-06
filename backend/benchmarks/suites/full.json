@@ -1,22 +1,89 @@
 {
   "name": "full",
-  "description": "Everything, one after the other: the baseline sweeps, the realistic climb, the image census and 10 random-mix climbs, and the burst matrix. Two days or more on a 16 GB Docker Desktop VM.",
+  "description": "Everything, one after the other: the baseline sweeps, the realistic climb, the image census and 10 random-mix climbs, and the burst limits. Two days or more on a 16 GB Docker Desktop VM.",
   "restart_docker": true,
   "rest_wait_s": 60,
   "items": [
-    { "id": "idle", "spec": "baseline/idle-sweep.json" },
-    { "id": "clients-servers", "spec": "baseline/clients-servers-sweep.json" },
-    { "id": "mesh", "spec": "baseline/mesh-sweep.json" },
-    { "id": "realistic-idle", "spec": "realistic/realistic-idle-sweep.json" },
-    { "id": "census", "spec": "random/image-census.json" },
+    {
+      "id": "idle",
+      "spec": "baseline/idle-sweep.json"
+    },
+    {
+      "id": "clients-servers",
+      "spec": "baseline/clients-servers-sweep.json"
+    },
+    {
+      "id": "mesh",
+      "spec": "baseline/mesh-sweep.json"
+    },
+    {
+      "id": "realistic-idle",
+      "spec": "realistic/realistic-idle-sweep.json"
+    },
+    {
+      "id": "census",
+      "spec": "random/image-census.json"
+    },
     {
       "id": "random-idle",
       "spec": "random/random-idle.json",
       "runs": 10,
-      "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "seeds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
       "pool_from": "census",
       "start_from_previous": 0.7
     },
-    { "id": "burst-matrix", "spec": "traffic/burst-matrix.json" }
+    {
+      "id": "burst-limits",
+      "spec": "traffic/burst-limits.json",
+      "limits": {
+        "step": 50,
+        "growth": 0.25,
+        "start_fraction": 0.8,
+        "max_hosts": 1000,
+        "cpu_budget": 0.7,
+        "mem_budget": 0.85,
+        "cost": {
+          "cs": {
+            "tcp": [
+              0.7,
+              5.7
+            ],
+            "udp": [
+              0.6,
+              3.5
+            ]
+          },
+          "mesh": {
+            "tcp": [
+              0.3,
+              2.3
+            ],
+            "udp": [
+              0.5,
+              1.0
+            ]
+          }
+        },
+        "flows_per_host": {
+          "cs": 1,
+          "mesh": 2
+        },
+        "mem_per_host": {
+          "cs": 16000000,
+          "mesh": 19000000
+        }
+      }
+    }
   ]
 }

@@ -1,0 +1,114 @@
+{
+  "label": "burst limits",
+  "notes": "Traffic limit search, one cell at a time: each of the 100 cells (5 rates x 5 burst intervals x TCP/UDP x clients -> servers / mesh) finds the most hosts at which its traffic still gets through (delivered >= 95%, UDP loss <= 1%) and the fewest at which it doesn't, 50 hosts apart (bench_suite.py runs one size per benchmark with the cells that want it). Clients -> servers: north-south through the routers and the core, one server per 50 clients. Mesh: each host sends to its next two neighbours, east-west inside a LAN. Paced bursts: each flow sends rate x interval bytes at once, every interval.",
+  "topology": {
+    "generate": {
+      "hosts_per_subnet": 200,
+      "hosts_per_switch": 48,
+      "host_type": "workstation",
+      "server_mix": [
+        {
+          "type": "workstation",
+          "per_hosts": 50
+        }
+      ]
+    }
+  },
+  "scale": [
+    100
+  ],
+  "matrix": {
+    "patterns": [
+      {
+        "id": "cs",
+        "kind": "clients_to_servers",
+        "servers": {
+          "subnets": [
+            "sub-srv"
+          ],
+          "roles": [
+            "host"
+          ]
+        }
+      },
+      {
+        "id": "mesh",
+        "kind": "mesh",
+        "fanout": 2,
+        "nodes": {
+          "roles": [
+            "host"
+          ],
+          "subnets": [
+            "sub-0",
+            "sub-1",
+            "sub-2",
+            "sub-3",
+            "sub-4",
+            "sub-5",
+            "sub-6",
+            "sub-7",
+            "sub-8",
+            "sub-9",
+            "sub-10",
+            "sub-11",
+            "sub-12",
+            "sub-13",
+            "sub-14",
+            "sub-15"
+          ]
+        }
+      }
+    ],
+    "axes": {
+      "pattern": [
+        "cs",
+        "mesh"
+      ],
+      "protocol": [
+        "tcp",
+        "udp"
+      ],
+      "bitrate": [
+        "50K",
+        "100K",
+        "250K",
+        "500K",
+        "1M"
+      ],
+      "burst_interval_ms": [
+        100,
+        250,
+        500,
+        1000,
+        2000
+      ]
+    },
+    "grid": [
+      "bitrate",
+      "burst_interval_ms"
+    ],
+    "interval_s": 10,
+    "ramp_s": 5,
+    "gap_s": 5,
+    "shuffle": true,
+    "seed": 1
+  },
+  "rest_s": 10,
+  "cooldown_s": 15,
+  "settle_s": 15,
+  "hold_s": 50,
+  "monitor": {
+    "interval_s": 5
+  },
+  "stop": {
+    "max_mem_pct": 90,
+    "max_psi_mem_full": 10,
+    "max_disk_pct": 90,
+    "min_delivered_ratio": 0.95,
+    "max_loss_pct": 1,
+    "project_memory": false,
+    "deploy_timeout_s": 1800,
+    "ready_timeout_s": 300
+  }
+}

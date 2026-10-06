@@ -119,6 +119,9 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
                 raise SuiteError(f"Item {iid!r}: pool_from must name an earlier census item")
             if not (item["_spec"].get("topology") or {}).get("generate", {}).get("random"):
                 raise SuiteError(f"Item {iid!r}: pool_from needs a spec with random pools")
+        if item.get("limits") is not None:
+            if "matrix" not in item["_spec"] or int(item.get("runs") or 1) != 1:
+                raise SuiteError(f"Item {iid!r}: limits needs a matrix spec and one run")
         frac = item.get("start_from_previous")
         if frac is not None:
             if not 0 < float(frac) <= 1:
@@ -164,6 +167,7 @@ def plan_runs(suite: dict[str, Any], only: set[str] | None = None) -> list[dict[
                     "seed": seed,
                     "dir": f"{n:02d}-{key}",
                     "status": "pending",
+                    **({"kind": "limits"} if item.get("limits") is not None else {}),
                 }
             )
     return out
@@ -306,6 +310,205 @@ def aggregate_random(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+# ── traffic limits (pure) ─────────────────────────────────────────────
+#
+# A limits item searches, for every cell of a traffic matrix, the most hosts
+# at which the cell's traffic still gets through ("comfortable") and the
+# fewest at which it doesn't ("fails"), ``step`` apart. Each size is one
+# matrix benchmark running only the cells that want it, so cells with similar
+# limits share deployments. A cell starts near its estimate (from a cost
+# model: Docker's cores per Mb/s, measured once), grows while it passes,
+# halves the gap once it fails, and confirms its comfortable size once more.
+
+LIMIT_DEFAULTS: dict[str, Any] = {
+    "step": 50,  # the precision: last pass and first failure this far apart (hosts)
+    "growth": 0.25,  # while a cell passes, grow by this share (at least a step)
+    "start_fraction": 0.8,  # start a cell at this share of its estimate
+    "max_hosts": 1000,
+    "cpu_budget": 0.7,  # share of the host's CPUs Docker may use before traffic degrades
+    "mem_budget": 0.85,  # share of memory the nodes and the traffic tool may use
+    "base_mem": 1.0e9,  # memory in use with nothing deployed
+    "cost": {},  # {pattern: {protocol: [cores, cores per 100 Mb/s]}}
+    "flows_per_host": {},  # {pattern: flows each host sends}
+    "mem_per_host": {},  # {pattern: bytes a host costs, its flows' iperf3 processes included}
+}
+TRAFFIC_REASONS = ("traffic_short", "traffic_loss", "traffic_none", "traffic_failed")
+_RATE = {"K": 1e3, "M": 1e6, "G": 1e9}
+
+
+def rate_bps(raw: str) -> float:
+    raw = str(raw).strip()
+    return float(raw.rstrip("KMGkmg")) * _RATE.get(raw[-1].upper(), 1.0)
+
+
+def _short(name: str, value: Any) -> str:  # as the backend names cells
+    if name == "burst_interval_ms":
+        return f"{value}ms"
+    if name == "length":
+        return f"{value}B"
+    if name == "parallel":
+        return f"P{value}"
+    return str(value)
+
+
+def matrix_cell_ids(matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    """The matrix's cells as the backend makes them (domain/benchmark.matrix_cells)."""
+    axes = dict(matrix.get("axes") or {})
+    patterns = [str(x) for x in axes.pop("pattern", None) or [p["id"] for p in matrix["patterns"]]]
+    cells: list[dict[str, Any]] = [{"pattern": pid} for pid in patterns]
+    for name, values in axes.items():
+        cells = [{**c, name: v} for c in cells for v in values]
+    for c in cells:
+        c["id"] = "·".join(_short(k, v) for k, v in c.items())
+    return cells
+
+
+def _grid(x: float, step: int) -> int:
+    return max(step, int(round(x / step)) * step)
+
+
+def estimate_limit(cell: dict[str, Any], cfg: dict[str, Any], ncpu: float, mem_total: float) -> int:
+    """Where the cell should stop coping (only a starting point): Docker's CPU
+    for its traffic reaching the budget, or memory running out, whichever
+    comes first."""
+    pattern = cell["pattern"]
+    a, b = (cfg["cost"].get(pattern) or {}).get(cell.get("protocol", "tcp"), [0.0, 0.0])
+    per_host = rate_bps(cell["bitrate"]) / 1e6 * cfg["flows_per_host"].get(pattern, 1)  # Mb/s
+    traffic = math.inf
+    if b > 0 and per_host > 0:
+        traffic = max(0.0, cfg["cpu_budget"] * ncpu - a) / (b / 100) / per_host
+    memory = math.inf
+    if cfg["mem_per_host"].get(pattern):
+        memory = (cfg["mem_budget"] * mem_total - cfg["base_mem"]) / cfg["mem_per_host"][pattern]
+    return int(max(cfg["step"], min(traffic, memory, cfg["max_hosts"])))
+
+
+def cell_bracket(state: dict[str, Any]) -> tuple[int | None, int | None]:
+    """(largest size passed below the first failure, smallest size failed).
+    A size that both passed and failed counts as failed (not reliable)."""
+    fails = {int(s) for s in state["fail"]}
+    hi = min(fails) if fails else None
+    passed = [int(s) for s in state["pass"] if int(s) not in fails and (hi is None or int(s) < hi)]
+    return (max(passed) if passed else None), hi
+
+
+def next_probe(state: dict[str, Any], cfg: dict[str, Any]) -> int | None:
+    """The size a cell wants next, or None when its limit is found."""
+    step, top = int(cfg["step"]), int(cfg["max_hosts"])
+    lo, hi = cell_bracket(state)
+    passes = state["pass"]
+    if lo is None and hi is None:
+        return min(top, _grid(state["estimate"] * cfg["start_fraction"], step))
+    if hi is None:  # passed so far: grow, or confirm at the largest size
+        if lo >= top:
+            return lo if passes.get(str(lo), 0) < 2 else None
+        return min(top, lo + max(step, _grid(lo * cfg["growth"], step)))
+    if lo is None:  # failed so far: shrink
+        if hi <= step:
+            return None  # fails at the smallest size
+        return max(step, min(hi - step, _grid(hi * (1 - cfg["growth"]), step)))
+    if hi - lo > step:
+        return min(max(_grid((lo + hi) / 2, step), lo + step), hi - step)
+    return lo if passes.get(str(lo), 0) < 2 else None  # confirm the comfortable size
+
+
+def plan_round(states: dict[str, dict[str, Any]], cfg: dict[str, Any]) -> dict[int, list[str]]:
+    """The sizes the unfinished cells want next, each with its cells."""
+    plan: dict[int, list[str]] = {}
+    for cid, state in states.items():
+        size = next_probe(state, cfg)
+        if size is not None:
+            plan.setdefault(size, []).append(cid)
+    return dict(sorted(plan.items()))
+
+
+def record_probe(
+    states: dict[str, dict[str, Any]], size: int, wanted: list[str], result: dict[str, Any]
+) -> None:
+    """A size's matrix result into its cells' states: a pass, a failure (its
+    reason), or, for a cell the run never reached (a stop criterion ended it
+    first), nothing: it asks for the size again, once."""
+    rows = result.get("rows") or []
+    ran = {r["case"]: r for r in rows if r.get("cell")}
+    deploy = next((r for r in rows if not r.get("cell")), None)
+    key = str(size)
+    for cid in wanted:
+        state, row = states[cid], ran.get(cid)
+        if row is None:
+            if deploy is not None and deploy["outcome"] != "ok":
+                state["fail"][key] = deploy.get("reason") or deploy["outcome"]
+            else:
+                state["unrun"][key] = state["unrun"].get(key, 0) + 1
+                if state["unrun"][key] >= 2:
+                    state["fail"][key] = "not_run"
+        elif row["outcome"] == "ok":
+            state["pass"][key] = state["pass"].get(key, 0) + 1
+        else:
+            state["fail"][key] = row.get("reason") or row["outcome"]
+
+
+def limit_result(cid: str, state: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
+    lo, hi = cell_bracket(state)
+    reason = state["fail"].get(str(hi)) if hi is not None else None
+    return {
+        "id": cid,
+        "cell": state["cell"],
+        "estimate": state["estimate"],
+        "comfortable": lo,
+        "fails_at": hi,
+        "reason": reason,
+        "bound": None if hi is None else ("traffic" if reason in TRAFFIC_REASONS else "host"),
+        "confirmed": lo is not None and state["pass"].get(str(lo), 0) >= 2,
+        "done": next_probe(state, cfg) is None,
+        "probes": sum(state["pass"].values()) + len(state["fail"]),
+    }
+
+
+def limits_markdown(item: str, results: list[dict[str, Any]], cfg: dict[str, Any]) -> list[str]:
+    """Per scenario (pattern · protocol), a rate × interval grid of
+    "comfortable / fails"."""
+    lines = [
+        "",
+        f"## Traffic limits: `{item}`",
+        "",
+        "Hosts each cell comfortably supports / the size where it first fell below the "
+        f"threshold ({cfg['step']} hosts apart, the comfortable size passed twice). "
+        "`mem` marks a host limit (memory, disk…) rather than traffic; `≥ N`: it never "
+        "degraded up to N.",
+    ]
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for r in results:
+        groups.setdefault((r["cell"]["pattern"], r["cell"].get("protocol", "?")), []).append(r)
+    for (pattern, proto), rs in groups.items():
+        rates = list(dict.fromkeys(r["cell"].get("bitrate") for r in rs))
+        intervals = list(dict.fromkeys(r["cell"].get("burst_interval_ms") for r in rs))
+        at = {(r["cell"].get("bitrate"), r["cell"].get("burst_interval_ms")): r for r in rs}
+        lines += [
+            "",
+            f"**{pattern} · {proto}**",
+            "",
+            "| rate \\ interval | " + " | ".join(f"{i} ms" for i in intervals) + " |",
+            "|---|" + "---:|" * len(intervals),
+        ]
+        for rate in rates:
+            cells = []
+            for i in intervals:
+                r = at.get((rate, i))
+                if r is None:
+                    cells.append("–")
+                elif r["fails_at"] is None:
+                    cells.append(f"≥ {r['comfortable']}" if r["comfortable"] else "?")
+                else:
+                    text = f"{r['comfortable'] or '<' + str(r['fails_at'])} / {r['fails_at']}"
+                    cells.append(
+                        text
+                        + (" mem" if r["bound"] == "host" else "")
+                        + ("" if r["done"] else " …")
+                    )
+            lines.append(f"| {rate} | " + " | ".join(cells) + " |")
+    return lines
+
+
 def _num(x: float | None, digits: int = 1) -> str:
     return "–" if x is None else f"{x:.{digits}f}"
 
@@ -333,7 +536,11 @@ def outcome_text(result: dict[str, Any] | None) -> str:
     return text
 
 
-def summary_markdown(manifest: dict[str, Any], aggregates: dict[str, dict[str, Any]]) -> str:
+def summary_markdown(
+    manifest: dict[str, Any],
+    aggregates: dict[str, dict[str, Any]],
+    limits: dict[str, tuple[list[dict[str, Any]], dict[str, Any]]] | None = None,
+) -> str:
     """The suite on one page: what ran, how each run ended, and the random
     climbs folded together."""
     git = manifest.get("git") or {}
@@ -419,6 +626,8 @@ def summary_markdown(manifest: dict[str, Any], aggregates: dict[str, dict[str, A
         ]
         for t, s in sorted(agg["type_shares"].items(), key=lambda kv: -(kv[1]["mean"] or 0)):
             lines.append(f"| {t} | {_pm(s, 0.01)} % |")
+    for item, (results, cfg) in (limits or {}).items():
+        lines += limits_markdown(item, results, cfg)
     return "\n".join(lines) + "\n"
 
 
@@ -697,9 +906,21 @@ class Runner:
                     (self.out_dir / f"random-{item_id}.json").write_text(
                         json.dumps(aggregates[item_id], indent=2)
                     )
+        limits = {}
+        for r in self.manifest["runs"]:
+            if r.get("kind") == "limits" and r.get("cells"):
+                cfg = self.limit_config(r["item"])
+                results = [limit_result(cid, st, cfg) for cid, st in r["cells"].items()]
+                limits[r["item"]] = (results, cfg)
+                (self.out_dir / f"limits-{r['item']}.json").write_text(
+                    json.dumps(results, indent=2)
+                )
         path = self.out_dir / "summary.md"
-        path.write_text(summary_markdown(self.manifest, aggregates))
+        path.write_text(summary_markdown(self.manifest, aggregates, limits))
         return path
+
+    def limit_config(self, item_id: str) -> dict[str, Any]:
+        return {**LIMIT_DEFAULTS, **(self.items[item_id].get("limits") or {})}
 
     # ── preflight ──
 
@@ -914,6 +1135,9 @@ class Runner:
 
     def run_one(self, run: dict[str, Any]) -> None:
         self.log.stamp(f"{run['dir']} ({run['status']})")
+        if run.get("kind") == "limits":
+            self.run_limits(run)
+            return
         if run["status"] == "running" and run.get("benchmark_id"):
             b = self.api.call("GET", f"/benchmarks/{run['benchmark_id']}")
             if b["live"]:
@@ -931,6 +1155,120 @@ class Runner:
             self.finish(run, self.follow(run, b["id"]))
             if run["status"] != "failed" or self.stopping:
                 return
+
+    # ── traffic limits ──
+
+    def run_limits(self, run: dict[str, Any]) -> None:
+        """Search every cell's limit, a round of sizes at a time (see
+        ``next_probe``); each size is a matrix benchmark of the cells that
+        want it, after a Docker restart."""
+        item = self.items[run["item"]]
+        cfg = self.limit_config(item["id"])
+        template = deep_merge(item["_spec"], item.get("overrides") or {})
+        states: dict[str, dict[str, Any]] = run.setdefault("cells", {})
+        if not states:
+            docker = (self.api.call("GET", "/system/environment").get("engine") or {}).get(
+                "docker"
+            ) or {}
+            ncpu, mem_total = docker.get("ncpu") or 4, docker.get("mem_total") or 8e9
+            for c in matrix_cell_ids(template["matrix"]):
+                cell = {k: v for k, v in c.items() if k != "id"}
+                states[c["id"]] = {
+                    "cell": cell,
+                    "estimate": estimate_limit(cell, cfg, ncpu, mem_total),
+                    "pass": {},
+                    "fail": {},
+                    "unrun": {},
+                }
+            run["host"] = {"ncpu": ncpu, "mem_total": mem_total}
+        run.update(status="running", error=None)
+        run.setdefault("started_at", datetime.now(UTC).isoformat())
+        probes: list[dict[str, Any]] = run.setdefault("probes", [])
+        self.save()
+        for probe in probes:  # one left running or unrecorded by an interrupted runner
+            if probe["status"] in ("running", "done") and not probe.get("recorded"):
+                self.run_probe(run, probe, template, states, resume=True)
+        while not self.stopping:
+            plan = plan_round(states, cfg)
+            if not plan:
+                break
+            rnd = 1 + max((pr["round"] for pr in probes), default=0)
+            self.log(
+                f"  round {rnd}: "
+                + ", ".join(f"{size} hosts × {len(ids)} cells" for size, ids in plan.items())
+            )
+            for size, ids in plan.items():
+                if self.stopping:
+                    break
+                probe = {
+                    "key": f"{run['key']} · {size} hosts · round {rnd}",
+                    "round": rnd,
+                    "size": size,
+                    "cells": ids,
+                    "dir": f"{run['dir']}/r{rnd:02d}-{size}",
+                    "status": "pending",
+                }
+                probes.append(probe)
+                self.save()
+                self.run_probe(run, probe, template, states)
+        results = [limit_result(cid, st, cfg) for cid, st in states.items()]
+        done = sum(1 for r in results if r["done"])
+        run.update(
+            status="done" if done == len(results) else "running",
+            ended_at=datetime.now(UTC).isoformat(),
+            outcome=f"{done} of {len(results)} cells' limits found, in {len(probes)} probes",
+        )
+        self.save()
+
+    def run_probe(
+        self,
+        run: dict[str, Any],
+        probe: dict[str, Any],
+        template: dict[str, Any],
+        states: dict[str, dict[str, Any]],
+        *,
+        resume: bool = False,
+    ) -> None:
+        b = None
+        if resume and probe.get("benchmark_id"):
+            b = self.api.call("GET", f"/benchmarks/{probe['benchmark_id']}")
+            if b["live"]:
+                b = self.follow(probe, b["id"])
+            if b["status"] == "failed":
+                probe["recorded"] = True  # its cells ask for the size again
+                self.save()
+                return
+            self.finish(probe, b)
+        attempt = 0
+        while b is None or (probe["status"] == "failed" and attempt <= self.retries):
+            if self.stopping:
+                return
+            attempt += 1
+            probe["rest"] = self.fresh_host()
+            spec = deep_merge(
+                template, {"scale": [probe["size"]], "matrix": {"cells": probe["cells"]}}
+            )
+            spec["label"] = (
+                f"{self.host} · {run['item']} · {probe['size']} hosts · round {probe['round']}"
+            )
+            folder = self.out_dir / probe["dir"]
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / "spec.json").write_text(json.dumps(spec, indent=2))
+            b = self.api.call("POST", "/benchmarks", spec)
+            probe.update(status="running", benchmark_id=b["id"], attempts=attempt, error=None)
+            self.save()
+            self.log(f"  benchmark {b['id']}: {spec['label']} · {len(probe['cells'])} cells")
+            b = self.follow(probe, b["id"])
+            self.finish(probe, b)
+        if probe["status"] != "done":
+            if self.stopping:  # Ctrl-C: --resume asks for the size again
+                return
+            raise SuiteError(f"{probe['key']}: {probe.get('error') or probe['status']}")
+        record_probe(states, probe["size"], probe["cells"], b.get("result") or {})
+        probe["recorded"] = True
+        passed = sum(1 for cid in probe["cells"] if str(probe["size"]) in states[cid]["pass"])
+        self.log(f"  {probe['size']} hosts: {passed} of {len(probe['cells'])} cells passed")
+        self.save()
 
     def run(self) -> int:
         """Every pending run; the exit code (0: all done)."""
@@ -1021,6 +1359,10 @@ def cmd_run(args: argparse.Namespace) -> int:
                 extra.append(f"pool from {item['pool_from']}")
             if item.get("start_from_previous") and r["run"] > 1:
                 extra.append(f"start at {item['start_from_previous']} × the previous ceiling")
+            if item.get("limits") is not None:
+                cells = matrix_cell_ids(item["_spec"]["matrix"])
+                step = {**LIMIT_DEFAULTS, **item["limits"]}["step"]
+                extra.append(f"limit search over {len(cells)} cells, {step} hosts apart")
             print(
                 f"  {r['dir']}  {_spec_text(suite, r)}"
                 + (f"  [{'; '.join(extra)}]" if extra else "")
