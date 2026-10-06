@@ -22,9 +22,9 @@ the other. The same suites run on every machine, so their results compare:
 |---|---|---|
 | `baseline` | `baseline/idle-sweep`, `clients-servers-sweep`, `mesh-sweep` (3 repetitions each) | memory per node, deploy/destroy time, how many idle nodes fit; when 1 Mb/s per host stops getting through (TCP to two servers, UDP mesh) |
 | `realistic` | `realistic/realistic-idle-sweep` | how many nodes of a chosen mixed campus fit (a climb to over 90% memory) |
-| `random` | `random/image-census`, then 5 × `random/random-idle` | which images run here and what each costs; how many nodes of a random mix of every type fit, and how much that varies with the mix |
+| `random` | `random/image-census`, then 10 × `random/random-idle` | which images run here and what each costs; how many nodes of a random mix of every type fit, and how much that varies with the mix |
 | `traffic` | `traffic/burst-matrix` | how 100 hosts cope with bursty traffic: 5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh |
-| `full` | all of the above | about two days on a 16 GB Docker Desktop VM |
+| `full` | all of the above | two days or more on a 16 GB Docker Desktop VM |
 
 From the repository root:
 
@@ -213,7 +213,7 @@ independently of the other nodes. Networking types can be client hosts too;
 several seeds and compare the spread, since some mixes come out heavier than
 others. Draws are prefix-stable, so a climb's larger steps keep the smaller
 ones' hosts. Rows record their `composition` (nodes per type · image). The
-`random` suite runs 5 seeds, each climb starting at 70% of the previous
+`random` suite runs 10 seeds, each climb starting at 70% of the previous
 ceiling, and its summary gives each run's ceiling and their mean ± std,
 min–max, plus the share of each type at the ceiling. Some images (the
 benign client, the Wazuh agent) run their own activity, so "idle" means no
