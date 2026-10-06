@@ -130,3 +130,9 @@ def test_full_sweep_over_a_fake_host(tmp_path):
 def test_container_dirs_tolerate_missing_trees(tmp_path, missing):
     (tmp_path / ("system.slice" if missing == "docker" else "docker")).mkdir()
     assert collect.container_dirs(str(tmp_path)) == {}
+
+
+def test_the_collector_reads_dockers_disk(tmp_path):
+    total, available = collect.read_disk(str(tmp_path))
+    assert total > 0 and 0 <= available <= total
+    assert collect.read_disk(str(tmp_path / "missing")) is None

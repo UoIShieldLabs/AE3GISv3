@@ -721,6 +721,9 @@ class BenchmarkStop(BaseModel):
     max_mem_pct: float | None = Field(default=90, gt=0, le=100)
     # Share of time every task stalled on memory (PSI "full"), per sweep.
     max_psi_mem_full: float | None = Field(default=10, ge=0, le=100)
+    # Docker's disk (where every node's writable layer goes): a full disk fails
+    # container starts, so a step over this stops (a climb then retries lower).
+    max_disk_pct: float | None = Field(default=90, gt=0, le=100)
     min_delivered_ratio: float | None = Field(default=0.8, ge=0, le=1)
     max_loss_pct: float | None = Field(default=5, ge=0, le=100)
     # A step whose traffic falls short ends the sweep (else it is noted and the sweep goes on).

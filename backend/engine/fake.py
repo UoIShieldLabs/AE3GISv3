@@ -214,6 +214,7 @@ class FakeEngine:
         self.fail_helper: dict[str, str] = {}
         self.monitor_interval: float | None = None
         self.fake_mem_per_node = 10_000_000
+        self.fake_disk_per_node = 1_000_000  # what each node writes to Docker's disk
         self.oom_nodes: set[str] = set()
         self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail

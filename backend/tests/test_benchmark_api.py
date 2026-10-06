@@ -375,6 +375,26 @@ def test_a_climb_steps_down_from_a_start_too_big(client, wait_jobs, fast):
     assert fast.labs == {}
 
 
+def test_a_full_disk_stops_a_step_and_the_climb_retries_lower(client, wait_jobs, fast):
+    # The fake disk: 60 GiB, 20 GiB used at rest; 500 MB a node fills it to 90%
+    # at ~67 nodes (memory stays low).
+    fast.fake_disk_per_node = 500_000_000
+    gen = {"servers": 1, "hosts_per_subnet": 20}
+    adaptive = {"start": 100, "min_step": 10, "confirm": 0, "descend": 0.5}
+    r = _start(client, scale=[], topology={"generate": gen}, adaptive=adaptive)
+    wait_jobs()
+    done = _done(client, r.json()["id"])
+    assert done["status"] == "succeeded", done["job"]["error"]
+    first, second, *_ = done["result"]["rows"]
+    assert (first["outcome"], first["reason"]) == ("stopped", "disk")
+    assert second["scale"] == 50 and second["outcome"] == "ok"
+    assert second["disk_per_node"] == pytest.approx(500e6, rel=0.05)
+    assert 50 <= second["hold_disk_pct_max"] < 90
+    assert done["result"]["ceiling"] >= 50
+    md = client.get(f"/api/v1/benchmarks/{r.json()['id']}/report.md").text
+    assert "| Disk MB/node | Disk % max |" in md
+
+
 @pytest.mark.parametrize("confirm", [0, 1])
 def test_an_adaptive_sweep_keeps_its_last_lab(client, wait_jobs, fast, confirm):
     # The last step is the climb's last (no confirm runs) or the last confirm run.

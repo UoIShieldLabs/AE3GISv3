@@ -68,7 +68,7 @@ class Watch:
         self.reset()
 
     def reset(self) -> None:
-        self.counts = {"memory": 0, "memory_pressure": 0, "monitor_lag": 0}
+        self.counts = {"memory": 0, "memory_pressure": 0, "disk": 0, "monitor_lag": 0}
 
     def _sustained(self, key: str, over: bool) -> bool:
         self.counts[key] = self.counts[key] + 1 if over else 0
@@ -90,6 +90,10 @@ class Watch:
             "memory_pressure", psi is not None and psi > limit
         ):
             return "memory_pressure", f"memory stalls {psi:.1f}% > {limit}% for {SUSTAINED} sweeps"
+        disk = host.get("disk_used_pct")
+        limit = self.stop.get("max_disk_pct")
+        if limit is not None and self._sustained("disk", disk is not None and disk > limit):
+            return "disk", f"Docker's disk {disk:.1f}% > {limit}% for {SUSTAINED} sweeps"
         ms = host.get("sweep_ms")
         if self._sustained("monitor_lag", ms is not None and ms > self.interval_ms):
             return (
@@ -136,6 +140,7 @@ HOST_LIMITS = frozenset(
     {
         "memory",
         "memory_pressure",
+        "disk",
         "oom",
         "node_exited",
         "projected_memory",
@@ -269,6 +274,8 @@ def step_metrics(
     pre, settle, hold = windows.get("pre"), windows.get("settle"), windows.get("hold")
     mem_pre = mean(window(host, pre, "mem_used"))
     mem_settle = mean(window(host, settle, "mem_used"))
+    disk_pre = mean(window(host, pre, "disk_used"))
+    disk_settle = mean(window(host, settle, "disk_used"))
 
     def docker(span):
         rows = [r for r in host if span and span[0] <= r["t"] <= span[1]]
@@ -295,6 +302,12 @@ def step_metrics(
         "docker_mem_per_node": _r((d_settle - d_pre) / nodes, 0)
         if d_pre is not None and d_settle is not None and nodes
         else None,
+        "disk_pre": _r(disk_pre, 0),
+        "disk_settle": _r(disk_settle, 0),
+        # What the step's nodes wrote to Docker's disk (their writable layers).
+        "disk_per_node": _r((disk_settle - disk_pre) / nodes, 0)
+        if disk_pre is not None and disk_settle is not None and nodes
+        else None,
         "node_mem_mean": _r(mean(window(agg, settle, "mem_mean")), 0),
         "node_mem_p95": _r(mean(window(agg, settle, "mem_p95")), 0),
         "nodes_seen": max(window(agg, settle, "count"), default=None),
@@ -309,6 +322,7 @@ def step_metrics(
             "hold_cores_mean": _r(mean(window(host, hold, "cores_used")), 3),
             "hold_mem_max": max(mem, default=None),
             "hold_mem_pct_max": _r(max(pct, default=None), 2),
+            "hold_disk_pct_max": _r(max(window(host, hold, "disk_used_pct"), default=None), 2),
             "hold_load1_mean": _r(mean(window(host, hold, "load1")), 2),
             "hold_psi_cpu_mean": _r(mean(window(host, hold, "psi_cpu_some")), 2),
             "hold_psi_mem_max": _r(max(window(host, hold, "psi_mem_some"), default=None), 2),
@@ -389,7 +403,9 @@ def composition(kinds) -> dict[str, int]:
 CENSUS_REFERENCE = {"type": "workstation", "image": "kathara/base"}
 # Census failures that say the host ran out, not that the image is broken: its
 # nodes may still go into random mixes, a few at a time.
-CENSUS_HOST_LIMITS = frozenset({"memory", "memory_pressure", "projected_memory", "monitor_lag"})
+CENSUS_HOST_LIMITS = frozenset(
+    {"memory", "memory_pressure", "disk", "projected_memory", "monitor_lag"}
+)
 
 
 def case_label(case: dict[str, Any]) -> str:
@@ -456,6 +472,11 @@ def census_table(rows: list[dict[str, Any]], per_image: int) -> list[dict[str, A
             if ref_node is not None and delta(r) is not None
         ]
         own = [r["by_image"][case] for r in ok if case in (r.get("by_image") or {})]
+        disk = [
+            (r["disk_settle"] - r["disk_pre"]) / per_image
+            for r in ok
+            if r.get("disk_settle") is not None and r.get("disk_pre") is not None
+        ]
         out.append(
             {
                 "case": case,
@@ -478,6 +499,8 @@ def census_table(rows: list[dict[str, Any]], per_image: int) -> list[dict[str, A
                 "cpu_pct_per_node": _r(
                     mean([x["cpu_mean"] for x in own if x.get("cpu_mean") is not None]), 3
                 ),
+                # What a node of it writes to Docker's disk (its base nodes write ~nothing).
+                "disk_per_node": _r(mean(disk), 0),
             }
         )
     return out
@@ -584,6 +607,7 @@ def rest_metrics(host: list[dict[str, Any]], span: tuple[float, float]) -> dict[
         "mem_used_pct": _r(mean(window(host, span, "mem_used_pct")), 2),
         "vm_cpu_pct": _r(mean(window(host, span, "vm_cpu_pct")), 2),
         "docker_rss": _r(mean(docker), 0),
+        "disk_used_pct": _r(mean(window(host, span, "disk_used_pct")), 2),
     }
 
 
@@ -621,6 +645,7 @@ SCALE_METRICS = (
     "hold_docker_cpu_mean",
     "hold_mem_pct_max",
     "hold_psi_mem_full_max",
+    "disk_per_node",
     "delivered_ratio",
     "rtt_ms_p95",
     "jitter_ms_p95",
@@ -720,8 +745,8 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
         "",
         "| Hosts | # | Nodes | Links | Deploy s | Ready s | Destroy s | Marginal MB/node | Docker MB/node "
         "| Node cgroup MB (mean / p95) | Host CPU % | Docker cores | Host mem % max | Mem stall % max "
-        "| Delivered | Outcome |",
-        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Disk MB/node | Disk % max | Delivered | Outcome |",
+        "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for r in rows:
         delivered = r.get("delivered_ratio")
@@ -735,6 +760,7 @@ def markdown_report(result: dict[str, Any], spec: dict[str, Any], env: dict[str,
             f"| {_num((r.get('hold_docker_cpu_mean') or 0) / 100 if r.get('hold_docker_cpu_mean') is not None else None, 2)} "
             f"| {_num(r.get('hold_mem_pct_max'))} "
             f"| {_num(r.get('hold_psi_mem_full_max'), 2)} "
+            f"| {_mb(r.get('disk_per_node'))} | {_num(r.get('hold_disk_pct_max'))} "
             f"| {'–' if delivered is None else f'{delivered * 100:.1f}%'} "
             f"| {outcome} |"
         )
@@ -810,15 +836,16 @@ def _census_md(census: list[dict[str, Any]], spec: dict[str, Any]) -> list[str]:
         "passed, or only the host ran out of memory.",
         "",
         "| Case | Outcome | Deploy s | Ready s | Host MB / node (est.) | Cgroup MB / node "
-        "| CPU % / node | Usable |",
-        "|---|---|---:|---:|---:|---:|---:|---|",
+        "| CPU % / node | Disk MB / node | Usable |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for c in census:
         outcome = c["outcome"] + (f": {c['detail']}" if c.get("detail") else "")
         lines.append(
             f"| `{c['case']}` | {outcome} | {_num(c.get('deploy_s'))} | {_num(c.get('ready_s'), 2)} "
             f"| {_mb(c.get('host_mem_per_node'))} | {_mb(c.get('cgroup_mem_per_node'))} "
-            f"| {_num(c.get('cpu_pct_per_node'), 2)} | {'yes' if c['usable'] else 'no'} |"
+            f"| {_num(c.get('cpu_pct_per_node'), 2)} | {_mb(c.get('disk_per_node'))} "
+            f"| {'yes' if c['usable'] else 'no'} |"
         )
     return [*lines, ""]
 
@@ -906,7 +933,7 @@ def _rest_line(rest: dict[str, Any] | None) -> list[str]:
         f"- **At rest (before the first step):** {_mb(rest.get('mem_used'))} of "
         f"{_mb(rest.get('mem_total'))} MB used ({_num(rest.get('mem_used_pct'))}%) · "
         f"host CPU {_num(rest.get('vm_cpu_pct'))}% · Docker processes "
-        f"{_mb(rest.get('docker_rss'))} MB"
+        f"{_mb(rest.get('docker_rss'))} MB · Docker's disk {_num(rest.get('disk_used_pct'))}% used"
     ]
 
 

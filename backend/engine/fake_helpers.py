@@ -207,6 +207,10 @@ class FakeCollector(FakeHelper):
                 "cpu": list(self.cpu),
                 "mem": {"MemTotal": total, "MemFree": total - used, "MemAvailable": total - used},
                 "load": [round(len(nodes) / 100, 2)] * 3,
+                "disk": [
+                    60 * GiB,
+                    60 * GiB - 20 * GiB - eng.fake_disk_per_node * len(nodes),
+                ],
                 "psi": {
                     "cpu": {"some": [round(busy, 2), self.psi_total], "full": [0.0, 0]},
                     "memory": {"some": [0.0, 0], "full": [0.0, 0]},

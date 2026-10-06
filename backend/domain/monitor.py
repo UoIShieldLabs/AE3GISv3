@@ -40,6 +40,9 @@ HOST_FIELDS = (
     "mem_used",
     "mem_available",
     "mem_used_pct",
+    "disk_total",
+    "disk_used",
+    "disk_used_pct",
     "slab",
     "load1",
     "psi_cpu_some",
@@ -135,6 +138,8 @@ def host_rates(prev: Sweep | None, cur: Sweep) -> dict[str, Any]:
     available = mem.get("MemAvailable")
     used = total - available if total is not None and available is not None else None
     load = cur.host.get("load") or [None]
+    disk = cur.host.get("disk") or [None, None]
+    disk_used = disk[0] - disk[1] if None not in disk else None
     row: dict[str, Any] = {
         "vm_cpu_pct": None,
         "cores_used": None,
@@ -142,6 +147,11 @@ def host_rates(prev: Sweep | None, cur: Sweep) -> dict[str, Any]:
         "mem_used": used,
         "mem_available": available,
         "mem_used_pct": round(used / total * 100, 2) if used is not None and total else None,
+        "disk_total": disk[0],
+        "disk_used": disk_used,
+        "disk_used_pct": round(disk_used / disk[0] * 100, 2)
+        if disk_used is not None and disk[0]
+        else None,
         "slab": mem.get("Slab"),
         "load1": load[0],
         "psi_cpu_some": None,

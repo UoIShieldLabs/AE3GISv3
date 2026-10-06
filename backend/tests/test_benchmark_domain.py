@@ -4,7 +4,13 @@ import pytest
 
 from domain import benchmark as bm
 
-STOP = {"max_mem_pct": 90, "max_psi_mem_full": 10, "min_delivered_ratio": 0.8, "max_loss_pct": 5}
+STOP = {
+    "max_mem_pct": 90,
+    "max_psi_mem_full": 10,
+    "max_disk_pct": 90,
+    "min_delivered_ratio": 0.8,
+    "max_loss_pct": 5,
+}
 
 
 def test_watch_needs_sustained_host_thresholds_but_not_for_ooms():
@@ -16,6 +22,10 @@ def test_watch_needs_sustained_host_thresholds_but_not_for_ooms():
     assert w.check(hot, {}) is None and w.check({"mem_used_pct": 50}, {}) is None  # streak broken
     assert w.check({}, {"oom": ["h1"]}) == ("oom", "out of memory: h1")
     assert w.check({}, {"missing": ["h2"]})[0] == "node_exited"
+    w.reset()
+    full = {"disk_used_pct": 96.0}
+    assert w.check(full, {}) is None and w.check(full, {}) is None
+    assert w.check(full, {}) == ("disk", "Docker's disk 96.0% > 90% for 3 sweeps")
     lag = {"sweep_ms": 1500.0}
     for _ in range(2):
         assert w.check(lag, {}) is None

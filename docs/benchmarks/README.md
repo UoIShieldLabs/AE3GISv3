@@ -192,7 +192,9 @@ delays the start.
 
 ### Random mixes
 
-`random` draws every node instead of splitting by weight (`random/random-idle.json`):
+`random` draws every node instead of splitting by weight (`random/random-idle.json`,
+every catalog type but the SIEM: each Wazuh manager downloads and unpacks
+Wazuh's CVE feed, 2–3 GB of disk per node, which made the disk the limit):
 
 ```jsonc
 "generate": {
@@ -228,7 +230,8 @@ measured alone. `workstation · kathara/base` runs first as the reference. An
 image that can't run here (platform) or doesn't build is recorded and its
 case skipped; no outcome stops the census. Its table gives each case's
 outcome, whether it is *usable* (it passed, or only the host ran out), deploy
-and ready time, the nodes' own cgroup memory and CPU, and the host memory a
+and ready time, the nodes' own cgroup memory and CPU, what a node writes to
+Docker's disk, and the host memory a
 node of it costs (the step's change less its base nodes, at the reference's
 cost per node; rough at 5 nodes). The suite runner drops what isn't usable
 from the random pools on that host, and records what it dropped.
@@ -290,6 +293,7 @@ a 65 s cell: ~103%). Checked on a real lab: the bursts leave a node intact
 | **Docker cores** | dockerd + containerd + shims + VDE switches over `hold`, in cores |
 | **Host mem % max** | Peak host memory used over `hold` |
 | **Mem stall % max** | PSI "memory full": the share of time every task waited for memory. Anything above 0 means the host is short of memory |
+| **Disk MB/node / Disk % max** | What the step's nodes wrote to Docker's disk, per node (their writable layers), and the disk's peak use over `hold`. Most images write next to nothing; a Wazuh manager writes 2–3 GB |
 | **Delivered** | Received ÷ asked over all flows (traffic sweeps) |
 | **Ceiling** | The largest scale whose every repetition passed. *Nodes per host* is this number, for the load the spec applied |
 
@@ -309,6 +313,7 @@ a census and a matrix go on past failed cases and cells:
 |---|---|
 | `projected_memory` | By the last step's memory per node, this step would cross `max_mem_pct`. It is **not deployed**: a deploy cannot be interrupted, and running the host out of memory can take Docker down with it |
 | `memory` / `memory_pressure` | Host memory over `max_mem_pct`, or memory stalls over `max_psi_mem_full`, for 3 sweeps in a row |
+| `disk` | Docker's disk (where every node's writable layer goes) over `max_disk_pct` (default 90) for 3 sweeps: a full disk fails container starts |
 | `oom` / `node_exited` | A node lost a process to the OOM killer, or stopped running |
 | `monitor_lag` | The collector needed longer than its interval for 3 sweeps (raise `monitor.interval_s`) |
 | `deploy_failed` / `deploy_partial` / `deploy_slow` | The deploy failed, left nodes not running, or took longer than `deploy_timeout_s` |
@@ -338,6 +343,11 @@ a census and a matrix go on past failed cases and cells:
 - **Memory is returned slowly.** After a destroy the host does not get all its
   memory back at once, so each step measures against its own `pre` window;
   raise `cooldown_s` if `mem_pre` keeps climbing between steps.
+- **Watch Docker's disk.** Docker Desktop's virtual disk (Settings → Resources)
+  holds every image and every node's writable layer; build caches and old
+  builders fill it quietly (`docker system df`, `docker buildx prune`). The
+  report's *At rest* line shows how full it was, and `max_disk_pct` stops a step
+  before it fills.
 - **Large labs are slow to list.** AE3GIS waits up to `AE3GIS_DOCKER_TIMEOUT_S`
   (300 s) for a Docker API call; around a thousand containers, listing them can
   take over a minute on Docker Desktop's containerd image store.

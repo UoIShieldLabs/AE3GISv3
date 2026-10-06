@@ -1249,6 +1249,11 @@ export interface components {
              */
             deploy_timeout_s: number;
             /**
+             * Max Disk Pct
+             * @default 90
+             */
+            max_disk_pct: number | null;
+            /**
              * Max Loss Pct
              * @default 5
              */
