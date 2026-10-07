@@ -298,6 +298,14 @@ Clients → servers there has one server per 50 clients (`server_mix` with
 `per_hosts`), so its limit is the routed path through the core, not two busy
 server links; mesh stays inside each LAN.
 
+The cells are *rested*: before each one the host must be quiet (CPU under
+`quiet_cpu_pct` for three sweeps, up to `quiet_timeout_s`: a fresh deployment
+of a few hundred nodes keeps Docker busy for minutes) and then idles `gap_s`
+(60 s). Cells that want the same size share a deployment, so without the idle
+minute a run of heavy cells heats a fanless laptop and slows it down (15–60%
+more CPU for the same traffic, measured on an M4 MacBook Air): the limits
+would depend on what ran before and on the room.
+
 **Paced bursts.** `burst_interval_ms` on a pattern (or flow) makes each flow
 send `bitrate × interval` bytes at once, every interval, keeping the mean
 rate: at 1 Mb/s and 2000 ms, 250 KB every 2 s. iperf3 3.16+ ignores
