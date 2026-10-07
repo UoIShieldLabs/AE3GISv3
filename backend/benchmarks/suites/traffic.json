@@ -1,8 +1,16 @@
 {
   "name": "traffic",
-  "description": "The burst limits: for each of 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts it comfortably supports and where it starts to fail, 50 hosts apart.",
+  "description": "The burst limits: for each of 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts it comfortably supports and where it starts to fail, 50 hosts apart. Docker's kernel gets room for 16384 neighbour (ARP) entries (default 1024 for all nodes together, which cut off hosts past ~250 in mesh and ~500 clients → servers under traffic).",
   "restart_docker": true,
   "rest_wait_s": 30,
+  "sysctls": {
+    "net.ipv4.neigh.default.gc_thresh1": 4096,
+    "net.ipv4.neigh.default.gc_thresh2": 8192,
+    "net.ipv4.neigh.default.gc_thresh3": 16384,
+    "net.ipv6.neigh.default.gc_thresh1": 4096,
+    "net.ipv6.neigh.default.gc_thresh2": 8192,
+    "net.ipv6.neigh.default.gc_thresh3": 16384
+  },
   "items": [
     {
       "id": "burst-limits",

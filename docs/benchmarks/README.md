@@ -294,6 +294,18 @@ host limit stops (memory, disk…) counts as a failure marked `mem`; a cell
 that passes at `max_hosts` is reported as `≥ max_hosts`. The summary draws a
 rate × interval grid of *comfortable / fails* per pattern × protocol;
 `limits-<item>.json` holds every cell's result and the manifest every probe.
+A suite's `sysctls` are set in Docker's kernel before the first benchmark and
+again after every Docker restart (Docker Desktop resets its VM; on Linux this
+changes the host's own kernel until it reboots), from a one-shot privileged
+container on the host network, and recorded in the manifest. The `traffic`
+suite raises the neighbour (ARP) table from 1024 entries for *all* nodes
+together to 16384: under traffic, the default cut off every host past ~250 in
+mesh (~4 entries each) and ~500 clients → servers (~2 each). Those hosts
+couldn't reach their peers at all ("unable to connect": a block of dead flows,
+whatever the rate), so low-rate limits measured a kernel default instead of
+the machine. After each probe the runner counts the kernel's "neighbour table
+overflow" messages (`neigh_overflows` in the manifest; it should stay 0).
+
 Clients → servers there has one server per 50 clients (`server_mix` with
 `per_hosts`), so its limit is the routed path through the core, not two busy
 server links; mesh stays inside each LAN.

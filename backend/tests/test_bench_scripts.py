@@ -483,3 +483,52 @@ def test_a_limit_search_end_to_end(client, fake_engine, tmp_path):
     before = len(run["probes"])
     assert again.run() == 0
     assert len(json.loads((out / "manifest.json").read_text())["runs"][0]["probes"]) == before
+
+
+def test_sysctl_command_and_parse():
+    argv = suites.sysctl_argv({"net.ipv4.neigh.default.gc_thresh3": 16384})
+    assert argv[:6] == ["docker", "run", "--rm", "--privileged", "--net=host", suites.SYSCTL_IMAGE]
+    assert "sysctl -q -w net.ipv4.neigh.default.gc_thresh3=16384" in argv[-1]
+    out = "net.ipv4.neigh.default.gc_thresh3 = 16384\nnoise\n"
+    assert suites.parse_sysctls(out) == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
+
+
+def test_suite_sysctls_are_set_after_every_restart(client, fake_engine, tmp_path):
+    fake_engine.monitor_interval = 0.02
+    _write(tmp_path / "specs", {"sweep.json": {**FAST, "scale": [2]}})
+    suite = _suite(
+        tmp_path,
+        [{"id": "a", "spec": "sweep.json"}, {"id": "b", "spec": "sweep.json"}],
+        rest_wait_s=0,
+        sysctls={"net.ipv4.neigh.default.gc_thresh3": 16384},
+    )
+    calls = []
+
+    def tune(wanted):
+        calls.append(dict(wanted))
+        return {k: str(v) for k, v in wanted.items()}
+
+    class Lines(suites.Log):
+        def __call__(self, text: str = "") -> None:
+            pass
+
+    runner = suites.Runner(
+        suite,
+        ClientApi(client),
+        tmp_path / "out",
+        host="m4",
+        log=Lines(None),
+        poll=0.05,
+        allow_dirty=True,
+        sleep=lambda s: None,
+        prebuild=False,
+        restart=lambda: None,
+        tune=tune,
+        kernel_log=lambda: 0,
+    )
+    runner.preflight()
+    assert runner.run() == 0
+    assert len(calls) == 3  # preflight, then after each of the 2 restarts
+    manifest = json.loads((tmp_path / "out" / "manifest.json").read_text())
+    assert manifest["sysctls"] == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
+    assert "gc_thresh3=16384" in (tmp_path / "out" / "summary.md").read_text()

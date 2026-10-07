@@ -550,6 +550,14 @@ def summary_markdown(
         f"- **Suite:** {manifest.get('description') or ''} (sha `{(manifest.get('suite_sha') or '')[:12]}`)",
         f"- **AE3GIS:** `{(git.get('commit') or '?')[:12]}`{' (modified)' if git.get('dirty') else ''}",
         f"- **Docker restart before each benchmark:** {manifest.get('restart') or 'no'}",
+        *(
+            [
+                "- **Kernel (set after every restart):** "
+                + ", ".join(f"`{k}={v}`" for k, v in manifest["sysctls"].items())
+            ]
+            if manifest.get("sysctls")
+            else []
+        ),
         f"- **When:** {(manifest.get('started_at') or '')[:19]} → "
         f"{(manifest.get('ended_at') or 'still running')[:19]} UTC",
     ]
@@ -714,6 +722,70 @@ def restart_docker(plan: list[list[str]], log: Log, timeout: float = 900) -> Non
         time.sleep(5)
 
 
+# A suite's ``sysctls`` are set in Docker's kernel (on Docker Desktop: the VM's,
+# reset whenever Docker restarts, so they are set again after every restart;
+# on Linux: the host's own, until it reboots) from a one-shot privileged
+# container on the host network. E.g. the neighbour (ARP) table: 1024 entries
+# for all nodes together by default, which under traffic cuts off every host
+# past ~250 (mesh) or ~500 (clients -> servers).
+SYSCTL_IMAGE = "alpine:3.22"
+
+
+def sysctl_argv(sysctls: dict[str, Any]) -> list[str]:
+    """The docker command that sets ``sysctls`` and prints them back."""
+    names = " ".join(shlex.quote(k) for k in sysctls)
+    sets = " ".join(shlex.quote(f"{k}={v}") for k, v in sysctls.items())
+    return [
+        "docker",
+        "run",
+        "--rm",
+        "--privileged",
+        "--net=host",
+        SYSCTL_IMAGE,
+        "sh",
+        "-c",
+        f"sysctl -q -w {sets} && sysctl {names}",
+    ]
+
+
+def parse_sysctls(text: str) -> dict[str, str]:
+    out = {}
+    for line in text.splitlines():
+        if " = " in line:
+            k, v = line.split(" = ", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def set_sysctls(sysctls: dict[str, Any]) -> dict[str, str]:
+    """Set them in Docker's kernel; what the kernel now reports."""
+    done = _run(sysctl_argv(sysctls), capture_output=True, text=True, timeout=300)
+    if done.returncode != 0:
+        raise SuiteError(f"Could not set {', '.join(sysctls)}: {done.stderr.strip()[:300]}")
+    got = parse_sysctls(done.stdout)
+    wrong = {k: v for k, v in sysctls.items() if got.get(k) != str(v)}
+    if wrong:
+        raise SuiteError(f"The kernel kept other values for {', '.join(wrong)}: {got}")
+    return got
+
+
+def neigh_overflows() -> int | None:
+    """How many "neighbour table overflow" messages Docker's kernel logged
+    (since it booted: on Docker Desktop, since the last restart)."""
+    try:
+        done = _run(
+            ["docker", "run", "--rm", "--privileged", SYSCTL_IMAGE, "dmesg"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.count("neighbour table overflow")
+
+
 def keep_awake_cmd(system: str, pid: int) -> list[str] | None:
     if system == "Darwin":
         return ["caffeinate", "-dimsu", "-w", str(pid)]
@@ -822,6 +894,8 @@ class Runner:
         host: str,
         log: Log,
         restart: Callable[[], None] | None = None,
+        tune: Callable[[dict[str, Any]], dict[str, str]] | None = None,
+        kernel_log: Callable[[], int | None] | None = None,
         restart_text: str | None = None,
         compose: Callable[[bool], None] | None = None,
         sleep: Callable[[float], None] = time.sleep,
@@ -835,6 +909,7 @@ class Runner:
     ) -> None:
         self.suite, self.api, self.out_dir, self.host, self.log = suite, api, out_dir, host, log
         self.restart, self.compose, self.sleep, self.poll = restart, compose, sleep, poll
+        self.tune, self.kernel_log = tune, kernel_log
         self.retries, self.retry_failed, self.stop_on_failure = (
             retries,
             retry_failed,
@@ -971,9 +1046,21 @@ class Runner:
             )
         else:
             self.check_labs()
+        self.apply_sysctls()
         if self.do_prebuild:
             self.prebuild()
         self.save()
+
+    def apply_sysctls(self) -> dict[str, str] | None:
+        """Set the suite's sysctls in Docker's kernel (again after every
+        Docker restart); what the kernel reports, also in the manifest."""
+        wanted = self.suite.get("sysctls")
+        if not wanted or self.tune is None:
+            return None
+        got = self.tune(wanted)
+        self.manifest["sysctls"] = got
+        self.log("  kernel: " + ", ".join(f"{k}={v}" for k, v in got.items()))
+        return got
 
     def check_labs(self) -> None:
         labs = [lab for lab in self.api.call("GET", "/system/labs")["labs"] if lab["running"]]
@@ -1037,6 +1124,7 @@ class Runner:
         let it settle, and record it at rest."""
         if self.restart is not None:
             self.restart()
+            self.apply_sysctls()
             if self.compose is not None:
                 self.compose(False)
             wait_healthy(self.api, sleep=self.sleep)
@@ -1264,6 +1352,10 @@ class Runner:
             if self.stopping:  # Ctrl-C: --resume asks for the size again
                 return
             raise SuiteError(f"{probe['key']}: {probe.get('error') or probe['status']}")
+        if self.kernel_log is not None and self.suite.get("sysctls"):
+            probe["neigh_overflows"] = self.kernel_log()
+            if probe["neigh_overflows"]:
+                self.log(f"  warning: {probe['neigh_overflows']} neighbour table overflows")
         record_probe(states, probe["size"], probe["cells"], b.get("result") or {})
         probe["recorded"] = True
         passed = sum(1 for cid in probe["cells"] if str(probe["size"]) in states[cid]["pass"])
@@ -1384,6 +1476,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         host=host,
         log=log,
         restart=(lambda: restart_docker(plan, log)) if plan else None,
+        tune=set_sysctls,
+        kernel_log=neigh_overflows,
         restart_text=" → ".join(" ".join(s) for s in plan) if plan else None,
         compose=None if args.no_compose else (lambda recreate: compose_up(env, recreate=recreate)),
         poll=args.poll,
