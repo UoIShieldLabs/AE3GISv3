@@ -1,3 +1,4 @@
+import pytest
 import sqlalchemy as sa
 from alembic import command
 
@@ -84,3 +85,30 @@ def test_0004_adds_a_result_column_and_keeps_the_cascade(tmp_path):
         c.execute(sa.text("DELETE FROM topologies WHERE id = 't1'"))
         c.commit()
         assert _rows(c, "SELECT id FROM jobs") == []
+
+
+def test_0005_adds_the_registries_table(tmp_path):
+    url = f"sqlite:///{tmp_path / 'm.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0004_job_result")
+    command.upgrade(cfg, "head")
+    engine = sa.create_engine(url)
+    columns = {c["name"] for c in sa.inspect(engine).get_columns("registries")}
+    assert columns == {"id", "kind", "namespace", "url", "created_at", "synced_at", "snapshot"}
+    with engine.begin() as c:
+        c.execute(
+            sa.text(
+                "INSERT INTO registries (id, namespace, url, created_at) "
+                "VALUES ('r1', 'lab', 'lab', CURRENT_TIMESTAMP)"
+            )
+        )
+        with pytest.raises(sa.exc.IntegrityError):
+            with c.begin_nested():
+                c.execute(
+                    sa.text(
+                        "INSERT INTO registries (id, namespace, url, created_at) "
+                        "VALUES ('r2', 'lab', 'lab', CURRENT_TIMESTAMP)"
+                    )
+                )
+        assert _rows(c, "SELECT id, kind FROM registries") == [("r1", "dockerhub")]
+    command.upgrade(cfg, "head")  # a no-op

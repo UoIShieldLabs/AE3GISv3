@@ -5,12 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from api.deps import get_db, get_images
+from api.deps import get_db, get_images, get_registries
 from api.schemas import BuildRequest, ImagesReport, JobOut
 from auth import require_any_auth, require_instructor
 from domain.topology import images_in
 from services import jobs, topologies
 from services.images import ImageManager
+from services.registries import RegistryManager
 
 router = APIRouter(prefix="/api/v1", tags=["images"])
 
@@ -22,9 +23,10 @@ async def list_images(
     ),
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
+    registries: RegistryManager = Depends(get_registries),
     _=Depends(require_any_auth),
 ):
-    """Host build support, image sources, and the status of each image.
+    """Host build support, image sources and registries, and the status of each image.
 
     Without ``topology_id``: every image the catalog describes.
     """
@@ -32,7 +34,9 @@ async def list_images(
         refs = images_in(topologies.get_or_404(db, topology_id).data or {})
     else:
         refs = images.catalog_refs()
-    return await images.report(refs)
+    report = await images.report(refs)
+    report["registries"] = registries.rows()
+    return report
 
 
 @router.post("/images/builds", response_model=list[JobOut], status_code=202)

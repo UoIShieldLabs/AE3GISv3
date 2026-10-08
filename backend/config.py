@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     max_concurrent_builds: int = 2
     source_overrides: dict[str, Path] = {}
 
+    # Docker Hub registries (images following docs/image-standard.md). Reading
+    # an image's labels counts as a Docker Hub pull (anonymous: 100/hour per
+    # IP); a sync stops reading while this many pulls are left, so deploys
+    # can still pull, and leaves the rest for the next sync.
+    registry_pull_reserve: int = 10
+    # Seconds one Docker Hub request may take.
+    registry_timeout_s: float = 20
+
     # Captures and traffic runs keep their output (pcaps, time series, run.json)
     # under data_dir/artifacts/<job id>/, deleted after the retention period.
     artifact_retention_days: float = 30

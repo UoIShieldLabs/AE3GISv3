@@ -23,6 +23,7 @@ from api import (
     jobs,
     monitors,
     presets,
+    registries,
     system,
     topologies,
     traffic,
@@ -43,10 +44,11 @@ from services.images import ImageManager
 from services.joblogs import JobLogStore
 from services.jobs import JobRunner, recover_stale_jobs
 from services.live import LiveHub
+from services.registries import RegistryManager
 from services.sources import Sources
 
 # Job kinds cancelled (rather than awaited) at shutdown.
-SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source", "benchmark")
+SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source", "sync_registry", "benchmark")
 # Open-ended job kinds stopped at shutdown: they keep what they recorded, and a
 # restart (or a dev reload) does not wait on a capture that runs for hours.
 SHUTDOWN_STOP_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor")
@@ -79,6 +81,11 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
     image_manager.register()
     runner.images = image_manager
+    registry_manager = RegistryManager(settings, runner)
+    registry_manager.register()
+    # The catalog in effect: built-in + what each registry's last sync loaded
+    # (from the DB only; syncing is always explicit).
+    registry_manager.apply_overlay()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -124,6 +131,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     app.state.engine = engine
     app.state.runner = runner
     app.state.images = image_manager
+    app.state.registries = registry_manager
     app.state.artifacts = artifacts
     app.state.live = runner.live
 
@@ -144,6 +152,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         monitors.router,
         benchmarks.router,
         images.router,
+        registries.router,
         system.router,
         catalog.router,
         presets.router,

@@ -78,7 +78,7 @@ class JobOut(BaseModel):
     # Set for topology jobs (deploy/destroy); None for image builds and syncs.
     topology_id: str | None = None
     # What the job serialises on: topology:<id> | image:<ref> | source:<name> |
-    # capture:<topology>:<node>:<interface> | traffic:<topology>.
+    # registry:<id> | capture:<topology>:<node>:<interface> | traffic:<topology>.
     subject: str | None = None
     kind: str
     status: str
@@ -145,9 +145,58 @@ class ImageStatusOut(BaseModel):
     last_job: JobOut | None = None
 
 
+class RegistryImageOut(BaseModel):
+    """An image a registry contributes to the catalog."""
+
+    ref: str
+    repo: str
+    tag: str
+    # The node type it is a variant of.
+    type: str
+    name: str
+    platforms: list[str] = Field(default_factory=list)
+    # True if the registry defined the type (False: it joined an existing one).
+    new_type: bool
+
+
+class RegistryRejectedOut(BaseModel):
+    """A repo marked for AE3GIS whose image does not follow the standard."""
+
+    repo: str
+    tag: str
+    reasons: list[str]
+
+
+class RegistryOut(BaseModel):
+    id: str
+    namespace: str
+    url: str
+    hub_url: str
+    created_at: datetime
+    synced_at: datetime | None = None
+    # Repositories in the namespace at the last sync, and those without the
+    # [ae3gis] marker (never inspected).
+    repositories: int = 0
+    skipped: int = 0
+    # Repos whose labels were not read last time (Docker Hub's pull limit).
+    pending: list[str] = Field(default_factory=list)
+    pulls_remaining: int | None = None
+    loaded: list[RegistryImageOut] = Field(default_factory=list)
+    rejected: list[RegistryRejectedOut] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    active_job: JobOut | None = None
+    last_job: JobOut | None = None
+
+
+class RegistryCreate(BaseModel):
+    # A Docker Hub URL (https://hub.docker.com/u/<namespace>) or a namespace.
+    url: str = Field(min_length=1, max_length=512)
+
+
 class ImagesReport(BaseModel):
     host: HostBuildOut
     sources: list[SourceOut]
+    registries: list[RegistryOut] = Field(default_factory=list)
     images: list[ImageStatusOut]
 
 

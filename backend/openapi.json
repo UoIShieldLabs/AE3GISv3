@@ -2127,6 +2127,13 @@
             "title": "Images",
             "type": "array"
           },
+          "registries": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryOut"
+            },
+            "title": "Registries",
+            "type": "array"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceOut"
@@ -3322,6 +3329,17 @@
             "title": "Label",
             "type": "string"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "purdueLevel": {
             "anyOf": [
               {
@@ -3667,6 +3685,209 @@
         "title": "ReconcileResult",
         "type": "object"
       },
+      "RegistryCreate": {
+        "properties": {
+          "url": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "RegistryCreate",
+        "type": "object"
+      },
+      "RegistryImageOut": {
+        "description": "An image a registry contributes to the catalog.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "new_type": {
+            "title": "New Type",
+            "type": "boolean"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "repo",
+          "tag",
+          "type",
+          "name",
+          "new_type"
+        ],
+        "title": "RegistryImageOut",
+        "type": "object"
+      },
+      "RegistryOut": {
+        "properties": {
+          "active_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hub_url": {
+            "title": "Hub Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loaded": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryImageOut"
+            },
+            "title": "Loaded",
+            "type": "array"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "pending": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pending",
+            "type": "array"
+          },
+          "pulls_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pulls Remaining"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryRejectedOut"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "repositories": {
+            "default": 0,
+            "title": "Repositories",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "namespace",
+          "url",
+          "hub_url",
+          "created_at"
+        ],
+        "title": "RegistryOut",
+        "type": "object"
+      },
+      "RegistryRejectedOut": {
+        "description": "A repo marked for AE3GIS whose image does not follow the standard.",
+        "properties": {
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo",
+          "tag",
+          "reasons"
+        ],
+        "title": "RegistryRejectedOut",
+        "type": "object"
+      },
       "RegistrySource": {
         "description": "Pull the image by ref from a registry (the default).",
         "properties": {
@@ -3675,6 +3896,17 @@
             "default": "registry",
             "title": "Kind",
             "type": "string"
+          },
+          "registry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registry"
           }
         },
         "title": "RegistrySource",
@@ -5059,7 +5291,7 @@
     },
     "/api/v1/images": {
       "get": {
-        "description": "Host build support, image sources, and the status of each image.\n\nWithout ``topology_id``: every image the catalog describes.",
+        "description": "Host build support, image sources and registries, and the status of each image.\n\nWithout ``topology_id``: every image the catalog describes.",
         "operationId": "list_images_api_v1_images_get",
         "parameters": [
           {
@@ -5931,6 +6163,229 @@
         "summary": "Load Preset",
         "tags": [
           "presets"
+        ]
+      }
+    },
+    "/api/v1/registries": {
+      "get": {
+        "description": "Every registry, with what its last sync loaded, rejected and skipped.",
+        "operationId": "list_registries_api_v1_registries_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegistryOut"
+                  },
+                  "title": "Response List Registries Api V1 Registries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Registries",
+        "tags": [
+          "registries"
+        ]
+      },
+      "post": {
+        "description": "Add a Docker Hub namespace (by URL or name) and start its first sync.",
+        "operationId": "add_registry_api_v1_registries_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Registry",
+        "tags": [
+          "registries"
+        ]
+      }
+    },
+    "/api/v1/registries/{registry_id}": {
+      "delete": {
+        "description": "Remove a registry: its images and types leave the catalog.",
+        "operationId": "remove_registry_api_v1_registries__registry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registry_id",
+            "required": true,
+            "schema": {
+              "title": "Registry Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Registry",
+        "tags": [
+          "registries"
+        ]
+      }
+    },
+    "/api/v1/registries/{registry_id}/sync": {
+      "post": {
+        "description": "Re-read the namespace (a sync already running returns its job).",
+        "operationId": "sync_registry_api_v1_registries__registry_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registry_id",
+            "required": true,
+            "schema": {
+              "title": "Registry Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Registry",
+        "tags": [
+          "registries"
         ]
       }
     },
