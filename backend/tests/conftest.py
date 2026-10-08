@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import catalog  # noqa: E402
 from config import Settings  # noqa: E402
 from engine.fake import FakeEngine  # noqa: E402
 from main import create_app  # noqa: E402
@@ -59,6 +60,14 @@ TWO_SUBNETS = {
     ],
     "siteConnections": [],
 }
+
+
+@pytest.fixture(autouse=True)
+def _builtin_catalog():
+    """Registries merge into a process-wide catalog: each test starts and ends built-in."""
+    catalog.set_registry_overlay(None)
+    yield
+    catalog.set_registry_overlay(None)
 
 
 def make_settings(tmp_path: Path, **overrides) -> Settings:

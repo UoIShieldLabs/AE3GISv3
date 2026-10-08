@@ -31,6 +31,20 @@ def _relative_path(value: str, what: str) -> str:
     return value
 
 
+def check_shell(v: str | None) -> str | None:
+    """A shell for boot commands: an absolute path (also used for image labels)."""
+    if v is not None and not re.fullmatch(r"/[A-Za-z0-9_./-]+", v):
+        raise ValueError(f"shell must be an absolute path: {v!r}")
+    return v
+
+
+def check_bridge(v: str | None) -> str | None:
+    """A bridge an image builds itself: an interface name."""
+    if v is not None and not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", v):
+        raise ValueError(f"ownBridge must be an interface name: {v!r}")
+    return v
+
+
 class CategorySpec(BaseModel):
     id: str
     label: str
@@ -78,6 +92,9 @@ class RegistrySource(BaseModel):
     """Pull the image by ref from a registry (the default)."""
 
     kind: Literal["registry"] = "registry"
+    # The configured registry (a Docker Hub namespace) the image was loaded
+    # from; None for images the built-in catalog lists.
+    registry: str | None = None
 
 
 ImageSource = Annotated[BuildSource | RegistrySource, Field(discriminator="kind")]
@@ -103,16 +120,12 @@ class ImageSpec(BaseModel):
     @field_validator("shell")
     @classmethod
     def _shell_path(cls, v: str | None) -> str | None:
-        if v is not None and not re.fullmatch(r"/[A-Za-z0-9_./-]+", v):
-            raise ValueError(f"shell must be an absolute path: {v!r}")
-        return v
+        return check_shell(v)
 
     @field_validator("ownBridge")
     @classmethod
     def _bridge_name(cls, v: str | None) -> str | None:
-        if v is not None and not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", v):
-            raise ValueError(f"ownBridge must be an interface name: {v!r}")
-        return v
+        return check_bridge(v)
 
     @field_validator("env")
     @classmethod
@@ -143,6 +156,9 @@ class NodeTypeSpec(BaseModel):
     description: str = ""
     webUiPort: int | None = None
     purdueLevel: float | None = None
+    # The registry (a Docker Hub namespace) that defined this type; None for
+    # built-in types.
+    origin: str | None = None
 
     @model_validator(mode="after")
     def _default_is_a_variant(self) -> NodeTypeSpec:

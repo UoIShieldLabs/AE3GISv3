@@ -107,7 +107,9 @@ def _gen_params(spec: dict[str, Any], hosts: int) -> GeneratorParams:
 
 
 def _hidden_images() -> set[str]:
-    model = catalog.load_model()
+    # A census covers the built-in catalog only: its results must not depend
+    # on which registries an instance has added.
+    model = catalog.builtin_model()
     return {ref for ref, img in model.images.items() if img.stability == "hidden"}
 
 
@@ -181,7 +183,7 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
             census = dict(spec["census"])
             try:
                 census["cases"] = bm.census_cases(
-                    catalog.node_types(), _hidden_images(), census.get("cases")
+                    catalog.builtin_node_types(), _hidden_images(), census.get("cases")
                 )
                 first_case = _census_params(spec, census["cases"][0])
                 check(first_case)
