@@ -20,7 +20,7 @@ Developer onboarding and the full architecture rationale live in
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
-./bench.sh <suite> --host <name>             # a benchmark suite on this host (./bench.sh list)
+./bench.sh check && ./bench.sh <suite> --host <name>   # benchmark suites on this host: docs/benchmarks/RUNNING.md
 cd backend && python -m pytest && ruff check . && ruff format --check .   # backend checks (CI)
 cd backend && python -m uvicorn main:create_app --factory --reload --port 8000
 cd backend && python scripts/export_openapi.py   # regenerate openapi.json after API changes
@@ -29,6 +29,10 @@ cd frontend && npm run api:types                 # regenerate src/api/schema.d.t
 
 Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
 `privileged`, no host netns). Push to `main` → SSH deploy via `.github/workflows/deploy.yml`.
+
+**Asked to run the benchmarks on a machine?** Follow `docs/benchmarks/RUNNING.md`
+(the `random` idle and `traffic` suites), including its section for Claude:
+`./bench.sh check` first, and ask before fixing anything destructive.
 
 ## Architecture
 

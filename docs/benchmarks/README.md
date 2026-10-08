@@ -11,7 +11,9 @@ alone or together:
 | **Benchmark** | Generated topologies deployed, checked, loaded and measured step by step: sweeps of growing size, climbs to the host's limit, image censuses, traffic matrices | Headless: `./bench.sh` (a suite per host) or `backend/scripts/bench.py` (one spec) · results on the Library page (*Benchmarks*) |
 
 This page is about benchmarks: how to run them on a machine, what the numbers
-mean, and how to get numbers you can trust and compare between machines.
+mean, and how to get numbers you can trust and compare between machines. To
+run the cross-machine suites on a new machine, follow the checklist in
+[RUNNING.md](RUNNING.md).
 
 ## Run the suites on a host
 
