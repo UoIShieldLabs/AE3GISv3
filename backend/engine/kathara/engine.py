@@ -363,12 +363,14 @@ class KatharaEngine:
     async def build_image(self, spec: BuildSpec, on_line: Progress) -> None:
         await docker_build(spec, on_line)
 
-    async def pull_image(self, image: str, on_progress: Progress) -> None:
+    async def pull_image(
+        self, image: str, on_progress: Progress, platform: str | None = None
+    ) -> None:
         def _pull() -> None:
             repo, _, tag = image.partition(":")
             last = ""
             for line in self._docker().api.pull(
-                repo, tag=tag or "latest", stream=True, decode=True
+                repo, tag=tag or "latest", stream=True, decode=True, platform=platform
             ):
                 status = line.get("status", "")
                 if status and status != last and not status.startswith("Pulling fs layer"):

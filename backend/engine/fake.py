@@ -194,6 +194,8 @@ class FakeEngine:
         self.crash_nodes: dict[str, str] = {}
         self.present_images: set[str] | None = None  # None = everything present
         self.pulled: list[str] = []
+        # The platform each pull asked for (None: the host's).
+        self.pull_platforms: dict[str, str | None] = {}
         self.pull_gate: asyncio.Event | None = None
         self.built: dict[str, ImageInfo] = {}  # normalized ref -> image
         self.builds: list[BuildSpec] = []
@@ -345,10 +347,13 @@ class FakeEngine:
             arch=self.platform.split("/")[-1],
         )
 
-    async def pull_image(self, image: str, on_progress: Progress) -> None:
+    async def pull_image(
+        self, image: str, on_progress: Progress, platform: str | None = None
+    ) -> None:
         if self.pull_gate is not None:
             await self.pull_gate.wait()
         self.pulled.append(image)
+        self.pull_platforms[image] = platform
         on_progress(f"{image}: Pull complete")
         if self.present_images is not None:
             self.present_images.add(image)
