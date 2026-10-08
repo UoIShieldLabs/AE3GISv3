@@ -68,13 +68,14 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `engine_state` is saved before the engine runs so failures clean up and leave
   `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
   **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
-  `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
+  `registry:<id>`, `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
   `benchmark` — at a time; steps on the
   job row mirrored to events; per-job log files via `joblogs`; `wait`/`cancel`,
   and `request_stop` for `stoppable` kinds (winds down, keeps output, ends
   `succeeded`); `set_result` → `Job.result`; bulk output in `artifacts`
   (`data/artifacts/<job>/`)), `images` + `sources` (node images built from
-  Dockerfiles, see below), `capture` (sidecar job), `monitor` (collector
+  Dockerfiles, see below), `registries` + `dockerhub` (Docker Hub namespaces
+  whose standard images join the catalog, see below), `capture` (sidecar job), `monitor` (collector
   helper → `MonitorSession`: CSVs + live sweeps; benchmarks embed one),
   `traffic` (+ `traffic_generators`; flows/patterns through the netns driver),
   `netns_driver` (the driver helper: iperf3 runs, readiness pings),
@@ -158,6 +159,31 @@ engine configures a node; unknown types default to `host`. Adding a node type is
 a single `node_types.json` edit (the palette, add menus, inspector type picker
 and Purdue view all read the catalog). A container with no `image` follows its
 type's default.
+
+The catalog *in effect* is that file merged with the images loaded from Docker
+Hub registries (`catalog/registry.py`, installed process-wide with
+`catalog.set_registry_overlay`, rebuilt from the DB at startup and after every
+registry add/remove/sync). All the catalog readers see the merge;
+`builtin_model()` does not (benchmark censuses use it). Registry images carry
+`source.registry`, types they define `origin`.
+
+### Node images from Docker Hub registries
+A registry is a Docker Hub namespace the user adds (by URL, `registries` table,
+per instance, never in git). Images follow **`docs/image-standard.md`**: the
+repo's short description starts with `[ae3gis]` (other repos are never
+inspected) and the image carries `io.ae3gis.schema` + `io.ae3gis.type` labels
+(parsed by `domain/image_labels.py`; a built-in type id joins that type as a
+variant, a new id defines a type from its `io.ae3gis.default` image's
+`io.ae3gis.type.*` labels; `shell`/`own-bridge` as in the catalog). A sync job
+(`list → inspect → apply`) lists repos/tags through the Hub API (free), reads
+labels through the registry (one Docker Hub pull per image: anonymous limit
+100/h per IP), reuses labels while a tag's digest is unchanged, and stops while
+`AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are `pending`). The
+registry's snapshot is stored and merged without network; rejected images keep
+their reasons for the UI. Deploys pull an image not published for the host's
+platform as amd64 (`pull_image(platform=)`) with a `deploy.images_emulated`
+warning. Tests use `tests/hubfake.py` (an in-memory Hub behind an httpx
+`MockTransport`).
 
 ### Node images built from Dockerfiles
 Images with a `build` source (refs under `ae3gis.local/`, which fails closed
@@ -284,8 +310,10 @@ tables record every long operation.
   results in `backend/benchmark-results/<host>/`) or `backend/scripts/bench.py`
   (one spec from `backend/benchmarks/specs/<category>/`), with
   `docker-compose.bench.yml` (no `--reload`: a reload kills a benchmark).
-- `images?topology_id=` (build support, sources, per-image status),
+- `images?topology_id=` (build support, sources, registries, per-image status),
   `images/builds` (202 + build jobs), `sources/{name}/sync` (202 + a job).
+- `registries` — list, add `{url}` (201, starts a sync), `{id}/sync` (202 + a
+  job), `DELETE {id}` (409 `registry_busy` while syncing).
 - `system` — `health`, `labs` (reconcile report), `environment`, `reconcile`,
   `labs/{hash}/purge`.
 - `catalog`, `presets` as before.

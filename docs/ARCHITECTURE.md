@@ -237,6 +237,16 @@ palette, add menus, inspector type picker, and Purdue view automatically (they
 all read one grouping, `frontend/src/catalog/tree.ts`). Only a genuinely new
 glyph needs code, in `frontend/src/catalog/icons.tsx`.
 
+**The catalog in effect = the file + registries.** Images loaded from Docker
+Hub namespaces (§5.6, "Docker Hub registries") are merged over the built-in
+catalog (`catalog/registry.py`) and installed with
+`catalog.set_registry_overlay`; every reader (`load_model`, `role_for`,
+`image_shell`, the served `/catalog`…) then sees them. It is process-wide, like
+the file cache, and rebuilt from the DB at startup. `builtin_model()` ignores
+it: benchmark censuses use it, so their results do not depend on which
+registries an instance added. Registry images carry `source.registry` and the
+types they define `origin` (the namespace); `node_types.json` never changes.
+
 ### 4.4 (Bonus) The API contract is generated
 
 `backend/openapi.json` is generated from the live app by
@@ -294,6 +304,7 @@ rather than matching message text.
 | `GET /jobs/{id}/log?offset=`, `POST /jobs/{id}/cancel` | A job's log (by byte offset), cancellation |
 | `GET /images?topology_id=` | Build support, image sources, and each image's status |
 | `POST /images/builds`, `POST /sources/{name}/sync` | 202 + build jobs / a sync job |
+| `GET/POST /registries`, `POST /registries/{id}/sync`, `DELETE /registries/{id}` | Docker Hub namespaces whose images join the catalog (§5.6) |
 | `GET /topologies/{id}/context` | Record + diagnostics + plan + runtime + events |
 | `GET /topologies/{id}/interfaces` | The deployed lab's interfaces and links (what captures can target) |
 | `POST /jobs/{id}/stop`, `GET /jobs/{id}/artifacts[/{name}]` | Stop an open-ended job (keeps its output); the files a job produced |
@@ -442,6 +453,35 @@ Images with a `build` source in the catalog are built by AE3GIS
   over the canvas lists images the topology still needs, with *Build now*; the
   **Images** sheet (library, *More*, ⌘K) manages sources, builds and logs; the
   deploy status badge opens the job's steps and logs, build logs included.
+
+#### Docker Hub registries
+
+Prebuilt images can come from a Docker Hub namespace instead
+(`services/registries.py`, `services/dockerhub.py`). Image authors follow
+[the AE3GIS image standard](image-standard.md): the repo's short description
+starts with `[ae3gis]`, the image says in `io.ae3gis.*` labels which node type
+it is a variant of (a built-in one, which it joins, or a new one it defines)
+and how to run it (`shell`, `own-bridge`, a new type's role, color…).
+
+- **Registries** are rows in the `registries` table (per instance, added from
+  the Images sheet by URL). Each keeps a **snapshot** of its last successful
+  sync: per marked repo the tag read, its digest, platforms and labels.
+- A **sync** is a job (subject `registry:<id>`; steps list → inspect → apply).
+  Listing repos and tags uses the Hub API, which does not count as pulls;
+  reading labels (manifest + config blob) costs one pull per image, so labels
+  are reused while a tag's digest is unchanged, and the sync stops reading
+  while `AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are *pending*).
+- **Merging** happens at startup and after every add, remove or sync, from the
+  DB only (`catalog/registry.py`, labels parsed by `domain/image_labels.py`),
+  and yields a report per registry: loaded, rejected (with reasons), warnings.
+  A failed sync keeps the previous snapshot. Nothing syncs on its own.
+- **Deploys** pull registry images like any other. An image not published for
+  the host's platform is pulled for amd64 (or its first platform) with a
+  `deploy.images_emulated` warning: buildx pushes an index even for one
+  platform, and `docker pull` on arm64 rejects an index without arm64.
+- **Removing** a registry drops its images and types from the catalog; nodes
+  keep their `type`/`image`, so a removed new type deploys as a plain host
+  (`type.unknown` warns).
 
 ---
 
@@ -802,6 +842,12 @@ Add the Dockerfile to a source repository (e.g. a folder in
 `node_types.json` (`ae3gis.local/<name>`, a `build` source naming the folder,
 `platforms` if it is not multi-arch) and list it in a type's `images`. Start it
 as `experimental` until it has been built and deployed once.
+
+### Publish node images on Docker Hub
+Follow [the image standard](image-standard.md): mark the repo's description
+with `[ae3gis]`, label the image (`io.ae3gis.schema`, `io.ae3gis.type`, and a new
+type's name and role), push, then add the namespace in **Images → Add registry**
+(or press *Sync* on it). Rejected images list their reasons there.
 
 ### Add an API endpoint
 Route in `api/`, logic in `services/`, pure helpers in `domain/`. Then:
