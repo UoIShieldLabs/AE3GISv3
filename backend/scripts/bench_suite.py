@@ -84,7 +84,7 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
     path = suite_file(name)
     if not path.is_file():
         raise SuiteError(f"No suite {name!r} ({path})")
-    raw = path.read_text()
+    raw = path.read_text(encoding="utf-8")
     try:
         suite = json.loads(raw)
     except ValueError as exc:
@@ -106,7 +106,7 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
         spec_path = specs_root / str(item.get("spec") or "")
         if not spec_path.is_file():
             raise SuiteError(f"Item {iid!r}: no spec {spec_path}")
-        text = spec_path.read_text()
+        text = spec_path.read_text(encoding="utf-8")
         digest.update(text.encode())
         item["_spec"] = json.loads(text)
         runs = int(item.get("runs") or 1)
@@ -652,7 +652,7 @@ class Log:
     def __call__(self, text: str = "") -> None:
         print(text, flush=True)
         if self.path is not None:
-            with self.path.open("a") as f:
+            with self.path.open("a", encoding="utf-8") as f:
                 f.write(text + "\n")
 
     def stamp(self, text: str) -> None:
@@ -660,6 +660,9 @@ class Log:
 
 
 def _run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess:
+    if kw.get("text"):  # Docker and git print UTF-8, not Windows' code page
+        kw.setdefault("encoding", "utf-8")
+        kw.setdefault("errors", "replace")
     return subprocess.run(argv, cwd=kw.pop("cwd", ROOT), **kw)
 
 
@@ -921,7 +924,7 @@ class Runner:
         self.stopping = False
         path = out_dir / "manifest.json"
         if path.is_file():
-            self.manifest = json.loads(path.read_text())
+            self.manifest = json.loads(path.read_text(encoding="utf-8"))
             if self.manifest.get("suite") != suite["name"] or self.manifest.get("host") != host:
                 raise SuiteError(f"{out_dir} holds another suite or host")
             known = {r["key"] for r in self.manifest["runs"]}
@@ -947,13 +950,13 @@ class Runner:
     def save(self) -> None:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         tmp = self.out_dir / "manifest.json.tmp"
-        tmp.write_text(json.dumps(self.manifest, indent=2, default=str))
+        tmp.write_text(json.dumps(self.manifest, indent=2, default=str), encoding="utf-8")
         tmp.replace(self.out_dir / "manifest.json")
 
     def result_of(self, run: dict[str, Any]) -> dict[str, Any] | None:
         path = self.out_dir / run["dir"] / "benchmark.json"
         if path.is_file():
-            return json.loads(path.read_text()).get("result")
+            return json.loads(path.read_text(encoding="utf-8")).get("result")
         return None
 
     def latest(self, item_id: str, before: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -980,7 +983,7 @@ class Runner:
                 if runs:
                     aggregates[item_id] = aggregate_random(runs)
                     (self.out_dir / f"random-{item_id}.json").write_text(
-                        json.dumps(aggregates[item_id], indent=2)
+                        json.dumps(aggregates[item_id], indent=2), encoding="utf-8"
                     )
         limits = {}
         for r in self.manifest["runs"]:
@@ -989,10 +992,10 @@ class Runner:
                 results = [limit_result(cid, st, cfg) for cid, st in r["cells"].items()]
                 limits[r["item"]] = (results, cfg)
                 (self.out_dir / f"limits-{r['item']}.json").write_text(
-                    json.dumps(results, indent=2)
+                    json.dumps(results, indent=2), encoding="utf-8"
                 )
         path = self.out_dir / "summary.md"
-        path.write_text(summary_markdown(self.manifest, aggregates, limits))
+        path.write_text(summary_markdown(self.manifest, aggregates, limits), encoding="utf-8")
         return path
 
     def limit_config(self, item_id: str) -> dict[str, Any]:
@@ -1139,7 +1142,9 @@ class Runner:
     def finish(self, run: dict[str, Any], b: dict[str, Any]) -> None:
         folder = self.out_dir / run["dir"]
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / "benchmark.json").write_text(json.dumps(b, indent=2, default=str))
+        (folder / "benchmark.json").write_text(
+            json.dumps(b, indent=2, default=str), encoding="utf-8"
+        )
         try:
             bench.save(self.api, b["id"], folder, "report")
             (folder / "report.zip").replace(folder / "export.zip")
@@ -1207,7 +1212,7 @@ class Runner:
         spec, notes = build_spec(item, run, self.host, previous_ceiling=previous, census=census)
         folder = self.out_dir / run["dir"]
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / "spec.json").write_text(json.dumps(spec, indent=2))
+        (folder / "spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
         b = self.api.call("POST", "/benchmarks", spec)
         run.update(
             status="running",
@@ -1342,7 +1347,7 @@ class Runner:
             )
             folder = self.out_dir / probe["dir"]
             folder.mkdir(parents=True, exist_ok=True)
-            (folder / "spec.json").write_text(json.dumps(spec, indent=2))
+            (folder / "spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
             b = self.api.call("POST", "/benchmarks", spec)
             probe.update(status="running", benchmark_id=b["id"], attempts=attempt, error=None)
             self.save()
@@ -1607,9 +1612,10 @@ def run_checks(restart_cmd: str | None, env: dict[str, str]) -> list[tuple[str, 
     pmset = _out(["pmset", "-g", "batt"])[1] if system == "Darwin" else None
     mains = (
         [
-            (p / "online").read_text().strip() == "1"
+            (p / "online").read_text(encoding="utf-8").strip() == "1"
             for p in Path("/sys/class/power_supply").glob("*")
-            if (p / "type").is_file() and (p / "type").read_text().strip() == "Mains"
+            if (p / "type").is_file()
+            and (p / "type").read_text(encoding="utf-8").strip() == "Mains"
         ]
         if system == "Linux"
         else []
@@ -1683,7 +1689,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def cmd_summarize(args: argparse.Namespace) -> int:
     out_dir = Path(args.dir)
-    manifest = json.loads((out_dir / "manifest.json").read_text())
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     suite = load_suite(manifest["suite"])
     runner = Runner(
         suite,
@@ -1697,6 +1703,7 @@ def cmd_summarize(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    bench.utf8_stdio()
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

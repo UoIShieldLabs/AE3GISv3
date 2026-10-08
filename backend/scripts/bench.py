@@ -201,11 +201,20 @@ def save(api: Api, bid: str, out_dir: Path, stem: str) -> tuple[Path, Path]:
     zip_path = out_dir / f"{stem}.zip"
     zip_path.write_bytes(api.raw("GET", f"/benchmarks/{bid}/export"))
     md_path = out_dir / f"{stem}.md"
-    md_path.write_text(api.raw("GET", f"/benchmarks/{bid}/report.md").decode())
+    md_path.write_text(api.raw("GET", f"/benchmarks/{bid}/report.md").decode(), encoding="utf-8")
     return md_path, zip_path
 
 
+def utf8_stdio() -> None:
+    """Print UTF-8 whatever the console or the redirected log: Windows
+    defaults to its ANSI code page, which has no → or ≤."""
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(AttributeError, ValueError):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main() -> None:
+    utf8_stdio()
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -231,7 +240,7 @@ def main() -> None:
         else:
             if args.spec is None:
                 ap.error("give a spec, or --attach a running benchmark")
-            spec = json.loads(args.spec.read_text())
+            spec = json.loads(args.spec.read_text(encoding="utf-8"))
             if args.label:
                 spec["label"] = args.label
             if args.scale:
