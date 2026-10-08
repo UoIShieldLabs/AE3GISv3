@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { buildCatalogTree } from '../tree';
+import type { Catalog } from '../catalog';
 import { CATALOG } from '@/test/catalogFixture';
+
+/** CATALOG plus an nftables-like firewall image loaded from the "lab" registry. */
+const WITH_HUB: Catalog = {
+  ...CATALOG,
+  images: {
+    ...CATALOG.images,
+    'lab/edge-fw:latest': { displayName: 'Edge FW', description: '', stability: 'stable', source: { kind: 'registry', registry: 'lab' } },
+  },
+  types: {
+    ...CATALOG.types,
+    firewall: { ...CATALOG.types.firewall, images: [...(CATALOG.types.firewall.images ?? []), 'lab/edge-fw:latest'] },
+  },
+};
 
 describe('buildCatalogTree', () => {
   it('orders categories as declared, undeclared ones last', () => {
@@ -35,5 +49,15 @@ describe('buildCatalogTree', () => {
 
     expect(buildCatalogTree(CATALOG, 'secret')).toEqual([]); // hidden stays hidden
     expect(buildCatalogTree(null)).toEqual([]);
+  });
+
+  it('marks variants loaded from a registry, and search finds them by registry', () => {
+    const fw = buildCatalogTree(WITH_HUB).find((c) => c.id === 'security')!.types[0];
+    const hub = fw.variants.find((v) => v.ref === 'lab/edge-fw:latest')!;
+    expect(hub).toMatchObject({ name: 'Edge FW', origin: 'lab', built: false });
+    expect(fw.variants.find((v) => v.ref === 'kathara/frr')!.origin).toBeUndefined();
+
+    const found = buildCatalogTree(WITH_HUB, 'lab');
+    expect(found[0].types[0].variants.map((v) => v.ref)).toEqual(['lab/edge-fw:latest']);
   });
 });

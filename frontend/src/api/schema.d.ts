@@ -172,7 +172,7 @@ export interface paths {
         };
         /**
          * List Images
-         * @description Host build support, image sources, and the status of each image.
+         * @description Host build support, image sources and registries, and the status of each image.
          *
          *     Without ``topology_id``: every image the catalog describes.
          */
@@ -431,6 +431,70 @@ export interface paths {
          * @description Create a new topology from a preset template.
          */
         post: operations["load_preset_api_v1_presets__preset_id__load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Registries
+         * @description Every registry, with what its last sync loaded, rejected and skipped.
+         */
+        get: operations["list_registries_api_v1_registries_get"];
+        put?: never;
+        /**
+         * Add Registry
+         * @description Add a Docker Hub namespace (by URL or name) and start its first sync.
+         */
+        post: operations["add_registry_api_v1_registries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries/{registry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Registry
+         * @description Remove a registry: its images and types leave the catalog.
+         */
+        delete: operations["remove_registry_api_v1_registries__registry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries/{registry_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Registry
+         * @description Re-read the namespace (a sync already running returns its job).
+         */
+        post: operations["sync_registry_api_v1_registries__registry_id__sync_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1873,6 +1937,8 @@ export interface components {
             host: components["schemas"]["HostBuildOut"];
             /** Images */
             images: components["schemas"]["ImageStatusOut"][];
+            /** Registries */
+            registries?: components["schemas"]["RegistryOut"][];
             /** Sources */
             sources: components["schemas"]["SourceOut"][];
         };
@@ -2280,6 +2346,8 @@ export interface components {
             images?: string[];
             /** Label */
             label: string;
+            /** Origin */
+            origin?: string | null;
             /** Purduelevel */
             purdueLevel?: number | null;
             /**
@@ -2422,6 +2490,83 @@ export interface components {
             /** Reset */
             reset: number;
         };
+        /** RegistryCreate */
+        RegistryCreate: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * RegistryImageOut
+         * @description An image a registry contributes to the catalog.
+         */
+        RegistryImageOut: {
+            /** Name */
+            name: string;
+            /** New Type */
+            new_type: boolean;
+            /** Platforms */
+            platforms?: string[];
+            /** Ref */
+            ref: string;
+            /** Repo */
+            repo: string;
+            /** Tag */
+            tag: string;
+            /** Type */
+            type: string;
+        };
+        /** RegistryOut */
+        RegistryOut: {
+            active_job?: components["schemas"]["JobOut"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Hub Url */
+            hub_url: string;
+            /** Id */
+            id: string;
+            last_job?: components["schemas"]["JobOut"] | null;
+            /** Loaded */
+            loaded?: components["schemas"]["RegistryImageOut"][];
+            /** Namespace */
+            namespace: string;
+            /** Pending */
+            pending?: string[];
+            /** Pulls Remaining */
+            pulls_remaining?: number | null;
+            /** Rejected */
+            rejected?: components["schemas"]["RegistryRejectedOut"][];
+            /**
+             * Repositories
+             * @default 0
+             */
+            repositories: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Synced At */
+            synced_at?: string | null;
+            /** Url */
+            url: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /**
+         * RegistryRejectedOut
+         * @description A repo marked for AE3GIS whose image does not follow the standard.
+         */
+        RegistryRejectedOut: {
+            /** Reasons */
+            reasons: string[];
+            /** Repo */
+            repo: string;
+            /** Tag */
+            tag: string;
+        };
         /**
          * RegistrySource
          * @description Pull the image by ref from a registry (the default).
@@ -2432,6 +2577,8 @@ export interface components {
              * @enum {string}
              */
             kind: "registry";
+            /** Registry */
+            registry?: string | null;
         };
         /** RuntimeOut */
         RuntimeOut: {
@@ -3509,6 +3656,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_registries_api_v1_registries_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_registry_api_v1_registries_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_registry_api_v1_registries__registry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                registry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_registry_api_v1_registries__registry_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                registry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Validation Error */

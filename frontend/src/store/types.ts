@@ -182,7 +182,10 @@ export interface ActivitySlice {
 export interface CatalogSlice {
   catalog: Catalog | null;
   catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
+  /** Load once at startup (a no-op once loaded). */
   loadCatalog: () => Promise<void>;
+  /** Re-fetch it, e.g. after a registry sync changed its types and images. */
+  refreshCatalog: () => Promise<void>;
 }
 
 export interface ImagesSlice {

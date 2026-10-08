@@ -12,6 +12,7 @@ import { JobLog } from '@/features/jobs/JobLog';
 import { buildImages, cancelJob, syncSource } from './actions';
 import { refreshImages } from './imagePolling';
 import { ImageStatusBadge } from './ImageStatusBadge';
+import { RegistriesPanel } from './RegistriesPanel';
 import { formatBytes, needsAttention } from './status';
 
 type Filter = 'attention' | 'built' | 'all';
@@ -27,7 +28,8 @@ function usedByTypes(): Map<string, string[]> {
   return map;
 }
 
-/** Images AE3GIS builds from Dockerfiles: status, builds, logs, and their sources. */
+/** Images AE3GIS builds from Dockerfiles or loads from Docker Hub registries:
+ *  status, builds, logs, and where they come from. */
 export function ImagesSheet() {
   const open = useAppStore((s) => s.imagesOpen);
   const setOpen = useAppStore((s) => s.setImagesOpen);
@@ -59,7 +61,7 @@ export function ImagesSheet() {
       side="right"
       size="min(920px, 100vw)"
       title="Images"
-      description="Node images AE3GIS builds from Dockerfiles, and where those come from."
+      description="Node images AE3GIS builds from Dockerfiles or loads from Docker Hub, and where those come from."
       headerAction={<IconButton label="Refresh" size="icon-sm" onClick={() => void refreshImages()}><RefreshCw /></IconButton>}
       flush
     >
@@ -67,9 +69,10 @@ export function ImagesSheet() {
         <div className="flex justify-center py-10">{error ? <p className="text-xs text-danger">{error}</p> : <Spinner />}</div>
       ) : (
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex flex-col gap-3 border-b border-border p-4">
+          <div className="flex max-h-[50%] shrink-0 flex-col gap-3 overflow-auto border-b border-border p-4">
             <HostLine host={report.host} />
             {report.sources.map((src) => <SourceRow key={src.name} source={src} />)}
+            <RegistriesPanel registries={report.registries ?? []} />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">

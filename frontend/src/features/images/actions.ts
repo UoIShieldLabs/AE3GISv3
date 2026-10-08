@@ -41,3 +41,35 @@ export async function cancelJob(jobId: string, what = 'Job'): Promise<void> {
     toast.error(`Could not cancel`, { description: api.errorMessage(err) });
   }
 }
+
+/** Add a Docker Hub namespace (URL or name); true if it was added. */
+export async function addRegistry(url: string): Promise<boolean> {
+  try {
+    const reg = await api.addRegistry(url);
+    toast.info(`Reading ${reg.namespace} from Docker Hub`, { description: 'Its images join the catalog when the sync ends.' });
+    await refreshImages();
+    return true;
+  } catch (err) {
+    toast.error('Could not add the registry', { description: api.errorMessage(err) });
+    return false;
+  }
+}
+
+export async function syncRegistry(reg: api.Registry): Promise<void> {
+  try {
+    await api.syncRegistry(reg.id);
+    await refreshImages();
+  } catch (err) {
+    toast.error(`Could not sync ${reg.namespace}`, { description: api.errorMessage(err) });
+  }
+}
+
+export async function removeRegistry(reg: api.Registry): Promise<void> {
+  try {
+    await api.removeRegistry(reg.id);
+    toast.info(`Removed ${reg.namespace}`, { description: 'Nodes that use its images keep them; types it added deploy as plain hosts.' });
+    await Promise.all([refreshImages(), useAppStore.getState().refreshCatalog()]);
+  } catch (err) {
+    toast.error(`Could not remove ${reg.namespace}`, { description: api.errorMessage(err) });
+  }
+}

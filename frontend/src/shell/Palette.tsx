@@ -164,6 +164,7 @@ function VariantRow({ type, variant, hint, disabled, onAdd }: { type: string; va
       compact
       trailing={
         <>
+          {variant.origin ? <Badge tone="outline" className="px-1" title={`From Docker Hub: ${variant.origin}`}>hub</Badge> : null}
           {variant.stability === 'experimental' ? <Badge tone="outline" className="px-1">exp</Badge> : null}
           <ImageStatusDot image={status} />
         </>
