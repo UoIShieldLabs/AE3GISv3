@@ -532,3 +532,32 @@ def test_suite_sysctls_are_set_after_every_restart(client, fake_engine, tmp_path
     manifest = json.loads((tmp_path / "out" / "manifest.json").read_text())
     assert manifest["sysctls"] == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
     assert "gc_thresh3=16384" in (tmp_path / "out" / "summary.md").read_text()
+
+
+def test_check_helpers(tmp_path):
+    assert suites.compose_project(tmp_path / "AE3GISv3", {}) == "ae3gisv3"
+    assert (
+        suites.compose_project(tmp_path / "x", {"COMPOSE_PROJECT_NAME": "ae3gis-bench"})
+        == "ae3gis-bench"
+    )
+    df = "Filesystem 1024-blocks Used Available Capacity Mounted on\noverlay 61228876 38590072 19497088 67% /\n"
+    assert suites.parse_df_available(df) == 19497088 * 1024
+    assert suites.parse_df_available("garbage") is None
+    assert suites.on_battery("Darwin", "Now drawing from 'Battery Power'", []) is True
+    assert suites.on_battery("Darwin", "Now drawing from 'AC Power'", []) is False
+    assert suites.on_battery("Linux", None, [False, True]) is False
+    assert suites.on_battery("Linux", None, []) is None
+    ps = "\n".join(
+        [
+            "ae3gisv3-backend-1|ae3gisv3||",
+            "other-db|cardinal||",
+            "buildx_buildkit_aegis-builder0|||",
+            "kathara_root-x_h1_1|||" + "",
+            "kathara_root-x_h1_2||kathara|",
+            "ae3gis-collect-1|||collector",
+        ]
+    )
+    assert suites.foreign_containers(ps, "ae3gisv3") == [
+        "other-db (cardinal)",
+        "kathara_root-x_h1_1 (no compose project)",
+    ]

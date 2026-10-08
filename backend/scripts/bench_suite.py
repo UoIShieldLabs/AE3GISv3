@@ -39,6 +39,7 @@ import json
 import math
 import os
 import platform
+import re
 import shlex
 import shutil
 import signal
@@ -1494,6 +1495,192 @@ def cmd_run(args: argparse.Namespace) -> int:
         return runner.run()
 
 
+# ── check: is this machine ready? ─────────────────────────────────────
+
+DISK_FAIL_GB, DISK_WARN_GB = 15, 30
+
+
+def compose_project(root: Path, env: dict[str, str]) -> str:
+    """The compose project ``docker compose`` uses for this checkout."""
+    name = env.get("COMPOSE_PROJECT_NAME") or root.name
+    return re.sub(r"[^a-z0-9_-]", "", name.lower())
+
+
+def parse_df_available(text: str) -> int | None:
+    """Bytes available, from the last line of ``df -Pk`` output."""
+    lines = [line for line in text.strip().splitlines() if line.strip()]
+    try:
+        return int(lines[-1].split()[3]) * 1024 if len(lines) >= 2 else None
+    except (IndexError, ValueError):
+        return None
+
+
+def on_battery(system: str, pmset: str | None, mains_online: list[bool]) -> bool | None:
+    """True on battery, False on mains power, None when unknown."""
+    if system == "Darwin":
+        return None if not pmset else "Battery Power" in pmset
+    if system == "Linux" and mains_online:
+        return not any(mains_online)
+    return None
+
+
+def foreign_containers(ps: str, project: str) -> list[str]:
+    """Running containers that are neither this checkout's compose project,
+    a BuildKit builder, a lab node (``app=kathara``) nor an AE3GIS helper
+    (``docker ps`` lines ``name|project|app|sidecar``)."""
+    out = []
+    for line in ps.splitlines():
+        name, proj, app, sidecar = ([*line.split("|"), "", "", ""])[:4]
+        if not name or proj == project or name.startswith("buildx_buildkit_"):
+            continue
+        if app == "kathara" or sidecar:
+            continue
+        out.append(f"{name} ({proj or 'no compose project'})")
+    return out
+
+
+def _out(argv: list[str], timeout: float = 120) -> tuple[int, str]:
+    try:
+        done = _run(argv, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 1, str(exc)
+    return done.returncode, (done.stdout or done.stderr).strip()
+
+
+def run_checks(restart_cmd: str | None, env: dict[str, str]) -> list[tuple[str, str, str]]:
+    """(level, what, detail) for everything that stops or skews a suite on
+    this machine; level OK, INFO, WARN or FAIL."""
+    system = platform.system()
+    project = compose_project(ROOT, env)
+    checks: list[tuple[str, str, str]] = []
+    checks.append(("OK", "python", platform.python_version()))
+    git = git_state()
+    _, branch = _out(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    if git["dirty"]:
+        checks.append(
+            ("FAIL", "git", f"{branch}: uncommitted changes (the suites refuse a dirty tree)")
+        )
+    else:
+        checks.append(("OK", "git", f"{branch} @ {git['commit'][:12]}, clean"))
+    code, info_json = _out(["docker", "info", "--format", "{{json .}}"])
+    if code != 0:
+        checks.append(("FAIL", "docker", f"not reachable: {info_json[:200]}"))
+        return checks
+    info = json.loads(info_json)
+    mem = info.get("MemTotal") or 0
+    checks.append(
+        (
+            "INFO" if mem >= 8 * 2**30 else "WARN",
+            "docker",
+            f"{info.get('OperatingSystem')} · Docker {info.get('ServerVersion')} · "
+            f"{info.get('NCPU')} CPUs · {mem / 2**30:.1f} GiB"
+            + ("" if mem >= 8 * 2**30 else " (under 8 GiB: small ceilings)"),
+        )
+    )
+    code, df = _out(["docker", "run", "--rm", SYSCTL_IMAGE, "df", "-Pk", "/"], timeout=300)
+    free = parse_df_available(df) if code == 0 else None
+    if free is None:
+        checks.append(("WARN", "disk", f"could not read Docker's disk: {df[:200]}"))
+    else:
+        gb = free / 1e9
+        level = "FAIL" if gb < DISK_FAIL_GB else "WARN" if gb < DISK_WARN_GB else "OK"
+        checks.append(
+            (
+                level,
+                "disk",
+                f"{gb:.1f} GB free on Docker's disk"
+                + ("" if level == "OK" else f" (want {DISK_WARN_GB}+: see `docker system df`)"),
+            )
+        )
+    plan = restart_plan(system, restart_cmd, restart_cmd is None and has_desktop_cli())
+    if plan:
+        checks.append(("OK", "restart", " → ".join(" ".join(s) for s in plan)))
+    else:
+        checks.append(
+            (
+                "FAIL",
+                "restart",
+                "no way to restart Docker here: pass --restart-cmd (e.g. "
+                '"sudo -n systemctl restart docker" with a sudoers rule) or --restart none',
+            )
+        )
+    pmset = _out(["pmset", "-g", "batt"])[1] if system == "Darwin" else None
+    mains = (
+        [
+            (p / "online").read_text().strip() == "1"
+            for p in Path("/sys/class/power_supply").glob("*")
+            if (p / "type").is_file() and (p / "type").read_text().strip() == "Mains"
+        ]
+        if system == "Linux"
+        else []
+    )
+    battery = on_battery(system, pmset, mains)
+    if battery:
+        checks.append(("FAIL", "power", "on battery: plug in (macOS sleeps on battery anyway)"))
+    else:
+        checks.append(
+            (
+                "OK" if battery is False else "INFO",
+                "power",
+                "mains" if battery is False else "unknown",
+            )
+        )
+    if system == "Darwin":
+        checks.append(
+            ("INFO", "sleep", "keep the lid open until the suites finish (a closed lid sleeps)")
+        )
+    _, port = _out(
+        [
+            "docker",
+            "ps",
+            "--filter",
+            "publish=8000",
+            "--format",
+            '{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "app"}}|{{.Label "ae3gis.sidecar"}}',
+        ]
+    )
+    holders = foreign_containers(port, project)
+    if holders:
+        checks.append(
+            ("FAIL", "port 8000", f"held by {', '.join(holders)}: stop it (`docker stop …`)")
+        )
+    else:
+        checks.append(("OK", "port 8000", f"free or this checkout's backend (project {project})"))
+    _, labs = _out(["docker", "ps", "-q", "--filter", "label=app=kathara"])
+    n = len(labs.split())
+    checks.append(
+        ("FAIL", "labs", f"{n} Kathará containers running: destroy their labs first")
+        if n
+        else ("OK", "labs", "nothing deployed")
+    )
+    _, ps = _out(
+        [
+            "docker",
+            "ps",
+            "--format",
+            '{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "app"}}|{{.Label "ae3gis.sidecar"}}',
+        ]
+    )
+    others = foreign_containers(ps, project)
+    if others:
+        checks.append(("WARN", "other containers", f"{', '.join(others[:6])}: they share the host"))
+    return checks
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    checks = run_checks(args.restart_cmd, dict(os.environ))
+    width = max(len(what) for _, what, _ in checks)
+    for level, what, detail in checks:
+        print(f"{level:<5} {what:<{width}}  {detail}")
+    failed = sum(1 for level, _, _ in checks if level == "FAIL")
+    print(
+        f"\n{'not ready' if failed else 'ready'}: {failed} problem(s) to fix"
+        if failed
+        else "\nready"
+    )
+    return 1 if failed else 0
+
+
 def cmd_summarize(args: argparse.Namespace) -> int:
     out_dir = Path(args.dir)
     manifest = json.loads((out_dir / "manifest.json").read_text())
@@ -1565,6 +1752,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     summarize = sub.add_parser("summarize", help="rebuild a results folder's summary.md")
     summarize.add_argument("dir")
+    check = sub.add_parser("check", help="is this machine ready to run the suites?")
+    check.add_argument("--restart-cmd", help="how the suites will restart Docker here (Linux)")
     args = ap.parse_args(argv)
     sys.stdout.reconfigure(line_buffering=True)
     try:
@@ -1572,6 +1761,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_list()
         if args.command == "summarize":
             return cmd_summarize(args)
+        if args.command == "check":
+            return cmd_check(args)
         return cmd_run(args)
     except SuiteError as exc:
         print(f"error: {exc}", file=sys.stderr)
