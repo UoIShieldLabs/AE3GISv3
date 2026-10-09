@@ -532,3 +532,37 @@ def test_suite_sysctls_are_set_after_every_restart(client, fake_engine, tmp_path
     manifest = json.loads((tmp_path / "out" / "manifest.json").read_text())
     assert manifest["sysctls"] == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
     assert "gc_thresh3=16384" in (tmp_path / "out" / "summary.md").read_text()
+
+
+def test_a_cancelled_probe_is_asked_again_on_resume(tmp_path):
+    class StubApi:
+        base = "http://stub/api/v1"
+
+        def call(self, method, path, body=None):
+            assert (method, path) == ("GET", "/benchmarks/b1")
+            return {"id": "b1", "live": False, "status": "cancelled", "result": None}
+
+    _write(tmp_path / "specs", {"m.json": {"matrix": {"patterns": [{"id": "p", "kind": "mesh"}]}}})
+    suite = _suite(tmp_path, [{"id": "lim", "spec": "m.json", "limits": {}}])
+
+    class Lines(suites.Log):
+        def __call__(self, text: str = "") -> None:
+            pass
+
+    runner = suites.Runner(suite, StubApi(), tmp_path / "out", host="m4", log=Lines(None))
+    state = {"cell": {}, "estimate": 900, "pass": {"700": 1}, "fail": {}, "unrun": {}}
+    probe = {
+        "key": "k",
+        "round": 3,
+        "size": 900,
+        "cells": ["c"],
+        "dir": "d",
+        "status": "running",
+        "benchmark_id": "b1",
+    }
+    runner.run_probe(
+        {"item": "lim", "key": "lim", "dir": "01"}, probe, {}, {"c": state}, resume=True
+    )
+    assert probe["status"] == "cancelled" and probe["recorded"]
+    assert state == {"cell": {}, "estimate": 900, "pass": {"700": 1}, "fail": {}, "unrun": {}}
+    assert suites.next_probe(state, suites.LIMIT_DEFAULTS) == 900  # the size is asked again

@@ -1322,8 +1322,10 @@ class Runner:
             b = self.api.call("GET", f"/benchmarks/{probe['benchmark_id']}")
             if b["live"]:
                 b = self.follow(probe, b["id"])
-            if b["status"] == "failed":
-                probe["recorded"] = True  # its cells ask for the size again
+            if b["status"] in ("failed", "cancelled"):
+                # Interrupted (e.g. cancelled to pause the search): nothing to
+                # record; its cells ask for the size again.
+                probe.update(status=b["status"], recorded=True)
                 self.save()
                 return
             self.finish(probe, b)
