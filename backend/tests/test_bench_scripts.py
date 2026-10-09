@@ -561,3 +561,37 @@ def test_check_helpers(tmp_path):
         "other-db (cardinal)",
         "kathara_root-x_h1_1 (no compose project)",
     ]
+
+
+def test_a_cancelled_probe_is_asked_again_on_resume(tmp_path):
+    class StubApi:
+        base = "http://stub/api/v1"
+
+        def call(self, method, path, body=None):
+            assert (method, path) == ("GET", "/benchmarks/b1")
+            return {"id": "b1", "live": False, "status": "cancelled", "result": None}
+
+    _write(tmp_path / "specs", {"m.json": {"matrix": {"patterns": [{"id": "p", "kind": "mesh"}]}}})
+    suite = _suite(tmp_path, [{"id": "lim", "spec": "m.json", "limits": {}}])
+
+    class Lines(suites.Log):
+        def __call__(self, text: str = "") -> None:
+            pass
+
+    runner = suites.Runner(suite, StubApi(), tmp_path / "out", host="m4", log=Lines(None))
+    state = {"cell": {}, "estimate": 900, "pass": {"700": 1}, "fail": {}, "unrun": {}}
+    probe = {
+        "key": "k",
+        "round": 3,
+        "size": 900,
+        "cells": ["c"],
+        "dir": "d",
+        "status": "running",
+        "benchmark_id": "b1",
+    }
+    runner.run_probe(
+        {"item": "lim", "key": "lim", "dir": "01"}, probe, {}, {"c": state}, resume=True
+    )
+    assert probe["status"] == "cancelled" and probe["recorded"]
+    assert state == {"cell": {}, "estimate": 900, "pass": {"700": 1}, "fail": {}, "unrun": {}}
+    assert suites.next_probe(state, suites.LIMIT_DEFAULTS) == 900  # the size is asked again
