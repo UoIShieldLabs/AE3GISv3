@@ -731,12 +731,23 @@ def restart_docker(plan: list[list[str]], log: Log, timeout: float = 900) -> Non
 # on Linux: the host's own, until it reboots) from a one-shot privileged
 # container on the host network. E.g. the neighbour (ARP) table: 1024 entries
 # for all nodes together by default, which under traffic cuts off every host
-# past ~250 (mesh) or ~500 (clients -> servers).
+# past ~250 (mesh) or ~500 (clients -> servers). Docker Desktop on Windows
+# runs dockerd in a network namespace of its own inside the WSL2 VM, where
+# the global ones (neigh/default) don't exist: there they are written from the
+# docker-desktop distro, which shares the VM's root namespace.
 SYSCTL_IMAGE = "alpine:3.22"
+WSL_DISTRO = "docker-desktop"
 
 
-def sysctl_argv(sysctls: dict[str, Any]) -> list[str]:
-    """The docker command that sets ``sysctls`` and prints them back."""
+def sysctl_argv(sysctls: dict[str, Any], system: str | None = None) -> list[str]:
+    """The command that sets ``sysctls`` and prints them back (``k = v``)."""
+    if system == "Windows":
+        paths = {k: shlex.quote("/proc/sys/" + k.replace(".", "/")) for k in sysctls}
+        sets = " && ".join(f"echo {shlex.quote(str(v))} > {paths[k]}" for k, v in sysctls.items())
+        reads = " && ".join(
+            f'printf "%s = %s\\n" {shlex.quote(k)} "$(cat {paths[k]})"' for k in sysctls
+        )
+        return ["wsl", "-d", WSL_DISTRO, "-u", "root", "-e", "sh", "-c", f"{sets} && {reads}"]
     names = " ".join(shlex.quote(k) for k in sysctls)
     sets = " ".join(shlex.quote(f"{k}={v}") for k, v in sysctls.items())
     return [
@@ -763,7 +774,9 @@ def parse_sysctls(text: str) -> dict[str, str]:
 
 def set_sysctls(sysctls: dict[str, Any]) -> dict[str, str]:
     """Set them in Docker's kernel; what the kernel now reports."""
-    done = _run(sysctl_argv(sysctls), capture_output=True, text=True, timeout=300)
+    done = _run(
+        sysctl_argv(sysctls, platform.system()), capture_output=True, text=True, timeout=300
+    )
     if done.returncode != 0:
         raise SuiteError(f"Could not set {', '.join(sysctls)}: {done.stderr.strip()[:300]}")
     got = parse_sysctls(done.stdout)
@@ -808,7 +821,9 @@ def keep_awake_cmd(system: str, pid: int) -> list[str] | None:
 
 @contextlib.contextmanager
 def keep_awake(log: Log):
-    """No idle or system sleep while the suite runs (a closed lid still sleeps)."""
+    """No idle or system sleep while the suite runs (a closed lid still sleeps).
+    Windows keeps the display on too: on Modern Standby laptops a display that
+    turns off puts the whole machine in standby, whatever the sleep settings."""
     system = platform.system()
     proc = None
     cmd = keep_awake_cmd(system, os.getpid())
@@ -818,7 +833,8 @@ def keep_awake(log: Log):
     elif system == "Windows":
         import ctypes
 
-        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)  # type: ignore[attr-defined]
+        # ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000003)  # type: ignore[attr-defined]
     if system == "Darwin":
         with contextlib.suppress(OSError):
             batt = _run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
@@ -1380,7 +1396,9 @@ class Runner:
                 continue
             try:
                 self.run_one(run)
-            except (SuiteError, bench.ApiError) as exc:
+            # OSError: the backend stayed unreachable past the API's retries
+            # (Docker down); the next run restarts Docker first
+            except (SuiteError, bench.ApiError, OSError) as exc:
                 run.update(status="failed", error=str(exc))
                 self.save()
                 self.log(f"  {run['key']} failed: {exc}")

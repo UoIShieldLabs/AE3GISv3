@@ -493,6 +493,15 @@ def test_sysctl_command_and_parse():
     assert suites.parse_sysctls(out) == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
 
 
+def test_sysctl_command_on_windows_writes_from_the_wsl_distro():
+    argv = suites.sysctl_argv({"net.ipv4.neigh.default.gc_thresh3": 16384}, "Windows")
+    assert argv[:7] == ["wsl", "-d", suites.WSL_DISTRO, "-u", "root", "-e", "sh"]
+    script = argv[-1]
+    assert "echo 16384 > /proc/sys/net/ipv4/neigh/default/gc_thresh3" in script
+    # prints back in sysctl's own format, for parse_sysctls
+    assert 'printf "%s = %s\\n" net.ipv4.neigh.default.gc_thresh3' in script
+
+
 def test_suite_sysctls_are_set_after_every_restart(client, fake_engine, tmp_path):
     fake_engine.monitor_interval = 0.02
     _write(tmp_path / "specs", {"sweep.json": {**FAST, "scale": [2]}})

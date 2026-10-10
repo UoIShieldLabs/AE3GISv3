@@ -103,8 +103,15 @@ it; results never go into git.
 - **Big machines**: the traffic search stops at 1000 hosts (`max_hosts` in
   `backend/benchmarks/suites/traffic.json`); if many cells report `≥ 1000`,
   raise it.
-- **Windows** is untested: run in WSL2 against Docker Desktop, and check that
-  `docker desktop restart` works there (else `--restart none`).
+- **Windows** (run once, on a Surface laptop, from Git Bash with Windows
+  Python against Docker Desktop on WSL2): `docker desktop restart` works; the
+  ARP limits are written from the `docker-desktop` WSL distro, since Docker's
+  own namespace there has none. Keep the charger in: unplugging drops to the
+  battery settings and Modern Standby, which an open lid and the runner's
+  display request then hold off. Pause Windows Update for the run: it reboots
+  on its own. A Docker Desktop crash (seen once, `dockerd` panicking) can
+  leave memory held in the VM until the next reboot; a run started from it
+  reports low ceilings and high memory at rest.
 
 ## For Claude, when asked to run these benchmarks
 
