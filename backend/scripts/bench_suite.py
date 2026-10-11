@@ -710,20 +710,33 @@ def restart_plan(system: str, cmd: str | None, desktop_cli: bool) -> list[list[s
     return None
 
 
-def restart_docker(plan: list[list[str]], log: Log, timeout: float = 900) -> None:
+def restart_docker(
+    plan: list[list[str]], log: Log, timeout: float = 900, attempts: int = 3, pause: float = 30
+) -> None:
+    """Run ``plan`` until Docker answers again, up to ``attempts`` times: a
+    restart can fail on its own (Docker Desktop for Windows times out
+    stopping while a ``wsl.exe`` of its hangs) and work when tried again."""
     log("  restarting Docker: " + " → ".join(" ".join(s) for s in plan))
-    for step in plan:
-        if step == WAIT_DOWN:
-            deadline = time.monotonic() + 120
-            while docker_ok() and time.monotonic() < deadline:
-                time.sleep(3)
-            continue
-        _run(step, check=True, timeout=timeout)
-    deadline = time.monotonic() + timeout
-    while not docker_ok():
-        if time.monotonic() > deadline:
-            raise SuiteError("Docker did not come back after the restart")
-        time.sleep(5)
+    for attempt in range(1, attempts + 1):
+        try:
+            for step in plan:
+                if step == WAIT_DOWN:
+                    deadline = time.monotonic() + 120
+                    while docker_ok() and time.monotonic() < deadline:
+                        time.sleep(3)
+                    continue
+                _run(step, check=True, timeout=timeout)
+            deadline = time.monotonic() + timeout
+            while not docker_ok():
+                if time.monotonic() > deadline:
+                    raise SuiteError("Docker did not come back after the restart")
+                time.sleep(5)
+            return
+        except (SuiteError, OSError, subprocess.SubprocessError) as exc:
+            if attempt == attempts:
+                raise SuiteError(f"restarting Docker failed {attempts} times: {exc}") from exc
+            log(f"  restart failed ({exc}); trying again in {pause:g}s")
+            time.sleep(pause)
 
 
 # A suite's ``sysctls`` are set in Docker's kernel (on Docker Desktop: the VM's,
@@ -1402,6 +1415,14 @@ class Runner:
                 run.update(status="failed", error=str(exc))
                 self.save()
                 self.log(f"  {run['key']} failed: {exc}")
+                # a Docker that can't be brought back would fail every run
+                # left in turn (the next run restarts it again anyway)
+                if self.restart is not None and not docker_ok():
+                    try:
+                        self.restart()
+                    except SuiteError as down:
+                        self.log(f"  {down}: stopping the suite")
+                        self.stopping = True
             if run["status"] == "cancelled":
                 self.stopping = True
             if run["status"] == "failed" and self.stop_on_failure:

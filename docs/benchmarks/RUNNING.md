@@ -111,7 +111,12 @@ it; results never go into git.
   display request then hold off. Pause Windows Update for the run: it reboots
   on its own. A Docker Desktop crash (seen once, `dockerd` panicking) can
   leave memory held in the VM until the next reboot; a run started from it
-  reports low ceilings and high memory at rest.
+  reports low ceilings and high memory at rest. Docker Desktop crashed twice
+  in big teardowns there (`dockerd`, then `com.docker.backend.exe`); its
+  orphaned processes (a hung `wsl.exe`, the dashboard) then make every
+  `docker desktop restart` time out. The runner tries a restart three times
+  and stops the suite if Docker stays down; end those processes, run
+  `wsl -t docker-desktop`, start Docker Desktop and resume.
 
 ## For Claude, when asked to run these benchmarks
 
