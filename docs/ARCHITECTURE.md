@@ -471,6 +471,10 @@ like any node image, named by the catalog's `tools` map: `capture`,
     `/proc/<pid>/ns/net`, since Kathará nodes hold capabilities the driver
     lacks). It starts processes inside nodes' network namespaces (iperf3 ends,
     pings) and is the only writer to its stdout, so events never interleave.
+    Traffic processes start through BusyBox `nsenter` (`setns` + `exec`, same
+    PID), so Python can `posix_spawn` them: ~2000 a second against ~40 for a
+    fork running `setns` in Python, which probes keep (the benchmarks' "network
+    ready" times were measured with it).
     Not a privileged container; on AppArmor/SELinux hosts set
     `AE3GIS_DRIVER_SECURITY_OPT`.
 
@@ -504,7 +508,9 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   (`domain/traffic/patterns.py`: clients → servers, mesh; hosts by default),
   each server port counted per node. One driver helper runs every flow's
   `iperf3 -s -1 -B <address>` and `iperf3 -c --json-stream` (clients spread
-  over `ramp_s`, early connect failures retried); output is parsed
+  over `ramp_s`, early connect failures retried; `clients_started` once every
+  client has started, recorded as the run's `startup`, where a benchmark's
+  window begins); output is parsed
   (`domain/traffic/iperf3.py`, pinned by real fixtures) into samples, summed
   per flow as they arrive (`FlowSummary`, nothing kept in memory), and into
   all-flow totals (delivered vs. asked) once per interval. Artifacts:

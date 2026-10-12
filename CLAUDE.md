@@ -133,7 +133,8 @@ would slow every poll and load the daemon being measured.
   (never `app=kathara`). Helpers: the monitor's collector (`ae3gis-collect`:
   host PID + cgroup namespaces, cgroupfs read-only; reads /proc and cgroups,
   never the Docker API) and the traffic driver (`ae3gis-netns`: host PID +
-  `CAP_SYS_ADMIN` + `CAP_SYS_PTRACE`, `setns` into node netns; not privileged;
+  `CAP_SYS_ADMIN` + `CAP_SYS_PTRACE`; runs start processes through `nsenter`
+  (posix_spawn, ~2000/s), probes with `setns` in a fork; not privileged;
   `AE3GIS_DRIVER_SECURITY_OPT` for AppArmor/SELinux hosts). The tools image is
   `ae3gis.local/nettools` (`backend/tools/nettools/`, catalog `tools` map;
   rebuilt when stale before a tool job). `engine/fake_helpers.py` simulates both.
