@@ -6,13 +6,14 @@
 # - ae3gis-collect (monitor): reads host and container counters from /proc and
 #   the host cgroup tree (host PID + cgroup namespaces, cgroupfs read-only)
 # - ae3gis-netns (traffic driver): runs iperf3/ping inside node network
-#   namespaces with setns (host PID namespace + CAP_SYS_ADMIN + CAP_SYS_PTRACE)
+#   namespaces through nsenter (host PID namespace + CAP_SYS_ADMIN + CAP_SYS_PTRACE)
 # Built by AE3GIS like any other node image (see catalog "tools"); the build
 # fails if iperf3 lacks --json-stream, which the traffic runner parses.
 FROM alpine:3.22
 
 RUN apk add --no-cache tcpdump iperf3 iproute2 procps python3 \
     && iperf3 --help | grep -q -- --json-stream \
+    && command -v nsenter \
     && python3 -c "import os; os.setns"
 
 COPY ae3gis_collect.py /usr/local/bin/ae3gis-collect

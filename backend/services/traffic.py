@@ -120,6 +120,9 @@ class RunRecorder:
         self.exited: dict[str, int] = {}
         self.proc_errors: dict[str, list[str]] = {}  # stderr / start failures, per proc
         self.processes = 0
+        # The driver's ``clients_started``: every client started (or failed
+        # to), seconds after t0 — where a measurement window may begin.
+        self.startup: dict[str, Any] | None = None
 
     # ── driver events (any thread) ──
     def on_event(self, evt: dict[str, Any]) -> None:
@@ -142,6 +145,13 @@ class RunRecorder:
                     offset = float(evt.get("t", time.time())) - self.t0
                     self._parsers[proc].offset = offset
                     self._parsers[server_proc(flow_id)].offset = offset
+            elif k == "clients_started":
+                self.startup = {
+                    "s": round(float(evt.get("t") or time.time()) - self.t0, 3),
+                    "clients": int(evt.get("n") or 0),
+                    "failed": len(evt.get("failed") or []),
+                    "never_started": len(evt.get("never_started") or []),
+                }
             elif k == "retry" and proc in self._parsers:
                 flow_id, role = split_proc(proc)
                 old = self._parsers[proc]
@@ -169,6 +179,11 @@ class RunRecorder:
                 last[s["direction"]] = (s["t"], s["bps"])
 
     # ── the loop's view ──
+    def clients_begun(self) -> int:
+        """Clients started so far (running or not)."""
+        with self._lock:
+            return sum(1 for p in self.started if split_proc(p)[1] == "client")
+
     def running_clients(self) -> list[str]:
         return [
             fid
@@ -674,6 +689,7 @@ def _result(params, recorder, started, stopped_by, env) -> tuple[dict, dict]:
         "duration_s": round((ended - started).total_seconds(), 3),
         "stopped_by": stopped_by,
         "totals": totals(flows, per_flow, recorder.processes),
+        "startup": recorder.startup,
         "environment_fingerprint": env.get("fingerprint"),
     }
     full = {**base, "flows": per_flow}

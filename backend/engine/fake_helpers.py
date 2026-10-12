@@ -291,13 +291,27 @@ class FakeDriver(FakeHelper):
         offered = sum(tools.IperfArgs(c["argv"]).bitrate for c in clients)
         cap = self.engine.traffic_capacity_bps
         share = min(1.0, cap / offered) if cap and offered else 1.0
-        await asyncio.gather(
-            *(self._client(c, servers.get(c["id"][:-2] + ".s"), failed, share) for c in clients)
+        cut = len(clients) - min(len(clients), self.engine.unstarted_clients)
+        clients, unstarted = clients[:cut], [c["id"] for c in clients[cut:]]
+        tasks = [
+            asyncio.ensure_future(self._client(c, servers.get(c["id"][:-2] + ".s"), failed, share))
+            for c in clients
+        ]
+        await asyncio.sleep(0)  # each client emits "started"
+        self.line(
+            {
+                "k": "clients_started",
+                "n": len(clients),
+                "failed": [],
+                "never_started": unstarted,
+                "t": round(time.time(), 3),
+            }
         )
+        await asyncio.gather(*tasks)
         for s in servers.values():
             if s["id"] not in failed and s["id"] not in self._served:
                 self.line({"k": "exit", "p": s["id"], "code": 0, "t": round(time.time(), 3)})
-        self.line({"k": "done", "exited": {}, "never_started": []})
+        self.line({"k": "done", "exited": {}, "never_started": unstarted})
 
     async def _client(
         self,
