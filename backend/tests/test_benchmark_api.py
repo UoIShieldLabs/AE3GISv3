@@ -255,6 +255,7 @@ def test_a_traffic_matrix_runs_every_cell_on_one_deployment(client, wait_jobs, f
     mesh = next(c for c in cells if c["case"] == "mesh·udp·1M·2000ms")
     assert mesh["flows"] == 8 and mesh["cell"]["burst_interval_ms"] == 2000  # 4 hosts × 2
     assert mesh["offered_bps"] == 8e6 and mesh["idle_cpu_mean"] is not None
+    assert mesh["flows_not_started"] == 0 and mesh["traffic_startup_s"] is not None
     run = client.get(f"/api/v1/traffic/runs/{mesh['traffic_job']}").json()
     assert run["result"]["flows"][0]["burst"]["count"] == 179
     names = [st["name"] for st in done["job"]["steps"]]
@@ -295,6 +296,21 @@ def test_a_matrix_can_run_only_some_cells(client, wait_jobs, fast):
         client, scale=[4], topology={"generate": gen}, matrix={**MATRIX, "cells": ["nope"]}
     )
     assert bad.status_code == 422 and bad.json()["code"] == "bad_matrix"
+
+
+def test_a_cell_whose_clients_never_all_start_is_the_tools_limit(client, wait_jobs, fast):
+    # The driver never starts the last client: the window begins without it,
+    # and the cell fails as traffic_start (the tool), not as the network.
+    fast.unstarted_clients = 1
+    gen = {"servers": 2, "hosts_per_subnet": 4}
+    matrix = {**MATRIX, "cells": ["mesh·udp·50K·100ms"]}
+    r = _start(client, scale=[4], topology={"generate": gen}, matrix=matrix)
+    assert r.status_code == 202, r.text
+    wait_jobs()
+    rows = _done(client, r.json()["id"])["result"]["rows"]
+    cell = next(row for row in rows if row.get("cell"))
+    assert cell["outcome"] == "failed" and cell["reason"] == "traffic_start"
+    assert cell["flows_not_started"] == 1 and "1 of 8 client(s)" in cell["detail"]
 
 
 def test_matrix_refusals(client):

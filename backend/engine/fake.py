@@ -17,7 +17,8 @@ reports running. Test hooks:
   ``oom_nodes``: nodes whose cgroup reports an OOM kill.
 - ``traffic_interval``: seconds between iperf3 intervals of the fake driver;
   ``fail_listen``: nodes whose traffic servers never listen; ``unreachable``:
-  nodes whose readiness probes fail.
+  nodes whose readiness probes fail; ``unstarted_clients``: how many of a
+  run's last clients the driver never gets to start.
 
 A capture sidecar behaves like tcpdump: it streams a pcap and prints its
 totals when signalled. Helpers (``start_helper``: the collector and the netns
@@ -221,6 +222,7 @@ class FakeEngine:
         self.oom_nodes: set[str] = set()
         self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail
+        self.unstarted_clients = 0  # a run's last clients the fake driver never starts
         self._pids: dict[tuple[str, str], int] = {}
 
     @staticmethod

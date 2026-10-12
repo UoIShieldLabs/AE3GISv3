@@ -3,6 +3,7 @@ over a fake /proc and cgroup tree (the scripts run in Python 3.12 on Alpine)."""
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 from pathlib import Path
@@ -75,6 +76,35 @@ def test_proc_stat_with_awkward_comm():
 
 def test_listening_ports_from_tcp6():
     assert netns.listening_ports(TCP6) == {0x1451}  # 5201, LISTEN only
+
+
+def test_the_driver_says_when_every_client_has_started(monkeypatch):
+    # Clients spread over the ramp; once each has started (or failed to),
+    # clients_started says so, before the run ends.
+    events: list[dict] = []
+    monkeypatch.setattr(netns, "emit", events.append)
+
+    async def spawn(pid, argv, **kwargs):
+        if argv == ["refused"]:
+            raise PermissionError("setns refused")
+        return await asyncio.create_subprocess_exec("true", **kwargs)
+
+    procs = [{"id": "f1.s", "pid": 1, "role": "server", "argv": ["srv"]}]
+    procs += [
+        {"id": f"f{i}.c", "pid": 1, "role": "client", "argv": argv}
+        for i, argv in enumerate((["cli"], ["refused"], ["cli"]), start=1)
+    ]
+    spec = {"mode": "run", "ramp_s": 0.3, "grace_s": 1, "procs": procs}
+    assert asyncio.run(netns.run(spec, asyncio.Event(), spawn)) == 0
+    kinds = [e["k"] for e in events]
+    up = next(e for e in events if e["k"] == "clients_started")
+    assert up["n"] == 2 and up["failed"] == ["f2.c"] and up["never_started"] == []
+    starts = {e["p"]: e["t"] for e in events if e["k"] == "started"}
+    assert set(starts) == {"f1.s", "f1.c", "f3.c"}
+    assert starts["f3.c"] - starts["f1.c"] >= 0.15  # two thirds of the ramp apart
+    started_at = max(i for i, e in enumerate(events) if e["k"] == "started")
+    assert kinds.index("servers_ready") < started_at < kinds.index("clients_started")
+    assert kinds.index("clients_started") < kinds.index("done")
 
 
 def _cgroup(root: Path, rel: str, pid: int, usage: int, mem: int) -> None:

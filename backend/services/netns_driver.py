@@ -11,8 +11,8 @@ events.
 
 Events arrive on the output pump's thread (Docker) or on the loop (fake
 engine), so ``on_event`` must be thread-safe; the control events a caller
-waits on (``servers_ready``, ``done``, ``error``) are also recorded here and
-signalled on the loop.
+waits on (``servers_ready``, ``clients_started``, ``done``, ``error``) are
+also recorded here and signalled on the loop.
 """
 
 from __future__ import annotations
@@ -65,6 +65,7 @@ class NetnsDriver:
         self.helper: Sidecar | None = None
         self.error: str | None = None
         self.servers_ready: Event | None = None
+        self.clients_started: Event | None = None
         self.done: Event | None = None
         self.stderr: deque[str] = deque(maxlen=20)
         self._pump: asyncio.Future | None = None
@@ -80,6 +81,8 @@ class NetnsDriver:
             if k == "servers_ready":
                 self.servers_ready = evt
                 self._ready.set()
+            elif k == "clients_started":
+                self.clients_started = evt
             elif k == "done":
                 self.done = evt
                 self._done.set()
@@ -104,7 +107,7 @@ class NetnsDriver:
                     on_event(evt)
                 except Exception as exc:  # pragma: no cover - a caller's bug; keep pumping
                     log.warning("Driver event handler failed: %s", exc)
-                if evt.get("k") in ("servers_ready", "done", "error"):
+                if evt.get("k") in ("servers_ready", "clients_started", "done", "error"):
                     loop.call_soon_threadsafe(control, evt)
 
         def on_stderr(chunk: bytes) -> None:

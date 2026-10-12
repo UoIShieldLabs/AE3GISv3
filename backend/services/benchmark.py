@@ -89,6 +89,10 @@ RESULTS_NAME = "results.csv"
 REPORT_NAME = "report.md"
 # Jobs that do not make the host busy (they don't load it for long).
 QUIET_KINDS = ("build", "sync_source")
+# How long a step's traffic may take to start every client before its window
+# begins anyway (beyond its ramp): starting thousands of processes takes a while.
+STARTUP_BASE_S = 60.0
+STARTUP_PER_FLOW_S = 0.05
 
 
 def list_benchmarks(db: Session, limit: int = 50) -> list[Job]:
@@ -572,7 +576,10 @@ async def _hold(
     load: dict[str, Any] | None,
 ) -> None:
     """``hold_s`` idle, or under ``load`` (``patterns``, ``interval_s``,
-    ``ramp_s``: one traffic run, its ramp left out of the window). Sets
+    ``ramp_s``: one traffic run). Under load the window begins once every
+    client has started (``_traffic_up``), so its start-up and ramp stay out of
+    it at any size; a client still not started by then fails the step as
+    ``traffic_start``: the tool's limit, not the network's. Sets
     ``windows["hold"]``, then raises Tripped if a criterion fired."""
     runner, topology_id = b.runner, b.spec["topology_id"]
     t2 = b.now()
@@ -604,11 +611,16 @@ async def _hold(
         windows["hold"] = None
         _fail(row, "failed", "traffic_refused", str(exc))
         return
-    ramp = float(load.get("ramp_s") or 0.0)
-    b.progress(name, f"traffic: ramp {ramp:.0f}s + hold {hold_s:g}s")
-    tripped = await b.pause(ramp)
+    flows = len((run.params or {}).get("flows") or [])
+    b.progress(name, f"traffic: starting {flows} flow(s)")
+    tripped, startup_s, begun = await _traffic_up(
+        b, run.id, flows, float(load.get("ramp_s") or 0.0)
+    )
+    row["traffic_startup_s"] = startup_s
+    row["flows_not_started"] = max(0, flows - begun)
     t2 = b.now()
     if not tripped:
+        b.progress(name, f"traffic: {begun} flow(s) running after {startup_s:g}s; hold {hold_s:g}s")
         tripped = await b.pause(hold_s)
     windows["hold"] = (t2, b.now())
     done = await _stop_traffic(runner, topology_id)
@@ -619,9 +631,40 @@ async def _hold(
         _fail(row, "failed", "traffic_failed", done.error or "the traffic run failed")
     if tripped:
         raise Tripped
+    if row["flows_not_started"]:
+        _fail(
+            row,
+            "failed",
+            "traffic_start",
+            f"{row['flows_not_started']} of {flows} client(s) had not started after {startup_s:g}s",
+        )
     verdict = bm.traffic_verdict(totals, b.stop)
     if verdict:
         _fail(row, "degraded", *verdict)
+
+
+async def _traffic_up(b: Bench, run_id: str, flows: int, ramp: float) -> tuple[bool, float, int]:
+    """Wait until traffic run ``run_id`` has started every client (the
+    driver's ``clients_started``), it ends, a criterion trips, or the start-up
+    budget runs out. Returns (tripped, seconds waited, clients started)."""
+    start = time.monotonic()
+    budget = ramp + STARTUP_BASE_S + STARTUP_PER_FLOW_S * flows
+    subject = traffic.subject(b.spec["topology_id"])
+    tripped = False
+    while time.monotonic() - start < budget:
+        rec = traffic.active_recorder(run_id)
+        if rec is not None and rec.startup is not None:
+            break
+        with b.runner.session_factory() as db:
+            active = jobs.active_for_subject(db, subject)
+        if active is None or active.id != run_id:
+            break  # it ended (failed) before starting its clients
+        if await b.pause(0.25):
+            tripped = True
+            break
+    rec = traffic.active_recorder(run_id)
+    begun = rec.clients_begun() if rec is not None else 0
+    return tripped, round(time.monotonic() - start, 1), begun
 
 
 def _keep_traffic(b: Bench, run_id: str, slug: str) -> None:
