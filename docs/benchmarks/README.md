@@ -257,7 +257,13 @@ its `axes` on it, one cell after another:
 Axes are `pattern` and any of a pattern's `bitrate`, `burst_interval_ms`,
 `protocol`, `length`, `parallel`, `direction`. Every cell is checked before
 anything deploys. Each cell waits for a quiet host, idles `gap_s` (its CPU
-reference), then runs its traffic for `ramp_s` + `hold_s`. Cells run in a
+reference), then starts its traffic (clients spread over `ramp_s`) and holds
+`hold_s` from the moment every client has started (the driver's
+`clients_started`), so a big lab's start-up never eats into the window. A
+client still not started after `ramp_s` + 60 s + 50 ms a flow fails the cell
+as `traffic_start`: the tool's limit, not the network's. (Before this, the
+window began `ramp_s` after the request; in labs of 500+ hosts the clients
+were then still starting through much of it.) Cells run in a
 seeded shuffled order so slow drift doesn't line up with an axis; a degraded
 or failed cell doesn't stop the matrix, a stop criterion does. The report
 draws, per pattern × protocol, a rate × interval grid of: delivered, slowest
@@ -292,8 +298,13 @@ its comfortable size a second time to confirm it. The runner plans rounds:
 every unfinished cell asks for its next size, and each size is one matrix
 benchmark (after a Docker restart) running only the cells that want it
 (`matrix.cells`), so cells with similar limits share deployments. A step a
-host limit stops (memory, disk…) counts as a failure marked `mem`; a cell
-that passes at `max_hosts` is reported as `≥ max_hosts`. The summary draws a
+host limit stops (memory, disk…) counts as a failure marked `mem`, one whose
+clients did not all start in time (`traffic_start`) `tool`; a cell that passes
+at `max_hosts` is reported as `≥ max_hosts`. Resuming a search recorded before
+the window waited for every client re-checks its results once
+(`reopen_legacy`): a pass counts only if every client ran for 90% of its
+window, a failure that only never-started clients explain is dropped, and
+those cells ask again (logged, and kept in the manifest under `reopened`). The summary draws a
 rate × interval grid of *comfortable / fails* per pattern × protocol;
 `limits-<item>.json` holds every cell's result and the manifest every probe.
 A suite's `sysctls` are set in Docker's kernel before the first benchmark and
@@ -421,8 +432,9 @@ Docker socket AE3GIS already uses:
 - the **collector** shares the host's PID and cgroup namespaces and mounts the
   host cgroup tree read-only: it reads files, it changes nothing;
 - the **traffic driver** shares the host's PID namespace with `CAP_SYS_ADMIN`
-  (to enter a node's network namespace with `setns`) and `CAP_SYS_PTRACE` (to
-  open that namespace: Kathará nodes hold capabilities the driver does not).
+  (to enter a node's network namespace: `nsenter` for traffic runs, `setns`
+  for readiness probes) and `CAP_SYS_PTRACE` (to open that namespace: Kathará
+  nodes hold capabilities the driver does not).
 
 On hosts whose AppArmor or SELinux policy blocks `setns` for containers, the
 first traffic run or readiness check fails with *Cannot enter node network
