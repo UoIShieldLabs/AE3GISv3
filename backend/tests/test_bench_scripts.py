@@ -391,6 +391,73 @@ def test_record_probe():
     assert results[2]["bound"] == "host" and results[1]["bound"] == "traffic"
 
 
+def _probe_dir(folder: Path, cells: dict, current: bool = False) -> None:
+    """A probe's files: ``cells`` maps case -> (outcome, reason, totals, ticks)."""
+    import json
+    import zipfile
+
+    folder.mkdir(parents=True)
+    rows = [{"case": None, "outcome": "ok"}]
+    for case, (outcome, reason, _, _) in cells.items():
+        row = {"case": case, "cell": {"x": 1}, "outcome": outcome, "reason": reason}
+        if current:
+            row["traffic_startup_s"] = 3.0
+        rows.append(row)
+    spec = {"hold_s": 50, "matrix": {"ramp_s": 5}, "stop": {"min_delivered_ratio": 0.95}}
+    (folder / "benchmark.json").write_text(json.dumps({"spec": spec, "result": {"rows": rows}}))
+    with zipfile.ZipFile(folder / "export.zip", "w") as zf:
+        for i, (case, (_, _, totals, ticks)) in enumerate(cells.items(), start=1):
+            run = {
+                "params": {"label": f"benchmark cell {i:03d}/9 {case}"},
+                "result": {"totals": totals},
+            }
+            zf.writestr(f"traffic/{i:03d}-x/run.json", json.dumps(run))
+            zf.writestr(f"traffic/{i:03d}-x/totals.ndjson", "\n".join(json.dumps(t) for t in ticks))
+
+
+def test_results_from_before_the_window_waited_for_every_client_are_reopened(tmp_path):
+    full = {"flows": 10, "flows_without_data": 0, "offered_bps": 10, "delivered_bps": 10}
+    dead = {"flows": 10, "flows_without_data": 4, "offered_bps": 10, "delivered_bps": 6}
+    slow = {"flows": 10, "flows_without_data": 4, "offered_bps": 10, "delivered_bps": 3}
+    _probe_dir(
+        tmp_path / "r01-300",
+        {
+            "late": ("ok", None, full, [{"t": 30, "active": 10}]),  # full load from 30 s: 50%
+            "early": ("ok", None, full, [{"t": 6, "active": 10}]),  # 98%
+            "unrun": ("degraded", "traffic_short", dead, [{"t": 50, "active": 6}]),
+            "real": ("degraded", "traffic_short", slow, [{"t": 50, "active": 6}]),
+        },
+    )
+    _probe_dir(tmp_path / "r02-400", {"late": ("ok", None, full, [{"t": 40, "active": 10}])}, True)
+
+    def st(**kw):
+        return {"cell": {}, "estimate": 100, "pass": {}, "fail": {}, "unrun": {}, **kw}
+
+    states = {
+        "late": st(),
+        "early": st(),
+        "unrun": st(),
+        "real": st(),
+    }
+    states["late"]["pass"] = {"300": 2, "400": 1}
+    states["early"]["pass"] = {"300": 1}
+    states["unrun"]["fail"] = {"300": "traffic_short"}
+    states["real"]["fail"] = {"300": "traffic_short"}
+    probes = [
+        {"status": "done", "recorded": True, "dir": "r01-300", "size": 300, "round": 1},
+        {"status": "done", "recorded": True, "dir": "r02-400", "size": 400, "round": 2},
+    ]
+    dropped = suites.reopen_legacy(states, probes, tmp_path)
+    assert {(d["cell"], d["size"]) for d in dropped} == {("late", 300), ("unrun", 300)}
+    assert states["late"]["pass"] == {"300": 1, "400": 1}  # one of two passes dropped; r02 trusted
+    assert states["early"]["pass"] == {"300": 1}
+    assert states["unrun"]["fail"] == {} and states["real"]["fail"] == {"300": "traffic_short"}
+    results = {k: suites.limit_result(k, v, suites.LIMIT_DEFAULTS) for k, v in states.items()}
+    tool = {**st(), "fail": {"500": "traffic_start"}}
+    assert suites.limit_result("t", tool, suites.LIMIT_DEFAULTS)["bound"] == "tool"
+    assert results["real"]["bound"] == "traffic"
+
+
 def test_a_limit_search_end_to_end(client, fake_engine, tmp_path):
     fake_engine.monitor_interval = 0.02
     fake_engine.traffic_capacity_bps = 25e6  # 1 Mb/s flows: 25 clients get through

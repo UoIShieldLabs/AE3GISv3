@@ -46,6 +46,7 @@ import signal
 import subprocess
 import sys
 import time
+import zipfile
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -334,6 +335,7 @@ LIMIT_DEFAULTS: dict[str, Any] = {
     "mem_per_host": {},  # {pattern: bytes a host costs, its flows' iperf3 processes included}
 }
 TRAFFIC_REASONS = ("traffic_short", "traffic_loss", "traffic_none", "traffic_failed")
+TOOL_REASONS = ("traffic_start",)  # the traffic tool's limit: clients not started in time
 _RATE = {"K": 1e3, "M": 1e6, "G": 1e9}
 
 
@@ -448,6 +450,133 @@ def record_probe(
             state["fail"][key] = row.get("reason") or row["outcome"]
 
 
+# Results measured before a step's window waited for every traffic client
+# (rows without ``traffic_startup_s``): its 50 s began at a fixed time after
+# the request, so in big labs the clients were still starting through much of
+# it. On resume they are checked once (``reopen_legacy``): a pass counts only if
+# every client ran for FULL_LOAD_MIN of its window, and a failure that only
+# clients which never ran explain (more than NOT_RUN_MAX of the flows sent
+# nothing while the others delivered) is dropped. Their cells ask again.
+FULL_LOAD_MIN = 0.9
+NOT_RUN_MAX = 0.05
+
+
+def legacy_cell_runs(folder: Path) -> list[dict[str, Any]] | None:
+    """One probe's traffic cells, if it was measured before the window waited
+    for every client: per cell its outcome, the share of its window at full
+    load (``coverage``; None if unknown) and its flows that sent nothing.
+    None for a probe of the current kind, or one without its files."""
+    try:
+        b = json.loads((folder / "benchmark.json").read_text())
+    except (OSError, ValueError):
+        return None
+    rows = [r for r in ((b.get("result") or {}).get("rows") or []) if r.get("cell")]
+    if not rows or any("traffic_startup_s" in r for r in rows):
+        return None
+    spec = b.get("spec") or {}
+    ramp = float((spec.get("matrix") or {}).get("ramp_s") or 0)
+    hold = float(spec.get("hold_s") or 0)
+    floor = float((spec.get("stop") or {}).get("min_delivered_ratio") or 0.95)
+    traffic: dict[str, dict[str, Any]] = {}
+    try:
+        with zipfile.ZipFile(folder / "export.zip") as zf:
+            for name in zf.namelist():
+                if not (name.startswith("traffic/") and name.endswith("/run.json")):
+                    continue
+                run = json.loads(zf.read(name))
+                case = str((run.get("params") or {}).get("label") or "").split(" ")[-1]
+                totals_name = name[: -len("run.json")] + "totals.ndjson"
+                lines = (
+                    zf.read(totals_name).decode().splitlines()
+                    if totals_name in zf.namelist()
+                    else []
+                )
+                traffic[case] = {
+                    "totals": ((run.get("result") or {}).get("totals")) or {},
+                    "ticks": [json.loads(x) for x in lines if x.strip()],
+                }
+    except (OSError, ValueError, zipfile.BadZipFile):
+        return None
+    out = []
+    for r in rows:
+        t = traffic.get(r["case"])
+        entry = {"case": r["case"], "outcome": r["outcome"], "reason": r.get("reason")}
+        if t is None or not hold:
+            out.append({**entry, "coverage": None, "not_run": False})
+            continue
+        flows = int(t["totals"].get("flows") or r.get("flows") or 0)
+        full = next((x["t"] for x in t["ticks"] if flows and (x.get("active") or 0) >= flows), None)
+        coverage = (
+            (0.0 if full is None else max(0.0, ramp + hold - max(ramp, float(full))) / hold)
+            if t["ticks"]
+            else None
+        )
+        no_data = int(t["totals"].get("flows_without_data") or 0)
+        offered = t["totals"].get("offered_bps") or 0
+        ran = flows - no_data
+        rest = (
+            (t["totals"].get("delivered_bps") or 0) / (offered * ran / flows)
+            if offered and ran
+            else 0
+        )
+        not_run = bool(flows) and no_data > NOT_RUN_MAX * flows and rest >= floor
+        out.append({**entry, "coverage": coverage, "not_run": not_run})
+    return out
+
+
+def reopen_legacy(
+    states: dict[str, dict[str, Any]], probes: list[dict[str, Any]], out_dir: Path
+) -> list[dict[str, Any]]:
+    """Drop the results ``legacy_cell_runs`` doesn't vouch for from the
+    cells' states; returns what was dropped ({cell, size, round, what})."""
+    seen: dict[tuple[str, int], dict[str, int]] = {}
+    dropped: list[dict[str, Any]] = []
+    for probe in probes:
+        if probe.get("status") != "done" or not probe.get("recorded"):
+            continue
+        runs = legacy_cell_runs(out_dir / probe["dir"])
+        if runs is None:  # the current kind (or no files): its failures stand
+            for cid in _failed_cells(out_dir / probe["dir"]):
+                tally = seen.setdefault((cid, probe["size"]), {})
+                tally["fail"] = tally.get("fail", 0) + 1
+            continue
+        for r in runs:
+            if r["case"] not in states:
+                continue
+            tally = seen.setdefault((r["case"], probe["size"]), {})
+            where = {"cell": r["case"], "size": probe["size"], "round": probe["round"]}
+            if r["outcome"] == "ok":
+                if r["coverage"] is not None and r["coverage"] < FULL_LOAD_MIN:
+                    tally["bad_pass"] = tally.get("bad_pass", 0) + 1
+                    dropped.append({**where, "what": f"pass at {r['coverage']:.0%} full load"})
+            elif r["reason"] in TRAFFIC_REASONS and r["not_run"]:
+                tally["not_run_fail"] = tally.get("not_run_fail", 0) + 1
+                dropped.append({**where, "what": "failure from clients that never ran"})
+            else:
+                tally["fail"] = tally.get("fail", 0) + 1
+    for (cid, size), tally in seen.items():
+        state, key = states[cid], str(size)
+        if tally.get("bad_pass") and key in state["pass"]:
+            left = state["pass"][key] - tally["bad_pass"]
+            if left > 0:
+                state["pass"][key] = left
+            else:
+                del state["pass"][key]
+        if tally.get("not_run_fail") and not tally.get("fail"):
+            state["fail"].pop(key, None)
+    return dropped
+
+
+def _failed_cells(folder: Path) -> list[str]:
+    try:
+        rows = (json.loads((folder / "benchmark.json").read_text()).get("result") or {}).get(
+            "rows"
+        ) or []
+    except (OSError, ValueError):
+        return []
+    return [r["case"] for r in rows if r.get("cell") and r["outcome"] != "ok"]
+
+
 def limit_result(cid: str, state: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     lo, hi = cell_bracket(state)
     reason = state["fail"].get(str(hi)) if hi is not None else None
@@ -458,11 +587,17 @@ def limit_result(cid: str, state: dict[str, Any], cfg: dict[str, Any]) -> dict[s
         "comfortable": lo,
         "fails_at": hi,
         "reason": reason,
-        "bound": None if hi is None else ("traffic" if reason in TRAFFIC_REASONS else "host"),
+        "bound": None if hi is None else _bound(reason),
         "confirmed": lo is not None and state["pass"].get(str(lo), 0) >= 2,
         "done": next_probe(state, cfg) is None,
         "probes": sum(state["pass"].values()) + len(state["fail"]),
     }
+
+
+def _bound(reason: str | None) -> str:
+    if reason in TRAFFIC_REASONS:
+        return "traffic"
+    return "tool" if reason in TOOL_REASONS else "host"
 
 
 def limits_markdown(item: str, results: list[dict[str, Any]], cfg: dict[str, Any]) -> list[str]:
@@ -474,8 +609,8 @@ def limits_markdown(item: str, results: list[dict[str, Any]], cfg: dict[str, Any
         "",
         "Hosts each cell comfortably supports / the size where it first fell below the "
         f"threshold ({cfg['step']} hosts apart, the comfortable size passed twice). "
-        "`mem` marks a host limit (memory, disk…) rather than traffic; `≥ N`: it never "
-        "degraded up to N.",
+        "`mem` marks a host limit (memory, disk…) rather than traffic, `tool` the traffic "
+        "tool's (clients not started in time); `≥ N`: it never degraded up to N.",
     ]
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for r in results:
@@ -503,7 +638,7 @@ def limits_markdown(item: str, results: list[dict[str, Any]], cfg: dict[str, Any
                     text = f"{r['comfortable'] or '<' + str(r['fails_at'])} / {r['fails_at']}"
                     cells.append(
                         text
-                        + (" mem" if r["bound"] == "host" else "")
+                        + {"host": " mem", "tool": " tool"}.get(r["bound"], "")
                         + ("" if r["done"] else " …")
                     )
             lines.append(f"| {rate} | " + " | ".join(cells) + " |")
@@ -1277,6 +1412,16 @@ class Runner:
         for probe in probes:  # one left running or unrecorded by an interrupted runner
             if probe["status"] in ("running", "done") and not probe.get("recorded"):
                 self.run_probe(run, probe, template, states, resume=True)
+        if "reopened" not in run:
+            dropped = reopen_legacy(states, probes, self.out_dir)
+            run["reopened"] = {"at": datetime.now(UTC).isoformat(), "dropped": dropped}
+            if dropped:
+                cells = len({d["cell"] for d in dropped})
+                self.log(
+                    f"  re-opened {cells} cells: {len(dropped)} results measured before "
+                    "the window waited for every traffic client"
+                )
+            self.save()
         while not self.stopping:
             plan = plan_round(states, cfg)
             if not plan:
