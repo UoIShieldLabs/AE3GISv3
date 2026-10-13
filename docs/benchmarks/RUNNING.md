@@ -7,7 +7,7 @@ method behind them is in [README.md](README.md); this page is the checklist.
 | Suite | What it measures | Took on an M4 MacBook Air (Docker Desktop 8 CPUs / 16 GB) |
 |---|---|---|
 | `random` | **Idle capacity.** An image census (which node images run here, and what each costs), then 10 climbs of a random mix of every node type, each to the most nodes this machine holds, Docker restarted before each | ~8.5 h |
-| `traffic` | **Capacity under traffic.** For 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts each comfortably supports and where it starts to fail, 50 hosts apart | ~25–30 h |
+| `traffic` | **Capacity under traffic.** For 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts each comfortably supports and where it starts to fail, 50 hosts apart | ~2 days (rough: the first full run on the fixed traffic driver is still going) |
 
 Both are started by one command each and keep going on their own; the
 results land in `backend/benchmark-results/<host>/` (kept out of git).
@@ -72,7 +72,16 @@ benchmark, and writes a manifest after every step.
   *Benchmarks* sheet in the UI once a suite runs.
 - **Stop:** `pkill -f bench_suite.py` stops the runner (the benchmark running
   in the backend finishes on its own); **resume** with the same command plus
-  `--resume`: finished runs are kept, a running benchmark is followed.
+  `--resume`: finished runs are kept, a running benchmark is followed. Pass
+  the results folder (`--resume backend/benchmark-results/$H/<date>-traffic`)
+  when an aborted attempt sits next to it: `latest` picks the newest folder.
+- **A traffic suite started before commit `d284d384`** (2026-10-12) measured
+  big labs at partial load: its 50 s window began 5 s after the traffic was
+  requested, while in labs of 500+ hosts the clients were still starting.
+  Stop it, `git pull`, and resume it on its folder: the runner re-checks the
+  old results once ("re-opened N cells" in the log) and searches those cells
+  again; results from small labs are kept. Nothing else changes, and the
+  `random` suite is unaffected.
 - **Kernel setting:** the `traffic` suite raises the neighbour (ARP) table in
   Docker's kernel (from 1024 entries for all nodes together to 16384) with a
   privileged one-shot container, after every Docker restart. On Linux that
@@ -87,6 +96,12 @@ per benchmark with its report and full export. Zip the host folder to share
 it; results never go into git.
 
 ## What has bitten earlier runs
+
+- **The traffic tool itself**, until 2026-10-12: the driver started about 40
+  processes a second, and the measured window didn't wait for them, so big
+  labs ran at partial load or with clients that never started (now ~2000 a
+  second, the window starts once every client runs, and a client still not
+  started fails the cell as `tool`, not as a traffic limit).
 
 - **A full Docker disk** fails builds and container starts (the Wazuh manager
   alone unpacks 2–3 GB per node; it is left out of the random mix, and steps
