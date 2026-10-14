@@ -292,8 +292,13 @@ its comfortable size a second time to confirm it. The runner plans rounds:
 every unfinished cell asks for its next size, and each size is one matrix
 benchmark (after a Docker restart) running only the cells that want it
 (`matrix.cells`), so cells with similar limits share deployments. A step a
-host limit stops (memory, disk…) counts as a failure marked `mem`; a cell
-that passes at `max_hosts` is reported as `≥ max_hosts`. The summary draws a
+host limit stops (memory, disk…) counts as a failure marked `mem`; a size
+whose whole deployment fails (a dropped Docker connection) is asked for again
+once before its cells fail there; a cell that passes at `max_hosts` is
+reported as `≥ max_hosts`. Before a cell's traffic starts, a client or server
+missing from the engine's node lookup is looked up again a few times
+(`NODE_RETRY_S` in `services/traffic.py`): under load a running node can drop
+out of one lookup, which once failed cells that were fine. The summary draws a
 rate × interval grid of *comfortable / fails* per pattern × protocol;
 `limits-<item>.json` holds every cell's result and the manifest every probe.
 A suite's `sysctls` are set in Docker's kernel before the first benchmark and

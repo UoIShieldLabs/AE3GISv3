@@ -386,6 +386,8 @@ def test_record_probe():
     assert states["d"]["fail"] == {"200": "not_run"}  # asked twice, never reached
     deploy_failed = [{"case": None, "outcome": "stopped", "reason": "memory"}]
     suites.record_probe(states, 900, ["a"], {"rows": deploy_failed})
+    assert "900" not in states["a"]["fail"]  # one failed deployment: the size again
+    suites.record_probe(states, 900, ["a"], {"rows": deploy_failed})
     assert states["a"]["fail"]["900"] == "memory"
     results = [suites.limit_result(k, s, suites.LIMIT_DEFAULTS) for k, s in states.items()]
     assert results[2]["bound"] == "host" and results[1]["bound"] == "traffic"

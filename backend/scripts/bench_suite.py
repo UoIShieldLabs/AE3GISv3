@@ -428,7 +428,9 @@ def record_probe(
 ) -> None:
     """A size's matrix result into its cells' states: a pass, a failure (its
     reason), or, for a cell the run never reached (a stop criterion ended it
-    first), nothing: it asks for the size again, once."""
+    first, or the deployment failed), nothing: it asks for the size again,
+    once. A deployment that fails twice fails its cells (a dropped Docker
+    connection fails one deployment, not the size)."""
     rows = result.get("rows") or []
     ran = {r["case"]: r for r in rows if r.get("cell")}
     deploy = next((r for r in rows if not r.get("cell")), None)
@@ -436,12 +438,12 @@ def record_probe(
     for cid in wanted:
         state, row = states[cid], ran.get(cid)
         if row is None:
-            if deploy is not None and deploy["outcome"] != "ok":
-                state["fail"][key] = deploy.get("reason") or deploy["outcome"]
-            else:
-                state["unrun"][key] = state["unrun"].get(key, 0) + 1
-                if state["unrun"][key] >= 2:
-                    state["fail"][key] = "not_run"
+            state["unrun"][key] = state["unrun"].get(key, 0) + 1
+            if state["unrun"][key] >= 2:
+                failed = deploy is not None and deploy["outcome"] != "ok"
+                state["fail"][key] = (
+                    (deploy.get("reason") or deploy["outcome"]) if failed else "not_run"
+                )
         elif row["outcome"] == "ok":
             state["pass"][key] = state["pass"].get(key, 0) + 1
         else:

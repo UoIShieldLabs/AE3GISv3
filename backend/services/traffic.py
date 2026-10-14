@@ -46,7 +46,7 @@ from domain.topology import find_container
 from domain.traffic.iperf3 import Iperf3StreamParser, burst_shape, is_interrupt
 from domain.traffic.patterns import PatternError, assign_ports, expand, offered_bps
 from domain.traffic.summary import FlowSummary, run_aggregates
-from engine.base import EngineState
+from engine.base import DeploymentEngine, EngineState
 from services import environment, events, jobs, monitor
 from services.jobs import JobRunner
 from services.live import Channel
@@ -65,6 +65,9 @@ DRIVER_STOP_S = 30.0
 LIVE_FLOW_LIMIT = 16  # per-flow samples go to live views up to this many flows
 STATUS_FLOW_LIMIT = 200  # every flow's latest rate in status messages up to this many
 RESULT_FLOW_LIMIT = 64  # the job row keeps per-flow summaries up to this many (run.json: all)
+# A busy Docker can briefly leave running nodes out of node_pids: look again
+# after these pauses before calling a flow's node not running.
+NODE_RETRY_S = (2.0, 5.0, 10.0)
 
 # Recorders of running runs, by job id (live views start from their backlog).
 _ACTIVE: dict[str, RunRecorder] = {}
@@ -431,6 +434,22 @@ def driver_spec(
     }
 
 
+async def _flow_pids(
+    engine: DeploymentEngine, state: EngineState, flows: list[dict[str, Any]]
+) -> dict[str, int]:
+    """The flows' nodes' pids, asking again (``NODE_RETRY_S``) while some are
+    missing: under load a node can drop out of one lookup and be back in the
+    next."""
+    nodes = {n for f in flows for n in (f["client"], f["server"])}
+    pids = await engine.node_pids(state)
+    for pause in NODE_RETRY_S:
+        if nodes <= pids.keys():
+            break
+        await asyncio.sleep(pause)
+        pids = await engine.node_pids(state)
+    return pids
+
+
 async def run_traffic(runner: JobRunner, job_id: str) -> None:
     settings, store, hub = runner.settings, runner.artifacts, runner.live
     assert settings is not None and store is not None and hub is not None
@@ -461,7 +480,7 @@ async def run_traffic(runner: JobRunner, job_id: str) -> None:
         async with runner.step(job_id, "prepare", message=f"{len(flows)} flow(s)"):
             if topo.status != "deployed" or state is None:
                 raise RuntimeError("The topology is not deployed")
-            pids = await engine.node_pids(state)
+            pids = await _flow_pids(engine, state, flows)
             missing = sorted(
                 {n for f in flows for n in (f["client"], f["server"]) if n not in pids}
             )
