@@ -57,7 +57,8 @@ From the repository root:
    `--restart none`. On Linux a Docker restart doesn't remove the leaked taps;
    compare the resting memory the summary shows;
 4. runs each spec through the API, follows it, and saves everything in
-   `backend/benchmark-results/<host>/<date>-<suite>/` (kept out of git):
+   `backend/benchmark-results/<host>/<date>-<suite>/` (ignored by git; the
+   reports are committed by hand, see [RUNNING.md](RUNNING.md#4-results)):
 
    | File | What it is |
    |---|---|
