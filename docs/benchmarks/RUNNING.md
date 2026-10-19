@@ -79,8 +79,8 @@ benchmark, and writes a manifest after every step.
   big labs at partial load: its 50 s window began 5 s after the traffic was
   requested, while in labs of 500+ hosts the clients were still starting.
   Stop it, `git pull`, and resume it on its folder: the runner re-checks the
-  old results once ("re-opened N cells" in the log) and searches those cells
-  again; results from small labs are kept. Nothing else changes, and the
+  old results once per rule ("re-opened N cells" in the log; finished searches
+  too) and searches those cells again; results from small labs are kept. Nothing else changes, and the
   `random` suite is unaffected.
 - **Kernel setting:** the `traffic` suite raises the neighbour (ARP) table in
   Docker's kernel (from 1024 entries for all nodes together to 16384) with a
@@ -101,7 +101,9 @@ it; results never go into git.
   processes a second, and the measured window didn't wait for them, so big
   labs ran at partial load or with clients that never started (now ~2000 a
   second, the window starts once every client runs, and a client still not
-  started fails the cell as `tool`, not as a traffic limit).
+  started fails the cell as `tool`, not as a traffic limit). It also forked
+  itself for every process, which stalled memory in big labs and stopped
+  some cells as memory limits at ~60% memory.
 
 - **A full Docker disk** fails builds and container starts (the Wazuh manager
   alone unpacks 2–3 GB per node; it is left out of the random mix, and steps
