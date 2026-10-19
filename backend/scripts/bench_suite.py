@@ -616,6 +616,16 @@ def reopen_legacy(
     return dropped
 
 
+def limits_outcome(run: dict[str, Any], cfg: dict[str, Any]) -> int:
+    """Set a limits run's outcome from its cells as they stand; returns how
+    many are done."""
+    results = [limit_result(cid, st, cfg) for cid, st in (run.get("cells") or {}).items()]
+    done = sum(1 for r in results if r["done"])
+    probes = len(run.get("probes") or [])
+    run["outcome"] = f"{done} of {len(results)} cells' limits found, in {probes} probes"
+    return done
+
+
 def reopen_due(run: dict[str, Any]) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """(re-check rules a limits run has had, those still to apply). A run
     re-checked before ``rules`` were recorded had the first two."""
@@ -690,7 +700,10 @@ def limits_markdown(item: str, results: list[dict[str, Any]], cfg: dict[str, Any
                 if r is None:
                     cells.append("–")
                 elif r["fails_at"] is None:
-                    cells.append(f"≥ {r['comfortable']}" if r["comfortable"] else "?")
+                    cells.append(
+                        (f"≥ {r['comfortable']}" if r["comfortable"] else "?")
+                        + ("" if r["done"] else " …")
+                    )
                 else:
                     text = f"{r['comfortable'] or '<' + str(r['fails_at'])} / {r['fails_at']}"
                     cells.append(
@@ -1475,11 +1488,12 @@ class Runner:
             rec = run.setdefault("reopened", {"dropped": []})
             rec.update(at=datetime.now(UTC).isoformat(), rules=[*done, *todo])
             rec["dropped"] = [*rec.get("dropped", []), *dropped]
+            limits_outcome(run, cfg)
             if dropped:
                 cells = len({d["cell"] for d in dropped})
                 self.log(
-                    f"  re-opened {cells} cells ({', '.join(todo)}): {len(dropped)} results "
-                    "measured by the traffic driver before 2026-10-12"
+                    f"  re-check ({', '.join(todo)}): dropped {len(dropped)} results from {cells} "
+                    "cells, measured by the traffic driver before 2026-10-12"
                 )
             self.save()
         while not self.stopping:
@@ -1505,12 +1519,12 @@ class Runner:
                 probes.append(probe)
                 self.save()
                 self.run_probe(run, probe, template, states)
-        results = [limit_result(cid, st, cfg) for cid, st in states.items()]
-        done = sum(1 for r in results if r["done"])
+                limits_outcome(run, cfg)
+                self.save()
+        done = limits_outcome(run, cfg)
         run.update(
-            status="done" if done == len(results) else "running",
+            status="done" if done == len(states) else "running",
             ended_at=datetime.now(UTC).isoformat(),
-            outcome=f"{done} of {len(results)} cells' limits found, in {len(probes)} probes",
         )
         self.save()
 

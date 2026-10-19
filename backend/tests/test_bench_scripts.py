@@ -389,6 +389,16 @@ def test_record_probe():
     assert states["a"]["fail"]["900"] == "memory"
     results = [suites.limit_result(k, s, suites.LIMIT_DEFAULTS) for k, s in states.items()]
     assert results[2]["bound"] == "host" and results[1]["bound"] == "traffic"
+    # A cell still climbing shows as open, and the outcome counts what stands now.
+    climbing = {**st(), "cell": {"pattern": "cs", "protocol": "tcp", "bitrate": "1M"}}
+    climbing["pass"] = {"300": 1}
+    shown = suites.limits_markdown(
+        "x", [suites.limit_result("c", climbing, suites.LIMIT_DEFAULTS)], suites.LIMIT_DEFAULTS
+    )
+    assert any("≥ 300 …" in line for line in shown)
+    run = {"cells": {"a": states["a"], "c": climbing}, "probes": [{}, {}]}
+    assert suites.limits_outcome(run, suites.LIMIT_DEFAULTS) == 0
+    assert run["outcome"] == "0 of 2 cells' limits found, in 2 probes"
 
 
 def _probe_dir(folder: Path, cells: dict, current: bool = False) -> None:
