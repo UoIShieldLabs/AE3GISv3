@@ -1,0 +1,2154 @@
+=== 2026-10-11 10:09:20 UTC · suite traffic on microsoft-surface-7 → C:\Users\tollan\workspace\AE3GISv3\backend\benchmark-results\microsoft-surface-7\2026-10-11-traffic
+  bringing the backend up in bench mode (docker compose)
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+=== 2026-10-11 10:09:37 UTC · 01-burst-limits (pending)
+  round 1: 50 hosts × 5 cells, 100 hosts × 10 cells, 150 hosts × 5 cells, 200 hosts × 10 cells, 250 hosts × 10 cells, 350 hosts × 5 cells, 400 hosts × 5 cells, 450 hosts × 5 cells, 550 hosts × 25 cells, 650 hosts × 20 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark bc25439f618a4b89a44e697bc91aea29: microsoft-surface-7 · burst-limits · 50 hosts · round 1 · 5 cells
+  … preflight
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    66.7s  ready   1.38s  destroy      –s    28.2 MB/node  host mem     –%  ok
+  … cell 001/5 cs·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·tcp·1M·250ms: idle (60s)
+  … cell 001/5 cs·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·tcp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … cell 002/5 cs·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·tcp·1M·2000ms: idle (60s)
+  … cell 002/5 cs·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·tcp·1M·2000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … cell 003/5 cs·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·1M·100ms: idle (60s)
+  … cell 003/5 cs·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·1M·100ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … cell 004/5 cs·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·tcp·1M·500ms: idle (60s)
+  … cell 004/5 cs·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·tcp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … cell 005/5 cs·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·tcp·1M·1000ms: idle (60s)
+  … cell 005/5 cs·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·tcp·1M·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 1: succeeded: 5 of 5 cells passed
+  50 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark ae46753851374f0da0becbb1519a410c: microsoft-surface-7 · burst-limits · 100 hosts · round 1 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   142.7s  ready   4.79s  destroy      –s    31.5 MB/node  host mem     –%  ok
+  … cell 001/10 cs·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 001/10 cs·udp·1M·1000ms: idle (60s)
+  … cell 001/10 cs·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·udp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 68%  degraded (delivered 67.6% of what was asked (< 95%))
+  … cell 002/10 cs·udp·1M·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·udp·1M·500ms: idle (60s)
+  … cell 002/10 cs·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·udp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 76%  degraded (delivered 75.8% of what was asked (< 95%))
+  … cell 003/10 mesh·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 003/10 mesh·tcp·1M·250ms: idle (60s)
+  … cell 003/10 mesh·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 003/10 mesh·tcp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  17.8%  delivered 92%  degraded (delivered 91.5% of what was asked (< 95%))
+  … cell 004/10 cs·udp·1M·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·udp·1M·250ms: idle (60s)
+  … cell 004/10 cs·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·udp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 72%  degraded (delivered 71.7% of what was asked (< 95%))
+  … cell 005/10 mesh·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 005/10 mesh·tcp·1M·2000ms: idle (60s)
+  … cell 005/10 mesh·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 mesh·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 006/10 mesh·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 006/10 mesh·tcp·1M·100ms: idle (60s)
+  … cell 006/10 mesh·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 mesh·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 97%  ok
+  … cell 007/10 mesh·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 007/10 mesh·tcp·1M·1000ms: idle (60s)
+  … cell 007/10 mesh·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 007/10 mesh·tcp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  17.4%  delivered 97%  ok
+  … cell 008/10 cs·udp·1M·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·udp·1M·100ms: idle (60s)
+  … cell 008/10 cs·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.9%  delivered 73%  degraded (delivered 73.3% of what was asked (< 95%))
+  … cell 009/10 cs·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·udp·1M·2000ms: idle (60s)
+  … cell 009/10 cs·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·udp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 74%  degraded (delivered 74.1% of what was asked (< 95%))
+  … cell 010/10 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 010/10 mesh·tcp·1M·500ms: idle (60s)
+  … cell 010/10 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 010/10 mesh·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  17.2%  delivered 98%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 1: succeeded: 4 of 10 cells passed
+  100 hosts: 4 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 7208d87969064f60a950b9c59bb70f5d: microsoft-surface-7 · burst-limits · 150 hosts · round 1 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 161 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   161  deploy   274.7s  ready   7.40s  destroy      –s    21.3 MB/node  host mem     –%  ok
+  … cell 001/5 cs·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·tcp·500K·250ms: idle (60s)
+  … cell 001/5 cs·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·tcp·500K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.4%  delivered 65%  degraded (delivered 64.6% of what was asked (< 95%))
+  … cell 002/5 cs·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·tcp·500K·2000ms: idle (60s)
+  … cell 002/5 cs·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·tcp·500K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.8%  delivered 66%  degraded (delivered 66.0% of what was asked (< 95%))
+  … cell 003/5 cs·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·500K·100ms: idle (60s)
+  … cell 003/5 cs·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·500K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.7%  delivered 66%  degraded (delivered 65.8% of what was asked (< 95%))
+  … cell 004/5 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·tcp·500K·500ms: idle (60s)
+  … cell 004/5 cs·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·tcp·500K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.7%  delivered 66%  degraded (delivered 66.0% of what was asked (< 95%))
+  … cell 005/5 cs·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·tcp·500K·1000ms: idle (60s)
+  … cell 005/5 cs·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·tcp·500K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.8%  delivered 66%  degraded (delivered 65.9% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 150 hosts · round 1: succeeded: 0 of 5 cells passed
+  150 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 7ce7657d70e440ab88f0fcbfca0ea566: microsoft-surface-7 · burst-limits · 200 hosts · round 1 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 213 nodes
+  … deploy: checking 408 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   213  deploy   428.9s  ready   7.58s  destroy      –s    24.4 MB/node  host mem     –%  ok
+  … cell 001/10 mesh·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 001/10 mesh·tcp·500K·1000ms: idle (60s)
+  … cell 001/10 mesh·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 mesh·tcp·500K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 77%  degraded (delivered 77.5% of what was asked (< 95%))
+  … cell 002/10 mesh·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 002/10 mesh·tcp·500K·500ms: idle (60s)
+  … cell 002/10 mesh·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 mesh·tcp·500K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.8%  delivered 78%  degraded (delivered 77.5% of what was asked (< 95%))
+  … cell 003/10 mesh·udp·1M·250ms: waiting for the host to go quiet
+  … cell 003/10 mesh·udp·1M·250ms: idle (60s)
+  … cell 003/10 mesh·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 003/10 mesh·udp·1M·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 65%  degraded (delivered 64.8% of what was asked (< 95%))
+  … cell 004/10 mesh·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 004/10 mesh·tcp·500K·250ms: idle (60s)
+  … cell 004/10 mesh·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 mesh·tcp·500K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.2%  delivered 80%  degraded (delivered 80.2% of what was asked (< 95%))
+  … cell 005/10 mesh·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 005/10 mesh·udp·1M·2000ms: idle (60s)
+  … cell 005/10 mesh·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 mesh·udp·1M·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.0%  delivered 75%  degraded (delivered 74.9% of what was asked (< 95%))
+  … cell 006/10 mesh·udp·1M·100ms: waiting for the host to go quiet
+  … cell 006/10 mesh·udp·1M·100ms: idle (60s)
+  … cell 006/10 mesh·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 mesh·udp·1M·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.4%  delivered 67%  degraded (delivered 67.5% of what was asked (< 95%))
+  … cell 007/10 mesh·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 007/10 mesh·udp·1M·1000ms: idle (60s)
+  … cell 007/10 mesh·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 007/10 mesh·udp·1M·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.2%  delivered 73%  degraded (delivered 73.5% of what was asked (< 95%))
+  … cell 008/10 mesh·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 008/10 mesh·tcp·500K·100ms: idle (60s)
+  … cell 008/10 mesh·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 mesh·tcp·500K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.2%  delivered 81%  degraded (delivered 80.8% of what was asked (< 95%))
+  … cell 009/10 mesh·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 009/10 mesh·tcp·500K·2000ms: idle (60s)
+  … cell 009/10 mesh·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 mesh·tcp·500K·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.4%  delivered 94%  degraded (delivered 93.8% of what was asked (< 95%))
+  … cell 010/10 mesh·udp·1M·500ms: waiting for the host to go quiet
+  … cell 010/10 mesh·udp·1M·500ms: idle (60s)
+  … cell 010/10 mesh·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 010/10 mesh·udp·1M·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 72%  degraded (delivered 71.8% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 200 hosts · round 1: succeeded: 0 of 10 cells passed
+  200 hosts: 0 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark db19953ffc7244b1bb98ad34d3230d25: microsoft-surface-7 · burst-limits · 250 hosts · round 1 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   621.5s  ready   9.24s  destroy      –s    23.5 MB/node  host mem     –%  ok
+  … cell 001/10 cs·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 001/10 cs·tcp·250K·1000ms: idle (60s)
+  … cell 001/10 cs·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·tcp·250K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  36.1%  delivered 60%  degraded (delivered 59.8% of what was asked (< 95%))
+  … cell 002/10 cs·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·tcp·250K·500ms: idle (60s)
+  … cell 002/10 cs·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·tcp·250K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.1%  delivered 61%  degraded (delivered 60.7% of what was asked (< 95%))
+  … cell 003/10 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 003/10 cs·udp·500K·250ms: idle (60s)
+  … cell 003/10 cs·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 003/10 cs·udp·500K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.4%  delivered 41%  degraded (delivered 40.6% of what was asked (< 95%))
+  … cell 004/10 cs·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·tcp·250K·250ms: idle (60s)
+  … cell 004/10 cs·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·tcp·250K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.0%  delivered 62%  degraded (delivered 61.6% of what was asked (< 95%))
+  … cell 005/10 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 005/10 cs·udp·500K·2000ms: idle (60s)
+  … cell 005/10 cs·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 cs·udp·500K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.9%  delivered 49%  degraded (delivered 49.2% of what was asked (< 95%))
+  … cell 006/10 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 006/10 cs·udp·500K·100ms: idle (60s)
+  … cell 006/10 cs·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 cs·udp·500K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.1%  delivered 38%  degraded (delivered 37.8% of what was asked (< 95%))
+  … cell 007/10 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 007/10 cs·udp·500K·1000ms: idle (60s)
+  … cell 007/10 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 007/10 cs·udp·500K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.1%  delivered 47%  degraded (delivered 46.5% of what was asked (< 95%))
+  … cell 008/10 cs·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·tcp·250K·100ms: idle (60s)
+  … cell 008/10 cs·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·tcp·250K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.8%  delivered 62%  degraded (delivered 62.4% of what was asked (< 95%))
+  … cell 009/10 cs·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·tcp·250K·2000ms: idle (60s)
+  … cell 009/10 cs·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·tcp·250K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.9%  delivered 61%  degraded (delivered 61.3% of what was asked (< 95%))
+  … cell 010/10 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 010/10 cs·udp·500K·500ms: idle (60s)
+  … cell 010/10 cs·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 010/10 cs·udp·500K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.4%  delivered 43%  degraded (delivered 43.4% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 250 hosts · round 1: succeeded: 0 of 10 cells passed
+  250 hosts: 0 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 2844dd4e8a8c4b20aa3ad5b2dc01e591: microsoft-surface-7 · burst-limits · 350 hosts · round 1 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1083.5s  ready  15.60s  destroy      –s    26.7 MB/node  host mem     –%  ok
+  … cell 001/5 mesh·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·tcp·250K·250ms: idle (60s)
+  … cell 001/5 mesh·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·tcp·250K·250ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.1%  delivered 79%  degraded (delivered 79.0% of what was asked (< 95%))
+  … cell 002/5 mesh·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·tcp·250K·2000ms: idle (60s)
+  … cell 002/5 mesh·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·tcp·250K·2000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.5%  delivered 87%  degraded (delivered 87.2% of what was asked (< 95%))
+  … cell 003/5 mesh·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 mesh·tcp·250K·100ms: idle (60s)
+  … cell 003/5 mesh·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·tcp·250K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.5%  delivered 80%  degraded (delivered 79.9% of what was asked (< 95%))
+  … cell 004/5 mesh·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·tcp·250K·500ms: idle (60s)
+  … cell 004/5 mesh·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·tcp·250K·500ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.9%  delivered 90%  degraded (delivered 90.2% of what was asked (< 95%))
+  … cell 005/5 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 005/5 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·tcp·250K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.2%  delivered 95%  ok
+  … teardown: destroying
+  burst-limits · 350 hosts · round 1: succeeded: 1 of 5 cells passed
+  350 hosts: 1 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark e51eea39b8d44482a4b3f68d31035ba3: microsoft-surface-7 · burst-limits · 400 hosts · round 1 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 424 nodes
+  … deploy: checking 816 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   424  deploy  1351.3s  ready  24.39s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/5 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·udp·500K·250ms: idle (60s)
+  … cell 001/5 mesh·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·udp·500K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.2%  delivered 49%  degraded (delivered 48.8% of what was asked (< 95%))
+  … cell 002/5 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·500K·2000ms: idle (60s)
+  … cell 002/5 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·500K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.7%  delivered 65%  degraded (delivered 65.3% of what was asked (< 95%))
+  … cell 003/5 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 mesh·udp·500K·100ms: idle (60s)
+  … cell 003/5 mesh·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·udp·500K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.4%  delivered 52%  degraded (delivered 51.9% of what was asked (< 95%))
+  … cell 004/5 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·udp·500K·500ms: idle (60s)
+  … cell 004/5 mesh·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·udp·500K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.7%  delivered 61%  degraded (delivered 61.2% of what was asked (< 95%))
+  … cell 005/5 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·udp·500K·1000ms: idle (60s)
+  … cell 005/5 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·udp·500K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.3%  delivered 63%  degraded (delivered 63.4% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 400 hosts · round 1: succeeded: 0 of 5 cells passed
+  400 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 7456644c0a3c4211868560b8d48cffd0: microsoft-surface-7 · burst-limits · 450 hosts · round 1 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 479 nodes
+  … deploy: checking 918 paths
+        deploy  nodes   479  deploy  1875.8s  ready  20.89s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 1876s)
+  … teardown: destroying
+  burst-limits · 450 hosts · round 1: succeeded: 0 of 0 cells passed
+  450 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 9bfecf8503c64c73beddad4eec132161: microsoft-surface-7 · burst-limits · 550 hosts · round 1 · 25 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 583 nodes
+  … deploy: checking 1122 paths
+        deploy  nodes   583  deploy  2696.2s  ready  25.33s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 2696s)
+  … teardown: destroying
+  burst-limits · 550 hosts · round 1: succeeded: 0 of 0 cells passed
+  550 hosts: 0 of 25 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 324612221e16456ebe9533a1fe96c88f: microsoft-surface-7 · burst-limits · 650 hosts · round 1 · 20 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 690 nodes
+  … deploy: checking 1326 paths
+        deploy  nodes   690  deploy  3603.6s  ready  11.17s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 3604s)
+  … teardown: destroying
+  burst-limits · 650 hosts · round 1: succeeded: 0 of 0 cells passed
+  650 hosts: 0 of 20 cells passed
+  round 2: 50 hosts × 6 cells, 100 hosts × 10 cells, 150 hosts × 14 cells, 200 hosts × 10 cells, 250 hosts × 4 cells, 300 hosts × 5 cells, 350 hosts × 5 cells, 400 hosts × 25 cells, 450 hosts × 1 cells, 500 hosts × 20 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 9a1443079f604b588b068acf67967bf8: microsoft-surface-7 · burst-limits · 50 hosts · round 2 · 6 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    54.1s  ready   1.07s  destroy      –s    29.9 MB/node  host mem     –%  ok
+  … cell 001/6 cs·udp·1M·250ms: waiting for the host to go quiet
+  … cell 001/6 cs·udp·1M·250ms: idle (60s)
+  … cell 001/6 cs·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 001/6 cs·udp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.5%  delivered 100%  ok
+  … cell 002/6 cs·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 002/6 cs·udp·1M·2000ms: idle (60s)
+  … cell 002/6 cs·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 002/6 cs·udp·1M·2000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.7%  delivered 100%  ok
+  … cell 003/6 cs·udp·1M·100ms: waiting for the host to go quiet
+  … cell 003/6 cs·udp·1M·100ms: idle (60s)
+  … cell 003/6 cs·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 003/6 cs·udp·1M·100ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … cell 004/6 cs·udp·1M·500ms: waiting for the host to go quiet
+  … cell 004/6 cs·udp·1M·500ms: idle (60s)
+  … cell 004/6 cs·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 004/6 cs·udp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … cell 005/6 cs·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 005/6 cs·udp·1M·1000ms: idle (60s)
+  … cell 005/6 cs·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 005/6 cs·udp·1M·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … cell 006/6 mesh·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 006/6 mesh·tcp·1M·250ms: idle (60s)
+  … cell 006/6 mesh·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 006/6 mesh·tcp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.5%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 2: succeeded: 6 of 6 cells passed
+  50 hosts: 6 of 6 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark ef38456a75cb4167a5442af35af3d9f8: microsoft-surface-7 · burst-limits · 100 hosts · round 2 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   149.3s  ready   4.33s  destroy      –s    23.8 MB/node  host mem     –%  ok
+  … cell 001/10 cs·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 001/10 cs·tcp·500K·1000ms: idle (60s)
+  … cell 001/10 cs·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·tcp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.6%  delivered 99%  ok
+  … cell 002/10 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·tcp·500K·500ms: idle (60s)
+  … cell 002/10 cs·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·tcp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.2%  delivered 100%  ok
+  … cell 003/10 cs·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 003/10 cs·tcp·1M·250ms: idle (60s)
+  … cell 003/10 cs·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 003/10 cs·tcp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 53%  degraded (delivered 53.0% of what was asked (< 95%))
+  … cell 004/10 cs·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·tcp·500K·250ms: idle (60s)
+  … cell 004/10 cs·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·tcp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 005/10 cs·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 005/10 cs·tcp·1M·2000ms: idle (60s)
+  … cell 005/10 cs·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 cs·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 51%  degraded (delivered 50.8% of what was asked (< 95%))
+  … cell 006/10 cs·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 006/10 cs·tcp·1M·100ms: idle (60s)
+  … cell 006/10 cs·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 cs·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 53%  degraded (delivered 53.1% of what was asked (< 95%))
+  … cell 007/10 cs·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 007/10 cs·tcp·1M·1000ms: idle (60s)
+  … cell 007/10 cs·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 007/10 cs·tcp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 51%  degraded (delivered 51.3% of what was asked (< 95%))
+  … cell 008/10 cs·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·tcp·500K·100ms: idle (60s)
+  … cell 008/10 cs·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·tcp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.2%  delivered 100%  ok
+  … cell 009/10 cs·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·tcp·500K·2000ms: idle (60s)
+  … cell 009/10 cs·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·tcp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 100%  ok
+  … cell 010/10 cs·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 010/10 cs·tcp·1M·500ms: idle (60s)
+  … cell 010/10 cs·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 010/10 cs·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.2%  delivered 52%  degraded (delivered 52.2% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 100 hosts · round 2: succeeded: 5 of 10 cells passed
+  100 hosts: 5 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 75ee7718dcbd474d823661ffd71a41db: microsoft-surface-7 · burst-limits · 150 hosts · round 2 · 14 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 161 nodes
+  … deploy: checking 306 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   161  deploy   296.9s  ready   6.56s  destroy      –s    23.7 MB/node  host mem     –%  ok
+  … cell 001/14 mesh·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 001/14 mesh·udp·1M·1000ms: idle (60s)
+  … cell 001/14 mesh·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 001/14 mesh·udp·1M·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.7%  delivered 99%  ok
+  … cell 002/14 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 002/14 mesh·tcp·1M·500ms: idle (60s)
+  … cell 002/14 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 002/14 mesh·tcp·1M·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.6%  delivered 56%  degraded (delivered 56.5% of what was asked (< 95%))
+  … cell 003/14 mesh·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 003/14 mesh·tcp·500K·1000ms: idle (60s)
+  … cell 003/14 mesh·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 003/14 mesh·tcp·500K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.6%  delivered 100%  ok
+  … cell 004/14 mesh·udp·1M·100ms: waiting for the host to go quiet
+  … cell 004/14 mesh·udp·1M·100ms: idle (60s)
+  … cell 004/14 mesh·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 004/14 mesh·udp·1M·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.2%  delivered 94%  degraded (delivered 94.4% of what was asked (< 95%))
+  … cell 005/14 mesh·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 005/14 mesh·tcp·1M·100ms: idle (60s)
+  … cell 005/14 mesh·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 005/14 mesh·tcp·1M·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  27.0%  delivered 55%  degraded (delivered 55.1% of what was asked (< 95%))
+  … cell 006/14 mesh·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 006/14 mesh·udp·1M·2000ms: idle (60s)
+  … cell 006/14 mesh·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 006/14 mesh·udp·1M·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.3%  delivered 100%  ok
+  … cell 007/14 mesh·udp·1M·250ms: waiting for the host to go quiet
+  … cell 007/14 mesh·udp·1M·250ms: idle (60s)
+  … cell 007/14 mesh·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 007/14 mesh·udp·1M·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.9%  delivered 97%  ok
+  … cell 008/14 mesh·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 008/14 mesh·tcp·500K·500ms: idle (60s)
+  … cell 008/14 mesh·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 008/14 mesh·tcp·500K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.8%  delivered 100%  ok
+  … cell 009/14 mesh·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 009/14 mesh·tcp·500K·250ms: idle (60s)
+  … cell 009/14 mesh·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 009/14 mesh·tcp·500K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.1%  delivered 99%  ok
+  … cell 010/14 mesh·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 010/14 mesh·tcp·1M·2000ms: idle (60s)
+  … cell 010/14 mesh·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 010/14 mesh·tcp·1M·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.8%  delivered 60%  degraded (delivered 60.2% of what was asked (< 95%))
+  … cell 011/14 mesh·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 011/14 mesh·tcp·500K·100ms: idle (60s)
+  … cell 011/14 mesh·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 011/14 mesh·tcp·500K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.7%  delivered 100%  ok
+  … cell 012/14 mesh·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 012/14 mesh·tcp·500K·2000ms: idle (60s)
+  … cell 012/14 mesh·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 012/14 mesh·tcp·500K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.5%  delivered 100%  ok
+  … cell 013/14 mesh·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 013/14 mesh·tcp·1M·1000ms: idle (60s)
+  … cell 013/14 mesh·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 013/14 mesh·tcp·1M·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.7%  delivered 51%  degraded (delivered 51.5% of what was asked (< 95%))
+  … cell 014/14 mesh·udp·1M·500ms: waiting for the host to go quiet
+  … cell 014/14 mesh·udp·1M·500ms: idle (60s)
+  … cell 014/14 mesh·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 014/14 mesh·udp·1M·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.8%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 150 hosts · round 2: succeeded: 9 of 14 cells passed
+  150 hosts: 9 of 14 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 9d6169f116ae41dfb3e7ddc20d105c66: microsoft-surface-7 · burst-limits · 200 hosts · round 2 · 10 cells
+  … preflight
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 213 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   213  deploy   466.6s  ready  11.13s  destroy      –s    23.2 MB/node  host mem     –%  ok
+  … cell 001/10 cs·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 001/10 cs·tcp·250K·1000ms: idle (60s)
+  … cell 001/10 cs·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·tcp·250K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  23.7%  delivered 87%  degraded (delivered 87.0% of what was asked (< 95%))
+  … cell 002/10 cs·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·tcp·250K·500ms: idle (60s)
+  … cell 002/10 cs·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·tcp·250K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.9%  delivered 91%  degraded (delivered 90.8% of what was asked (< 95%))
+  … cell 003/10 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 003/10 cs·udp·500K·250ms: idle (60s)
+  … cell 003/10 cs·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 003/10 cs·udp·500K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.5%  delivered 62%  degraded (delivered 61.5% of what was asked (< 95%))
+  … cell 004/10 cs·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·tcp·250K·250ms: idle (60s)
+  … cell 004/10 cs·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·tcp·250K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.4%  delivered 89%  degraded (delivered 88.6% of what was asked (< 95%))
+  … cell 005/10 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 005/10 cs·udp·500K·2000ms: idle (60s)
+  … cell 005/10 cs·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 cs·udp·500K·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.6%  delivered 69%  degraded (delivered 68.7% of what was asked (< 95%))
+  … cell 006/10 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 006/10 cs·udp·500K·100ms: idle (60s)
+  … cell 006/10 cs·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 cs·udp·500K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.2%  delivered 61%  degraded (delivered 60.9% of what was asked (< 95%))
+  … cell 007/10 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 007/10 cs·udp·500K·1000ms: idle (60s)
+  … cell 007/10 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 007/10 cs·udp·500K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  23.3%  delivered 67%  degraded (delivered 67.2% of what was asked (< 95%))
+  … cell 008/10 cs·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·tcp·250K·100ms: idle (60s)
+  … cell 008/10 cs·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·tcp·250K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.6%  delivered 86%  degraded (delivered 86.4% of what was asked (< 95%))
+  … cell 009/10 cs·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·tcp·250K·2000ms: idle (60s)
+  … cell 009/10 cs·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·tcp·250K·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.8%  delivered 86%  degraded (delivered 86.2% of what was asked (< 95%))
+  … cell 010/10 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 010/10 cs·udp·500K·500ms: idle (60s)
+  … cell 010/10 cs·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 010/10 cs·udp·500K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  27.9%  delivered 61%  degraded (delivered 60.9% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 200 hosts · round 2: succeeded: 0 of 10 cells passed
+  200 hosts: 0 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 2d6c48bd82964655a10d657c6e5246a9: microsoft-surface-7 · burst-limits · 250 hosts · round 2 · 4 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   677.7s  ready  13.12s  destroy      –s    26.3 MB/node  host mem     –%  ok
+  … cell 001/4 mesh·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 001/4 mesh·tcp·250K·500ms: idle (60s)
+  … cell 001/4 mesh·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 001/4 mesh·tcp·250K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.9%  delivered 99%  ok
+  … cell 002/4 mesh·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 002/4 mesh·tcp·250K·100ms: idle (60s)
+  … cell 002/4 mesh·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 002/4 mesh·tcp·250K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.1%  delivered 99%  ok
+  … cell 003/4 mesh·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 003/4 mesh·tcp·250K·250ms: idle (60s)
+  … cell 003/4 mesh·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 003/4 mesh·tcp·250K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.4%  delivered 100%  ok
+  … cell 004/4 mesh·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 004/4 mesh·tcp·250K·2000ms: idle (60s)
+  … cell 004/4 mesh·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 004/4 mesh·tcp·250K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.4%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 250 hosts · round 2: succeeded: 4 of 4 cells passed
+  250 hosts: 4 of 4 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 635550786a754538b7d49136825014c6: microsoft-surface-7 · burst-limits · 300 hosts · round 2 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy   923.2s  ready  12.15s  destroy      –s    25.2 MB/node  host mem     –%  ok
+  … cell 001/5 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·udp·500K·250ms: idle (60s)
+  … cell 001/5 mesh·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·udp·500K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.2%  delivered 75%  degraded (delivered 74.8% of what was asked (< 95%))
+  … cell 002/5 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·500K·2000ms: idle (60s)
+  … cell 002/5 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·500K·2000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.7%  delivered 93%  degraded (delivered 93.3% of what was asked (< 95%))
+  … cell 003/5 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 mesh·udp·500K·100ms: idle (60s)
+  … cell 003/5 mesh·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·udp·500K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.1%  delivered 70%  degraded (delivered 69.8% of what was asked (< 95%))
+  … cell 004/5 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·udp·500K·500ms: idle (60s)
+  … cell 004/5 mesh·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·udp·500K·500ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  37.6%  delivered 88%  degraded (delivered 87.6% of what was asked (< 95%))
+  … cell 005/5 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·udp·500K·1000ms: idle (60s)
+  … cell 005/5 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·udp·500K·1000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.2%  delivered 95%  degraded (delivered 94.9% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 300 hosts · round 2: succeeded: 0 of 5 cells passed
+  300 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 61d4b895175a49c9bcb44455c318eb6c: microsoft-surface-7 · burst-limits · 350 hosts · round 2 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1070.9s  ready  17.27s  destroy      –s    25.3 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·250K·250ms: idle (60s)
+  … cell 001/5 cs·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·250K·250ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.6%  delivered 62%  degraded (delivered 62.1% of what was asked (< 95%))
+  … cell 002/5 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/5 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·250K·2000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.2%  delivered 72%  degraded (delivered 71.5% of what was asked (< 95%))
+  … cell 003/5 cs·udp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·udp·250K·100ms: idle (60s)
+  … cell 003/5 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·udp·250K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.6%  delivered 45%  degraded (delivered 45.4% of what was asked (< 95%))
+  … cell 004/5 cs·udp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·250K·500ms: idle (60s)
+  … cell 004/5 cs·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·250K·500ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.7%  delivered 61%  degraded (delivered 61.5% of what was asked (< 95%))
+  … cell 005/5 cs·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·250K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·250K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.8%  delivered 55%  degraded (delivered 54.7% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 350 hosts · round 2: succeeded: 0 of 5 cells passed
+  350 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark a378211f9e0640629d751de3c7f9ddd6: microsoft-surface-7 · burst-limits · 400 hosts · round 2 · 25 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 424 nodes
+  … deploy: checking 816 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   424  deploy  1333.1s  ready  22.08s  destroy      –s    26.3 MB/node  host mem     –%  ok
+  … cell 001/25 mesh·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 001/25 mesh·tcp·100K·1000ms: idle (60s)
+  … cell 001/25 mesh·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/25 mesh·tcp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.0%  delivered 100%  ok
+  … cell 002/25 mesh·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 002/25 mesh·udp·100K·2000ms: idle (60s)
+  … cell 002/25 mesh·udp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/25 mesh·udp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.9%  delivered 101%  ok
+  … cell 003/25 mesh·udp·50K·500ms: waiting for the host to go quiet
+  … cell 003/25 mesh·udp·50K·500ms: idle (60s)
+  … cell 003/25 mesh·udp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 003/25 mesh·udp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.9%  delivered 100%  ok
+  … cell 004/25 mesh·udp·250K·250ms: waiting for the host to go quiet
+  … cell 004/25 mesh·udp·250K·250ms: idle (60s)
+  … cell 004/25 mesh·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 004/25 mesh·udp·250K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  52.3%  delivered 100%  ok
+  … cell 005/25 mesh·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 005/25 mesh·tcp·100K·500ms: idle (60s)
+  … cell 005/25 mesh·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 005/25 mesh·tcp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.9%  delivered 99%  ok
+  … cell 006/25 mesh·udp·50K·250ms: waiting for the host to go quiet
+  … cell 006/25 mesh·udp·50K·250ms: idle (60s)
+  … cell 006/25 mesh·udp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 006/25 mesh·udp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.8%  delivered 101%  ok
+  … cell 007/25 mesh·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 007/25 mesh·udp·250K·2000ms: idle (60s)
+  … cell 007/25 mesh·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 007/25 mesh·udp·250K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.5%  delivered 100%  ok
+  … cell 008/25 mesh·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 008/25 mesh·udp·250K·1000ms: idle (60s)
+  … cell 008/25 mesh·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 008/25 mesh·udp·250K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.9%  delivered 103%  ok
+  … cell 009/25 mesh·udp·50K·100ms: waiting for the host to go quiet
+  … cell 009/25 mesh·udp·50K·100ms: idle (60s)
+  … cell 009/25 mesh·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 009/25 mesh·udp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.4%  delivered 100%  ok
+  … cell 010/25 mesh·udp·250K·100ms: waiting for the host to go quiet
+  … cell 010/25 mesh·udp·250K·100ms: idle (60s)
+  … cell 010/25 mesh·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 010/25 mesh·udp·250K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.9%  delivered 83%  degraded (delivered 82.8% of what was asked (< 95%))
+  … cell 011/25 mesh·udp·100K·100ms: waiting for the host to go quiet
+  … cell 011/25 mesh·udp·100K·100ms: idle (60s)
+  … cell 011/25 mesh·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 011/25 mesh·udp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.9%  delivered 100%  ok
+  … cell 012/25 mesh·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 012/25 mesh·udp·100K·1000ms: idle (60s)
+  … cell 012/25 mesh·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 012/25 mesh·udp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.2%  delivered 101%  ok
+  … cell 013/25 mesh·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 013/25 mesh·udp·50K·1000ms: idle (60s)
+  … cell 013/25 mesh·udp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 013/25 mesh·udp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.7%  delivered 102%  ok
+  … cell 014/25 mesh·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 014/25 mesh·tcp·50K·1000ms: idle (60s)
+  … cell 014/25 mesh·tcp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 014/25 mesh·tcp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.5%  delivered 102%  ok
+  … cell 015/25 mesh·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 015/25 mesh·tcp·100K·100ms: idle (60s)
+  … cell 015/25 mesh·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 015/25 mesh·tcp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.9%  delivered 100%  ok
+  … cell 016/25 mesh·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 016/25 mesh·tcp·100K·250ms: idle (60s)
+  … cell 016/25 mesh·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 016/25 mesh·tcp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.1%  delivered 100%  ok
+  … cell 017/25 mesh·udp·100K·250ms: waiting for the host to go quiet
+  … cell 017/25 mesh·udp·100K·250ms: idle (60s)
+  … cell 017/25 mesh·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 017/25 mesh·udp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.3%  delivered 100%  ok
+  … cell 018/25 mesh·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 018/25 mesh·tcp·50K·250ms: idle (60s)
+  … cell 018/25 mesh·tcp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 018/25 mesh·tcp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.6%  delivered 100%  ok
+  … cell 019/25 mesh·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 019/25 mesh·tcp·50K·2000ms: idle (60s)
+  … cell 019/25 mesh·tcp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 019/25 mesh·tcp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.7%  delivered 102%  ok
+  … cell 020/25 mesh·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 020/25 mesh·tcp·50K·500ms: idle (60s)
+  … cell 020/25 mesh·tcp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 020/25 mesh·tcp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.5%  delivered 101%  ok
+  … cell 021/25 mesh·udp·100K·500ms: waiting for the host to go quiet
+  … cell 021/25 mesh·udp·100K·500ms: idle (60s)
+  … cell 021/25 mesh·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 021/25 mesh·udp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.5%  delivered 101%  ok
+  … cell 022/25 mesh·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 022/25 mesh·tcp·50K·100ms: idle (60s)
+  … cell 022/25 mesh·tcp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 022/25 mesh·tcp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.2%  delivered 100%  ok
+  … cell 023/25 mesh·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 023/25 mesh·tcp·100K·2000ms: idle (60s)
+  … cell 023/25 mesh·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 023/25 mesh·tcp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.1%  delivered 100%  ok
+  … cell 024/25 mesh·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 024/25 mesh·udp·50K·2000ms: idle (60s)
+  … cell 024/25 mesh·udp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 024/25 mesh·udp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.8%  delivered 103%  ok
+  … cell 025/25 mesh·udp·250K·500ms: waiting for the host to go quiet
+  … cell 025/25 mesh·udp·250K·500ms: idle (60s)
+  … cell 025/25 mesh·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 025/25 mesh·udp·250K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.0%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 400 hosts · round 2: succeeded: 24 of 25 cells passed
+  400 hosts: 24 of 25 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark ca830fc8627a4e3c8b8f0b579367e71e: microsoft-surface-7 · burst-limits · 450 hosts · round 2 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 479 nodes
+  … deploy: checking 918 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   479  deploy  1689.7s  ready  23.17s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/1 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 001/1 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 001/1 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/1 mesh·tcp·250K·1000ms  nodes   479  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  54.8%  delivered 53%  degraded (delivered 53.3% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 450 hosts · round 2: succeeded: 0 of 1 cells passed
+  450 hosts: 0 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark fb15e3f33f9941a7beadf3009670efa4: microsoft-surface-7 · burst-limits · 500 hosts · round 2 · 20 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 531 nodes
+  … deploy: checking 1020 paths
+        deploy  nodes   531  deploy  2085.4s  ready  25.19s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 2085s)
+  … teardown: destroying
+  burst-limits · 500 hosts · round 2: succeeded: 0 of 0 cells passed
+  500 hosts: 0 of 20 cells passed
+  round 3: 50 hosts × 11 cells, 100 hosts × 10 cells, 150 hosts × 19 cells, 200 hosts × 5 cells, 250 hosts × 5 cells, 300 hosts × 5 cells, 400 hosts × 21 cells, 500 hosts × 24 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 819295075002476dada0ba47e6c3fd2e: microsoft-surface-7 · burst-limits · 50 hosts · round 3 · 11 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: checking 102 paths
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    74.2s  ready   2.51s  destroy      –s    29.2 MB/node  host mem     –%  ok
+  … cell 001/11 cs·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 001/11 cs·tcp·1M·500ms: idle (60s)
+  … cell 001/11 cs·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 001/11 cs·tcp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 100%  ok
+  … cell 002/11 cs·udp·1M·100ms: waiting for the host to go quiet
+  … cell 002/11 cs·udp·1M·100ms: idle (60s)
+  … cell 002/11 cs·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 002/11 cs·udp·1M·100ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.0%  delivered 100%  ok
+  … cell 003/11 cs·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 003/11 cs·tcp·1M·1000ms: idle (60s)
+  … cell 003/11 cs·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 003/11 cs·tcp·1M·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.1%  delivered 100%  ok
+  … cell 004/11 cs·udp·1M·250ms: waiting for the host to go quiet
+  … cell 004/11 cs·udp·1M·250ms: idle (60s)
+  … cell 004/11 cs·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 004/11 cs·udp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … cell 005/11 cs·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 005/11 cs·udp·1M·2000ms: idle (60s)
+  … cell 005/11 cs·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 005/11 cs·udp·1M·2000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.2%  delivered 100%  ok
+  … cell 006/11 cs·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 006/11 cs·udp·1M·1000ms: idle (60s)
+  … cell 006/11 cs·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 006/11 cs·udp·1M·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.0%  delivered 100%  ok
+  … cell 007/11 mesh·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 007/11 mesh·tcp·1M·250ms: idle (60s)
+  … cell 007/11 mesh·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 007/11 mesh·tcp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.6%  delivered 100%  ok
+  … cell 008/11 cs·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 008/11 cs·tcp·1M·250ms: idle (60s)
+  … cell 008/11 cs·tcp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 008/11 cs·tcp·1M·250ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.8%  delivered 99%  ok
+  … cell 009/11 cs·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 009/11 cs·tcp·1M·100ms: idle (60s)
+  … cell 009/11 cs·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 009/11 cs·tcp·1M·100ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.3%  delivered 100%  ok
+  … cell 010/11 cs·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 010/11 cs·tcp·1M·2000ms: idle (60s)
+  … cell 010/11 cs·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 010/11 cs·tcp·1M·2000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.2%  delivered 100%  ok
+  … cell 011/11 cs·udp·1M·500ms: waiting for the host to go quiet
+  … cell 011/11 cs·udp·1M·500ms: idle (60s)
+  … cell 011/11 cs·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 011/11 cs·udp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 3: succeeded: 11 of 11 cells passed
+  50 hosts: 11 of 11 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 94dfe0dba8914d3a8fab8ffbb166da01: microsoft-surface-7 · burst-limits · 100 hosts · round 3 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: checking 204 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   173.2s  ready   6.63s  destroy      –s    28.0 MB/node  host mem     –%  ok
+  … cell 001/10 cs·tcp·500K·1000ms: idle (60s)
+  … cell 001/10 cs·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·tcp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.0%  delivered 99%  ok
+  … cell 002/10 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·tcp·500K·500ms: idle (60s)
+  … cell 002/10 cs·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·tcp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 76%  degraded (delivered 76.3% of what was asked (< 95%))
+  … cell 003/10 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 003/10 mesh·tcp·1M·500ms: idle (60s)
+  … cell 003/10 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 003/10 mesh·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.1%  delivered 90%  degraded (delivered 90.0% of what was asked (< 95%))
+  … cell 004/10 cs·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·tcp·500K·250ms: idle (60s)
+  … cell 004/10 cs·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·tcp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 99%  ok
+  … cell 005/10 mesh·udp·1M·100ms: waiting for the host to go quiet
+  … cell 005/10 mesh·udp·1M·100ms: idle (60s)
+  … cell 005/10 mesh·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 005/10 mesh·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+  … cell 006/10 mesh·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 006/10 mesh·tcp·1M·100ms: idle (60s)
+  … cell 006/10 mesh·tcp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 mesh·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 96%  ok
+  … cell 007/10 mesh·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 007/10 mesh·tcp·1M·2000ms: idle (60s)
+  … cell 007/10 mesh·tcp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 007/10 mesh·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 100%  ok
+  … cell 008/10 cs·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·tcp·500K·100ms: idle (60s)
+  … cell 008/10 cs·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·tcp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 009/10 cs·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·tcp·500K·2000ms: idle (60s)
+  … cell 009/10 cs·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·tcp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 010/10 mesh·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 010/10 mesh·tcp·1M·1000ms: idle (60s)
+=== 2026-10-12 16:22:45 UTC · suite traffic on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-11-traffic
+  warning: the backend it runs commit '20c8b9e23b2c', not f6638a8abd99
+  benchmark 94dfe0db (microsoft-surface-7 · burst-limits · 100 hosts · round 3) is running: following it, not redeploying
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+=== 2026-10-12 16:22:48 UTC · 01-burst-limits (running)
+        deploy  nodes   109  deploy   173.2s  ready   6.63s  destroy      –s    28.0 MB/node  host mem     –%  ok
+cell 001/10 cs·tcp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.0%  delivered 99%  ok
+cell 002/10 cs·tcp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 76%  degraded (delivered 76.3% of what was asked (< 95%))
+cell 003/10 mesh·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.1%  delivered 90%  degraded (delivered 90.0% of what was asked (< 95%))
+cell 004/10 cs·tcp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 99%  ok
+cell 005/10 mesh·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+cell 006/10 mesh·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 96%  ok
+cell 007/10 mesh·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 100%  ok
+cell 008/10 cs·tcp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+cell 009/10 cs·tcp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 010/10 mesh·tcp·1M·1000ms: idle (60s)
+  … cell 010/10 mesh·tcp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 010/10 mesh·tcp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.0%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 3: succeeded: 8 of 10 cells passed
+  100 hosts: 10 of 10 cells passed
+  round 4: 50 hosts × 2 cells, 100 hosts × 1 cells, 150 hosts × 19 cells, 200 hosts × 5 cells, 250 hosts × 5 cells, 300 hosts × 5 cells, 400 hosts × 21 cells, 500 hosts × 24 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 744e9e1836da486382e851fc3db760c6: microsoft-surface-7 · burst-limits · 50 hosts · round 4 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    68.5s  ready   2.48s  destroy      –s    35.0 MB/node  host mem     –%  ok
+  … cell 001/2 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 001/2 cs·tcp·500K·500ms: idle (60s)
+  … cell 001/2 cs·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·tcp·500K·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  10.9%  delivered 100%  ok
+  … cell 002/2 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 002/2 mesh·tcp·1M·500ms: idle (60s)
+  … cell 002/2 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 002/2 mesh·tcp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.8%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 4: succeeded: 2 of 2 cells passed
+  50 hosts: 2 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark fbf658265103400ea7fc9733e5900d32: microsoft-surface-7 · burst-limits · 100 hosts · round 4 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   199.3s  ready   6.62s  destroy      –s    25.4 MB/node  host mem     –%  ok
+  … cell 001/1 mesh·udp·1M·100ms: waiting for the host to go quiet
+  … cell 001/1 mesh·udp·1M·100ms: idle (60s)
+  … cell 001/1 mesh·udp·1M·100ms: traffic: ramp 5s + hold 50s
+cell 001/1 mesh·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  17.3%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 4: succeeded: 1 of 1 cells passed
+  100 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 27a59272f6fb4a82b6402cb24a6ca843: microsoft-surface-7 · burst-limits · 150 hosts · round 4 · 19 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 161 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   161  deploy   346.0s  ready   7.62s  destroy      –s    26.6 MB/node  host mem     –%  ok
+  … cell 001/19 cs·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 001/19 cs·tcp·250K·2000ms: idle (60s)
+  … cell 001/19 cs·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 001/19 cs·tcp·250K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  27.2%  delivered 100%  ok
+  … cell 002/19 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 002/19 cs·udp·500K·250ms: idle (60s)
+  … cell 002/19 cs·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 002/19 cs·udp·500K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.9%  delivered 91%  degraded (delivered 90.9% of what was asked (< 95%))
+  … cell 003/19 mesh·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 003/19 mesh·tcp·500K·100ms: idle (60s)
+  … cell 003/19 mesh·tcp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/19 mesh·tcp·500K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.1%  delivered 98%  ok
+  … cell 004/19 mesh·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 004/19 mesh·tcp·500K·1000ms: idle (60s)
+  … cell 004/19 mesh·tcp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 004/19 mesh·tcp·500K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  24.8%  delivered 100%  ok
+  … cell 005/19 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 005/19 cs·udp·500K·500ms: idle (60s)
+  … cell 005/19 cs·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 005/19 cs·udp·500K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.9%  delivered 91%  degraded (delivered 91.3% of what was asked (< 95%))
+  … cell 006/19 mesh·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 006/19 mesh·udp·1M·2000ms: idle (60s)
+  … cell 006/19 mesh·udp·1M·2000ms: traffic: ramp 5s + hold 50s
+cell 006/19 mesh·udp·1M·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  25.4%  delivered 99%  ok
+  … cell 007/19 cs·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 007/19 cs·tcp·250K·250ms: idle (60s)
+  … cell 007/19 cs·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 007/19 cs·tcp·250K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.0%  delivered 100%  ok
+  … cell 008/19 mesh·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 008/19 mesh·udp·1M·1000ms: idle (60s)
+  … cell 008/19 mesh·udp·1M·1000ms: traffic: ramp 5s + hold 50s
+cell 008/19 mesh·udp·1M·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.4%  delivered 100%  ok
+  … cell 009/19 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 009/19 cs·udp·500K·100ms: idle (60s)
+  … cell 009/19 cs·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 009/19 cs·udp·500K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.8%  delivered 88%  degraded (delivered 88.4% of what was asked (< 95%))
+  … cell 010/19 cs·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 010/19 cs·tcp·250K·1000ms: idle (60s)
+  … cell 010/19 cs·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 010/19 cs·tcp·250K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.3%  delivered 100%  ok
+  … cell 011/19 mesh·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 011/19 mesh·tcp·500K·250ms: idle (60s)
+  … cell 011/19 mesh·tcp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 011/19 mesh·tcp·500K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.5%  delivered 100%  ok
+  … cell 012/19 mesh·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 012/19 mesh·tcp·500K·500ms: idle (60s)
+  … cell 012/19 mesh·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 012/19 mesh·tcp·500K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.3%  delivered 100%  ok
+  … cell 013/19 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 013/19 cs·udp·500K·1000ms: idle (60s)
+  … cell 013/19 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 013/19 cs·udp·500K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.8%  delivered 86%  degraded (delivered 85.6% of what was asked (< 95%))
+  … cell 014/19 mesh·udp·1M·500ms: waiting for the host to go quiet
+  … cell 014/19 mesh·udp·1M·500ms: idle (60s)
+  … cell 014/19 mesh·udp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 014/19 mesh·udp·1M·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  23.9%  delivered 101%  ok
+  … cell 015/19 mesh·udp·1M·250ms: waiting for the host to go quiet
+  … cell 015/19 mesh·udp·1M·250ms: idle (60s)
+  … cell 015/19 mesh·udp·1M·250ms: traffic: ramp 5s + hold 50s
+cell 015/19 mesh·udp·1M·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.9%  delivered 99%  ok
+  … cell 016/19 cs·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 016/19 cs·tcp·250K·500ms: idle (60s)
+  … cell 016/19 cs·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 016/19 cs·tcp·250K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  23.0%  delivered 100%  ok
+  … cell 017/19 cs·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 017/19 cs·tcp·250K·100ms: idle (60s)
+  … cell 017/19 cs·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 017/19 cs·tcp·250K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.4%  delivered 99%  ok
+  … cell 018/19 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 018/19 cs·udp·500K·2000ms: idle (60s)
+  … cell 018/19 cs·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 018/19 cs·udp·500K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  25.5%  delivered 88%  degraded (delivered 87.7% of what was asked (< 95%))
+  … cell 019/19 mesh·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 019/19 mesh·tcp·500K·2000ms: idle (60s)
+  … cell 019/19 mesh·tcp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 019/19 mesh·tcp·500K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 150 hosts · round 4: succeeded: 14 of 19 cells passed
+  150 hosts: 14 of 19 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 4d54666468534c56a32d7fc8c0b51fe9: microsoft-surface-7 · burst-limits · 200 hosts · round 4 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 213 nodes
+  … deploy: checking 408 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   213  deploy   532.0s  ready  11.49s  destroy      –s    25.7 MB/node  host mem     –%  ok
+  … cell 001/5 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·udp·500K·250ms: idle (60s)
+  … cell 001/5 mesh·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·udp·500K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 100%  ok
+  … cell 002/5 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·500K·2000ms: idle (60s)
+  … cell 002/5 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·500K·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.0%  delivered 100%  ok
+  … cell 003/5 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 mesh·udp·500K·100ms: idle (60s)
+  … cell 003/5 mesh·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·udp·500K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  24.8%  delivered 99%  ok
+  … cell 004/5 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·udp·500K·500ms: idle (60s)
+  … cell 004/5 mesh·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·udp·500K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  27.1%  delivered 100%  ok
+  … cell 005/5 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·udp·500K·1000ms: idle (60s)
+  … cell 005/5 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·udp·500K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  30.4%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 200 hosts · round 4: succeeded: 5 of 5 cells passed
+  200 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 739f0bd1795743e5bf4611ea27cb45d2: microsoft-surface-7 · burst-limits · 250 hosts · round 4 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   731.4s  ready   7.32s  destroy      –s    28.3 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·250K·250ms: idle (60s)
+  … cell 001/5 cs·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·250K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.7%  delivered 93%  degraded (delivered 92.7% of what was asked (< 95%))
+  … cell 002/5 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/5 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·250K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  26.6%  delivered 93%  degraded (delivered 92.9% of what was asked (< 95%))
+  … cell 003/5 cs·udp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·udp·250K·100ms: idle (60s)
+  … cell 003/5 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·udp·250K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.3%  delivered 79%  degraded (delivered 79.2% of what was asked (< 95%))
+  … cell 004/5 cs·udp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·250K·500ms: idle (60s)
+  … cell 004/5 cs·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·250K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.1%  delivered 93%  degraded (delivered 92.9% of what was asked (< 95%))
+  … cell 005/5 cs·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·250K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·250K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 93%  degraded (delivered 93.2% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 250 hosts · round 4: succeeded: 0 of 5 cells passed
+  250 hosts: 0 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 0d0c09482d604ec0b06e7115ddf3d383: microsoft-surface-7 · burst-limits · 300 hosts · round 4 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy   934.4s  ready  13.96s  destroy      –s    29.4 MB/node  host mem     –%  ok
+  … cell 001/5 mesh·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·tcp·250K·250ms: idle (60s)
+  … cell 001/5 mesh·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·tcp·250K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.8%  delivered 82%  degraded (delivered 82.5% of what was asked (< 95%))
+  … cell 002/5 mesh·udp·250K·100ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·250K·100ms: idle (60s)
+  … cell 002/5 mesh·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·250K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  35.9%  delivered 102%  ok
+  … cell 003/5 mesh·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 mesh·tcp·250K·100ms: idle (60s)
+  … cell 003/5 mesh·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·tcp·250K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.5%  delivered 93%  degraded (delivered 93.3% of what was asked (< 95%))
+  … cell 004/5 mesh·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·tcp·250K·500ms: idle (60s)
+  … cell 004/5 mesh·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·tcp·250K·500ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.8%  delivered 99%  ok
+  … cell 005/5 mesh·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·tcp·250K·2000ms: idle (60s)
+  … cell 005/5 mesh·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·tcp·250K·2000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.8%  delivered 101%  ok
+  … teardown: destroying
+  burst-limits · 300 hosts · round 4: succeeded: 3 of 5 cells passed
+  300 hosts: 3 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark f79faabf29a14ea880161f1503943a5b: microsoft-surface-7 · burst-limits · 400 hosts · round 4 · 21 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 424 nodes
+  … deploy: checking 816 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   424  deploy  1570.8s  ready  24.86s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/21 cs·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 001/21 cs·tcp·100K·250ms: idle (60s)
+  … cell 001/21 cs·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 001/21 cs·tcp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.8%  delivered 80%  degraded (delivered 80.0% of what was asked (< 95%))
+  … cell 002/21 cs·udp·100K·100ms: waiting for the host to go quiet
+  … cell 002/21 cs·udp·100K·100ms: idle (60s)
+  … cell 002/21 cs·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 002/21 cs·udp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.0%  delivered 94%  degraded (delivered 94.0% of what was asked (< 95%))
+  … cell 003/21 cs·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 003/21 cs·tcp·50K·250ms: idle (60s)
+  … cell 003/21 cs·tcp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 003/21 cs·tcp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.9%  delivered 98%  ok
+  … cell 004/21 cs·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 004/21 cs·udp·100K·2000ms: idle (60s)
+  … cell 004/21 cs·udp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 004/21 cs·udp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.0%  delivered 99%  ok
+  … cell 005/21 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/21 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 005/21 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/21 mesh·tcp·250K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.9%  delivered 63%  degraded (delivered 62.7% of what was asked (< 95%))
+  … cell 006/21 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 006/21 cs·tcp·100K·500ms: idle (60s)
+  … cell 006/21 cs·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 006/21 cs·tcp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.0%  delivered 80%  degraded (delivered 80.0% of what was asked (< 95%))
+  … cell 007/21 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 007/21 cs·udp·100K·250ms: idle (60s)
+  … cell 007/21 cs·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 007/21 cs·udp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  42.2%  delivered 87%  degraded (delivered 87.0% of what was asked (< 95%))
+  … cell 008/21 cs·udp·50K·250ms: waiting for the host to go quiet
+  … cell 008/21 cs·udp·50K·250ms: idle (60s)
+  … cell 008/21 cs·udp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 008/21 cs·udp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.6%  delivered 98%  ok
+  … cell 009/21 cs·udp·50K·100ms: waiting for the host to go quiet
+  … cell 009/21 cs·udp·50K·100ms: idle (60s)
+  … cell 009/21 cs·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 009/21 cs·udp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  37.6%  delivered 95%  degraded (UDP loss 2.97% > 1.0%)
+  … cell 010/21 cs·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 010/21 cs·tcp·100K·100ms: idle (60s)
+  … cell 010/21 cs·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 010/21 cs·tcp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.7%  delivered 84%  degraded (delivered 83.5% of what was asked (< 95%))
+  … cell 011/21 cs·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 011/21 cs·tcp·50K·1000ms: idle (60s)
+  … cell 011/21 cs·tcp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 011/21 cs·tcp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.6%  delivered 100%  ok
+  … cell 012/21 cs·udp·50K·500ms: waiting for the host to go quiet
+  … cell 012/21 cs·udp·50K·500ms: idle (60s)
+  … cell 012/21 cs·udp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 012/21 cs·udp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.6%  delivered 100%  ok
+  … cell 013/21 cs·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 013/21 cs·udp·50K·1000ms: idle (60s)
+  … cell 013/21 cs·udp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 013/21 cs·udp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.3%  delivered 100%  ok
+  … cell 014/21 cs·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 014/21 cs·tcp·100K·1000ms: idle (60s)
+  … cell 014/21 cs·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 014/21 cs·tcp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.4%  delivered 86%  degraded (delivered 85.6% of what was asked (< 95%))
+  … cell 015/21 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 015/21 cs·udp·100K·1000ms: idle (60s)
+  … cell 015/21 cs·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 015/21 cs·udp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.6%  delivered 96%  ok
+  … cell 016/21 cs·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 016/21 cs·tcp·50K·2000ms: idle (60s)
+  … cell 016/21 cs·tcp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 016/21 cs·tcp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.3%  delivered 100%  ok
+  … cell 017/21 cs·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 017/21 cs·tcp·50K·500ms: idle (60s)
+  … cell 017/21 cs·tcp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 017/21 cs·tcp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.7%  delivered 100%  ok
+  … cell 018/21 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 018/21 cs·udp·100K·500ms: idle (60s)
+  … cell 018/21 cs·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 018/21 cs·udp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.3%  delivered 95%  ok
+  … cell 019/21 cs·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 019/21 cs·tcp·50K·100ms: idle (60s)
+  … cell 019/21 cs·tcp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 019/21 cs·tcp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  37.9%  delivered 99%  ok
+  … cell 020/21 cs·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 020/21 cs·tcp·100K·2000ms: idle (60s)
+  … cell 020/21 cs·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 020/21 cs·tcp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.2%  delivered 81%  degraded (delivered 81.4% of what was asked (< 95%))
+  … cell 021/21 cs·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 021/21 cs·udp·50K·2000ms: idle (60s)
+  … cell 021/21 cs·udp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 021/21 cs·udp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.0%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 400 hosts · round 4: succeeded: 12 of 21 cells passed
+  400 hosts: 12 of 21 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark aa9f623020964166be9d8266ed06985b: microsoft-surface-7 · burst-limits · 500 hosts · round 4 · 24 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 531 nodes
+  … deploy: checking 1020 paths
+        deploy  nodes   531  deploy  2248.3s  ready  27.95s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 2248s)
+  … teardown: destroying
+=== 2026-10-13 04:52:04 UTC · suite traffic on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-11-traffic
+  bringing the backend up in bench mode (docker compose)
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+=== 2026-10-13 04:52:26 UTC · 01-burst-limits (running)
+  round 5: 50 hosts × 2 cells, 100 hosts × 5 cells, 150 hosts × 5 cells, 200 hosts × 5 cells, 250 hosts × 7 cells, 300 hosts × 10 cells, 350 hosts × 2 cells, 450 hosts × 12 cells, 500 hosts × 24 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 544ddf6a163e4811b3c4729dc41c6435: microsoft-surface-7 · burst-limits · 50 hosts · round 5 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    79.8s  ready   2.13s  destroy      –s    25.8 MB/node  host mem     –%  ok
+  … cell 001/2 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 001/2 cs·tcp·500K·500ms: idle (60s)
+  … cell 001/2 cs·tcp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·tcp·500K·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  12.9%  delivered 100%  ok
+  … cell 002/2 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 002/2 mesh·tcp·1M·500ms: idle (60s)
+  … cell 002/2 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 50s
+cell 002/2 mesh·tcp·1M·500ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  13.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 5: succeeded: 2 of 2 cells passed
+  50 hosts: 2 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark c678abf15a534d0c8b6e0dc1c842a65f: microsoft-surface-7 · burst-limits · 100 hosts · round 5 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: checking 204 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   179.2s  ready   5.24s  destroy      –s    24.7 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·500K·250ms: idle (60s)
+  … cell 001/5 cs·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.0%  delivered 100%  ok
+  … cell 002/5 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·500K·2000ms: idle (60s)
+  … cell 002/5 cs·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 003/5 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·udp·500K·100ms: idle (60s)
+  … cell 003/5 cs·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·udp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 004/5 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·500K·500ms: idle (60s)
+  … cell 004/5 cs·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 100%  ok
+  … cell 005/5 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·500K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.9%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 5: succeeded: 5 of 5 cells passed
+  100 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 84312380dcff494f81e20f6facb2906f: microsoft-surface-7 · burst-limits · 150 hosts · round 5 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 161 nodes
+  … deploy: checking 306 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   161  deploy   349.7s  ready   8.62s  destroy      –s    25.2 MB/node  host mem     –%  ok
+  … cell 001/5 cs·tcp·250K·250ms: idle (60s)
+  … cell 001/5 cs·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·tcp·250K·250ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.6%  delivered 97%  ok
+  … cell 002/5 cs·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·tcp·250K·2000ms: idle (60s)
+  … cell 002/5 cs·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·tcp·250K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.5%  delivered 100%  ok
+  … cell 003/5 cs·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·250K·100ms: idle (60s)
+  … cell 003/5 cs·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·250K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.9%  delivered 97%  ok
+  … cell 004/5 cs·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·tcp·250K·500ms: idle (60s)
+  … cell 004/5 cs·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·tcp·250K·500ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  21.9%  delivered 100%  ok
+  … cell 005/5 cs·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·tcp·250K·1000ms: idle (60s)
+  … cell 005/5 cs·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·tcp·250K·1000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  18.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 150 hosts · round 5: succeeded: 5 of 5 cells passed
+  150 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark c936630886464e00a191373061576577: microsoft-surface-7 · burst-limits · 200 hosts · round 5 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 213 nodes
+  … deploy: checking 408 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   213  deploy   560.0s  ready  13.03s  destroy      –s    27.2 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·250K·250ms: idle (60s)
+  … cell 001/5 cs·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·250K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  25.0%  delivered 100%  ok
+  … cell 002/5 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/5 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·250K·2000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.0%  delivered 94%  degraded (delivered 93.6% of what was asked (< 95%))
+  … cell 003/5 cs·udp·250K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·udp·250K·100ms: idle (60s)
+  … cell 003/5 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·udp·250K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  28.3%  delivered 90%  degraded (delivered 90.3% of what was asked (< 95%))
+  … cell 004/5 cs·udp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·250K·500ms: idle (60s)
+  … cell 004/5 cs·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·250K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  30.3%  delivered 98%  ok
+  … cell 005/5 cs·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·250K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·250K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  30.2%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 200 hosts · round 5: succeeded: 3 of 5 cells passed
+  200 hosts: 3 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark f444718572414ec8a9691e85973a738e: microsoft-surface-7 · burst-limits · 250 hosts · round 5 · 7 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   770.9s  ready  14.71s  destroy      –s    26.4 MB/node  host mem     –%  ok
+  … cell 001/7 mesh·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 001/7 mesh·tcp·250K·250ms: idle (60s)
+  … cell 001/7 mesh·tcp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/7 mesh·tcp·250K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.4%  delivered 100%  ok
+  … cell 002/7 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/7 mesh·udp·500K·2000ms: idle (60s)
+  … cell 002/7 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/7 mesh·udp·500K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.2%  delivered 100%  ok
+  … cell 003/7 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 003/7 mesh·udp·500K·500ms: idle (60s)
+  … cell 003/7 mesh·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 003/7 mesh·udp·500K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.9%  delivered 99%  ok
+  … cell 004/7 mesh·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 004/7 mesh·tcp·250K·100ms: idle (60s)
+  … cell 004/7 mesh·tcp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 004/7 mesh·tcp·250K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.4%  delivered 100%  ok
+  … cell 005/7 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 005/7 mesh·udp·500K·100ms: idle (60s)
+  … cell 005/7 mesh·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 005/7 mesh·udp·500K·100ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  36.0%  delivered 89%  degraded (delivered 88.7% of what was asked (< 95%))
+  … cell 006/7 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 006/7 mesh·udp·500K·250ms: idle (60s)
+  … cell 006/7 mesh·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 006/7 mesh·udp·500K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.6%  delivered 98%  ok
+  … cell 007/7 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 007/7 mesh·udp·500K·1000ms: idle (60s)
+  … cell 007/7 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 007/7 mesh·udp·500K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  36.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 250 hosts · round 5: succeeded: 6 of 7 cells passed
+  250 hosts: 6 of 7 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark f997dbc3aaea44d0a7c6c79f284d515f: microsoft-surface-7 · burst-limits · 300 hosts · round 5 · 10 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy   973.8s  ready  17.09s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/10 cs·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 001/10 cs·tcp·100K·1000ms: idle (60s)
+  … cell 001/10 cs·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/10 cs·tcp·100K·1000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  30.4%  delivered 100%  ok
+  … cell 002/10 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 002/10 cs·tcp·100K·500ms: idle (60s)
+  … cell 002/10 cs·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 002/10 cs·tcp·100K·500ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  30.2%  delivered 91%  degraded (delivered 91.4% of what was asked (< 95%))
+  … cell 003/10 cs·udp·100K·100ms: waiting for the host to go quiet
+  … cell 003/10 cs·udp·100K·100ms: idle (60s)
+  … cell 003/10 cs·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 003/10 cs·udp·100K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.7%  delivered 99%  ok
+  … cell 004/10 cs·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 004/10 cs·tcp·100K·250ms: idle (60s)
+  … cell 004/10 cs·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 004/10 cs·tcp·100K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.8%  delivered 99%  ok
+  … cell 005/10 mesh·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 005/10 mesh·tcp·250K·2000ms: idle (60s)
+  … cell 005/10 mesh·tcp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 005/10 mesh·tcp·250K·2000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.5%  delivered 100%  ok
+  … cell 006/10 cs·udp·50K·100ms: waiting for the host to go quiet
+  … cell 006/10 cs·udp·50K·100ms: idle (60s)
+  … cell 006/10 cs·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 006/10 cs·udp·50K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.1%  delivered 100%  ok
+  … cell 007/10 mesh·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 007/10 mesh·tcp·250K·500ms: idle (60s)
+  … cell 007/10 mesh·tcp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 007/10 mesh·tcp·250K·500ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.9%  delivered 98%  ok
+  … cell 008/10 cs·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 008/10 cs·tcp·100K·100ms: idle (60s)
+  … cell 008/10 cs·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 008/10 cs·tcp·100K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  32.5%  delivered 99%  ok
+  … cell 009/10 cs·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 009/10 cs·tcp·100K·2000ms: idle (60s)
+  … cell 009/10 cs·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 009/10 cs·tcp·100K·2000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  35.6%  delivered 100%  ok
+  … cell 010/10 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 010/10 cs·udp·100K·250ms: idle (60s)
+  … cell 010/10 cs·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 010/10 cs·udp·100K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 300 hosts · round 5: succeeded: 9 of 10 cells passed
+  300 hosts: 9 of 10 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 23af53dafc0d4c6598137e35e9a2aaa8: microsoft-surface-7 · burst-limits · 350 hosts · round 5 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1267.9s  ready  17.43s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/2 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 001/2 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 001/2 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/2 mesh·tcp·250K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.4%  delivered 80%  degraded (delivered 80.2% of what was asked (< 95%))
+  … cell 002/2 mesh·udp·250K·100ms: waiting for the host to go quiet
+  … cell 002/2 mesh·udp·250K·100ms: idle (60s)
+  … cell 002/2 mesh·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 002/2 mesh·udp·250K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.6%  delivered 95%  degraded (delivered 94.9% of what was asked (< 95%))
+  … teardown: destroying
+  burst-limits · 350 hosts · round 5: succeeded: 0 of 2 cells passed
+  350 hosts: 1 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark fc4525513bdf409388465bd76dc41836: microsoft-surface-7 · burst-limits · 450 hosts · round 5 · 12 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 479 nodes
+  … deploy: checking 918 paths
+        deploy  nodes   479  deploy  1943.1s  ready  29.10s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 1943s)
+  … teardown: destroying
+  burst-limits · 450 hosts · round 5: succeeded: 0 of 0 cells passed
+  450 hosts: 0 of 12 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 64f6d4e95f2a4d4eb94a7a7619ba41c9: microsoft-surface-7 · burst-limits · 500 hosts · round 5 · 24 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 531 nodes
+  … deploy: checking 1020 paths
+        deploy  nodes   531  deploy  2516.9s  ready  26.85s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 2517s)
+  … teardown: destroying
+  burst-limits · 500 hosts · round 5: succeeded: 0 of 0 cells passed
+  500 hosts: 0 of 24 cells passed
+  round 6: 100 hosts × 5 cells, 150 hosts × 2 cells, 200 hosts × 5 cells, 250 hosts × 5 cells, 300 hosts × 1 cells, 350 hosts × 7 cells, 400 hosts × 12 cells, 450 hosts × 24 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 2a13d746eaab40e7a2ce6951f5e20a37: microsoft-surface-7 · burst-limits · 100 hosts · round 6 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   228.8s  ready   4.34s  destroy      –s    22.5 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·500K·250ms: idle (60s)
+  … cell 001/5 cs·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  25.5%  delivered 100%  ok
+  … cell 002/5 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·500K·2000ms: idle (60s)
+  … cell 002/5 cs·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 100%  ok
+  … cell 003/5 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·udp·500K·100ms: idle (60s)
+  … cell 003/5 cs·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·udp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 004/5 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·500K·500ms: idle (60s)
+  … cell 004/5 cs·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.9%  delivered 99%  ok
+  … cell 005/5 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·500K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.7%  delivered 99%  degraded (UDP loss 1.03% > 1.0%)
+  … teardown: destroying
+  burst-limits · 100 hosts · round 6: succeeded: 4 of 5 cells passed
+  100 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 736a5de8f9a348d09fccc5c75834465f: microsoft-surface-7 · burst-limits · 150 hosts · round 6 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 161 nodes
+  … deploy: checking 306 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   161  deploy   367.2s  ready   8.35s  destroy      –s    23.9 MB/node  host mem     –%  ok
+  … cell 001/2 cs·udp·250K·100ms: idle (60s)
+  … cell 001/2 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·udp·250K·100ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  19.2%  delivered 93%  degraded (delivered 92.9% of what was asked (< 95%))
+  … cell 002/2 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/2 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/2 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/2 cs·udp·250K·2000ms  nodes   161  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  20.7%  delivered 96%  degraded (UDP loss 1.01% > 1.0%)
+  … teardown: destroying
+  burst-limits · 150 hosts · round 6: succeeded: 0 of 2 cells passed
+  150 hosts: 0 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark e2b5fb9aba1147abb3e6738a3af2e4cc: microsoft-surface-7 · burst-limits · 200 hosts · round 6 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 213 nodes
+  … deploy: checking 408 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   213  deploy   565.8s  ready  10.88s  destroy      –s    22.5 MB/node  host mem     –%  ok
+  … cell 001/5 cs·udp·250K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·udp·250K·250ms: idle (60s)
+  … cell 001/5 cs·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·udp·250K·250ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  24.8%  delivered 98%  ok
+  … cell 002/5 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·500K·100ms: idle (60s)
+  … cell 002/5 mesh·udp·500K·100ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·500K·100ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  24.5%  delivered 100%  ok
+  … cell 003/5 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·100K·500ms: idle (60s)
+  … cell 003/5 cs·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·100K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.3%  delivered 100%  ok
+  … cell 004/5 cs·udp·250K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·250K·500ms: idle (60s)
+  … cell 004/5 cs·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·250K·500ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  25.6%  delivered 97%  ok
+  … cell 005/5 cs·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·250K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·250K·1000ms  nodes   213  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.2%  delivered 97%  ok
+  … teardown: destroying
+  burst-limits · 200 hosts · round 6: succeeded: 5 of 5 cells passed
+  200 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 24a1cb7aa65940aa9ba9c23ea1c069b7: microsoft-surface-7 · burst-limits · 250 hosts · round 6 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   746.5s  ready  17.39s  destroy      –s    24.1 MB/node  host mem     –%  ok
+  … cell 001/5 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 001/5 mesh·udp·500K·250ms: idle (60s)
+  … cell 001/5 mesh·udp·500K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 mesh·udp·500K·250ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.6%  delivered 97%  ok
+  … cell 002/5 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·udp·500K·2000ms: idle (60s)
+  … cell 002/5 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·udp·500K·2000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.8%  delivered 100%  ok
+  … cell 003/5 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 003/5 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 003/5 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 003/5 mesh·tcp·250K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.2%  delivered 99%  ok
+  … cell 004/5 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 004/5 mesh·udp·500K·500ms: idle (60s)
+  … cell 004/5 mesh·udp·500K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 mesh·udp·500K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.5%  delivered 100%  ok
+  … cell 005/5 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 005/5 mesh·udp·500K·1000ms: idle (60s)
+  … cell 005/5 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 mesh·udp·500K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.7%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 250 hosts · round 6: succeeded: 5 of 5 cells passed
+  250 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 26389ced33b94c02b01068bcfc7edbbf: microsoft-surface-7 · burst-limits · 300 hosts · round 6 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy  1013.0s  ready  17.33s  destroy      –s    26.7 MB/node  host mem     –%  ok
+  … cell 001/1 mesh·udp·250K·100ms: waiting for the host to go quiet
+  … cell 001/1 mesh·udp·250K·100ms: idle (60s)
+  … cell 001/1 mesh·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 001/1 mesh·udp·250K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.8%  delivered 98%  ok
+  … teardown: destroying
+  burst-limits · 300 hosts · round 6: succeeded: 1 of 1 cells passed
+  300 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 59db7a3516414a24b415d7561ad4e8ef: microsoft-surface-7 · burst-limits · 350 hosts · round 6 · 7 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1298.5s  ready  21.59s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/7 cs·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 001/7 cs·tcp·100K·250ms: idle (60s)
+  … cell 001/7 cs·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 001/7 cs·tcp·100K·250ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.6%  delivered 93%  degraded (delivered 92.9% of what was asked (< 95%))
+  … cell 002/7 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 002/7 cs·udp·100K·250ms: idle (60s)
+  … cell 002/7 cs·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 002/7 cs·udp·100K·250ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  35.3%  delivered 96%  ok
+  … cell 003/7 cs·udp·50K·100ms: waiting for the host to go quiet
+  … cell 003/7 cs·udp·50K·100ms: idle (60s)
+  … cell 003/7 cs·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 003/7 cs·udp·50K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  42.0%  delivered 98%  ok
+  … cell 004/7 cs·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 004/7 cs·tcp·100K·100ms: idle (60s)
+  … cell 004/7 cs·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 004/7 cs·tcp·100K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  44.4%  delivered 86%  degraded (delivered 85.9% of what was asked (< 95%))
+  … cell 005/7 cs·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 005/7 cs·tcp·100K·1000ms: idle (60s)
+  … cell 005/7 cs·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/7 cs·tcp·100K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  42.3%  delivered 98%  ok
+  … cell 006/7 cs·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 006/7 cs·tcp·100K·2000ms: idle (60s)
+  … cell 006/7 cs·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 006/7 cs·tcp·100K·2000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.4%  delivered 101%  ok
+  … cell 007/7 cs·udp·100K·100ms: waiting for the host to go quiet
+  … cell 007/7 cs·udp·100K·100ms: idle (60s)
+  … cell 007/7 cs·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 007/7 cs·udp·100K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  42.6%  delivered 98%  ok
+  … teardown: destroying
+  burst-limits · 350 hosts · round 6: succeeded: 5 of 7 cells passed
+  350 hosts: 5 of 7 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 44e9be524cff438abe034ed723cb23cb: microsoft-surface-7 · burst-limits · 400 hosts · round 6 · 12 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 424 nodes
+  … deploy: checking 816 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   424  deploy  1512.7s  ready  26.67s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/12 cs·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 001/12 cs·tcp·50K·500ms: idle (60s)
+  … cell 001/12 cs·tcp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 001/12 cs·tcp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.6%  delivered 99%  ok
+  … cell 002/12 cs·udp·50K·250ms: waiting for the host to go quiet
+  … cell 002/12 cs·udp·50K·250ms: idle (60s)
+  … cell 002/12 cs·udp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 002/12 cs·udp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.4%  delivered 97%  ok
+  … cell 003/12 cs·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 003/12 cs·tcp·50K·1000ms: idle (60s)
+  … cell 003/12 cs·tcp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 003/12 cs·tcp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.8%  delivered 100%  ok
+  … cell 004/12 cs·udp·50K·500ms: waiting for the host to go quiet
+  … cell 004/12 cs·udp·50K·500ms: idle (60s)
+  … cell 004/12 cs·udp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 004/12 cs·udp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.1%  delivered 100%  ok
+  … cell 005/12 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 005/12 cs·udp·100K·500ms: idle (60s)
+  … cell 005/12 cs·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 005/12 cs·udp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.7%  delivered 96%  degraded (UDP loss 1.38% > 1.0%)
+  … cell 006/12 cs·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 006/12 cs·udp·50K·2000ms: idle (60s)
+  … cell 006/12 cs·udp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 006/12 cs·udp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.5%  delivered 100%  ok
+  … cell 007/12 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 007/12 cs·udp·100K·1000ms: idle (60s)
+  … cell 007/12 cs·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 007/12 cs·udp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.8%  delivered 92%  degraded (delivered 92.1% of what was asked (< 95%))
+  … cell 008/12 cs·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 008/12 cs·tcp·50K·250ms: idle (60s)
+  … cell 008/12 cs·tcp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 008/12 cs·tcp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.8%  delivered 99%  ok
+  … cell 009/12 cs·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 009/12 cs·tcp·50K·100ms: idle (60s)
+  … cell 009/12 cs·tcp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 009/12 cs·tcp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.1%  delivered 98%  ok
+  … cell 010/12 cs·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 010/12 cs·tcp·50K·2000ms: idle (60s)
+  … cell 010/12 cs·tcp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 010/12 cs·tcp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.7%  delivered 100%  ok
+  … cell 011/12 cs·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 011/12 cs·udp·50K·1000ms: idle (60s)
+  … cell 011/12 cs·udp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 011/12 cs·udp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.4%  delivered 100%  ok
+  … cell 012/12 cs·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 012/12 cs·udp·100K·2000ms: idle (60s)
+  … cell 012/12 cs·udp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 012/12 cs·udp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.5%  delivered 98%  ok
+  … teardown: destroying
+  burst-limits · 400 hosts · round 6: succeeded: 10 of 12 cells passed
+  400 hosts: 12 of 12 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark babda604446643b995146d30bde9aab4: microsoft-surface-7 · burst-limits · 450 hosts · round 6 · 24 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 479 nodes
+  … deploy: checking 918 paths
+        deploy  nodes   479  deploy  1923.9s  ready  27.39s  destroy      –s       – MB/node  host mem     –%  stopped (deploy took 1924s)
+  … teardown: destroying
+  burst-limits · 450 hosts · round 6: succeeded: 0 of 0 cells passed
+  450 hosts: 0 of 24 cells passed
+  round 7: 50 hosts × 1 cells, 100 hosts × 2 cells, 250 hosts × 1 cells, 300 hosts × 5 cells, 350 hosts × 5 cells, 400 hosts × 24 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 2f45504da73143b489b5c7a7593c7241: microsoft-surface-7 · burst-limits · 50 hosts · round 7 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: checking 102 paths
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    80.2s  ready   2.07s  destroy      –s    31.2 MB/node  host mem     –%  ok
+  … cell 001/1 cs·udp·500K·1000ms: idle (60s)
+  … cell 001/1 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/1 cs·udp·500K·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  12.2%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 7: succeeded: 1 of 1 cells passed
+  50 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 3c30ae90960e4a9391a493269fe1208c: microsoft-surface-7 · burst-limits · 100 hosts · round 7 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: checking 204 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   218.9s  ready   4.29s  destroy      –s    24.7 MB/node  host mem     –%  ok
+  … cell 001/2 cs·udp·250K·100ms: idle (60s)
+  … cell 001/2 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·udp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  23.9%  delivered 100%  ok
+  … cell 002/2 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/2 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/2 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/2 cs·udp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 7: succeeded: 2 of 2 cells passed
+  100 hosts: 2 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 81a28a21a76a4ec0b544c2fe164c4f70: microsoft-surface-7 · burst-limits · 250 hosts · round 7 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   829.0s  ready  17.43s  destroy      –s    28.2 MB/node  host mem     –%  ok
+  … cell 001/1 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 001/1 cs·tcp·100K·500ms: idle (60s)
+  … cell 001/1 cs·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 001/1 cs·tcp·100K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  27.3%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 250 hosts · round 7: succeeded: 1 of 1 cells passed
+  250 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 68c5ed62c40f4646af389f9ba1dafb6f: microsoft-surface-7 · burst-limits · 300 hosts · round 7 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy  1085.1s  ready  19.47s  destroy      –s    21.7 MB/node  host mem     –%  ok
+  … cell 001/5 cs·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 001/5 cs·tcp·100K·250ms: idle (60s)
+  … cell 001/5 cs·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·tcp·100K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  31.6%  delivered 100%  ok
+  … cell 002/5 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 002/5 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 002/5 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 002/5 mesh·tcp·250K·1000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  37.4%  delivered 95%  degraded (delivered 94.5% of what was asked (< 95%))
+  … cell 003/5 cs·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·100K·100ms: idle (60s)
+  … cell 003/5 cs·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·100K·100ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  33.3%  delivered 99%  ok
+  … cell 004/5 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·100K·500ms: idle (60s)
+  … cell 004/5 cs·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·100K·500ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  41.3%  delivered 100%  ok
+  … cell 005/5 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·100K·1000ms: idle (60s)
+  … cell 005/5 cs·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·100K·1000ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  40.8%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 300 hosts · round 7: succeeded: 4 of 5 cells passed
+  300 hosts: 4 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 37cad03c5b194640b8b8fedab284d7d8: microsoft-surface-7 · burst-limits · 350 hosts · round 7 · 5 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1249.8s  ready  21.00s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/5 cs·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 001/5 cs·tcp·100K·2000ms: idle (60s)
+  … cell 001/5 cs·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 001/5 cs·tcp·100K·2000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  35.0%  delivered 98%  ok
+  … cell 002/5 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 002/5 cs·udp·100K·250ms: idle (60s)
+  … cell 002/5 cs·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 002/5 cs·udp·100K·250ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.1%  delivered 92%  degraded (delivered 92.3% of what was asked (< 95%))
+  … cell 003/5 cs·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 003/5 cs·tcp·100K·1000ms: idle (60s)
+  … cell 003/5 cs·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 003/5 cs·tcp·100K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.8%  delivered 100%  ok
+  … cell 004/5 cs·udp·50K·100ms: waiting for the host to go quiet
+  … cell 004/5 cs·udp·50K·100ms: idle (60s)
+  … cell 004/5 cs·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 004/5 cs·udp·50K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.1%  delivered 100%  ok
+  … cell 005/5 cs·udp·100K·100ms: waiting for the host to go quiet
+  … cell 005/5 cs·udp·100K·100ms: idle (60s)
+  … cell 005/5 cs·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 005/5 cs·udp·100K·100ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.1%  delivered 95%  ok
+  … teardown: destroying
+  burst-limits · 350 hosts · round 7: succeeded: 4 of 5 cells passed
+  350 hosts: 5 of 5 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark bc641a284ccc4f998f6db7cd67fed554: microsoft-surface-7 · burst-limits · 400 hosts · round 7 · 24 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 424 nodes
+  … deploy: checking 816 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   424  deploy  1654.8s  ready  24.08s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/24 mesh·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 001/24 mesh·tcp·100K·1000ms: idle (60s)
+  … cell 001/24 mesh·tcp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/24 mesh·tcp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.7%  delivered 100%  ok
+  … cell 002/24 mesh·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 002/24 mesh·udp·100K·1000ms: idle (60s)
+  … cell 002/24 mesh·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 002/24 mesh·udp·100K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.7%  delivered 102%  ok
+  … cell 003/24 mesh·udp·50K·500ms: waiting for the host to go quiet
+  … cell 003/24 mesh·udp·50K·500ms: idle (60s)
+  … cell 003/24 mesh·udp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 003/24 mesh·udp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  43.8%  delivered 100%  ok
+  … cell 004/24 mesh·udp·250K·250ms: waiting for the host to go quiet
+  … cell 004/24 mesh·udp·250K·250ms: idle (60s)
+  … cell 004/24 mesh·udp·250K·250ms: traffic: ramp 5s + hold 50s
+cell 004/24 mesh·udp·250K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.9%  delivered 99%  ok
+  … cell 005/24 mesh·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 005/24 mesh·tcp·100K·500ms: idle (60s)
+  … cell 005/24 mesh·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 005/24 mesh·tcp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.5%  delivered 100%  ok
+  … cell 006/24 mesh·udp·50K·250ms: waiting for the host to go quiet
+  … cell 006/24 mesh·udp·50K·250ms: idle (60s)
+  … cell 006/24 mesh·udp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 006/24 mesh·udp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.2%  delivered 101%  ok
+  … cell 007/24 mesh·udp·250K·500ms: waiting for the host to go quiet
+  … cell 007/24 mesh·udp·250K·500ms: idle (60s)
+  … cell 007/24 mesh·udp·250K·500ms: traffic: ramp 5s + hold 50s
+cell 007/24 mesh·udp·250K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.1%  delivered 99%  ok
+  … cell 008/24 mesh·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 008/24 mesh·udp·250K·2000ms: idle (60s)
+  … cell 008/24 mesh·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 008/24 mesh·udp·250K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.2%  delivered 100%  ok
+  … cell 009/24 mesh·udp·50K·100ms: waiting for the host to go quiet
+  … cell 009/24 mesh·udp·50K·100ms: idle (60s)
+  … cell 009/24 mesh·udp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 009/24 mesh·udp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  52.2%  delivered 100%  ok
+  … cell 010/24 mesh·udp·100K·250ms: waiting for the host to go quiet
+  … cell 010/24 mesh·udp·100K·250ms: idle (60s)
+  … cell 010/24 mesh·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 010/24 mesh·udp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.2%  delivered 100%  ok
+  … cell 011/24 mesh·udp·100K·100ms: waiting for the host to go quiet
+  … cell 011/24 mesh·udp·100K·100ms: idle (60s)
+  … cell 011/24 mesh·udp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 011/24 mesh·udp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  45.9%  delivered 100%  ok
+  … cell 012/24 mesh·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 012/24 mesh·udp·100K·2000ms: idle (60s)
+  … cell 012/24 mesh·udp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 012/24 mesh·udp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  52.5%  delivered 102%  ok
+  … cell 013/24 mesh·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 013/24 mesh·udp·50K·1000ms: idle (60s)
+  … cell 013/24 mesh·udp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 013/24 mesh·udp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  50.3%  delivered 103%  ok
+  … cell 014/24 mesh·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 014/24 mesh·tcp·50K·1000ms: idle (60s)
+  … cell 014/24 mesh·tcp·50K·1000ms: traffic: ramp 5s + hold 50s
+cell 014/24 mesh·tcp·50K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.9%  delivered 102%  ok
+  … cell 015/24 mesh·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 015/24 mesh·tcp·100K·100ms: idle (60s)
+  … cell 015/24 mesh·tcp·100K·100ms: traffic: ramp 5s + hold 50s
+cell 015/24 mesh·tcp·100K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.7%  delivered 99%  ok
+  … cell 016/24 mesh·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 016/24 mesh·tcp·100K·250ms: idle (60s)
+  … cell 016/24 mesh·tcp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 016/24 mesh·tcp·100K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  51.4%  delivered 98%  ok
+  … cell 017/24 mesh·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 017/24 mesh·tcp·50K·250ms: idle (60s)
+  … cell 017/24 mesh·tcp·50K·250ms: traffic: ramp 5s + hold 50s
+cell 017/24 mesh·tcp·50K·250ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.6%  delivered 100%  ok
+  … cell 018/24 mesh·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 018/24 mesh·tcp·50K·2000ms: idle (60s)
+  … cell 018/24 mesh·tcp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 018/24 mesh·tcp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  47.2%  delivered 103%  ok
+  … cell 019/24 mesh·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 019/24 mesh·tcp·50K·500ms: idle (60s)
+  … cell 019/24 mesh·tcp·50K·500ms: traffic: ramp 5s + hold 50s
+cell 019/24 mesh·tcp·50K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.6%  delivered 101%  ok
+  … cell 020/24 mesh·udp·100K·500ms: waiting for the host to go quiet
+  … cell 020/24 mesh·udp·100K·500ms: idle (60s)
+  … cell 020/24 mesh·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 020/24 mesh·udp·100K·500ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  54.4%  delivered 101%  ok
+  … cell 021/24 mesh·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 021/24 mesh·tcp·50K·100ms: idle (60s)
+  … cell 021/24 mesh·tcp·50K·100ms: traffic: ramp 5s + hold 50s
+cell 021/24 mesh·tcp·50K·100ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  54.4%  delivered 100%  ok
+  … cell 022/24 mesh·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 022/24 mesh·tcp·100K·2000ms: idle (60s)
+  … cell 022/24 mesh·tcp·100K·2000ms: traffic: ramp 5s + hold 50s
+cell 022/24 mesh·tcp·100K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.2%  delivered 100%  ok
+  … cell 023/24 mesh·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 023/24 mesh·udp·50K·2000ms: idle (60s)
+  … cell 023/24 mesh·udp·50K·2000ms: traffic: ramp 5s + hold 50s
+cell 023/24 mesh·udp·50K·2000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  57.0%  delivered 104%  ok
+  … cell 024/24 mesh·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 024/24 mesh·udp·250K·1000ms: idle (60s)
+  … cell 024/24 mesh·udp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 024/24 mesh·udp·250K·1000ms  nodes   424  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  49.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 400 hosts · round 7: succeeded: 24 of 24 cells passed
+  400 hosts: 24 of 24 cells passed
+  round 8: 50 hosts × 1 cells, 100 hosts × 2 cells, 250 hosts × 2 cells, 300 hosts × 1 cells, 350 hosts × 2 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 2bcf1e891a8e45698c9388028f05b31a: microsoft-surface-7 · burst-limits · 50 hosts · round 8 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 57 nodes
+  … deploy: checking 102 paths
+  … deploy: settling (15.0s)
+        deploy  nodes    57  deploy    81.1s  ready   2.23s  destroy      –s    32.0 MB/node  host mem     –%  ok
+  … cell 001/1 cs·udp·500K·1000ms: idle (60s)
+  … cell 001/1 cs·udp·500K·1000ms: traffic: ramp 5s + hold 50s
+cell 001/1 cs·udp·500K·1000ms  nodes    57  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  11.5%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 50 hosts · round 8: succeeded: 1 of 1 cells passed
+  50 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 0cbe13a36aad4500a4aeb2c2bb908dd8: microsoft-surface-7 · burst-limits · 100 hosts · round 8 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (15.0s)
+        deploy  nodes   109  deploy   241.9s  ready   4.53s  destroy      –s    25.3 MB/node  host mem     –%  ok
+  … cell 001/2 cs·udp·250K·100ms: waiting for the host to go quiet
+  … cell 001/2 cs·udp·250K·100ms: idle (60s)
+  … cell 001/2 cs·udp·250K·100ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·udp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.0%  delivered 96%  ok
+  … cell 002/2 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 002/2 cs·udp·250K·2000ms: idle (60s)
+  … cell 002/2 cs·udp·250K·2000ms: traffic: ramp 5s + hold 50s
+cell 002/2 cs·udp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  22.4%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 100 hosts · round 8: succeeded: 2 of 2 cells passed
+  100 hosts: 2 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 5d2a54e7c6b74aa7836ce7069b53f83e: microsoft-surface-7 · burst-limits · 250 hosts · round 8 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 268 nodes
+  … deploy: checking 510 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   268  deploy   759.0s  ready  15.35s  destroy      –s    23.3 MB/node  host mem     –%  ok
+  … cell 001/2 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 001/2 cs·tcp·100K·500ms: idle (60s)
+  … cell 001/2 cs·tcp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·tcp·100K·500ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  38.5%  delivered 100%  ok
+  … cell 002/2 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 002/2 mesh·tcp·250K·1000ms: idle (60s)
+  … cell 002/2 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 50s
+cell 002/2 mesh·tcp·250K·1000ms  nodes   268  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  29.8%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 250 hosts · round 8: succeeded: 2 of 2 cells passed
+  250 hosts: 2 of 2 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 154d909d2db9431a864a2973a7fb3dee: microsoft-surface-7 · burst-limits · 300 hosts · round 8 · 1 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 320 nodes
+  … deploy: checking 612 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   320  deploy  1082.6s  ready  18.43s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/1 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 001/1 cs·udp·100K·250ms: idle (60s)
+  … cell 001/1 cs·udp·100K·250ms: traffic: ramp 5s + hold 50s
+cell 001/1 cs·udp·100K·250ms  nodes   320  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  34.1%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 300 hosts · round 8: succeeded: 1 of 1 cells passed
+  300 hosts: 1 of 1 cells passed
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark e865e00324b54ff385b56093bc3f65fd: microsoft-surface-7 · burst-limits · 350 hosts · round 8 · 2 cells
+  … preflight
+  … baseline: the host at rest (10s)
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1291.5s  ready  26.13s  destroy      –s       – MB/node  host mem     –%  ok
+  … cell 001/2 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 001/2 cs·udp·100K·500ms: idle (60s)
+  … cell 001/2 cs·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·udp·100K·500ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  39.0%  delivered 97%  ok
+  … cell 002/2 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 002/2 cs·udp·100K·1000ms: idle (60s)
+  … cell 002/2 cs·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 002/2 cs·udp·100K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  46.9%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 350 hosts · round 8: succeeded: 2 of 2 cells passed
+  350 hosts: 2 of 2 cells passed
+  round 9: 350 hosts × 2 cells
+  restarting Docker: docker desktop restart
+  kernel: net.ipv4.neigh.default.gc_thresh1=4096, net.ipv4.neigh.default.gc_thresh2=8192, net.ipv4.neigh.default.gc_thresh3=16384, net.ipv6.neigh.default.gc_thresh1=4096, net.ipv6.neigh.default.gc_thresh2=8192, net.ipv6.neigh.default.gc_thresh3=16384
+  letting the host settle (30s)
+  benchmark 26eb6e30a6204301a5637cd7538a3269: microsoft-surface-7 · burst-limits · 350 hosts · round 9 · 2 cells
+  … preflight
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (15.0s, nothing deployed)
+  … deploy: deploying 372 nodes
+  … deploy: checking 714 paths
+  … deploy: settling (15.0s)
+        deploy  nodes   372  deploy  1228.7s  ready  21.36s  destroy      –s    26.7 MB/node  host mem     –%  ok
+  … cell 001/2 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 001/2 cs·udp·100K·500ms: idle (60s)
+  … cell 001/2 cs·udp·100K·500ms: traffic: ramp 5s + hold 50s
+cell 001/2 cs·udp·100K·500ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  42.9%  delivered 99%  ok
+  … cell 002/2 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 002/2 cs·udp·100K·1000ms: idle (60s)
+  … cell 002/2 cs·udp·100K·1000ms: traffic: ramp 5s + hold 50s
+cell 002/2 cs·udp·100K·1000ms  nodes   372  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  48.7%  delivered 100%  ok
+  … teardown: destroying
+  burst-limits · 350 hosts · round 9: succeeded: 2 of 2 cells passed
+  350 hosts: 2 of 2 cells passed
+=== 2026-10-14 01:31:40 UTC · suite finished: backend\benchmark-results\microsoft-surface-7\2026-10-11-traffic\summary.md

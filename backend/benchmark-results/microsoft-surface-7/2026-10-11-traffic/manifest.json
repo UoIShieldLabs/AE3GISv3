@@ -1,0 +1,4001 @@
+{
+  "suite": "traffic",
+  "description": "The burst limits: for each of 100 traffic cells (5 rates \u00d7 5 burst intervals \u00d7 TCP/UDP \u00d7 clients \u2192 servers / mesh), the most hosts it comfortably supports and where it starts to fail, 50 hosts apart. Docker's kernel gets room for 16384 neighbour (ARP) entries (default 1024 for all nodes together, which cut off hosts past ~250 in mesh and ~500 clients \u2192 servers under traffic).",
+  "suite_sha": "e8c5f0bf8e36832a881d402916fad7798f521c09fe015cbc5f6e90cc7d072ce1",
+  "host": "microsoft-surface-7",
+  "platform": "Windows",
+  "base_url": "http://localhost:8000/api/v1",
+  "restart": "docker desktop restart",
+  "started_at": "2026-10-11T10:09:20.088052+00:00",
+  "ended_at": "2026-10-14T01:31:40.356863+00:00",
+  "runs": [
+    {
+      "key": "burst-limits",
+      "item": "burst-limits",
+      "run": 1,
+      "runs": 1,
+      "seed": null,
+      "dir": "01-burst-limits",
+      "status": "done",
+      "kind": "limits",
+      "cells": {
+        "cs\u00b7tcp\u00b750K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b750K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b750K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b750K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b750K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7100K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short",
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7100K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short",
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7100K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 819,
+          "pass": {
+            "200": 1,
+            "250": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7100K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7100K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7250K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 343,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7250K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 343,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7250K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 343,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7250K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 343,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7250K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 343,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7500K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 171,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7500K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 171,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7500K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 171,
+          "pass": {
+            "100": 1,
+            "50": 2
+          },
+          "fail": {
+            "150": "traffic_short",
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7500K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 171,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b7500K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 171,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b71M\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 100
+          },
+          "estimate": 85,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b71M\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 250
+          },
+          "estimate": 85,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b71M\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 500
+          },
+          "estimate": 85,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b71M\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 85,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7tcp\u00b71M\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 85,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b750K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_loss"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b750K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b750K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b750K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b750K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7100K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7100K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 819,
+          "pass": {
+            "300": 2,
+            "350": 1
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "400": "traffic_short",
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7100K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 1,
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow",
+            "400": "traffic_loss"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7100K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 1,
+            "300": 1,
+            "350": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow",
+            "400": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7100K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 819,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "650": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7250K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 571,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "450": "deploy_slow",
+            "350": "traffic_short",
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7250K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 571,
+          "pass": {
+            "200": 2
+          },
+          "fail": {
+            "450": "deploy_slow",
+            "350": "traffic_short",
+            "250": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7250K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 571,
+          "pass": {
+            "200": 2
+          },
+          "fail": {
+            "450": "deploy_slow",
+            "350": "traffic_short",
+            "250": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7250K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 571,
+          "pass": {
+            "200": 2
+          },
+          "fail": {
+            "450": "deploy_slow",
+            "350": "traffic_short",
+            "250": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7250K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 571,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "450": "deploy_slow",
+            "350": "traffic_short",
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_loss"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7500K\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 285,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7500K\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 285,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7500K\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 285,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7500K\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 285,
+          "pass": {
+            "100": 1,
+            "50": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short",
+            "100": "traffic_loss"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b7500K\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 285,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "250": "traffic_short",
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b71M\u00b7100ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 100
+          },
+          "estimate": 142,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b71M\u00b7250ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 250
+          },
+          "estimate": 142,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b71M\u00b7500ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 500
+          },
+          "estimate": 142,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b71M\u00b71000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 142,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "cs\u00b7udp\u00b71M\u00b72000ms": {
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 142,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b750K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b750K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b750K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b750K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b750K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "50K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7100K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7100K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7100K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7100K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7100K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "100K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7250K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 460,
+          "pass": {
+            "250": 2
+          },
+          "fail": {
+            "350": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7250K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 460,
+          "pass": {
+            "250": 2
+          },
+          "fail": {
+            "350": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7250K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 460,
+          "pass": {
+            "250": 1,
+            "300": 2
+          },
+          "fail": {
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7250K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 460,
+          "pass": {
+            "350": 1,
+            "250": 2
+          },
+          "fail": {
+            "450": "traffic_short",
+            "400": "traffic_short",
+            "350": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7250K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 460,
+          "pass": {
+            "250": 1,
+            "300": 2
+          },
+          "fail": {
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7500K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 230,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7500K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 230,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7500K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 230,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7500K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 230,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b7500K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "500K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 230,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b71M\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 100
+          },
+          "estimate": 115,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b71M\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 250
+          },
+          "estimate": 115,
+          "pass": {
+            "50": 2
+          },
+          "fail": {
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b71M\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 500
+          },
+          "estimate": 115,
+          "pass": {
+            "100": 1,
+            "50": 2
+          },
+          "fail": {
+            "150": "traffic_short",
+            "100": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b71M\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 115,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7tcp\u00b71M\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "tcp",
+            "bitrate": "1M",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 115,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b750K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b750K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b750K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b750K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b750K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "50K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7100K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7100K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7100K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7100K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7100K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "100K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7250K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 690,
+          "pass": {
+            "300": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "400": "traffic_short",
+            "350": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7250K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7250K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7250K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7250K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 690,
+          "pass": {
+            "400": 2
+          },
+          "fail": {
+            "550": "deploy_slow",
+            "500": "deploy_slow",
+            "450": "deploy_slow"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7500K\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 100
+          },
+          "estimate": 509,
+          "pass": {
+            "200": 2
+          },
+          "fail": {
+            "400": "traffic_short",
+            "300": "traffic_short",
+            "250": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7500K\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 250
+          },
+          "estimate": 509,
+          "pass": {
+            "200": 1,
+            "250": 2
+          },
+          "fail": {
+            "400": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7500K\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 500
+          },
+          "estimate": 509,
+          "pass": {
+            "200": 1,
+            "250": 2
+          },
+          "fail": {
+            "400": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7500K\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 509,
+          "pass": {
+            "200": 1,
+            "250": 2
+          },
+          "fail": {
+            "400": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b7500K\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "500K",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 509,
+          "pass": {
+            "200": 1,
+            "250": 2
+          },
+          "fail": {
+            "400": "traffic_short",
+            "300": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b71M\u00b7100ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 100
+          },
+          "estimate": 254,
+          "pass": {
+            "100": 2
+          },
+          "fail": {
+            "200": "traffic_short",
+            "150": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b71M\u00b7250ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 250
+          },
+          "estimate": 254,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b71M\u00b7500ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 500
+          },
+          "estimate": 254,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b71M\u00b71000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 1000
+          },
+          "estimate": 254,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        },
+        "mesh\u00b7udp\u00b71M\u00b72000ms": {
+          "cell": {
+            "pattern": "mesh",
+            "protocol": "udp",
+            "bitrate": "1M",
+            "burst_interval_ms": 2000
+          },
+          "estimate": 254,
+          "pass": {
+            "150": 2
+          },
+          "fail": {
+            "200": "traffic_short"
+          },
+          "unrun": {}
+        }
+      },
+      "host": {
+        "ncpu": 8,
+        "mem_total": 16605478912
+      },
+      "error": null,
+      "started_at": "2026-10-11T10:09:37.488559+00:00",
+      "probes": [
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 50,
+          "cells": [
+            "cs\u00b7tcp\u00b71M\u00b7100ms",
+            "cs\u00b7tcp\u00b71M\u00b7250ms",
+            "cs\u00b7tcp\u00b71M\u00b7500ms",
+            "cs\u00b7tcp\u00b71M\u00b71000ms",
+            "cs\u00b7tcp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T10:11:34.553849+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15204012032,
+            "loadavg": [
+              1.48,
+              0.5,
+              0.18
+            ]
+          },
+          "benchmark_id": "bc25439f618a4b89a44e697bc91aea29",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T10:25:36.082934+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 100,
+          "cells": [
+            "cs\u00b7udp\u00b71M\u00b7100ms",
+            "cs\u00b7udp\u00b71M\u00b7250ms",
+            "cs\u00b7udp\u00b71M\u00b7500ms",
+            "cs\u00b7udp\u00b71M\u00b71000ms",
+            "cs\u00b7udp\u00b71M\u00b72000ms",
+            "mesh\u00b7tcp\u00b71M\u00b7100ms",
+            "mesh\u00b7tcp\u00b71M\u00b7250ms",
+            "mesh\u00b7tcp\u00b71M\u00b7500ms",
+            "mesh\u00b7tcp\u00b71M\u00b71000ms",
+            "mesh\u00b7tcp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T10:27:35.699166+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15155417088,
+            "loadavg": [
+              0.95,
+              0.3,
+              0.1
+            ]
+          },
+          "benchmark_id": "ae46753851374f0da0becbb1519a410c",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T10:54:52.682899+00:00",
+          "outcome": "4 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 150 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 150,
+          "cells": [
+            "cs\u00b7tcp\u00b7500K\u00b7100ms",
+            "cs\u00b7tcp\u00b7500K\u00b7250ms",
+            "cs\u00b7tcp\u00b7500K\u00b7500ms",
+            "cs\u00b7tcp\u00b7500K\u00b71000ms",
+            "cs\u00b7tcp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-150",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T10:56:46.760256+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15084441600,
+            "loadavg": [
+              0.46,
+              0.15,
+              0.05
+            ]
+          },
+          "benchmark_id": "7208d87969064f60a950b9c59bb70f5d",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T11:16:03.939079+00:00",
+          "outcome": "0 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 200 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 200,
+          "cells": [
+            "mesh\u00b7tcp\u00b7500K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7500K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7500K\u00b72000ms",
+            "mesh\u00b7udp\u00b71M\u00b7100ms",
+            "mesh\u00b7udp\u00b71M\u00b7250ms",
+            "mesh\u00b7udp\u00b71M\u00b7500ms",
+            "mesh\u00b7udp\u00b71M\u00b71000ms",
+            "mesh\u00b7udp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-200",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T11:18:15.360569+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15664472064,
+            "loadavg": [
+              1.06,
+              0.35,
+              0.12
+            ]
+          },
+          "benchmark_id": "7ce7657d70e440ab88f0fcbfca0ea566",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T11:56:05.200796+00:00",
+          "outcome": "0 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 250,
+          "cells": [
+            "cs\u00b7tcp\u00b7250K\u00b7100ms",
+            "cs\u00b7tcp\u00b7250K\u00b7250ms",
+            "cs\u00b7tcp\u00b7250K\u00b7500ms",
+            "cs\u00b7tcp\u00b7250K\u00b71000ms",
+            "cs\u00b7tcp\u00b7250K\u00b72000ms",
+            "cs\u00b7udp\u00b7500K\u00b7100ms",
+            "cs\u00b7udp\u00b7500K\u00b7250ms",
+            "cs\u00b7udp\u00b7500K\u00b7500ms",
+            "cs\u00b7udp\u00b7500K\u00b71000ms",
+            "cs\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T11:58:10.822858+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15092649984,
+            "loadavg": [
+              0.48,
+              0.15,
+              0.05
+            ]
+          },
+          "benchmark_id": "db19953ffc7244b1bb98ad34d3230d25",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T12:52:00.812964+00:00",
+          "outcome": "0 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 350,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T12:54:06.373953+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15535099904,
+            "loadavg": [
+              0.48,
+              0.16,
+              0.06
+            ]
+          },
+          "benchmark_id": "2844dd4e8a8c4b20aa3ad5b2dc01e591",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T15:12:47.205334+00:00",
+          "outcome": "1 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 400 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 400,
+          "cells": [
+            "mesh\u00b7udp\u00b7500K\u00b7100ms",
+            "mesh\u00b7udp\u00b7500K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7500ms",
+            "mesh\u00b7udp\u00b7500K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-400",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T15:14:47.053709+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15195611136,
+            "loadavg": [
+              1.04,
+              0.34,
+              0.12
+            ]
+          },
+          "benchmark_id": "e51eea39b8d44482a4b3f68d31035ba3",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T17:40:58.452658+00:00",
+          "outcome": "0 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 450 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 450,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b7250ms",
+            "cs\u00b7udp\u00b7250K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b71000ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-450",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T17:43:03.747599+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15655043072,
+            "loadavg": [
+              0.96,
+              0.32,
+              0.11
+            ]
+          },
+          "benchmark_id": "7456644c0a3c4211868560b8d48cffd0",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T18:32:42.384109+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 550 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 550,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7100ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-550",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T18:34:53.742251+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15063449600,
+            "loadavg": [
+              1.09,
+              0.37,
+              0.13
+            ]
+          },
+          "benchmark_id": "9bfecf8503c64c73beddad4eec132161",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T19:48:04.948671+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 650 hosts \u00b7 round 1",
+          "round": 1,
+          "size": 650,
+          "cells": [
+            "cs\u00b7tcp\u00b750K\u00b7100ms",
+            "cs\u00b7tcp\u00b750K\u00b7250ms",
+            "cs\u00b7tcp\u00b750K\u00b7500ms",
+            "cs\u00b7tcp\u00b750K\u00b71000ms",
+            "cs\u00b7tcp\u00b750K\u00b72000ms",
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b750K\u00b7250ms",
+            "cs\u00b7udp\u00b750K\u00b7500ms",
+            "cs\u00b7udp\u00b750K\u00b71000ms",
+            "cs\u00b7udp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "cs\u00b7udp\u00b7100K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r01-650",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T19:50:20.897152+00:00",
+            "mem_total": 16605466624,
+            "mem_available": 15183003648,
+            "loadavg": [
+              1.55,
+              0.52,
+              0.18
+            ]
+          },
+          "benchmark_id": "324612221e16456ebe9533a1fe96c88f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T21:07:33.487377+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 50,
+          "cells": [
+            "cs\u00b7udp\u00b71M\u00b7100ms",
+            "cs\u00b7udp\u00b71M\u00b7250ms",
+            "cs\u00b7udp\u00b71M\u00b7500ms",
+            "cs\u00b7udp\u00b71M\u00b71000ms",
+            "cs\u00b7udp\u00b71M\u00b72000ms",
+            "mesh\u00b7tcp\u00b71M\u00b7250ms"
+          ],
+          "dir": "01-burst-limits/r02-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T21:09:34.756166+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15451054080,
+            "loadavg": [
+              0.14,
+              0.04,
+              0.01
+            ]
+          },
+          "benchmark_id": "9a1443079f604b588b068acf67967bf8",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T21:25:35.877666+00:00",
+          "outcome": "6 of 6 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 100,
+          "cells": [
+            "cs\u00b7tcp\u00b7500K\u00b7100ms",
+            "cs\u00b7tcp\u00b7500K\u00b7250ms",
+            "cs\u00b7tcp\u00b7500K\u00b7500ms",
+            "cs\u00b7tcp\u00b7500K\u00b71000ms",
+            "cs\u00b7tcp\u00b7500K\u00b72000ms",
+            "cs\u00b7tcp\u00b71M\u00b7100ms",
+            "cs\u00b7tcp\u00b71M\u00b7250ms",
+            "cs\u00b7tcp\u00b71M\u00b7500ms",
+            "cs\u00b7tcp\u00b71M\u00b71000ms",
+            "cs\u00b7tcp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T21:27:54.156398+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15638999040,
+            "loadavg": [
+              0.66,
+              0.22,
+              0.08
+            ]
+          },
+          "benchmark_id": "ef38456a75cb4167a5442af35af3d9f8",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T21:55:11.572140+00:00",
+          "outcome": "5 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 150 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 150,
+          "cells": [
+            "mesh\u00b7tcp\u00b7500K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7500K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7500K\u00b72000ms",
+            "mesh\u00b7tcp\u00b71M\u00b7100ms",
+            "mesh\u00b7tcp\u00b71M\u00b7500ms",
+            "mesh\u00b7tcp\u00b71M\u00b71000ms",
+            "mesh\u00b7tcp\u00b71M\u00b72000ms",
+            "mesh\u00b7udp\u00b71M\u00b7100ms",
+            "mesh\u00b7udp\u00b71M\u00b7250ms",
+            "mesh\u00b7udp\u00b71M\u00b7500ms",
+            "mesh\u00b7udp\u00b71M\u00b71000ms",
+            "mesh\u00b7udp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-150",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T21:57:07.632294+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15625887744,
+            "loadavg": [
+              3.17,
+              5.98,
+              5.6
+            ]
+          },
+          "benchmark_id": "75ee7718dcbd474d823661ffd71a41db",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T22:38:26.010794+00:00",
+          "outcome": "9 of 14 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 200 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 200,
+          "cells": [
+            "cs\u00b7tcp\u00b7250K\u00b7100ms",
+            "cs\u00b7tcp\u00b7250K\u00b7250ms",
+            "cs\u00b7tcp\u00b7250K\u00b7500ms",
+            "cs\u00b7tcp\u00b7250K\u00b71000ms",
+            "cs\u00b7tcp\u00b7250K\u00b72000ms",
+            "cs\u00b7udp\u00b7500K\u00b7100ms",
+            "cs\u00b7udp\u00b7500K\u00b7250ms",
+            "cs\u00b7udp\u00b7500K\u00b7500ms",
+            "cs\u00b7udp\u00b7500K\u00b71000ms",
+            "cs\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-200",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T22:40:42.184567+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15638052864,
+            "loadavg": [
+              0.48,
+              0.15,
+              0.05
+            ]
+          },
+          "benchmark_id": "9d6169f116ae41dfb3e7ddc20d105c66",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T23:16:45.555425+00:00",
+          "outcome": "0 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 250,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T23:18:42.030757+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15623004160,
+            "loadavg": [
+              2.71,
+              8.78,
+              8.76
+            ]
+          },
+          "benchmark_id": "2d6c48bd82964655a10d657c6e5246a9",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-11T23:48:30.764432+00:00",
+          "outcome": "4 of 4 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 300,
+          "cells": [
+            "mesh\u00b7udp\u00b7500K\u00b7100ms",
+            "mesh\u00b7udp\u00b7500K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7500ms",
+            "mesh\u00b7udp\u00b7500K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-11T23:50:47.341784+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15035826176,
+            "loadavg": [
+              0.88,
+              0.29,
+              0.1
+            ]
+          },
+          "benchmark_id": "635550786a754538b7d49136825014c6",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T01:14:39.878032+00:00",
+          "outcome": "0 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 350,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b7250ms",
+            "cs\u00b7udp\u00b7250K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b71000ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T01:16:38.905277+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14831853568,
+            "loadavg": [
+              2.72,
+              14.99,
+              19.32
+            ]
+          },
+          "benchmark_id": "61d4b895175a49c9bcb44455c318eb6c",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T03:27:34.461218+00:00",
+          "outcome": "0 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 400 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 400,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7100ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-400",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T03:29:37.589226+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15152353280,
+            "loadavg": [
+              1.08,
+              0.35,
+              0.12
+            ]
+          },
+          "benchmark_id": "a378211f9e0640629d751de3c7f9ddd6",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T13:16:03.355499+00:00",
+          "outcome": "24 of 25 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 450 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 450,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r02-450",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T13:18:17.313130+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15052652544,
+            "loadavg": [
+              0.77,
+              0.26,
+              0.09
+            ]
+          },
+          "benchmark_id": "ca830fc8627a4e3c8b8f0b579367e71e",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T14:27:11.093851+00:00",
+          "outcome": "0 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 500 hosts \u00b7 round 2",
+          "round": 2,
+          "size": 500,
+          "cells": [
+            "cs\u00b7tcp\u00b750K\u00b7100ms",
+            "cs\u00b7tcp\u00b750K\u00b7250ms",
+            "cs\u00b7tcp\u00b750K\u00b7500ms",
+            "cs\u00b7tcp\u00b750K\u00b71000ms",
+            "cs\u00b7tcp\u00b750K\u00b72000ms",
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b750K\u00b7250ms",
+            "cs\u00b7udp\u00b750K\u00b7500ms",
+            "cs\u00b7udp\u00b750K\u00b71000ms",
+            "cs\u00b7udp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "cs\u00b7udp\u00b7100K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r02-500",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T14:29:26.025663+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15234674688,
+            "loadavg": [
+              1.06,
+              0.35,
+              0.12
+            ]
+          },
+          "benchmark_id": "fb15e3f33f9941a7beadf3009670efa4",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T15:25:35.259357+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 3",
+          "round": 3,
+          "size": 50,
+          "cells": [
+            "cs\u00b7tcp\u00b71M\u00b7100ms",
+            "cs\u00b7tcp\u00b71M\u00b7250ms",
+            "cs\u00b7tcp\u00b71M\u00b7500ms",
+            "cs\u00b7tcp\u00b71M\u00b71000ms",
+            "cs\u00b7tcp\u00b71M\u00b72000ms",
+            "cs\u00b7udp\u00b71M\u00b7100ms",
+            "cs\u00b7udp\u00b71M\u00b7250ms",
+            "cs\u00b7udp\u00b71M\u00b7500ms",
+            "cs\u00b7udp\u00b71M\u00b71000ms",
+            "cs\u00b7udp\u00b71M\u00b72000ms",
+            "mesh\u00b7tcp\u00b71M\u00b7250ms"
+          ],
+          "dir": "01-burst-limits/r03-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T15:27:52.617237+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15667548160,
+            "loadavg": [
+              0.88,
+              0.29,
+              0.1
+            ]
+          },
+          "benchmark_id": "819295075002476dada0ba47e6c3fd2e",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T15:55:24.637367+00:00",
+          "outcome": "11 of 11 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 3",
+          "round": 3,
+          "size": 100,
+          "cells": [
+            "cs\u00b7tcp\u00b7500K\u00b7100ms",
+            "cs\u00b7tcp\u00b7500K\u00b7250ms",
+            "cs\u00b7tcp\u00b7500K\u00b7500ms",
+            "cs\u00b7tcp\u00b7500K\u00b71000ms",
+            "cs\u00b7tcp\u00b7500K\u00b72000ms",
+            "mesh\u00b7tcp\u00b71M\u00b7100ms",
+            "mesh\u00b7tcp\u00b71M\u00b7500ms",
+            "mesh\u00b7tcp\u00b71M\u00b71000ms",
+            "mesh\u00b7tcp\u00b71M\u00b72000ms",
+            "mesh\u00b7udp\u00b71M\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r03-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T15:57:31.051699+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15610585088,
+            "loadavg": [
+              0.4,
+              0.13,
+              0.05
+            ]
+          },
+          "benchmark_id": "94dfe0dba8914d3a8fab8ffbb166da01",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T16:25:48.925210+00:00",
+          "outcome": "8 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 50,
+          "cells": [
+            "cs\u00b7tcp\u00b7500K\u00b7500ms",
+            "mesh\u00b7tcp\u00b71M\u00b7500ms"
+          ],
+          "dir": "01-burst-limits/r04-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T16:27:54.630876+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15612669952,
+            "loadavg": [
+              0.76,
+              0.25,
+              0.09
+            ]
+          },
+          "benchmark_id": "744e9e1836da486382e851fc3db760c6",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T16:35:10.434495+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 100,
+          "cells": [
+            "mesh\u00b7udp\u00b71M\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r04-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T16:37:25.946366+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14904176640,
+            "loadavg": [
+              0.84,
+              0.28,
+              0.1
+            ]
+          },
+          "benchmark_id": "fbf658265103400ea7fc9733e5900d32",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T16:45:27.542861+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 150 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 150,
+          "cells": [
+            "cs\u00b7tcp\u00b7250K\u00b7100ms",
+            "cs\u00b7tcp\u00b7250K\u00b7250ms",
+            "cs\u00b7tcp\u00b7250K\u00b7500ms",
+            "cs\u00b7tcp\u00b7250K\u00b71000ms",
+            "cs\u00b7tcp\u00b7250K\u00b72000ms",
+            "cs\u00b7udp\u00b7500K\u00b7100ms",
+            "cs\u00b7udp\u00b7500K\u00b7250ms",
+            "cs\u00b7udp\u00b7500K\u00b7500ms",
+            "cs\u00b7udp\u00b7500K\u00b71000ms",
+            "cs\u00b7udp\u00b7500K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7500K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7500K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7500K\u00b72000ms",
+            "mesh\u00b7udp\u00b71M\u00b7250ms",
+            "mesh\u00b7udp\u00b71M\u00b7500ms",
+            "mesh\u00b7udp\u00b71M\u00b71000ms",
+            "mesh\u00b7udp\u00b71M\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r04-150",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T16:47:45.262385+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 14945452032,
+            "loadavg": [
+              1.2,
+              0.39,
+              0.13
+            ]
+          },
+          "benchmark_id": "27a59272f6fb4a82b6402cb24a6ca843",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T17:40:20.236412+00:00",
+          "outcome": "14 of 19 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 200 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 200,
+          "cells": [
+            "mesh\u00b7udp\u00b7500K\u00b7100ms",
+            "mesh\u00b7udp\u00b7500K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7500ms",
+            "mesh\u00b7udp\u00b7500K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r04-200",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T17:42:39.278147+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15598264320,
+            "loadavg": [
+              0.88,
+              0.29,
+              0.1
+            ]
+          },
+          "benchmark_id": "4d54666468534c56a32d7fc8c0b51fe9",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T18:09:27.939157+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 250,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b7250ms",
+            "cs\u00b7udp\u00b7250K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b71000ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r04-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T18:11:47.004781+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 14833766400,
+            "loadavg": [
+              0.92,
+              0.31,
+              0.11
+            ]
+          },
+          "benchmark_id": "739f0bd1795743e5bf4611ea27cb45d2",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T18:44:21.402652+00:00",
+          "outcome": "0 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 300,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7250K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r04-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T18:46:47.622679+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15624470528,
+            "loadavg": [
+              1.51,
+              0.51,
+              0.18
+            ]
+          },
+          "benchmark_id": "0d0c09482d604ec0b06e7115ddf3d383",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T19:38:09.129454+00:00",
+          "outcome": "3 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 400 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 400,
+          "cells": [
+            "cs\u00b7tcp\u00b750K\u00b7100ms",
+            "cs\u00b7tcp\u00b750K\u00b7250ms",
+            "cs\u00b7tcp\u00b750K\u00b7500ms",
+            "cs\u00b7tcp\u00b750K\u00b71000ms",
+            "cs\u00b7tcp\u00b750K\u00b72000ms",
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b750K\u00b7250ms",
+            "cs\u00b7udp\u00b750K\u00b7500ms",
+            "cs\u00b7udp\u00b750K\u00b71000ms",
+            "cs\u00b7udp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "cs\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r04-400",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-12T19:40:23.281260+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14916612096,
+            "loadavg": [
+              1.48,
+              0.49,
+              0.17
+            ]
+          },
+          "benchmark_id": "f79faabf29a14ea880161f1503943a5b",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-12T22:06:08.656172+00:00",
+          "outcome": "12 of 21 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 500 hosts \u00b7 round 4",
+          "round": 4,
+          "size": 500,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r04-500",
+          "status": "running",
+          "rest": {
+            "at": "2026-10-12T22:08:17.271045+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14761353216,
+            "loadavg": [
+              1.41,
+              0.48,
+              0.17
+            ]
+          },
+          "benchmark_id": "aa9f623020964166be9d8266ed06985b",
+          "attempts": 1,
+          "error": null,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 50,
+          "cells": [
+            "cs\u00b7tcp\u00b7500K\u00b7500ms",
+            "mesh\u00b7tcp\u00b71M\u00b7500ms"
+          ],
+          "dir": "01-burst-limits/r05-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T04:54:29.374184+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15373205504,
+            "loadavg": [
+              1.22,
+              0.42,
+              0.15
+            ]
+          },
+          "benchmark_id": "544ddf6a163e4811b3c4729dc41c6435",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T05:02:15.393745+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 100,
+          "cells": [
+            "cs\u00b7udp\u00b7500K\u00b7100ms",
+            "cs\u00b7udp\u00b7500K\u00b7250ms",
+            "cs\u00b7udp\u00b7500K\u00b7500ms",
+            "cs\u00b7udp\u00b7500K\u00b71000ms",
+            "cs\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T05:04:20.581176+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15619153920,
+            "loadavg": [
+              1.12,
+              0.37,
+              0.13
+            ]
+          },
+          "benchmark_id": "c678abf15a534d0c8b6e0dc1c842a65f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T05:20:37.037650+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 150 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 150,
+          "cells": [
+            "cs\u00b7tcp\u00b7250K\u00b7100ms",
+            "cs\u00b7tcp\u00b7250K\u00b7250ms",
+            "cs\u00b7tcp\u00b7250K\u00b7500ms",
+            "cs\u00b7tcp\u00b7250K\u00b71000ms",
+            "cs\u00b7tcp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-150",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T05:22:55.296169+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15053205504,
+            "loadavg": [
+              0.76,
+              0.25,
+              0.09
+            ]
+          },
+          "benchmark_id": "84312380dcff494f81e20f6facb2906f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T05:44:12.774202+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 200 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 200,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b7250ms",
+            "cs\u00b7udp\u00b7250K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b71000ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-200",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T05:46:46.142406+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15615569920,
+            "loadavg": [
+              0.75,
+              0.25,
+              0.09
+            ]
+          },
+          "benchmark_id": "c936630886464e00a191373061576577",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T06:13:49.800171+00:00",
+          "outcome": "3 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 250,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7100ms",
+            "mesh\u00b7udp\u00b7500K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7500ms",
+            "mesh\u00b7udp\u00b7500K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T06:16:03.703001+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15635419136,
+            "loadavg": [
+              1.79,
+              0.59,
+              0.21
+            ]
+          },
+          "benchmark_id": "f444718572414ec8a9691e85973a738e",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T06:59:53.558264+00:00",
+          "outcome": "6 of 7 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 300,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7250K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T07:02:07.748570+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15628668928,
+            "loadavg": [
+              1.02,
+              0.36,
+              0.13
+            ]
+          },
+          "benchmark_id": "f997dbc3aaea44d0a7c6c79f284d515f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T08:13:15.025608+00:00",
+          "outcome": "9 of 10 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 350,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r05-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T08:15:28.496606+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14844936192,
+            "loadavg": [
+              0.71,
+              0.23,
+              0.08
+            ]
+          },
+          "benchmark_id": "23af53dafc0d4c6598137e35e9a2aaa8",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T08:58:34.942083+00:00",
+          "outcome": "0 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 450 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 450,
+          "cells": [
+            "cs\u00b7tcp\u00b750K\u00b7100ms",
+            "cs\u00b7tcp\u00b750K\u00b7250ms",
+            "cs\u00b7tcp\u00b750K\u00b7500ms",
+            "cs\u00b7tcp\u00b750K\u00b71000ms",
+            "cs\u00b7tcp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7250ms",
+            "cs\u00b7udp\u00b750K\u00b7500ms",
+            "cs\u00b7udp\u00b750K\u00b71000ms",
+            "cs\u00b7udp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "cs\u00b7udp\u00b7100K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-450",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T09:00:58.584919+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14719090688,
+            "loadavg": [
+              0.78,
+              0.25,
+              0.09
+            ]
+          },
+          "benchmark_id": "fc4525513bdf409388465bd76dc41836",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T09:54:23.964818+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 500 hosts \u00b7 round 5",
+          "round": 5,
+          "size": 500,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r05-500",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T09:56:48.048848+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15628378112,
+            "loadavg": [
+              0.57,
+              0.2,
+              0.07
+            ]
+          },
+          "benchmark_id": "64f6d4e95f2a4d4eb94a7a7619ba41c9",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T11:05:01.261920+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 100,
+          "cells": [
+            "cs\u00b7udp\u00b7500K\u00b7100ms",
+            "cs\u00b7udp\u00b7500K\u00b7250ms",
+            "cs\u00b7udp\u00b7500K\u00b7500ms",
+            "cs\u00b7udp\u00b7500K\u00b71000ms",
+            "cs\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r06-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T11:07:37.910862+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15595089920,
+            "loadavg": [
+              0.64,
+              0.21,
+              0.07
+            ]
+          },
+          "benchmark_id": "2a13d746eaab40e7a2ce6951f5e20a37",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T11:25:10.234987+00:00",
+          "outcome": "4 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 150 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 150,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r06-150",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T11:27:42.828072+00:00",
+            "mem_total": 16605462528,
+            "mem_available": 14651682816,
+            "loadavg": [
+              1.7,
+              0.6,
+              0.21
+            ]
+          },
+          "benchmark_id": "736a5de8f9a348d09fccc5c75834465f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T11:42:15.409809+00:00",
+          "outcome": "0 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 200 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 200,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b7250ms",
+            "cs\u00b7udp\u00b7250K\u00b7500ms",
+            "cs\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r06-200",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T11:44:37.124724+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14797709312,
+            "loadavg": [
+              0.85,
+              0.29,
+              0.1
+            ]
+          },
+          "benchmark_id": "e2b5fb9aba1147abb3e6738a3af2e4cc",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T12:10:56.046836+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 250,
+          "cells": [
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b7250ms",
+            "mesh\u00b7udp\u00b7500K\u00b7500ms",
+            "mesh\u00b7udp\u00b7500K\u00b71000ms",
+            "mesh\u00b7udp\u00b7500K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r06-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T12:13:21.288100+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14597537792,
+            "loadavg": [
+              0.69,
+              0.22,
+              0.08
+            ]
+          },
+          "benchmark_id": "24a1cb7aa65940aa9ba9c23ea1c069b7",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T12:46:10.969550+00:00",
+          "outcome": "5 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 300,
+          "cells": [
+            "mesh\u00b7udp\u00b7250K\u00b7100ms"
+          ],
+          "dir": "01-burst-limits/r06-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T12:48:44.668341+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14680813568,
+            "loadavg": [
+              0.93,
+              0.31,
+              0.11
+            ]
+          },
+          "benchmark_id": "26389ced33b94c02b01068bcfc7edbbf",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T13:20:49.917389+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 350,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms"
+          ],
+          "dir": "01-burst-limits/r06-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T13:23:09.898727+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14366457856,
+            "loadavg": [
+              1.64,
+              0.53,
+              0.18
+            ]
+          },
+          "benchmark_id": "59db7a3516414a24b415d7561ad4e8ef",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T14:31:48.687884+00:00",
+          "outcome": "5 of 7 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 400 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 400,
+          "cells": [
+            "cs\u00b7tcp\u00b750K\u00b7100ms",
+            "cs\u00b7tcp\u00b750K\u00b7250ms",
+            "cs\u00b7tcp\u00b750K\u00b7500ms",
+            "cs\u00b7tcp\u00b750K\u00b71000ms",
+            "cs\u00b7tcp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7250ms",
+            "cs\u00b7udp\u00b750K\u00b7500ms",
+            "cs\u00b7udp\u00b750K\u00b71000ms",
+            "cs\u00b7udp\u00b750K\u00b72000ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "cs\u00b7udp\u00b7100K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r06-400",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T14:34:04.463346+00:00",
+            "mem_total": 16605470720,
+            "mem_available": 15506997248,
+            "loadavg": [
+              0.66,
+              0.23,
+              0.08
+            ]
+          },
+          "benchmark_id": "44e9be524cff438abe034ed723cb23cb",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T16:13:15.896825+00:00",
+          "outcome": "10 of 12 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 450 hosts \u00b7 round 6",
+          "round": 6,
+          "size": 450,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r06-450",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T16:15:38.033683+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15435345920,
+            "loadavg": [
+              0.93,
+              0.33,
+              0.12
+            ]
+          },
+          "benchmark_id": "babda604446643b995146d30bde9aab4",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T17:04:16.158367+00:00",
+          "outcome": "0 of 0 cells passed",
+          "ceiling": null,
+          "stopped_by": "criterion:deploy_slow",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 50,
+          "cells": [
+            "cs\u00b7udp\u00b7500K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r07-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T17:06:37.045063+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14459375616,
+            "loadavg": [
+              1.62,
+              0.52,
+              0.18
+            ]
+          },
+          "benchmark_id": "2f45504da73143b489b5c7a7593c7241",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T17:12:07.671101+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 100,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r07-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T17:14:23.726037+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14505140224,
+            "loadavg": [
+              1.31,
+              0.42,
+              0.15
+            ]
+          },
+          "benchmark_id": "3c30ae90960e4a9391a493269fe1208c",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T17:24:54.833561+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 250,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7500ms"
+          ],
+          "dir": "01-burst-limits/r07-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T17:27:25.346035+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 14360899584,
+            "loadavg": [
+              0.54,
+              0.18,
+              0.06
+            ]
+          },
+          "benchmark_id": "81a28a21a76a4ec0b544c2fe164c4f70",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T17:52:30.135004+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 300,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7100ms",
+            "cs\u00b7tcp\u00b7100K\u00b7250ms",
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r07-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T17:54:55.140380+00:00",
+            "mem_total": 16605478912,
+            "mem_available": 15606419456,
+            "loadavg": [
+              0.85,
+              0.3,
+              0.11
+            ]
+          },
+          "benchmark_id": "68c5ed62c40f4646af389f9ba1dafb6f",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T18:48:18.070712+00:00",
+          "outcome": "4 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 350,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b71000ms",
+            "cs\u00b7tcp\u00b7100K\u00b72000ms",
+            "cs\u00b7udp\u00b750K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7100ms",
+            "cs\u00b7udp\u00b7100K\u00b7250ms"
+          ],
+          "dir": "01-burst-limits/r07-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T18:50:40.050280+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14233825280,
+            "loadavg": [
+              1.53,
+              0.52,
+              0.18
+            ]
+          },
+          "benchmark_id": "37cad03c5b194640b8b8fedab284d7d8",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T19:48:32.276209+00:00",
+          "outcome": "4 of 5 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 400 hosts \u00b7 round 7",
+          "round": 7,
+          "size": 400,
+          "cells": [
+            "mesh\u00b7tcp\u00b750K\u00b7100ms",
+            "mesh\u00b7tcp\u00b750K\u00b7250ms",
+            "mesh\u00b7tcp\u00b750K\u00b7500ms",
+            "mesh\u00b7tcp\u00b750K\u00b71000ms",
+            "mesh\u00b7tcp\u00b750K\u00b72000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7100ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7250ms",
+            "mesh\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7100K\u00b71000ms",
+            "mesh\u00b7tcp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b750K\u00b7100ms",
+            "mesh\u00b7udp\u00b750K\u00b7250ms",
+            "mesh\u00b7udp\u00b750K\u00b7500ms",
+            "mesh\u00b7udp\u00b750K\u00b71000ms",
+            "mesh\u00b7udp\u00b750K\u00b72000ms",
+            "mesh\u00b7udp\u00b7100K\u00b7100ms",
+            "mesh\u00b7udp\u00b7100K\u00b7250ms",
+            "mesh\u00b7udp\u00b7100K\u00b7500ms",
+            "mesh\u00b7udp\u00b7100K\u00b71000ms",
+            "mesh\u00b7udp\u00b7100K\u00b72000ms",
+            "mesh\u00b7udp\u00b7250K\u00b7250ms",
+            "mesh\u00b7udp\u00b7250K\u00b7500ms",
+            "mesh\u00b7udp\u00b7250K\u00b71000ms",
+            "mesh\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r07-400",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T19:51:06.043884+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15633494016,
+            "loadavg": [
+              0.66,
+              0.23,
+              0.08
+            ]
+          },
+          "benchmark_id": "bc641a284ccc4f998f6db7cd67fed554",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T22:34:22.914838+00:00",
+          "outcome": "24 of 24 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 50 hosts \u00b7 round 8",
+          "round": 8,
+          "size": 50,
+          "cells": [
+            "cs\u00b7udp\u00b7500K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r08-50",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T22:36:59.456217+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14152986624,
+            "loadavg": [
+              0.97,
+              0.33,
+              0.12
+            ]
+          },
+          "benchmark_id": "2bcf1e891a8e45698c9388028f05b31a",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T22:42:30.297212+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 100 hosts \u00b7 round 8",
+          "round": 8,
+          "size": 100,
+          "cells": [
+            "cs\u00b7udp\u00b7250K\u00b7100ms",
+            "cs\u00b7udp\u00b7250K\u00b72000ms"
+          ],
+          "dir": "01-burst-limits/r08-100",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T22:44:49.444725+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14357651456,
+            "loadavg": [
+              1.51,
+              0.54,
+              0.19
+            ]
+          },
+          "benchmark_id": "0cbe13a36aad4500a4aeb2c2bb908dd8",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T22:55:51.396439+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 250 hosts \u00b7 round 8",
+          "round": 8,
+          "size": 250,
+          "cells": [
+            "cs\u00b7tcp\u00b7100K\u00b7500ms",
+            "mesh\u00b7tcp\u00b7250K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r08-250",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T22:58:43.504922+00:00",
+            "mem_total": 16605483008,
+            "mem_available": 15555514368,
+            "loadavg": [
+              0.33,
+              0.11,
+              0.04
+            ]
+          },
+          "benchmark_id": "5d2a54e7c6b74aa7836ce7069b53f83e",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T23:23:32.547501+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 300 hosts \u00b7 round 8",
+          "round": 8,
+          "size": 300,
+          "cells": [
+            "cs\u00b7udp\u00b7100K\u00b7250ms"
+          ],
+          "dir": "01-burst-limits/r08-300",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-13T23:26:03.017518+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 15580631040,
+            "loadavg": [
+              1.51,
+              0.52,
+              0.18
+            ]
+          },
+          "benchmark_id": "154d909d2db9431a864a2973a7fb3dee",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-13T23:59:53.526386+00:00",
+          "outcome": "1 of 1 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 8",
+          "round": 8,
+          "size": 350,
+          "cells": [
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r08-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-14T00:02:44.201786+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14336557056,
+            "loadavg": [
+              0.94,
+              0.31,
+              0.11
+            ]
+          },
+          "benchmark_id": "e865e00324b54ff385b56093bc3f65fd",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-14T00:45:50.396507+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        },
+        {
+          "key": "burst-limits \u00b7 350 hosts \u00b7 round 9",
+          "round": 9,
+          "size": 350,
+          "cells": [
+            "cs\u00b7udp\u00b7100K\u00b7500ms",
+            "cs\u00b7udp\u00b7100K\u00b71000ms"
+          ],
+          "dir": "01-burst-limits/r09-350",
+          "status": "done",
+          "rest": {
+            "at": "2026-10-14T00:48:15.318155+00:00",
+            "mem_total": 16605474816,
+            "mem_available": 14099533824,
+            "loadavg": [
+              0.92,
+              0.32,
+              0.11
+            ]
+          },
+          "benchmark_id": "26eb6e30a6204301a5637cd7538a3269",
+          "attempts": 1,
+          "error": null,
+          "ended_at": "2026-10-14T01:31:36.673756+00:00",
+          "outcome": "2 of 2 cells passed",
+          "ceiling": null,
+          "stopped_by": "completed",
+          "limit": null,
+          "neigh_overflows": 0,
+          "recorded": true
+        }
+      ],
+      "ended_at": "2026-10-14T01:31:40.352576+00:00",
+      "outcome": "100 of 100 cells' limits found, in 59 probes"
+    }
+  ],
+  "git": {
+    "commit": "f6638a8abd9944bda432bbb2e6b46b65e122c315",
+    "dirty": false
+  },
+  "sysctls": {
+    "net.ipv4.neigh.default.gc_thresh1": "4096",
+    "net.ipv4.neigh.default.gc_thresh2": "8192",
+    "net.ipv4.neigh.default.gc_thresh3": "16384",
+    "net.ipv6.neigh.default.gc_thresh1": "4096",
+    "net.ipv6.neigh.default.gc_thresh2": "8192",
+    "net.ipv6.neigh.default.gc_thresh3": "16384"
+  },
+  "prebuild": {
+    "built": [],
+    "failed": {},
+    "unavailable": {}
+  }
+}
