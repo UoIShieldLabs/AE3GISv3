@@ -449,21 +449,30 @@ def record_probe(
             state["fail"][key] = row.get("reason") or row["outcome"]
 
 
-# Results measured before a step's window waited for every traffic client
-# (rows without ``traffic_startup_s``): its 50 s began at a fixed time after
-# the request, so in big labs the clients were still starting through much of
-# it. On resume they are checked once (``reopen_legacy``): a pass counts only if
-# every client ran for FULL_LOAD_MIN of its window, and a failure that only
-# clients which never ran explain (more than NOT_RUN_MAX of the flows sent
-# nothing while the others delivered) is dropped. Their cells ask again.
+# Results measured by the traffic driver before 2026-10-12 (rows without
+# ``traffic_startup_s``) are checked on resume (``reopen_legacy``), each rule
+# once (the manifest's ``reopened.rules``); what they drop, their cells ask for
+# again:
+# - ``coverage``: the window began at a fixed time after the request, so in big
+#   labs the clients were still starting through much of it; a pass counts
+#   only if every client ran for FULL_LOAD_MIN of its window;
+# - ``unstarted``: a failure that only clients which never ran explain (more
+#   than UNSTARTED_MAX of the flows sent nothing while the others delivered);
+# - ``stalls``: that driver forked itself for every process it started, which
+#   stalled the host's memory (full PSI ~25% median in mesh labs of 500-800
+#   hosts at ~60% memory; 0 with the current driver): a failure measured while
+#   full memory stalls passed the spec's ``max_psi_mem_full``, a memory-stall
+#   stop, and a cell such stopped probes never reached (``not_run``).
+REOPEN_RULES = ("coverage", "unstarted", "stalls")
 FULL_LOAD_MIN = 0.9
-NOT_RUN_MAX = 0.05
+UNSTARTED_MAX = 0.05
 
 
 def legacy_cell_runs(folder: Path) -> list[dict[str, Any]] | None:
-    """One probe's traffic cells, if it was measured before the window waited
-    for every client: per cell its outcome, the share of its window at full
-    load (``coverage``; None if unknown) and its flows that sent nothing.
+    """One probe's traffic cells, if the old driver measured them: per cell
+    its outcome, the share of its window at full load (``coverage``; None if
+    unknown), whether only never-started clients explain a failure
+    (``unstarted``) and whether it ran under memory stalls (``stalled``).
     None for a probe of the current kind, or one without its files."""
     try:
         b = json.loads((folder / "benchmark.json").read_text())
@@ -473,9 +482,11 @@ def legacy_cell_runs(folder: Path) -> list[dict[str, Any]] | None:
     if not rows or any("traffic_startup_s" in r for r in rows):
         return None
     spec = b.get("spec") or {}
+    stop = spec.get("stop") or {}
     ramp = float((spec.get("matrix") or {}).get("ramp_s") or 0)
     hold = float(spec.get("hold_s") or 0)
-    floor = float((spec.get("stop") or {}).get("min_delivered_ratio") or 0.95)
+    floor = float(stop.get("min_delivered_ratio") or 0.95)
+    stall_limit = float(stop.get("max_psi_mem_full") or 10)
     traffic: dict[str, dict[str, Any]] = {}
     try:
         with zipfile.ZipFile(folder / "export.zip") as zf:
@@ -498,10 +509,15 @@ def legacy_cell_runs(folder: Path) -> list[dict[str, Any]] | None:
         return None
     out = []
     for r in rows:
-        t = traffic.get(r["case"])
+        stalled = (
+            r.get("reason") == "memory_pressure"
+            or (r.get("hold_psi_mem_full_max") or 0) > stall_limit
+        )
         entry = {"case": r["case"], "outcome": r["outcome"], "reason": r.get("reason")}
+        entry["stalled"] = stalled
+        t = traffic.get(r["case"])
         if t is None or not hold:
-            out.append({**entry, "coverage": None, "not_run": False})
+            out.append({**entry, "coverage": None, "unstarted": False})
             continue
         flows = int(t["totals"].get("flows") or r.get("flows") or 0)
         full = next((x["t"] for x in t["ticks"] if flows and (x.get("active") or 0) >= flows), None)
@@ -518,22 +534,31 @@ def legacy_cell_runs(folder: Path) -> list[dict[str, Any]] | None:
             if offered and ran
             else 0
         )
-        not_run = bool(flows) and no_data > NOT_RUN_MAX * flows and rest >= floor
-        out.append({**entry, "coverage": coverage, "not_run": not_run})
+        unstarted = bool(flows) and no_data > UNSTARTED_MAX * flows and rest >= floor
+        out.append({**entry, "coverage": coverage, "unstarted": unstarted})
     return out
 
 
 def reopen_legacy(
-    states: dict[str, dict[str, Any]], probes: list[dict[str, Any]], out_dir: Path
+    states: dict[str, dict[str, Any]],
+    probes: list[dict[str, Any]],
+    out_dir: Path,
+    rules: tuple[str, ...] = REOPEN_RULES,
+    done: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
-    """Drop the results ``legacy_cell_runs`` doesn't vouch for from the
-    cells' states; returns what was dropped ({cell, size, round, what})."""
+    """Apply ``rules`` (of REOPEN_RULES) to the cells' states; ``done``: the
+    rules applied before, whose failures don't count as standing either.
+    Returns what was dropped ({cell, size, round, what})."""
+    explained = set(rules) | set(done)
     seen: dict[tuple[str, int], dict[str, int]] = {}
+    listed: dict[tuple[str, int], list[bool]] = {}  # per probe listing the cell: old driver?
     dropped: list[dict[str, Any]] = []
     for probe in probes:
         if probe.get("status") != "done" or not probe.get("recorded"):
             continue
         runs = legacy_cell_runs(out_dir / probe["dir"])
+        for cid in probe.get("cells") or []:
+            listed.setdefault((cid, probe["size"]), []).append(runs is not None)
         if runs is None:  # the current kind (or no files): its failures stand
             for cid in _failed_cells(out_dir / probe["dir"]):
                 tally = seen.setdefault((cid, probe["size"]), {})
@@ -545,14 +570,30 @@ def reopen_legacy(
             tally = seen.setdefault((r["case"], probe["size"]), {})
             where = {"cell": r["case"], "size": probe["size"], "round": probe["round"]}
             if r["outcome"] == "ok":
-                if r["coverage"] is not None and r["coverage"] < FULL_LOAD_MIN:
+                if (
+                    "coverage" in rules
+                    and r["coverage"] is not None
+                    and r["coverage"] < FULL_LOAD_MIN
+                ):
                     tally["bad_pass"] = tally.get("bad_pass", 0) + 1
                     dropped.append({**where, "what": f"pass at {r['coverage']:.0%} full load"})
-            elif r["reason"] in TRAFFIC_REASONS and r["not_run"]:
-                tally["not_run_fail"] = tally.get("not_run_fail", 0) + 1
-                dropped.append({**where, "what": "failure from clients that never ran"})
-            else:
+                continue
+            rule = (
+                "unstarted"
+                if r["reason"] in TRAFFIC_REASONS and r["unstarted"] and "unstarted" in explained
+                else "stalls"
+                if r["stalled"] and "stalls" in explained
+                else None
+            )
+            if rule is None:
                 tally["fail"] = tally.get("fail", 0) + 1
+            elif rule in rules:
+                tally["new"] = tally.get("new", 0) + 1
+                what = {
+                    "unstarted": "failure from clients that never ran",
+                    "stalls": "failure under the old driver's memory stalls",
+                }[rule]
+                dropped.append({**where, "what": what})
     for (cid, size), tally in seen.items():
         state, key = states[cid], str(size)
         if tally.get("bad_pass") and key in state["pass"]:
@@ -561,9 +602,26 @@ def reopen_legacy(
                 state["pass"][key] = left
             else:
                 del state["pass"][key]
-        if tally.get("not_run_fail") and not tally.get("fail"):
+        if tally.get("new") and not tally.get("fail") and state["fail"].get(key) != "not_run":
             state["fail"].pop(key, None)
+    if "stalls" in rules:
+        for cid, state in states.items():
+            for key, reason in list(state["fail"].items()):
+                if reason == "not_run" and all(listed.get((cid, int(key))) or [False]):
+                    del state["fail"][key]
+                    state["unrun"].pop(key, None)
+                    dropped.append(
+                        {"cell": cid, "size": int(key), "round": None, "what": "never reached"}
+                    )
     return dropped
+
+
+def reopen_due(run: dict[str, Any]) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(re-check rules a limits run has had, those still to apply). A run
+    re-checked before ``rules`` were recorded had the first two."""
+    rec = run.get("reopened")
+    done = tuple(rec.get("rules") or REOPEN_RULES[:2]) if rec is not None else ()
+    return done, tuple(r for r in REOPEN_RULES if r not in done)
 
 
 def _failed_cells(folder: Path) -> list[str]:
@@ -1411,14 +1469,17 @@ class Runner:
         for probe in probes:  # one left running or unrecorded by an interrupted runner
             if probe["status"] in ("running", "done") and not probe.get("recorded"):
                 self.run_probe(run, probe, template, states, resume=True)
-        if "reopened" not in run:
-            dropped = reopen_legacy(states, probes, self.out_dir)
-            run["reopened"] = {"at": datetime.now(UTC).isoformat(), "dropped": dropped}
+        done, todo = reopen_due(run)
+        if todo:
+            dropped = reopen_legacy(states, probes, self.out_dir, todo, done)
+            rec = run.setdefault("reopened", {"dropped": []})
+            rec.update(at=datetime.now(UTC).isoformat(), rules=[*done, *todo])
+            rec["dropped"] = [*rec.get("dropped", []), *dropped]
             if dropped:
                 cells = len({d["cell"] for d in dropped})
                 self.log(
-                    f"  re-opened {cells} cells: {len(dropped)} results measured before "
-                    "the window waited for every traffic client"
+                    f"  re-opened {cells} cells ({', '.join(todo)}): {len(dropped)} results "
+                    "measured by the traffic driver before 2026-10-12"
                 )
             self.save()
         while not self.stopping:
@@ -1515,7 +1576,9 @@ class Runner:
         for run in self.manifest["runs"]:
             if self.stopping:
                 break
-            if run["status"] in ("done", "skipped"):
+            if run["status"] in ("done", "skipped") and not (
+                run.get("kind") == "limits" and reopen_due(run)[1]
+            ):
                 continue
             if run["status"] in ("failed", "cancelled") and not self.retry_failed:
                 continue
