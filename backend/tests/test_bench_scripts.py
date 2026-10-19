@@ -398,15 +398,16 @@ def _probe_dir(folder: Path, cells: dict, current: bool = False) -> None:
 
     folder.mkdir(parents=True)
     rows = [{"case": None, "outcome": "ok"}]
-    for case, (outcome, reason, _, _) in cells.items():
+    for case, (outcome, reason, *rest) in cells.items():
         row = {"case": case, "cell": {"x": 1}, "outcome": outcome, "reason": reason}
+        row.update(rest[2] if len(rest) > 2 else {})
         if current:
             row["traffic_startup_s"] = 3.0
         rows.append(row)
     spec = {"hold_s": 50, "matrix": {"ramp_s": 5}, "stop": {"min_delivered_ratio": 0.95}}
     (folder / "benchmark.json").write_text(json.dumps({"spec": spec, "result": {"rows": rows}}))
     with zipfile.ZipFile(folder / "export.zip", "w") as zf:
-        for i, (case, (_, _, totals, ticks)) in enumerate(cells.items(), start=1):
+        for i, (case, (_, _, totals, ticks, *_)) in enumerate(cells.items(), start=1):
             run = {
                 "params": {"label": f"benchmark cell {i:03d}/9 {case}"},
                 "result": {"totals": totals},
@@ -456,6 +457,55 @@ def test_results_from_before_the_window_waited_for_every_client_are_reopened(tmp
     tool = {**st(), "fail": {"500": "traffic_start"}}
     assert suites.limit_result("t", tool, suites.LIMIT_DEFAULTS)["bound"] == "tool"
     assert results["real"]["bound"] == "traffic"
+
+
+def test_failures_under_the_old_drivers_memory_stalls_are_reopened(tmp_path):
+    full = {"flows": 10, "flows_without_data": 0, "offered_bps": 10, "delivered_bps": 10}
+    slow = {"flows": 10, "flows_without_data": 0, "offered_bps": 10, "delivered_bps": 7}
+    ticks = [{"t": 6, "active": 10}]
+    _probe_dir(
+        tmp_path / "r01-600",
+        {
+            "stopped": ("stopped", "memory_pressure", slow, ticks, {"hold_psi_mem_full_max": 40}),
+            "stalled": ("degraded", "traffic_short", slow, ticks, {"hold_psi_mem_full_max": 30}),
+            "real": ("degraded", "traffic_short", slow, ticks, {"hold_psi_mem_full_max": 2}),
+            "late": ("ok", None, full, [{"t": 40, "active": 10}]),  # coverage: done before
+        },
+    )
+
+    def st(**kw):
+        return {"cell": {}, "estimate": 100, "pass": {}, "fail": {}, "unrun": {}, **kw}
+
+    states = {
+        "stopped": st(fail={"600": "memory_pressure"}),
+        "stalled": st(fail={"600": "traffic_short"}),
+        "real": st(fail={"600": "traffic_short"}),
+        "late": st(),
+        "unreached": st(fail={"600": "not_run"}, unrun={"600": 2}),
+    }
+    states["late"]["pass"] = {"600": 1}
+    cells = list(states)
+    probes = [
+        {
+            "status": "done",
+            "recorded": True,
+            "dir": "r01-600",
+            "size": 600,
+            "round": 1,
+            "cells": cells,
+        }
+    ]
+    run = {"reopened": {"at": "x", "dropped": []}}  # re-checked before rules were recorded
+    done, todo = suites.reopen_due(run)
+    assert done == ("coverage", "unstarted") and todo == ("stalls",)
+    dropped = suites.reopen_legacy(states, probes, tmp_path, todo, done)
+    assert {d["cell"] for d in dropped} == {"stopped", "stalled", "unreached"}
+    assert states["stopped"]["fail"] == {} and states["stalled"]["fail"] == {}
+    assert states["real"]["fail"] == {"600": "traffic_short"}
+    assert states["late"]["pass"] == {"600": 1}  # coverage isn't applied twice
+    assert states["unreached"]["fail"] == {} and states["unreached"]["unrun"] == {}
+    assert suites.reopen_due({}) == ((), suites.REOPEN_RULES)
+    assert suites.reopen_due({"reopened": {"rules": list(suites.REOPEN_RULES)}})[1] == ()
 
 
 def test_a_limit_search_end_to_end(client, fake_engine, tmp_path):

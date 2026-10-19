@@ -300,11 +300,17 @@ benchmark (after a Docker restart) running only the cells that want it
 (`matrix.cells`), so cells with similar limits share deployments. A step a
 host limit stops (memory, disk…) counts as a failure marked `mem`, one whose
 clients did not all start in time (`traffic_start`) `tool`; a cell that passes
-at `max_hosts` is reported as `≥ max_hosts`. Resuming a search recorded before
-the window waited for every client re-checks its results once
-(`reopen_legacy`): a pass counts only if every client ran for 90% of its
-window, a failure that only never-started clients explain is dropped, and
-those cells ask again (logged, and kept in the manifest under `reopened`). The summary draws a
+at `max_hosts` is reported as `≥ max_hosts`. Resuming a search with results
+from the traffic driver before 2026-10-12 re-checks them, each rule once
+(`reopen_legacy`, `reopened.rules` in the manifest; a finished search is
+re-entered for a rule it hasn't had): a pass counts only if every client ran
+for 90% of its window (`coverage`); a failure that only never-started clients
+explain is dropped (`unstarted`); and so is a failure measured while full
+memory stalls passed `max_psi_mem_full`, a memory-stall stop, or a cell such
+stopped probes never reached (`stalls`: that driver forked itself for every
+process it started, which stalled memory at ~60% use; the current driver
+shows none). Those cells ask again; what was dropped is logged and kept
+under `reopened`. The summary draws a
 rate × interval grid of *comfortable / fails* per pattern × protocol;
 `limits-<item>.json` holds every cell's result and the manifest every probe.
 A suite's `sysctls` are set in Docker's kernel before the first benchmark and
