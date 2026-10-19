@@ -1,0 +1,1778 @@
+=== 2026-10-06 03:36:39 UTC · suite random on m4-macbook-air → /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-random
+  bringing the backend up in bench mode (docker compose)
+ Image ae3gisv3-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 552B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.34kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 ...
+
+#4 [auth] library/python:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.8s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 110B done
+#5 DONE 0.0s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:02108f5d322dd89f1c9e552442c25acb0543dfdbc455693a5599624f20d9155d
+#6 resolve docker.io/library/python:3.12-slim@sha256:02108f5d322dd89f1c9e552442c25acb0543dfdbc455693a5599624f20d9155d done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 1.63MB 0.1s done
+#7 DONE 0.1s
+
+#8 [2/7] RUN apt-get update &&     apt-get install -y --no-install-recommends         ca-certificates curl git gnupg iproute2 &&     install -m 0755 -d /etc/apt/keyrings &&     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &&     chmod a+r /etc/apt/keyrings/docker.asc &&     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list &&     apt-get update &&     apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [3/7] WORKDIR /app
+#9 CACHED
+
+#10 [4/7] COPY requirements.txt .
+#10 CACHED
+
+#11 [5/7] RUN pip install --no-cache-dir -r requirements.txt
+#11 CACHED
+
+#12 [6/7] COPY . .
+#12 DONE 0.1s
+
+#13 [7/7] RUN mkdir -p /app/data
+#13 DONE 0.1s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 0.3s done
+#14 exporting manifest sha256:1eec29b68bdd8c7a9ddf66b076cc60d7097197c725b3072c632ec374b515d474 done
+#14 exporting config sha256:cd36699bd84f5ddef2826c2223c415328c42dd416233969085f984ec279aadaa done
+#14 exporting attestation manifest sha256:8b108f52e71c47c8e97d9e50aef9728c36520b7ecbe529155db0c1cd278b847a done
+#14 exporting manifest list sha256:fa599382c8b9d3b762777d5f5e4d425e57082fb80da0eff088e8d84a47caad54 done
+#14 naming to docker.io/library/ae3gisv3-backend:latest done
+#14 unpacking to docker.io/library/ae3gisv3-backend:latest 0.1s done
+#14 DONE 0.4s
+
+#15 resolving provenance for metadata file
+#15 DONE 0.0s
+ Image ae3gisv3-backend Built 
+ Container ae3gisv3-backend-1 Recreate 
+ Container ae3gisv3-backend-1 Recreated 
+ Container ae3gisv3-backend-1 Starting 
+ Container ae3gisv3-backend-1 Started 
+  building 2 image(s): ae3gis.local/nettools, ae3gis.local/zeek
+  not available here: ae3gis.local/malicious-client (Builds only for linux/amd64; this host is linux/arm64)
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-06 03:37:06 UTC · 01-census (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 20c78193e56e4d4f9aef7e63f5020606: m4-macbook-air · census · census of 29 cases
+  … preflight
+  … images: Building Zeek (1/1) · [1/6] FROM docker.io/library/ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+  … baseline: the host at rest (30s)
+  … workstation · kathara/base: waiting for the host to go quiet
+  … workstation · kathara/base: reference (20.0s, nothing deployed)
+  … workstation · kathara/base: settling (30.0s)
+  … workstation · kathara/base: holding idle (30s)
+workstation · kathara/base  nodes    10  deploy     1.8s  ready   0.02s  destroy    0.6s    10.3 MB/node  host mem   7.6%  ok
+  … router · kathara/frr: waiting for the host to go quiet
+  … router · kathara/frr: reference (20.0s, nothing deployed)
+  … router · kathara/frr: settling (30.0s)
+  … router · kathara/frr: holding idle (30s)
+router · kathara/frr  nodes    10  deploy     1.7s  ready   0.00s  destroy    0.6s     0.1 MB/node  host mem   7.4%  ok
+  … switch · kathara/base: waiting for the host to go quiet
+  … switch · kathara/base: reference (20.0s, nothing deployed)
+  … switch · kathara/base: settling (30.0s)
+  … switch · kathara/base: holding idle (30s)
+switch · kathara/base  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s    13.6 MB/node  host mem   7.6%  ok
+  … switch · ae3gis.local/open-vswitch: waiting for the host to go quiet
+  … switch · ae3gis.local/open-vswitch: reference (20.0s, nothing deployed)
+  … switch · ae3gis.local/open-vswitch: settling (30.0s)
+  … switch · ae3gis.local/open-vswitch: holding idle (30s)
+switch · ae3gis.local/open-vswitch  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s     7.6 MB/node  host mem   7.7%  ok
+  … firewall · kathara/frr: waiting for the host to go quiet
+  … firewall · kathara/frr: reference (20.0s, nothing deployed)
+  … firewall · kathara/frr: settling (30.0s)
+  … firewall · kathara/frr: holding idle (30s)
+firewall · kathara/frr  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s     3.7 MB/node  host mem   6.9%  ok
+  … firewall · ae3gis.local/iptables: waiting for the host to go quiet
+  … firewall · ae3gis.local/iptables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/iptables: settling (30.0s)
+  … firewall · ae3gis.local/iptables: holding idle (30s)
+firewall · ae3gis.local/iptables  nodes    10  deploy     1.4s  ready   0.00s  destroy    0.6s    12.6 MB/node  host mem   7.2%  ok
+  … firewall · ae3gis.local/nftables: waiting for the host to go quiet
+  … firewall · ae3gis.local/nftables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/nftables: settling (30.0s)
+  … firewall · ae3gis.local/nftables: holding idle (30s)
+firewall · ae3gis.local/nftables  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s    11.0 MB/node  host mem   7.1%  ok
+  … firewall · ae3gis.local/firehol: waiting for the host to go quiet
+  … firewall · ae3gis.local/firehol: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/firehol: settling (30.0s)
+  … firewall · ae3gis.local/firehol: holding idle (30s)
+firewall · ae3gis.local/firehol  nodes    10  deploy     1.7s  ready   0.00s  destroy    0.6s    13.8 MB/node  host mem   7.2%  ok
+  … ids · ae3gis.local/suricata: waiting for the host to go quiet
+  … ids · ae3gis.local/suricata: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/suricata: settling (30.0s)
+  … ids · ae3gis.local/suricata: holding idle (30s)
+ids · ae3gis.local/suricata  nodes    10  deploy     1.5s  ready   0.03s  destroy    0.6s    40.2 MB/node  host mem   8.8%  ok
+  … ids · ae3gis.local/snort3: waiting for the host to go quiet
+  … ids · ae3gis.local/snort3: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort3: settling (30.0s)
+  … ids · ae3gis.local/snort3: holding idle (30s)
+ids · ae3gis.local/snort3  nodes    10  deploy     1.4s  ready   0.02s  destroy    0.6s     4.7 MB/node  host mem   7.4%  ok
+  … ids · ae3gis.local/snort2: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort2: settling (30.0s)
+  … ids · ae3gis.local/snort2: holding idle (30s)
+ids · ae3gis.local/snort2  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    10.2 MB/node  host mem   7.5%  ok
+ids · ae3gis.local/zeek  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Building Zeek failed: BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+  … siem · ae3gis.local/wazuh-manager: waiting for the host to go quiet
+  … siem · ae3gis.local/wazuh-manager: reference (20.0s, nothing deployed)
+  … siem · ae3gis.local/wazuh-manager: settling (30.0s)
+  … siem · ae3gis.local/wazuh-manager: holding idle (30s)
+siem · ae3gis.local/wazuh-manager  nodes    10  deploy     1.7s  ready   0.04s  destroy    2.4s   248.8 MB/node  host mem  22.9%  stopped (Docker's disk 100.0% > 90% for 3 sweeps)
+  … web-server · httpd:alpine: waiting for the host to go quiet
+  … web-server · httpd:alpine: reference (20.0s, nothing deployed)
+  … web-server · httpd:alpine: settling (30.0s)
+  … web-server · httpd:alpine: holding idle (30s)
+web-server · httpd:alpine  nodes    10  deploy     1.7s  ready   0.03s  destroy    0.7s    21.2 MB/node  host mem   7.5%  ok
+  … web-server · ae3gis.local/apache: waiting for the host to go quiet
+  … web-server · ae3gis.local/apache: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/apache: settling (30.0s)
+  … web-server · ae3gis.local/apache: holding idle (30s)
+web-server · ae3gis.local/apache  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    13.3 MB/node  host mem   7.6%  ok
+  … web-server · ae3gis.local/nginx: waiting for the host to go quiet
+  … web-server · ae3gis.local/nginx: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/nginx: deploying 10 nodes
+  … web-server · ae3gis.local/nginx: settling (30.0s)
+  … web-server · ae3gis.local/nginx: holding idle (30s)
+web-server · ae3gis.local/nginx  nodes    10  deploy     1.5s  ready   0.02s  destroy    0.6s    16.7 MB/node  host mem   7.8%  ok
+  … file-server · kathara/base: reference (20.0s, nothing deployed)
+  … file-server · kathara/base: settling (30.0s)
+  … file-server · kathara/base: holding idle (30s)
+file-server · kathara/base  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    11.7 MB/node  host mem   7.5%  ok
+  … file-server · ae3gis.local/samba: waiting for the host to go quiet
+  … file-server · ae3gis.local/samba: reference (20.0s, nothing deployed)
+  … file-server · ae3gis.local/samba: settling (30.0s)
+  … file-server · ae3gis.local/samba: holding idle (30s)
+file-server · ae3gis.local/samba  nodes    10  deploy     1.9s  ready   0.02s  destroy    0.7s    11.7 MB/node  host mem   7.6%  ok
+  … ftp-server · ae3gis.local/vsftpd: waiting for the host to go quiet
+  … ftp-server · ae3gis.local/vsftpd: reference (20.0s, nothing deployed)
+  … ftp-server · ae3gis.local/vsftpd: deploying 10 nodes
+  … ftp-server · ae3gis.local/vsftpd: settling (30.0s)
+  … ftp-server · ae3gis.local/vsftpd: holding idle (30s)
+ftp-server · ae3gis.local/vsftpd  nodes    10  deploy     1.5s  ready   0.03s  destroy    0.6s     8.2 MB/node  host mem   7.5%  ok
+  … database-server · postgres:alpine: reference (20.0s, nothing deployed)
+  … database-server · postgres:alpine: settling (30.0s)
+  … database-server · postgres:alpine: holding idle (30s)
+database-server · postgres:alpine  nodes    10  deploy     2.1s  ready   0.02s  destroy    0.6s    24.1 MB/node  host mem   8.7%  ok
+  … dns-server · kathara/base: waiting for the host to go quiet
+  … dns-server · kathara/base: reference (20.0s, nothing deployed)
+  … dns-server · kathara/base: settling (30.0s)
+  … dns-server · kathara/base: holding idle (30s)
+dns-server · kathara/base  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s     8.0 MB/node  host mem   7.8%  ok
+  … dhcp-server · ae3gis.local/isc-dhcp: waiting for the host to go quiet
+  … dhcp-server · ae3gis.local/isc-dhcp: reference (20.0s, nothing deployed)
+  … dhcp-server · ae3gis.local/isc-dhcp: deploying 10 nodes
+  … dhcp-server · ae3gis.local/isc-dhcp: settling (30.0s)
+  … dhcp-server · ae3gis.local/isc-dhcp: holding idle (30s)
+dhcp-server · ae3gis.local/isc-dhcp  nodes    10  deploy     1.8s  ready   0.02s  destroy    0.6s     9.4 MB/node  host mem   7.8%  ok
+  … workstation · ae3gis.local/benign-client: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/benign-client: settling (30.0s)
+  … workstation · ae3gis.local/benign-client: holding idle (30s)
+workstation · ae3gis.local/benign-client  nodes    10  deploy     1.5s  ready   0.02s  destroy    0.6s     6.2 MB/node  host mem   7.7%  ok
+  … workstation · ae3gis.local/wazuh-agent: waiting for the host to go quiet
+  … workstation · ae3gis.local/wazuh-agent: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/wazuh-agent: settling (30.0s)
+  … workstation · ae3gis.local/wazuh-agent: holding idle (30s)
+workstation · ae3gis.local/wazuh-agent  nodes    10  deploy     1.7s  ready   0.03s  destroy    0.6s    11.5 MB/node  host mem   7.7%  ok
+  … workstation · ae3gis.local/firefox: waiting for the host to go quiet
+  … workstation · ae3gis.local/firefox: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/firefox: deploying 10 nodes
+  … workstation · ae3gis.local/firefox: settling (30.0s)
+  … workstation · ae3gis.local/firefox: holding idle (30s)
+workstation · ae3gis.local/firefox  nodes    10  deploy     2.2s  ready   0.05s  destroy    0.8s   216.0 MB/node  host mem  20.2%  ok
+attacker · ae3gis.local/malicious-client  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Builds only for linux/amd64; this host is linux/arm64)
+  … plc · kathara/base: waiting for the host to go quiet
+  … plc · kathara/base: reference (20.0s, nothing deployed)
+  … plc · kathara/base: settling (30.0s)
+  … plc · kathara/base: holding idle (30s)
+plc · kathara/base  nodes    10  deploy     1.6s  ready   0.03s  destroy    0.6s     2.7 MB/node  host mem   9.4%  ok
+  … plc · ae3gis.local/openplc: waiting for the host to go quiet
+  … plc · ae3gis.local/openplc: reference (20.0s, nothing deployed)
+  … plc · ae3gis.local/openplc: checking 12 paths
+  … plc · ae3gis.local/openplc: settling (30.0s)
+  … plc · ae3gis.local/openplc: holding idle (30s)
+plc · ae3gis.local/openplc  nodes    10  deploy     2.0s  ready   0.05s  destroy    0.7s    28.9 MB/node  host mem   9.7%  ok
+  … hmi · kathara/base: reference (20.0s, nothing deployed)
+  … hmi · kathara/base: settling (30.0s)
+  … hmi · kathara/base: holding idle (30s)
+hmi · kathara/base  nodes    10  deploy     1.7s  ready   0.02s  destroy    0.6s     4.5 MB/node  host mem   8.4%  ok
+  census: succeeded: 27 of 29 cases usable
+=== 2026-10-06 04:22:08 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 24de392d405e43a98eedb001b4381878: m4-macbook-air · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+  … 100 hosts: destroying
+     100 hosts  nodes   107  deploy    14.3s  ready   4.33s  destroy    6.2s    26.7 MB/node  host mem  23.1%  ok
+  → next 200 hosts: ~93% memory projected at 528 hosts (26.7 MB/node, peak 23.1% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  … 200 hosts: settling (60.0s)
+  … 200 hosts: holding idle (30s)
+  … 200 hosts: destroying
+     200 hosts  nodes   209  deploy    36.5s  ready   1.44s  destroy   17.8s    30.5 MB/node  host mem  46.6%  ok
+  → next 350 hosts: ~93% memory projected at 450 hosts (30.5 MB/node, peak 46.6% now)
+  … 350 hosts: waiting for the host to go quiet
+  … 350 hosts: reference (20.0s, nothing deployed)
+  … 350 hosts: deploying 365 nodes
+  … 350 hosts: settling (60.0s)
+  … 350 hosts: holding idle (30s)
+  … 350 hosts: destroying
+     350 hosts  nodes   365  deploy    76.8s  ready   4.09s  destroy   53.1s    29.2 MB/node  host mem  73.5%  ok
+  → next 420 hosts: ~93% memory projected at 459 hosts (29.2 MB/node, peak 73.5% now)
+  … 420 hosts: waiting for the host to go quiet
+  … 420 hosts: reference (20.0s, nothing deployed)
+  … 420 hosts: deploying 438 nodes
+  … 420 hosts: checking 658 paths
+  … 420 hosts: settling (60.0s)
+  … 420 hosts: holding idle (30s)
+  … 420 hosts: destroying
+     420 hosts  nodes   438  deploy   110.4s  ready   5.53s  destroy   78.9s    28.0 MB/node  host mem  86.3%  ok
+  → next 440 hosts: ~93% memory projected at 459 hosts (28.0 MB/node, peak 86.3% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: checking 684 paths
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   120.1s  ready   5.68s  destroy   86.8s    27.2 MB/node  host mem  89.0%  ok
+  → next 450 hosts: ~93% memory projected at 462 hosts (27.2 MB/node, peak 89.0% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: checking 700 paths
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   139.6s  ready   7.04s  destroy  102.7s    25.8 MB/node  host mem  88.3%  ok
+  → next 470 hosts: ~93% memory projected at 481 hosts (25.8 MB/node, peak 88.3% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   155.8s  ready   8.06s  destroy  114.0s    25.3 MB/node  host mem  89.9%  ok
+  → next 480 hosts: ~93% memory projected at 490 hosts (25.3 MB/node, peak 89.9% now)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: checking 748 paths
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   167.0s  ready   8.38s  destroy  121.0s    24.1 MB/node  host mem  89.5%  ok
+  → next 490 hosts: ~93% memory projected at 503 hosts (24.1 MB/node, peak 89.5% now)
+  … 490 hosts: waiting for the host to go quiet
+  … 490 hosts: reference (20.0s, nothing deployed)
+  … 490 hosts: deploying 510 nodes
+  … 490 hosts: checking 762 paths
+  … 490 hosts: settling (60.0s)
+  … 490 hosts: holding idle (30s)
+  … 490 hosts: destroying
+     490 hosts  nodes   510  deploy   177.8s  ready   9.73s  destroy  127.8s    24.2 MB/node  host mem  90.7%  ok
+  → memory peaked at 90.7% at 490 hosts
+  random-idle-run1: succeeded: ceiling 490 hosts
+=== 2026-10-06 05:15:11 UTC · 03-random-idle-run2 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark d5c96fcbda96421a94880c02de802309: m4-macbook-air · random-idle run 2 · adaptive from 340 hosts
+  seed: 2
+  start: 340
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 340 hosts: waiting for the host to go quiet
+  … 340 hosts: reference (20.0s, nothing deployed)
+  … 340 hosts: deploying 354 nodes
+  … 340 hosts: settling (60.0s)
+  … 340 hosts: holding idle (30s)
+  … 340 hosts: destroying
+     340 hosts  nodes   354  deploy    67.8s  ready   3.41s  destroy   55.0s    27.3 MB/node  host mem  65.1%  ok
+  → next 440 hosts: ~93% memory projected at 515 hosts (27.3 MB/node, peak 65.1% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   111.5s  ready   5.45s  destroy   92.3s    24.0 MB/node  host mem  77.4%  ok
+  → next 500 hosts: ~93% memory projected at 547 hosts (24.0 MB/node, peak 77.4% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: checking 750 paths
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   151.4s  ready   8.85s  destroy  123.3s    23.0 MB/node  host mem  86.3%  ok
+  → next 530 hosts: ~93% memory projected at 546 hosts (23.0 MB/node, peak 86.3% now)
+  … 530 hosts: waiting for the host to go quiet
+  … 530 hosts: reference (20.0s, nothing deployed)
+  … 530 hosts: deploying 551 nodes
+  … 530 hosts: settling (60.0s)
+  … 530 hosts: holding idle (30s)
+  … 530 hosts: destroying
+     530 hosts  nodes   551  deploy   176.3s  ready   7.34s  destroy  139.0s    21.7 MB/node  host mem  88.2%  ok
+  → next 550 hosts: ~93% memory projected at 567 hosts (21.7 MB/node, peak 88.2% now)
+  … 550 hosts: waiting for the host to go quiet
+  … 550 hosts: reference (20.0s, nothing deployed)
+  … 550 hosts: deploying 572 nodes
+  … 550 hosts: checking 828 paths
+  … 550 hosts: settling (60.0s)
+  … 550 hosts: holding idle (30s)
+  … 550 hosts: destroying
+     550 hosts  nodes   572  deploy   198.0s  ready   9.31s  destroy  158.5s    21.1 MB/node  host mem  90.0%  ok
+  → next 560 hosts: ~93% memory projected at 574 hosts (21.1 MB/node, peak 90.0% now)
+  … 560 hosts: waiting for the host to go quiet
+  … 560 hosts: reference (20.0s, nothing deployed)
+  … 560 hosts: deploying 582 nodes
+  … 560 hosts: checking 844 paths
+  … 560 hosts: settling (60.0s)
+  … 560 hosts: holding idle (30s)
+  … 560 hosts: destroying
+     560 hosts  nodes   582  deploy   208.6s  ready  10.65s  destroy  156.7s    20.4 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 560 hosts
+  random-idle-run2: succeeded: ceiling 560 hosts
+=== 2026-10-06 06:00:20 UTC · 04-random-idle-run3 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 96ddd0a8fe7449529710cc8916a6f3bc: m4-macbook-air · random-idle run 3 · adaptive from 390 hosts
+  seed: 3
+  start: 390
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 390 hosts: waiting for the host to go quiet
+  … 390 hosts: reference (20.0s, nothing deployed)
+  … 390 hosts: deploying 405 nodes
+  … 390 hosts: checking 614 paths
+  … 390 hosts: settling (60.0s)
+  … 390 hosts: holding idle (30s)
+  … 390 hosts: destroying
+     390 hosts  nodes   405  deploy    81.7s  ready   4.30s  destroy   76.5s    28.4 MB/node  host mem  74.8%  ok
+  → next 450 hosts: ~93% memory projected at 494 hosts (28.4 MB/node, peak 74.8% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   126.8s  ready   7.36s  destroy  112.9s    28.0 MB/node  host mem  91.2%  ok
+  → memory peaked at 91.2% at 450 hosts
+  random-idle-run3: succeeded: ceiling 450 hosts
+=== 2026-10-06 06:13:55 UTC · 05-random-idle-run4 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark e0df2faffe454325974a3668986885ed: m4-macbook-air · random-idle run 4 · adaptive from 310 hosts
+  seed: 4
+  start: 310
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 310 hosts: waiting for the host to go quiet
+  … 310 hosts: reference (20.0s, nothing deployed)
+  … 310 hosts: deploying 324 nodes
+  … 310 hosts: settling (60.0s)
+  … 310 hosts: holding idle (30s)
+  … 310 hosts: destroying
+     310 hosts  nodes   324  deploy    70.0s  ready   4.12s  destroy   53.6s    30.7 MB/node  host mem  65.7%  ok
+  → next 400 hosts: ~93% memory projected at 458 hosts (30.7 MB/node, peak 65.7% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: checking 610 paths
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   127.4s  ready   6.87s  destroy   88.5s    28.7 MB/node  host mem  82.4%  ok
+  → next 440 hosts: ~93% memory projected at 460 hosts (28.7 MB/node, peak 82.4% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: checking 680 paths
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   153.0s  ready   7.19s  destroy  108.6s    27.1 MB/node  host mem  87.3%  ok
+  → next 460 hosts: ~93% memory projected at 472 hosts (27.1 MB/node, peak 87.3% now)
+  … 460 hosts: waiting for the host to go quiet
+  … 460 hosts: reference (20.0s, nothing deployed)
+  … 460 hosts: deploying 480 nodes
+  … 460 hosts: checking 712 paths
+  … 460 hosts: settling (60.0s)
+  … 460 hosts: holding idle (30s)
+  … 460 hosts: destroying
+     460 hosts  nodes   480  deploy   182.8s  ready   9.19s  destroy  125.3s    26.2 MB/node  host mem  90.4%  ok
+  → memory peaked at 90.4% at 460 hosts
+  random-idle-run4: succeeded: ceiling 460 hosts
+=== 2026-10-06 06:41:47 UTC · 06-random-idle-run5 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 3569900b809141a0adcb6b3ea4cc649e: m4-macbook-air · random-idle run 5 · adaptive from 320 hosts
+  seed: 5
+  start: 320
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 320 hosts: waiting for the host to go quiet
+  … 320 hosts: reference (20.0s, nothing deployed)
+  … 320 hosts: deploying 334 nodes
+  … 320 hosts: checking 500 paths
+  … 320 hosts: settling (60.0s)
+  … 320 hosts: holding idle (30s)
+  … 320 hosts: destroying
+     320 hosts  nodes   334  deploy    80.8s  ready   3.79s  destroy   55.2s    30.7 MB/node  host mem  66.5%  ok
+  → next 400 hosts: ~93% memory projected at 457 hosts (30.7 MB/node, peak 66.5% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: checking 622 paths
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   117.0s  ready   6.50s  destroy   82.0s    27.1 MB/node  host mem  78.8%  ok
+  → next 450 hosts: ~93% memory projected at 485 hosts (27.1 MB/node, peak 78.8% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: checking 698 paths
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   133.5s  ready   6.94s  destroy   95.0s    25.3 MB/node  host mem  85.3%  ok
+  → next 480 hosts: ~93% memory projected at 500 hosts (25.3 MB/node, peak 85.3% now)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: checking 746 paths
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   143.0s  ready   7.47s  destroy  108.6s    24.1 MB/node  host mem  88.1%  ok
+  → next 500 hosts: ~93% memory projected at 513 hosts (24.1 MB/node, peak 88.1% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   161.3s  ready   7.29s  destroy  116.9s    23.6 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 500 hosts
+  random-idle-run5: succeeded: ceiling 500 hosts
+=== 2026-10-06 07:14:56 UTC · 07-random-idle-run6 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 889fd7204d6642d1a42c254c6c6892c2: m4-macbook-air · random-idle run 6 · adaptive from 350 hosts
+  seed: 6
+  start: 350
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 350 hosts: waiting for the host to go quiet
+  … 350 hosts: reference (20.0s, nothing deployed)
+  … 350 hosts: deploying 365 nodes
+  … 350 hosts: settling (60.0s)
+  … 350 hosts: holding idle (30s)
+  … 350 hosts: destroying
+     350 hosts  nodes   365  deploy    69.6s  ready   3.04s  destroy   56.3s    25.6 MB/node  host mem  62.6%  ok
+  → next 470 hosts: ~93% memory projected at 548 hosts (25.6 MB/node, peak 62.6% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   126.4s  ready   6.07s  destroy  103.4s    26.0 MB/node  host mem  87.8%  ok
+  → next 490 hosts: ~93% memory projected at 503 hosts (26.0 MB/node, peak 87.8% now)
+  … 490 hosts: waiting for the host to go quiet
+  … 490 hosts: reference (20.0s, nothing deployed)
+  … 490 hosts: deploying 510 nodes
+  … 490 hosts: checking 768 paths
+  … 490 hosts: settling (60.0s)
+  … 490 hosts: holding idle (30s)
+  … 490 hosts: destroying
+     490 hosts  nodes   510  deploy   144.6s  ready   6.87s  destroy  115.0s    24.4 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 490 hosts
+  random-idle-run6: succeeded: ceiling 490 hosts
+=== 2026-10-06 07:34:32 UTC · 08-random-idle-run7 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark b6ac7b7f0e2f4f27b32f7438712d7c8e: m4-macbook-air · random-idle run 7 · adaptive from 340 hosts
+  seed: 7
+  start: 340
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 340 hosts: waiting for the host to go quiet
+  … 340 hosts: reference (20.0s, nothing deployed)
+  … 340 hosts: deploying 354 nodes
+  … 340 hosts: settling (60.0s)
+  … 340 hosts: holding idle (30s)
+  … 340 hosts: destroying
+     340 hosts  nodes   354  deploy    63.2s  ready   2.97s  destroy   54.7s    20.1 MB/node  host mem  48.7%  ok
+  → next 560 hosts: ~93% memory projected at 701 hosts (20.1 MB/node, peak 48.7% now)
+  … 560 hosts: waiting for the host to go quiet
+  … 560 hosts: reference (20.0s, nothing deployed)
+  … 560 hosts: deploying 582 nodes
+  … 560 hosts: checking 866 paths
+  … 560 hosts: settling (60.0s)
+  … 560 hosts: holding idle (30s)
+  … 560 hosts: destroying
+     560 hosts  nodes   582  deploy   161.6s  ready   7.31s  destroy  141.1s    19.6 MB/node  host mem  79.5%  ok
+  → next 630 hosts: ~93% memory projected at 672 hosts (19.6 MB/node, peak 79.5% now)
+  … 630 hosts: waiting for the host to go quiet
+  … 630 hosts: reference (20.0s, nothing deployed)
+  … 630 hosts: deploying 655 nodes
+  … 630 hosts: checking 984 paths
+  … 630 hosts: settling (60.0s)
+  … 630 hosts: holding idle (30s)
+  … 630 hosts: destroying
+     630 hosts  nodes   655  deploy   206.1s  ready  10.93s  destroy  181.5s    18.5 MB/node  host mem  89.3%  ok
+  → next 650 hosts: ~93% memory projected at 661 hosts (18.5 MB/node, peak 89.3% now)
+  … 650 hosts: waiting for the host to go quiet
+  … 650 hosts: reference (20.0s, nothing deployed)
+  … 650 hosts: deploying 677 nodes
+  … 650 hosts: checking 1016 paths
+  … 650 hosts: settling (60.0s)
+  … 650 hosts: holding idle (30s)
+  … 650 hosts: destroying
+     650 hosts  nodes   677  deploy   282.8s  ready  29.24s  destroy  197.2s    16.4 MB/node  host mem  85.5%  ok
+  → next 700 hosts: ~93% memory projected at 726 hosts (16.4 MB/node, peak 85.5% now)
+  … 700 hosts: waiting for the host to go quiet
+  … 700 hosts: reference (20.0s, nothing deployed)
+  … 700 hosts: deploying 728 nodes
+  … 700 hosts: checking 1098 paths
+  … 700 hosts: settling (60.0s)
+  … 700 hosts: holding idle (30s)
+  … 700 hosts: destroying
+     700 hosts  nodes   728  deploy   276.6s  ready  32.81s  destroy  233.9s    16.3 MB/node  host mem  90.4%  ok
+  → memory peaked at 90.4% at 700 hosts
+  random-idle-run7: succeeded: ceiling 700 hosts
+=== 2026-10-06 08:20:26 UTC · 09-random-idle-run8 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 0e576ef54d464b67aa82183df5fc2bf0: m4-macbook-air · random-idle run 8 · adaptive from 480 hosts
+  seed: 8
+  start: 480
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   113.6s  ready   5.44s  destroy  106.7s    26.4 MB/node  host mem  84.4%  ok
+  → next 510 hosts: ~93% memory projected at 535 hosts (26.4 MB/node, peak 84.4% now)
+  … 510 hosts: waiting for the host to go quiet
+  … 510 hosts: reference (20.0s, nothing deployed)
+  … 510 hosts: deploying 531 nodes
+  … 510 hosts: settling (60.0s)
+  … 510 hosts: holding idle (30s)
+  … 510 hosts: destroying
+     510 hosts  nodes   531  deploy   153.2s  ready   7.95s  destroy  127.0s    23.7 MB/node  host mem  89.3%  ok
+  → next 530 hosts: ~93% memory projected at 536 hosts (23.7 MB/node, peak 89.3% now)
+  … 530 hosts: waiting for the host to go quiet
+  … 530 hosts: reference (20.0s, nothing deployed)
+  … 530 hosts: deploying 551 nodes
+  … 530 hosts: settling (60.0s)
+  … 530 hosts: holding idle (30s)
+  … 530 hosts: destroying
+     530 hosts  nodes   551  deploy   175.8s  ready   8.27s  destroy  137.6s    23.1 MB/node  host mem  91.2%  ok
+  → memory peaked at 91.2% at 530 hosts
+  random-idle-run8: succeeded: ceiling 530 hosts
+=== 2026-10-06 08:43:27 UTC · 10-random-idle-run9 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 2d2e33daa6a64030bd1329147e28dbc5: m4-macbook-air · random-idle run 9 · adaptive from 370 hosts
+  seed: 9
+  start: 370
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 370 hosts: waiting for the host to go quiet
+  … 370 hosts: reference (20.0s, nothing deployed)
+  … 370 hosts: deploying 385 nodes
+  … 370 hosts: settling (60.0s)
+  … 370 hosts: holding idle (30s)
+  … 370 hosts: destroying
+     370 hosts  nodes   385  deploy    74.8s  ready   3.63s  destroy   63.0s    26.5 MB/node  host mem  67.6%  ok
+  → next 470 hosts: ~93% memory projected at 529 hosts (26.5 MB/node, peak 67.6% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: checking 716 paths
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   128.5s  ready   6.87s  destroy  104.3s    24.9 MB/node  host mem  85.1%  ok
+  → next 500 hosts: ~93% memory projected at 523 hosts (24.9 MB/node, peak 85.1% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   150.4s  ready   7.24s  destroy  136.6s    23.6 MB/node  host mem  88.9%  ok
+  → next 520 hosts: ~93% memory projected at 531 hosts (23.6 MB/node, peak 88.9% now)
+  … 520 hosts: waiting for the host to go quiet
+  … 520 hosts: reference (20.0s, nothing deployed)
+  … 520 hosts: deploying 541 nodes
+  … 520 hosts: checking 794 paths
+  … 520 hosts: settling (60.0s)
+  … 520 hosts: holding idle (30s)
+  … 520 hosts: destroying
+     520 hosts  nodes   541  deploy   166.6s  ready   7.58s  destroy  132.9s    22.5 MB/node  host mem  89.2%  ok
+  → next 540 hosts: ~93% memory projected at 548 hosts (22.5 MB/node, peak 89.2% now)
+  … 540 hosts: waiting for the host to go quiet
+  … 540 hosts: reference (20.0s, nothing deployed)
+  … 540 hosts: deploying 561 nodes
+  … 540 hosts: checking 828 paths
+  … 540 hosts: settling (60.0s)
+  … 540 hosts: holding idle (30s)
+  … 540 hosts: destroying
+     540 hosts  nodes   561  deploy   197.5s  ready   9.39s  destroy  146.6s    21.7 MB/node  host mem  90.3%  ok
+  → memory peaked at 90.3% at 540 hosts
+  random-idle-run9: succeeded: ceiling 540 hosts
+=== 2026-10-06 09:20:08 UTC · 11-random-idle-run10 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 284354e08b40494da2bcfcf5e627418a: m4-macbook-air · random-idle run 10 · adaptive from 370 hosts
+  seed: 10
+  start: 370
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 370 hosts: waiting for the host to go quiet
+  … 370 hosts: reference (20.0s, nothing deployed)
+  … 370 hosts: deploying 385 nodes
+  … 370 hosts: settling (60.0s)
+  … 370 hosts: holding idle (30s)
+  … 370 hosts: destroying
+     370 hosts  nodes   385  deploy    73.4s  ready   4.03s  destroy   62.0s    24.3 MB/node  host mem  62.4%  ok
+  → next 500 hosts: ~93% memory projected at 580 hosts (24.3 MB/node, peak 62.4% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: checking 776 paths
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   134.6s  ready   7.23s  destroy  112.4s    22.4 MB/node  host mem  81.8%  ok
+  → next 550 hosts: ~93% memory projected at 585 hosts (22.4 MB/node, peak 81.8% now)
+  … 550 hosts: waiting for the host to go quiet
+  … 550 hosts: reference (20.0s, nothing deployed)
+  … 550 hosts: deploying 572 nodes
+  … 550 hosts: checking 844 paths
+  … 550 hosts: settling (60.0s)
+  … 550 hosts: holding idle (30s)
+  … 550 hosts: destroying
+     550 hosts  nodes   572  deploy   171.5s  ready   8.77s  destroy  137.4s    20.8 MB/node  host mem  87.3%  ok
+  → next 580 hosts: ~93% memory projected at 597 hosts (20.8 MB/node, peak 87.3% now)
+  … 580 hosts: waiting for the host to go quiet
+  … 580 hosts: reference (20.0s, nothing deployed)
+  … 580 hosts: deploying 602 nodes
+  … 580 hosts: settling (60.0s)
+  … 580 hosts: holding idle (30s)
+  … 580 hosts: destroying
+     580 hosts  nodes   602  deploy   188.9s  ready   8.73s  destroy  153.1s    20.1 MB/node  host mem  90.3%  ok
+  → memory peaked at 90.3% at 580 hosts
+  random-idle-run10: succeeded: ceiling 580 hosts
+=== 2026-10-06 09:49:30 UTC · suite finished: /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-random/summary.md
+=== random exit 0
+=== 2026-10-06 09:49:31 UTC · suite traffic on m4-macbook-air → /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-traffic
+  bringing the backend up in bench mode (docker compose)
+ Image ae3gisv3-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 552B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.34kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 ...
+
+#4 [auth] library/python:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 1.3s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 110B done
+#5 DONE 0.0s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:ddb0207ae1f0356c2b724d740769b0c5f5f51cc54a0525178f721825f78fe74c
+#6 resolve docker.io/library/python:3.12-slim@sha256:ddb0207ae1f0356c2b724d740769b0c5f5f51cc54a0525178f721825f78fe74c done
+#6 ...
+
+#7 [internal] load build context
+#7 transferring context: 9.21MB 0.1s done
+#7 DONE 0.2s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:ddb0207ae1f0356c2b724d740769b0c5f5f51cc54a0525178f721825f78fe74c
+#6 sha256:6e2fcafe72a4c4e812d11805d3f8f7b8fddd43ac39a29aadbe0a93b079d60e18 249B / 249B 0.1s done
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 0B / 12.06MB 0.3s
+#6 sha256:387b25ff7b944c188f58f0e8633fb93428b7418b9af0549618f96ce8fd56da5f 0B / 1.28MB 0.2s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 0B / 30.20MB 0.2s
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 1.05MB / 12.06MB 0.5s
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 3.15MB / 12.06MB 0.6s
+#6 sha256:387b25ff7b944c188f58f0e8633fb93428b7418b9af0549618f96ce8fd56da5f 1.05MB / 1.28MB 0.5s
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 7.34MB / 12.06MB 0.8s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 2.10MB / 30.20MB 0.6s
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 12.06MB / 12.06MB 0.9s
+#6 sha256:387b25ff7b944c188f58f0e8633fb93428b7418b9af0549618f96ce8fd56da5f 1.28MB / 1.28MB 0.8s done
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 5.24MB / 30.20MB 0.8s
+#6 sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 12.06MB / 12.06MB 0.9s done
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 11.53MB / 30.20MB 1.1s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 15.73MB / 30.20MB 1.2s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 20.97MB / 30.20MB 1.4s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 26.21MB / 30.20MB 1.5s
+#6 sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 30.20MB / 30.20MB 1.6s done
+#6 extracting sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba
+#6 extracting sha256:bbeda6b4abb749f743f4547ef5a28070a14de8caef211daa5afb78d5b5fa21ba 0.4s done
+#6 DONE 2.1s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:ddb0207ae1f0356c2b724d740769b0c5f5f51cc54a0525178f721825f78fe74c
+#6 extracting sha256:387b25ff7b944c188f58f0e8633fb93428b7418b9af0549618f96ce8fd56da5f 0.0s done
+#6 extracting sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16
+#6 extracting sha256:4dbdca1a513d31094476a7f745c8278b0ca94c30b9bc66ec65b9faebff263a16 0.2s done
+#6 DONE 2.3s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:ddb0207ae1f0356c2b724d740769b0c5f5f51cc54a0525178f721825f78fe74c
+#6 extracting sha256:6e2fcafe72a4c4e812d11805d3f8f7b8fddd43ac39a29aadbe0a93b079d60e18 done
+#6 DONE 2.3s
+
+#8 [2/7] RUN apt-get update &&     apt-get install -y --no-install-recommends         ca-certificates curl git gnupg iproute2 &&     install -m 0755 -d /etc/apt/keyrings &&     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &&     chmod a+r /etc/apt/keyrings/docker.asc &&     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list &&     apt-get update &&     apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#8 0.209 Hit:1 http://deb.debian.org/debian trixie InRelease
+#8 0.229 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+#8 0.279 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+#8 0.313 Get:4 http://deb.debian.org/debian trixie/main arm64 Packages [9614 kB]
+#8 0.679 Get:5 http://deb.debian.org/debian trixie-updates/main arm64 Packages [4424 B]
+#8 0.707 Get:6 http://deb.debian.org/debian-security trixie-security/main arm64 Packages [265 kB]
+#8 1.419 Fetched 9974 kB in 1s (7783 kB/s)
+#8 1.419 Reading package lists...
+#8 1.801 Reading package lists...
+#8 2.189 Building dependency tree...
+#8 2.283 Reading state information...
+#8 2.421 ca-certificates is already the newest version (20250419).
+#8 2.421 The following additional packages will be installed:
+#8 2.421   dirmngr git-man gnupg-l10n gpg gpg-agent gpgconf gpgsm libassuan9 libbpf1
+#8 2.421   libbrotli1 libcap2-bin libcom-err2 libcurl3t64-gnutls libcurl4t64 libelf1t64
+#8 2.421   liberror-perl libexpat1 libgcrypt20 libgdbm-compat4t64 libgnutls30t64
+#8 2.421   libgpg-error0 libgssapi-krb5-2 libidn2-0 libk5crypto3 libkeyutils1 libkrb5-3
+#8 2.421   libkrb5support0 libksba8 libldap2 libmnl0 libnghttp2-14 libnghttp3-9
+#8 2.421   libngtcp2-16 libngtcp2-crypto-gnutls8 libnpth0t64 libp11-kit0 libperl5.40
+#8 2.421   libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1t64 libtasn1-6
+#8 2.421   libtirpc-common libtirpc3t64 libunistring5 libxtables12 perl
+#8 2.421   perl-modules-5.40 pinentry-curses
+#8 2.422 Suggested packages:
+#8 2.422   dbus-user-session libpam-systemd pinentry-gnome3 tor gettext-base git-doc
+#8 2.422   git-email git-gui gitk gitweb git-cvs git-mediawiki git-svn gpg-wks-server
+#8 2.422   parcimonie xloadimage scdaemon tpm2daemon python3:any rng-tools gnutls-bin
+#8 2.422   krb5-doc krb5-user sensible-utils perl-doc libterm-readline-gnu-perl
+#8 2.422   | libterm-readline-perl-perl make libtap-harness-archive-perl pinentry-doc
+#8 2.422 Recommended packages:
+#8 2.422   bash-completion patch less ssh-client gnupg-utils gpg-wks-client gpgv
+#8 2.422   libpam-cap libgpg-error-l10n krb5-locales libldap-common publicsuffix
+#8 2.422   libsasl2-modules
+#8 2.669 The following NEW packages will be installed:
+#8 2.669   curl dirmngr git git-man gnupg gnupg-l10n gpg gpg-agent gpgconf gpgsm
+#8 2.669   iproute2 libassuan9 libbpf1 libbrotli1 libcap2-bin libcom-err2
+#8 2.669   libcurl3t64-gnutls libcurl4t64 libelf1t64 liberror-perl libexpat1
+#8 2.669   libgcrypt20 libgdbm-compat4t64 libgnutls30t64 libgpg-error0 libgssapi-krb5-2
+#8 2.669   libidn2-0 libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libksba8
+#8 2.669   libldap2 libmnl0 libnghttp2-14 libnghttp3-9 libngtcp2-16
+#8 2.669   libngtcp2-crypto-gnutls8 libnpth0t64 libp11-kit0 libperl5.40 libpsl5t64
+#8 2.669   librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1t64 libtasn1-6
+#8 2.669   libtirpc-common libtirpc3t64 libunistring5 libxtables12 perl
+#8 2.669   perl-modules-5.40 pinentry-curses
+#8 2.731 0 upgraded, 54 newly installed, 0 to remove and 0 not upgraded.
+#8 2.731 Need to get 29.0 MB of archives.
+#8 2.731 After this operation, 144 MB of additional disk space will be used.
+#8 2.731 Get:1 http://deb.debian.org/debian trixie/main arm64 libexpat1 arm64 2.8.3-1~deb13u1 [109 kB]
+#8 2.789 Get:2 http://deb.debian.org/debian trixie/main arm64 libelf1t64 arm64 0.192-4 [189 kB]
+#8 2.817 Get:3 http://deb.debian.org/debian trixie/main arm64 libbpf1 arm64 1:1.5.0-3 [159 kB]
+#8 2.829 Get:4 http://deb.debian.org/debian trixie/main arm64 libmnl0 arm64 1.0.5-3 [11.9 kB]
+#8 2.829 Get:5 http://deb.debian.org/debian trixie/main arm64 libkrb5support0 arm64 1.21.3-5+deb13u1 [32.5 kB]
+#8 2.835 Get:6 http://deb.debian.org/debian trixie/main arm64 libcom-err2 arm64 1.47.2-3+b12 [24.9 kB]
+#8 2.836 Get:7 http://deb.debian.org/debian trixie/main arm64 libk5crypto3 arm64 1.21.3-5+deb13u1 [81.4 kB]
+#8 2.840 Get:8 http://deb.debian.org/debian trixie/main arm64 libkeyutils1 arm64 1.6.3-6 [9716 B]
+#8 2.841 Get:9 http://deb.debian.org/debian trixie/main arm64 libkrb5-3 arm64 1.21.3-5+deb13u1 [308 kB]
+#8 2.857 Get:10 http://deb.debian.org/debian trixie/main arm64 libgssapi-krb5-2 arm64 1.21.3-5+deb13u1 [128 kB]
+#8 2.860 Get:11 http://deb.debian.org/debian trixie/main arm64 libtirpc-common all 1.3.6+ds-1 [11.0 kB]
+#8 2.860 Get:12 http://deb.debian.org/debian trixie/main arm64 libtirpc3t64 arm64 1.3.6+ds-1 [79.1 kB]
+#8 2.863 Get:13 http://deb.debian.org/debian trixie/main arm64 libxtables12 arm64 1.8.11-2 [30.6 kB]
+#8 2.863 Get:14 http://deb.debian.org/debian trixie/main arm64 libcap2-bin arm64 1:2.75-10+deb13u1+b3 [35.6 kB]
+#8 2.888 Get:15 http://deb.debian.org/debian trixie/main arm64 iproute2 arm64 6.15.0-1 [1050 kB]
+#8 2.905 Get:16 http://deb.debian.org/debian trixie/main arm64 perl-modules-5.40 all 5.40.1-6+deb13u1 [3014 kB]
+#8 2.989 Get:17 http://deb.debian.org/debian trixie/main arm64 libgdbm-compat4t64 arm64 1.24-2 [50.3 kB]
+#8 2.990 Get:18 http://deb.debian.org/debian trixie/main arm64 libperl5.40 arm64 5.40.1-6+deb13u1 [4138 kB]
+#8 3.087 Get:19 http://deb.debian.org/debian trixie/main arm64 perl arm64 5.40.1-6+deb13u1 [268 kB]
+#8 3.098 Get:20 http://deb.debian.org/debian trixie/main arm64 libbrotli1 arm64 1.1.0-2+b7 [308 kB]
+#8 3.102 Get:21 http://deb.debian.org/debian trixie/main arm64 libunistring5 arm64 1.3-2 [453 kB]
+#8 3.109 Get:22 http://deb.debian.org/debian trixie/main arm64 libidn2-0 arm64 2.3.8-2 [107 kB]
+#8 3.112 Get:23 http://deb.debian.org/debian trixie/main arm64 libsasl2-modules-db arm64 2.1.28+dfsg1-9 [20.1 kB]
+#8 3.112 Get:24 http://deb.debian.org/debian trixie/main arm64 libsasl2-2 arm64 2.1.28+dfsg1-9 [55.6 kB]
+#8 3.140 Get:25 http://deb.debian.org/debian trixie/main arm64 libldap2 arm64 2.6.10+dfsg-1 [179 kB]
+#8 3.143 Get:26 http://deb.debian.org/debian trixie/main arm64 libnghttp2-14 arm64 1.64.0-1.1+deb13u1 [71.6 kB]
+#8 3.144 Get:27 http://deb.debian.org/debian trixie/main arm64 libnghttp3-9 arm64 1.8.0-1 [63.2 kB]
+#8 3.146 Get:28 http://deb.debian.org/debian trixie/main arm64 libpsl5t64 arm64 0.21.2-1.1+b1 [57.1 kB]
+#8 3.147 Get:29 http://deb.debian.org/debian trixie/main arm64 libp11-kit0 arm64 0.25.5-3 [409 kB]
+#8 3.152 Get:30 http://deb.debian.org/debian trixie/main arm64 libtasn1-6 arm64 4.20.0-2+deb13u1 [47.3 kB]
+#8 3.153 Get:31 http://deb.debian.org/debian trixie/main arm64 libgnutls30t64 arm64 3.8.9-3+deb13u4 [1379 kB]
+#8 3.197 Get:32 http://deb.debian.org/debian trixie/main arm64 librtmp1 arm64 2.4+20151223.gitfa8646d.1-2+b5 [56.8 kB]
+#8 3.198 Get:33 http://deb.debian.org/debian trixie/main arm64 libssh2-1t64 arm64 1.11.1-1+deb13u2 [236 kB]
+#8 3.203 Get:34 http://deb.debian.org/debian trixie/main arm64 libcurl4t64 arm64 8.14.1-2+deb13u5 [360 kB]
+#8 3.216 Get:35 http://deb.debian.org/debian trixie/main arm64 curl arm64 8.14.1-2+deb13u5 [262 kB]
+#8 3.221 Get:36 http://deb.debian.org/debian trixie/main arm64 libgpg-error0 arm64 1.51-4 [78.5 kB]
+#8 3.222 Get:37 http://deb.debian.org/debian trixie/main arm64 libassuan9 arm64 3.0.2-2 [59.1 kB]
+#8 3.223 Get:38 http://deb.debian.org/debian trixie/main arm64 libgcrypt20 arm64 1.11.0-7+deb13u1 [741 kB]
+#8 3.242 Get:39 http://deb.debian.org/debian trixie/main arm64 gpgconf arm64 2.4.7-21+deb13u1+b5 [122 kB]
+#8 3.246 Get:40 http://deb.debian.org/debian trixie/main arm64 libksba8 arm64 1.6.7-2+b1 [125 kB]
+#8 3.250 Get:41 http://deb.debian.org/debian trixie/main arm64 libnpth0t64 arm64 1.8-3 [22.9 kB]
+#8 3.250 Get:42 http://deb.debian.org/debian trixie/main arm64 dirmngr arm64 2.4.7-21+deb13u1+b5 [358 kB]
+#8 3.257 Get:43 http://deb.debian.org/debian trixie/main arm64 libngtcp2-16 arm64 1.11.0-1+deb13u1 [121 kB]
+#8 3.259 Get:44 http://deb.debian.org/debian trixie/main arm64 libngtcp2-crypto-gnutls8 arm64 1.11.0-1+deb13u1 [28.4 kB]
+#8 3.259 Get:45 http://deb.debian.org/debian trixie/main arm64 libcurl3t64-gnutls arm64 8.14.1-2+deb13u5 [354 kB]
+#8 3.268 Get:46 http://deb.debian.org/debian trixie/main arm64 liberror-perl all 0.17030-1 [26.9 kB]
+#8 3.270 Get:47 http://deb.debian.org/debian trixie/main arm64 git-man all 1:2.47.3-0+deb13u1 [2205 kB]
+#8 3.323 Get:48 http://deb.debian.org/debian trixie/main arm64 git arm64 1:2.47.3-0+deb13u1 [8666 kB]
+#8 3.533 Get:49 http://deb.debian.org/debian trixie/main arm64 gnupg-l10n all 2.4.7-21+deb13u1 [749 kB]
+#8 3.552 Get:50 http://deb.debian.org/debian trixie/main arm64 gpg arm64 2.4.7-21+deb13u1+b5 [578 kB]
+#8 3.564 Get:51 http://deb.debian.org/debian trixie/main arm64 pinentry-curses arm64 1.3.1-2 [83.5 kB]
+#8 3.566 Get:52 http://deb.debian.org/debian trixie/main arm64 gpg-agent arm64 2.4.7-21+deb13u1+b5 [250 kB]
+#8 3.574 Get:53 http://deb.debian.org/debian trixie/main arm64 gpgsm arm64 2.4.7-21+deb13u1+b5 [252 kB]
+#8 3.580 Get:54 http://deb.debian.org/debian trixie/main arm64 gnupg all 2.4.7-21+deb13u1 [417 kB]
+#8 3.680 debconf: unable to initialize frontend: Dialog
+#8 3.680 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#8 3.680 debconf: falling back to frontend: Readline
+#8 3.680 debconf: unable to initialize frontend: Readline
+#8 3.680 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 54.)
+#8 3.680 debconf: falling back to frontend: Teletype
+#8 3.682 debconf: unable to initialize frontend: Teletype
+#8 3.682 debconf: (This frontend requires a controlling tty.)
+#8 3.682 debconf: falling back to frontend: Noninteractive
+#8 4.426 Preconfiguring packages ...
+#8 4.456 Fetched 29.0 MB in 1s (31.8 MB/s)
+#8 4.465 Selecting previously unselected package libexpat1:arm64.
+#8 4.465 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 5657 files and directories currently installed.)
+#8 4.468 Preparing to unpack .../00-libexpat1_2.8.3-1~deb13u1_arm64.deb ...
+#8 4.470 Unpacking libexpat1:arm64 (2.8.3-1~deb13u1) ...
+#8 4.490 Selecting previously unselected package libelf1t64:arm64.
+#8 4.491 Preparing to unpack .../01-libelf1t64_0.192-4_arm64.deb ...
+#8 4.492 Unpacking libelf1t64:arm64 (0.192-4) ...
+#8 4.518 Selecting previously unselected package libbpf1:arm64.
+#8 4.519 Preparing to unpack .../02-libbpf1_1%3a1.5.0-3_arm64.deb ...
+#8 4.521 Unpacking libbpf1:arm64 (1:1.5.0-3) ...
+#8 4.546 Selecting previously unselected package libmnl0:arm64.
+#8 4.547 Preparing to unpack .../03-libmnl0_1.0.5-3_arm64.deb ...
+#8 4.552 Unpacking libmnl0:arm64 (1.0.5-3) ...
+#8 4.566 Selecting previously unselected package libkrb5support0:arm64.
+#8 4.566 Preparing to unpack .../04-libkrb5support0_1.21.3-5+deb13u1_arm64.deb ...
+#8 4.568 Unpacking libkrb5support0:arm64 (1.21.3-5+deb13u1) ...
+#8 4.581 Selecting previously unselected package libcom-err2:arm64.
+#8 4.582 Preparing to unpack .../05-libcom-err2_1.47.2-3+b12_arm64.deb ...
+#8 4.583 Unpacking libcom-err2:arm64 (1.47.2-3+b12) ...
+#8 4.598 Selecting previously unselected package libk5crypto3:arm64.
+#8 4.599 Preparing to unpack .../06-libk5crypto3_1.21.3-5+deb13u1_arm64.deb ...
+#8 4.601 Unpacking libk5crypto3:arm64 (1.21.3-5+deb13u1) ...
+#8 4.621 Selecting previously unselected package libkeyutils1:arm64.
+#8 4.622 Preparing to unpack .../07-libkeyutils1_1.6.3-6_arm64.deb ...
+#8 4.623 Unpacking libkeyutils1:arm64 (1.6.3-6) ...
+#8 4.636 Selecting previously unselected package libkrb5-3:arm64.
+#8 4.636 Preparing to unpack .../08-libkrb5-3_1.21.3-5+deb13u1_arm64.deb ...
+#8 4.637 Unpacking libkrb5-3:arm64 (1.21.3-5+deb13u1) ...
+#8 4.667 Selecting previously unselected package libgssapi-krb5-2:arm64.
+#8 4.668 Preparing to unpack .../09-libgssapi-krb5-2_1.21.3-5+deb13u1_arm64.deb ...
+#8 4.669 Unpacking libgssapi-krb5-2:arm64 (1.21.3-5+deb13u1) ...
+#8 4.688 Selecting previously unselected package libtirpc-common.
+#8 4.688 Preparing to unpack .../10-libtirpc-common_1.3.6+ds-1_all.deb ...
+#8 4.690 Unpacking libtirpc-common (1.3.6+ds-1) ...
+#8 4.704 Selecting previously unselected package libtirpc3t64:arm64.
+#8 4.705 Preparing to unpack .../11-libtirpc3t64_1.3.6+ds-1_arm64.deb ...
+#8 4.708 Adding 'diversion of /lib/aarch64-linux-gnu/libtirpc.so.3 to /lib/aarch64-linux-gnu/libtirpc.so.3.usr-is-merged by libtirpc3t64'
+#8 4.711 Adding 'diversion of /lib/aarch64-linux-gnu/libtirpc.so.3.0.0 to /lib/aarch64-linux-gnu/libtirpc.so.3.0.0.usr-is-merged by libtirpc3t64'
+#8 4.713 Unpacking libtirpc3t64:arm64 (1.3.6+ds-1) ...
+#8 4.730 Selecting previously unselected package libxtables12:arm64.
+#8 4.731 Preparing to unpack .../12-libxtables12_1.8.11-2_arm64.deb ...
+#8 4.733 Unpacking libxtables12:arm64 (1.8.11-2) ...
+#8 4.752 Selecting previously unselected package libcap2-bin.
+#8 4.753 Preparing to unpack .../13-libcap2-bin_1%3a2.75-10+deb13u1+b3_arm64.deb ...
+#8 4.754 Unpacking libcap2-bin (1:2.75-10+deb13u1+b3) ...
+#8 4.773 Selecting previously unselected package iproute2.
+#8 4.774 Preparing to unpack .../14-iproute2_6.15.0-1_arm64.deb ...
+#8 4.795 Unpacking iproute2 (6.15.0-1) ...
+#8 4.863 Selecting previously unselected package perl-modules-5.40.
+#8 4.864 Preparing to unpack .../15-perl-modules-5.40_5.40.1-6+deb13u1_all.deb ...
+#8 4.865 Unpacking perl-modules-5.40 (5.40.1-6+deb13u1) ...
+#8 5.066 Selecting previously unselected package libgdbm-compat4t64:arm64.
+#8 5.067 Preparing to unpack .../16-libgdbm-compat4t64_1.24-2_arm64.deb ...
+#8 5.068 Unpacking libgdbm-compat4t64:arm64 (1.24-2) ...
+#8 5.085 Selecting previously unselected package libperl5.40:arm64.
+#8 5.086 Preparing to unpack .../17-libperl5.40_5.40.1-6+deb13u1_arm64.deb ...
+#8 5.087 Unpacking libperl5.40:arm64 (5.40.1-6+deb13u1) ...
+#8 5.328 Selecting previously unselected package perl.
+#8 5.330 Preparing to unpack .../18-perl_5.40.1-6+deb13u1_arm64.deb ...
+#8 5.331 Unpacking perl (5.40.1-6+deb13u1) ...
+#8 5.359 Selecting previously unselected package libbrotli1:arm64.
+#8 5.360 Preparing to unpack .../19-libbrotli1_1.1.0-2+b7_arm64.deb ...
+#8 5.361 Unpacking libbrotli1:arm64 (1.1.0-2+b7) ...
+#8 5.392 Selecting previously unselected package libunistring5:arm64.
+#8 5.393 Preparing to unpack .../20-libunistring5_1.3-2_arm64.deb ...
+#8 5.394 Unpacking libunistring5:arm64 (1.3-2) ...
+#8 5.434 Selecting previously unselected package libidn2-0:arm64.
+#8 5.435 Preparing to unpack .../21-libidn2-0_2.3.8-2_arm64.deb ...
+#8 5.436 Unpacking libidn2-0:arm64 (2.3.8-2) ...
+#8 5.451 Selecting previously unselected package libsasl2-modules-db:arm64.
+#8 5.452 Preparing to unpack .../22-libsasl2-modules-db_2.1.28+dfsg1-9_arm64.deb ...
+#8 5.454 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg1-9) ...
+#8 5.468 Selecting previously unselected package libsasl2-2:arm64.
+#8 5.469 Preparing to unpack .../23-libsasl2-2_2.1.28+dfsg1-9_arm64.deb ...
+#8 5.470 Unpacking libsasl2-2:arm64 (2.1.28+dfsg1-9) ...
+#8 5.486 Selecting previously unselected package libldap2:arm64.
+#8 5.487 Preparing to unpack .../24-libldap2_2.6.10+dfsg-1_arm64.deb ...
+#8 5.488 Unpacking libldap2:arm64 (2.6.10+dfsg-1) ...
+#8 5.509 Selecting previously unselected package libnghttp2-14:arm64.
+#8 5.510 Preparing to unpack .../25-libnghttp2-14_1.64.0-1.1+deb13u1_arm64.deb ...
+#8 5.511 Unpacking libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+#8 5.528 Selecting previously unselected package libnghttp3-9:arm64.
+#8 5.530 Preparing to unpack .../26-libnghttp3-9_1.8.0-1_arm64.deb ...
+#8 5.531 Unpacking libnghttp3-9:arm64 (1.8.0-1) ...
+#8 5.548 Selecting previously unselected package libpsl5t64:arm64.
+#8 5.549 Preparing to unpack .../27-libpsl5t64_0.21.2-1.1+b1_arm64.deb ...
+#8 5.550 Unpacking libpsl5t64:arm64 (0.21.2-1.1+b1) ...
+#8 5.565 Selecting previously unselected package libp11-kit0:arm64.
+#8 5.566 Preparing to unpack .../28-libp11-kit0_0.25.5-3_arm64.deb ...
+#8 5.567 Unpacking libp11-kit0:arm64 (0.25.5-3) ...
+#8 5.598 Selecting previously unselected package libtasn1-6:arm64.
+#8 5.599 Preparing to unpack .../29-libtasn1-6_4.20.0-2+deb13u1_arm64.deb ...
+#8 5.600 Unpacking libtasn1-6:arm64 (4.20.0-2+deb13u1) ...
+#8 5.620 Selecting previously unselected package libgnutls30t64:arm64.
+#8 5.621 Preparing to unpack .../30-libgnutls30t64_3.8.9-3+deb13u4_arm64.deb ...
+#8 5.623 Unpacking libgnutls30t64:arm64 (3.8.9-3+deb13u4) ...
+#8 5.684 Selecting previously unselected package librtmp1:arm64.
+#8 5.685 Preparing to unpack .../31-librtmp1_2.4+20151223.gitfa8646d.1-2+b5_arm64.deb ...
+#8 5.686 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#8 5.702 Selecting previously unselected package libssh2-1t64:arm64.
+#8 5.703 Preparing to unpack .../32-libssh2-1t64_1.11.1-1+deb13u2_arm64.deb ...
+#8 5.705 Unpacking libssh2-1t64:arm64 (1.11.1-1+deb13u2) ...
+#8 5.727 Selecting previously unselected package libcurl4t64:arm64.
+#8 5.728 Preparing to unpack .../33-libcurl4t64_8.14.1-2+deb13u5_arm64.deb ...
+#8 5.729 Unpacking libcurl4t64:arm64 (8.14.1-2+deb13u5) ...
+#8 5.755 Selecting previously unselected package curl.
+#8 5.756 Preparing to unpack .../34-curl_8.14.1-2+deb13u5_arm64.deb ...
+#8 5.758 Unpacking curl (8.14.1-2+deb13u5) ...
+#8 5.781 Selecting previously unselected package libgpg-error0:arm64.
+#8 5.782 Preparing to unpack .../35-libgpg-error0_1.51-4_arm64.deb ...
+#8 5.784 Unpacking libgpg-error0:arm64 (1.51-4) ...
+#8 5.798 Selecting previously unselected package libassuan9:arm64.
+#8 5.799 Preparing to unpack .../36-libassuan9_3.0.2-2_arm64.deb ...
+#8 5.800 Unpacking libassuan9:arm64 (3.0.2-2) ...
+#8 5.823 Selecting previously unselected package libgcrypt20:arm64.
+#8 5.824 Preparing to unpack .../37-libgcrypt20_1.11.0-7+deb13u1_arm64.deb ...
+#8 5.826 Unpacking libgcrypt20:arm64 (1.11.0-7+deb13u1) ...
+#8 5.866 Selecting previously unselected package gpgconf.
+#8 5.867 Preparing to unpack .../38-gpgconf_2.4.7-21+deb13u1+b5_arm64.deb ...
+#8 5.868 Unpacking gpgconf (2.4.7-21+deb13u1+b5) ...
+#8 5.890 Selecting previously unselected package libksba8:arm64.
+#8 5.891 Preparing to unpack .../39-libksba8_1.6.7-2+b1_arm64.deb ...
+#8 5.893 Unpacking libksba8:arm64 (1.6.7-2+b1) ...
+#8 5.911 Selecting previously unselected package libnpth0t64:arm64.
+#8 5.912 Preparing to unpack .../40-libnpth0t64_1.8-3_arm64.deb ...
+#8 5.914 Unpacking libnpth0t64:arm64 (1.8-3) ...
+#8 5.929 Selecting previously unselected package dirmngr.
+#8 5.930 Preparing to unpack .../41-dirmngr_2.4.7-21+deb13u1+b5_arm64.deb ...
+#8 5.937 Unpacking dirmngr (2.4.7-21+deb13u1+b5) ...
+#8 5.970 Selecting previously unselected package libngtcp2-16:arm64.
+#8 5.971 Preparing to unpack .../42-libngtcp2-16_1.11.0-1+deb13u1_arm64.deb ...
+#8 5.972 Unpacking libngtcp2-16:arm64 (1.11.0-1+deb13u1) ...
+#8 5.992 Selecting previously unselected package libngtcp2-crypto-gnutls8:arm64.
+#8 5.993 Preparing to unpack .../43-libngtcp2-crypto-gnutls8_1.11.0-1+deb13u1_arm64.deb ...
+#8 5.995 Unpacking libngtcp2-crypto-gnutls8:arm64 (1.11.0-1+deb13u1) ...
+#8 6.013 Selecting previously unselected package libcurl3t64-gnutls:arm64.
+#8 6.014 Preparing to unpack .../44-libcurl3t64-gnutls_8.14.1-2+deb13u5_arm64.deb ...
+#8 6.016 Unpacking libcurl3t64-gnutls:arm64 (8.14.1-2+deb13u5) ...
+#8 6.045 Selecting previously unselected package liberror-perl.
+#8 6.046 Preparing to unpack .../45-liberror-perl_0.17030-1_all.deb ...
+#8 6.048 Unpacking liberror-perl (0.17030-1) ...
+#8 6.059 Selecting previously unselected package git-man.
+#8 6.060 Preparing to unpack .../46-git-man_1%3a2.47.3-0+deb13u1_all.deb ...
+#8 6.062 Unpacking git-man (1:2.47.3-0+deb13u1) ...
+#8 6.141 Selecting previously unselected package git.
+#8 6.141 Preparing to unpack .../47-git_1%3a2.47.3-0+deb13u1_arm64.deb ...
+#8 6.145 Unpacking git (1:2.47.3-0+deb13u1) ...
+#8 6.447 Selecting previously unselected package gnupg-l10n.
+#8 6.449 Preparing to unpack .../48-gnupg-l10n_2.4.7-21+deb13u1_all.deb ...
+#8 6.450 Unpacking gnupg-l10n (2.4.7-21+deb13u1) ...
+#8 6.507 Selecting previously unselected package gpg.
+#8 6.508 Preparing to unpack .../49-gpg_2.4.7-21+deb13u1+b5_arm64.deb ...
+#8 6.511 Unpacking gpg (2.4.7-21+deb13u1+b5) ...
+#8 6.560 Selecting previously unselected package pinentry-curses.
+#8 6.561 Preparing to unpack .../50-pinentry-curses_1.3.1-2_arm64.deb ...
+#8 6.562 Unpacking pinentry-curses (1.3.1-2) ...
+#8 6.582 Selecting previously unselected package gpg-agent.
+#8 6.583 Preparing to unpack .../51-gpg-agent_2.4.7-21+deb13u1+b5_arm64.deb ...
+#8 6.584 Unpacking gpg-agent (2.4.7-21+deb13u1+b5) ...
+#8 6.611 Selecting previously unselected package gpgsm.
+#8 6.612 Preparing to unpack .../52-gpgsm_2.4.7-21+deb13u1+b5_arm64.deb ...
+#8 6.613 Unpacking gpgsm (2.4.7-21+deb13u1+b5) ...
+#8 6.638 Selecting previously unselected package gnupg.
+#8 6.640 Preparing to unpack .../53-gnupg_2.4.7-21+deb13u1_all.deb ...
+#8 6.642 Unpacking gnupg (2.4.7-21+deb13u1) ...
+#8 6.677 Setting up libexpat1:arm64 (2.8.3-1~deb13u1) ...
+#8 6.682 Setting up libnpth0t64:arm64 (1.8-3) ...
+#8 6.686 Setting up libkeyutils1:arm64 (1.6.3-6) ...
+#8 6.693 Setting up libgpg-error0:arm64 (1.51-4) ...
+#8 6.701 Setting up libgdbm-compat4t64:arm64 (1.24-2) ...
+#8 6.707 Setting up libtirpc-common (1.3.6+ds-1) ...
+#8 6.712 Setting up libbrotli1:arm64 (1.1.0-2+b7) ...
+#8 6.717 Setting up libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+#8 6.720 Setting up libgcrypt20:arm64 (1.11.0-7+deb13u1) ...
+#8 6.728 Setting up libcom-err2:arm64 (1.47.2-3+b12) ...
+#8 6.733 Setting up libelf1t64:arm64 (0.192-4) ...
+#8 6.737 Setting up libkrb5support0:arm64 (1.21.3-5+deb13u1) ...
+#8 6.740 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg1-9) ...
+#8 6.746 Setting up libcap2-bin (1:2.75-10+deb13u1+b3) ...
+#8 6.750 Setting up gnupg-l10n (2.4.7-21+deb13u1) ...
+#8 6.753 Setting up libp11-kit0:arm64 (0.25.5-3) ...
+#8 6.756 Setting up libunistring5:arm64 (1.3-2) ...
+#8 6.759 Setting up libmnl0:arm64 (1.0.5-3) ...
+#8 6.762 Setting up libk5crypto3:arm64 (1.21.3-5+deb13u1) ...
+#8 6.767 Setting up libxtables12:arm64 (1.8.11-2) ...
+#8 6.772 Setting up libsasl2-2:arm64 (2.1.28+dfsg1-9) ...
+#8 6.775 Setting up libnghttp3-9:arm64 (1.8.0-1) ...
+#8 6.779 Setting up perl-modules-5.40 (5.40.1-6+deb13u1) ...
+#8 6.784 Setting up libassuan9:arm64 (3.0.2-2) ...
+#8 6.787 Setting up gpgconf (2.4.7-21+deb13u1+b5) ...
+#8 6.790 Setting up libtasn1-6:arm64 (4.20.0-2+deb13u1) ...
+#8 6.793 Setting up git-man (1:2.47.3-0+deb13u1) ...
+#8 6.799 Setting up libngtcp2-16:arm64 (1.11.0-1+deb13u1) ...
+#8 6.804 Setting up libkrb5-3:arm64 (1.21.3-5+deb13u1) ...
+#8 6.807 Setting up libssh2-1t64:arm64 (1.11.1-1+deb13u2) ...
+#8 6.810 Setting up libldap2:arm64 (2.6.10+dfsg-1) ...
+#8 6.813 Setting up libbpf1:arm64 (1:1.5.0-3) ...
+#8 6.818 Setting up libksba8:arm64 (1.6.7-2+b1) ...
+#8 6.821 Setting up pinentry-curses (1.3.1-2) ...
+#8 6.827 Setting up gpg-agent (2.4.7-21+deb13u1+b5) ...
+#8 7.103 Setting up gpgsm (2.4.7-21+deb13u1+b5) ...
+#8 7.107 Setting up libidn2-0:arm64 (2.3.8-2) ...
+#8 7.114 Setting up libperl5.40:arm64 (5.40.1-6+deb13u1) ...
+#8 7.123 Setting up perl (5.40.1-6+deb13u1) ...
+#8 7.130 Setting up libgssapi-krb5-2:arm64 (1.21.3-5+deb13u1) ...
+#8 7.134 Setting up gpg (2.4.7-21+deb13u1+b5) ...
+#8 7.198 Setting up libgnutls30t64:arm64 (3.8.9-3+deb13u4) ...
+#8 7.202 Setting up libtirpc3t64:arm64 (1.3.6+ds-1) ...
+#8 7.205 Setting up iproute2 (6.15.0-1) ...
+#8 7.247 debconf: unable to initialize frontend: Dialog
+#8 7.247 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#8 7.249 debconf: falling back to frontend: Readline
+#8 7.251 debconf: unable to initialize frontend: Readline
+#8 7.251 debconf: (This frontend requires a controlling tty.)
+#8 7.251 debconf: falling back to frontend: Teletype
+#8 7.253 debconf: unable to initialize frontend: Teletype
+#8 7.253 debconf: (This frontend requires a controlling tty.)
+#8 7.253 debconf: falling back to frontend: Noninteractive
+#8 7.287 Setting up libpsl5t64:arm64 (0.21.2-1.1+b1) ...
+#8 7.292 Setting up liberror-perl (0.17030-1) ...
+#8 7.295 Setting up dirmngr (2.4.7-21+deb13u1+b5) ...
+#8 7.364 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#8 7.368 Setting up gnupg (2.4.7-21+deb13u1) ...
+#8 7.371 Setting up libngtcp2-crypto-gnutls8:arm64 (1.11.0-1+deb13u1) ...
+#8 7.374 Setting up libcurl4t64:arm64 (8.14.1-2+deb13u5) ...
+#8 7.377 Setting up libcurl3t64-gnutls:arm64 (8.14.1-2+deb13u5) ...
+#8 7.380 Setting up git (1:2.47.3-0+deb13u1) ...
+#8 7.387 Setting up curl (8.14.1-2+deb13u5) ...
+#8 7.392 Processing triggers for libc-bin (2.41-12+deb13u4) ...
+#8 7.586 Hit:1 http://deb.debian.org/debian trixie InRelease
+#8 7.603 Hit:2 http://deb.debian.org/debian trixie-updates InRelease
+#8 7.626 Hit:3 http://deb.debian.org/debian-security trixie-security InRelease
+#8 7.822 Get:4 https://download.docker.com/linux/debian trixie InRelease [32.5 kB]
+#8 7.859 Get:5 https://download.docker.com/linux/debian trixie/stable arm64 Packages [47.6 kB]
+#8 7.878 Fetched 80.0 kB in 0s (226 kB/s)
+#8 7.878 Reading package lists...
+#8 8.248 Reading package lists...
+#8 8.608 Building dependency tree...
+#8 8.716 Reading state information...
+#8 8.846 Suggested packages:
+#8 8.846   docker-model-plugin
+#8 8.846 Recommended packages:
+#8 8.846   docker-compose-plugin
+#8 8.858 The following NEW packages will be installed:
+#8 8.858   docker-buildx-plugin docker-ce-cli
+#8 8.953 0 upgraded, 2 newly installed, 0 to remove and 0 not upgraded.
+#8 8.953 Need to get 30.6 MB of archives.
+#8 8.953 After this operation, 114 MB of additional disk space will be used.
+#8 8.953 Get:1 https://download.docker.com/linux/debian trixie/stable arm64 docker-buildx-plugin arm64 0.37.1-1~debian.13~trixie [14.8 MB]
+#8 9.444 Get:2 https://download.docker.com/linux/debian trixie/stable arm64 docker-ce-cli arm64 5:29.8.2-1~debian.13~trixie [15.8 MB]
+#8 9.825 debconf: unable to initialize frontend: Dialog
+#8 9.825 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#8 9.825 debconf: falling back to frontend: Readline
+#8 9.829 debconf: unable to initialize frontend: Readline
+#8 9.829 debconf: (This frontend requires a controlling tty.)
+#8 9.829 debconf: falling back to frontend: Teletype
+#8 9.832 debconf: unable to initialize frontend: Teletype
+#8 9.832 debconf: (This frontend requires a controlling tty.)
+#8 9.832 debconf: falling back to frontend: Noninteractive
+#8 10.21 Fetched 30.6 MB in 1s (34.0 MB/s)
+#8 10.22 Selecting previously unselected package docker-buildx-plugin.
+#8 10.22 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9715 files and directories currently installed.)
+#8 10.22 Preparing to unpack .../docker-buildx-plugin_0.37.1-1~debian.13~trixie_arm64.deb ...
+#8 10.23 Unpacking docker-buildx-plugin (0.37.1-1~debian.13~trixie) ...
+#8 10.68 Selecting previously unselected package docker-ce-cli.
+#8 10.68 Preparing to unpack .../docker-ce-cli_5%3a29.8.2-1~debian.13~trixie_arm64.deb ...
+#8 10.69 Unpacking docker-ce-cli (5:29.8.2-1~debian.13~trixie) ...
+#8 11.07 Setting up docker-buildx-plugin (0.37.1-1~debian.13~trixie) ...
+#8 11.08 Setting up docker-ce-cli (5:29.8.2-1~debian.13~trixie) ...
+#8 DONE 11.5s
+
+#9 [3/7] WORKDIR /app
+#9 DONE 0.0s
+
+#10 [4/7] COPY requirements.txt .
+#10 DONE 0.0s
+
+#11 [5/7] RUN pip install --no-cache-dir -r requirements.txt
+#11 1.103 Collecting fastapi (from -r requirements.txt (line 1))
+#11 1.188   Downloading fastapi-0.142.2-py3-none-any.whl.metadata (27 kB)
+#11 1.422 Collecting sqlalchemy (from -r requirements.txt (line 3))
+#11 1.447   Downloading sqlalchemy-2.1.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (9.7 kB)
+#11 1.485 Collecting alembic (from -r requirements.txt (line 4))
+#11 1.511   Downloading alembic-1.20.0-py3-none-any.whl.metadata (7.3 kB)
+#11 1.538 Collecting pydantic-settings (from -r requirements.txt (line 5))
+#11 1.564   Downloading pydantic_settings-2.15.0-py3-none-any.whl.metadata (3.9 kB)
+#11 1.590 Collecting python-multipart (from -r requirements.txt (line 6))
+#11 1.615   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+#11 1.689 Collecting websockets (from -r requirements.txt (line 7))
+#11 1.714   Downloading websockets-17.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (6.3 kB)
+#11 1.753 Collecting pyyaml (from -r requirements.txt (line 8))
+#11 1.780   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (2.4 kB)
+#11 1.873 Collecting kathara<4.0,>=3.7.0 (from -r requirements.txt (line 10))
+#11 1.898   Downloading kathara-3.8.3-py3-none-any.whl.metadata (11 kB)
+#11 1.931 Collecting docker (from -r requirements.txt (line 13))
+#11 1.955   Downloading docker-7.2.0-py3-none-any.whl.metadata (3.8 kB)
+#11 1.990 Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+#11 2.014   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+#11 2.050 Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+#11 2.074   Downloading starlette-1.7.0-py3-none-any.whl.metadata (6.6 kB)
+#11 2.143 Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+#11 2.168   Downloading pydantic-2.13.5-py3-none-any.whl.metadata (110 kB)
+#11 2.229 Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+#11 2.254   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#11 2.283 Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+#11 2.307   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#11 2.334 Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+#11 2.358   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#11 2.390 Collecting opentelemetry-api>=1.44.0 (from fastapi->-r requirements.txt (line 1))
+#11 2.412   Downloading opentelemetry_api-1.45.0-py3-none-any.whl.metadata (1.4 kB)
+#11 2.442 Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.466   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#11 2.492 Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.516   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#11 2.555 Collecting httptools>=0.8.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.580   Downloading httptools-0.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (3.5 kB)
+#11 2.614 Collecting python-dotenv>=0.13 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.638   Downloading python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+#11 2.688 Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.712   Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (5.1 kB)
+#11 2.775 Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+#11 2.799   Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (4.9 kB)
+#11 2.840 Collecting Mako (from alembic->-r requirements.txt (line 4))
+#11 2.864   Downloading mako-1.4.3-py3-none-any.whl.metadata (2.9 kB)
+#11 2.916 Collecting binaryornot>=0.4.4 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 2.940   Downloading binaryornot-0.6.0-py3-none-any.whl.metadata (2.9 kB)
+#11 2.976 Collecting kubernetes>=23.3.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.000   Downloading kubernetes-36.0.3-py2.py3-none-any.whl.metadata (1.8 kB)
+#11 3.037 Collecting requests>=2.22.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.061   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+#11 3.095 Collecting pyroute2 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.121   Downloading pyroute2-0.9.6-py3-none-any.whl.metadata (8.8 kB)
+#11 3.170 Collecting rich (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.195   Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+#11 3.278 Collecting setuptools<81 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.304   Downloading setuptools-80.10.2-py3-none-any.whl.metadata (6.6 kB)
+#11 3.339 Collecting fs>=2.4.16 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.366   Downloading fs-2.4.16-py2.py3-none-any.whl.metadata (6.3 kB)
+#11 3.407 Collecting chardet<6.0.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.433   Downloading chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+#11 3.474 Collecting urllib3>=1.26.0 (from docker->-r requirements.txt (line 13))
+#11 3.498   Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+#11 3.529 Collecting appdirs~=1.4.3 (from fs>=2.4.16->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.554   Downloading appdirs-1.4.4-py2.py3-none-any.whl.metadata (9.0 kB)
+#11 3.586 Collecting six~=1.10 (from fs>=2.4.16->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.611   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#11 3.656 Collecting certifi>=14.05.14 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.679   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+#11 3.715 Collecting python-dateutil>=2.5.3 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.743   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+#11 3.789 Collecting websocket-client!=0.40.0,!=0.41.*,!=0.42.*,>=0.32.0 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.814   Downloading websocket_client-1.9.2-py3-none-any.whl.metadata (8.3 kB)
+#11 3.846 Collecting requests-oauthlib (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.870   Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
+#11 3.910 Collecting durationpy>=0.7 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 3.935   Downloading durationpy-0.11-py3-none-any.whl.metadata (474 bytes)
+#11 4.174 Collecting aiohttp<4.0.0,>=3.13.5 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 4.199   Downloading aiohttp-3.14.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (8.3 kB)
+#11 4.227 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+#11 4.252   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#11 4.560 Collecting pydantic-core==2.46.5 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+#11 4.588   Downloading pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (6.6 kB)
+#11 4.659 Collecting charset_normalizer<4,>=2 (from requests>=2.22.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 4.684   Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (46 kB)
+#11 4.713 Collecting idna<4,>=2.5 (from requests>=2.22.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 4.737   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#11 4.783 Collecting anyio<5,>=4.0.0 (from starlette>=0.46.0->fastapi->-r requirements.txt (line 1))
+#11 4.805   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#11 4.867 Collecting MarkupSafe>=2.0 (from Mako->alembic->-r requirements.txt (line 4))
+#11 4.891   Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (2.7 kB)
+#11 4.920 Collecting markdown-it-py>=2.2.0 (from rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 4.944   Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+#11 4.979 Collecting pygments<3.0.0,>=2.13.0 (from rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.003   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+#11 5.035 Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.060   Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+#11 5.092 Collecting aiosignal>=1.4.0 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.119   Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+#11 5.153 Collecting attrs>=17.3.0 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.181   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+#11 5.231 Collecting frozenlist>=1.1.1 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.259   Downloading frozenlist-1.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (20 kB)
+#11 5.423 Collecting multidict<7.0,>=4.5 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.452   Downloading multidict-6.9.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (5.3 kB)
+#11 5.508 Collecting propcache>=0.2.0 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.536   Downloading propcache-0.5.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (25 kB)
+#11 5.662 Collecting yarl<2.0,>=1.25.1 (from aiohttp<4.0.0,>=3.13.5->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.695   Downloading yarl-1.25.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (111 kB)
+#11 5.744 Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.775   Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+#11 5.810 Collecting oauthlib>=3.0.0 (from requests-oauthlib->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#11 5.836   Downloading oauthlib-4.0.0-py3-none-any.whl.metadata (8.6 kB)
+#11 5.896 Downloading fastapi-0.142.2-py3-none-any.whl (144 kB)
+#11 5.938 Downloading sqlalchemy-2.1.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.7 MB)
+#11 6.398    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 10.6 MB/s eta 0:00:00
+#11 6.427 Downloading alembic-1.20.0-py3-none-any.whl (268 kB)
+#11 6.471 Downloading pydantic_settings-2.15.0-py3-none-any.whl (69 kB)
+#11 6.506 Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+#11 6.537 Downloading websockets-17.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (226 kB)
+#11 6.585 Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (775 kB)
+#11 6.635    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 775.1/775.1 kB 15.1 MB/s eta 0:00:00
+#11 6.666 Downloading kathara-3.8.3-py3-none-any.whl (222 kB)
+#11 6.707 Downloading docker-7.2.0-py3-none-any.whl (148 kB)
+#11 6.740 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#11 6.769 Downloading binaryornot-0.6.0-py3-none-any.whl (14 kB)
+#11 6.798 Downloading chardet-5.2.0-py3-none-any.whl (199 kB)
+#11 6.837 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#11 6.882 Downloading fs-2.4.16-py2.py3-none-any.whl (135 kB)
+#11 6.922 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#11 6.954 Downloading httptools-0.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (518 kB)
+#11 7.014 Downloading kubernetes-36.0.3-py2.py3-none-any.whl (4.6 MB)
+#11 7.243    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.6/4.6 MB 20.6 MB/s eta 0:00:00
+#11 7.277 Downloading opentelemetry_api-1.45.0-py3-none-any.whl (60 kB)
+#11 7.309 Downloading pydantic-2.13.5-py3-none-any.whl (472 kB)
+#11 7.355 Downloading pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (2.0 MB)
+#11 7.432    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 25.6 MB/s eta 0:00:00
+#11 7.462 Downloading python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+#11 7.491 Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+#11 7.526 Downloading setuptools-80.10.2-py3-none-any.whl (1.1 MB)
+#11 7.570    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 25.4 MB/s eta 0:00:00
+#11 7.609 Downloading starlette-1.7.0-py3-none-any.whl (78 kB)
+#11 7.639 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#11 7.668 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#11 7.697 Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+#11 7.729 Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.4 MB)
+#11 7.866    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.4/4.4 MB 32.3 MB/s eta 0:00:00
+#11 7.893 Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (454 kB)
+#11 7.930 Downloading mako-1.4.3-py3-none-any.whl (80 kB)
+#11 7.959 Downloading pyroute2-0.9.6-py3-none-any.whl (483 kB)
+#11 7.996 Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+#11 8.045 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
+#11 8.077 Downloading aiohttp-3.14.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (1.9 MB)
+#11 8.132    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 33.4 MB/s eta 0:00:00
+#11 8.159 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#11 8.187 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#11 8.214 Downloading appdirs-1.4.4-py2.py3-none-any.whl (9.6 kB)
+#11 8.241 Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
+#11 8.273 Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (246 kB)
+#11 8.305 Downloading durationpy-0.11-py3-none-any.whl (4.1 kB)
+#11 8.334 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#11 8.363 Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+#11 8.393 Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (24 kB)
+#11 8.423 Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+#11 8.466    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 27.3 MB/s eta 0:00:00
+#11 8.496 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#11 8.527 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#11 8.557 Downloading websocket_client-1.9.2-py3-none-any.whl (95 kB)
+#11 8.588 Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+#11 8.618 Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+#11 8.646 Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+#11 8.675 Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+#11 8.704 Downloading frozenlist-1.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (243 kB)
+#11 8.738 Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+#11 8.766 Downloading multidict-6.9.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (334 kB)
+#11 8.805 Downloading oauthlib-4.0.0-py3-none-any.whl (159 kB)
+#11 8.836 Downloading propcache-0.5.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (251 kB)
+#11 8.869 Downloading yarl-1.25.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (115 kB)
+#11 8.978 Installing collected packages: durationpy, appdirs, websockets, websocket-client, uvloop, urllib3, typing-extensions, six, setuptools, pyyaml, python-multipart, python-dotenv, pyroute2, pygments, propcache, oauthlib, multidict, mdurl, MarkupSafe, idna, httptools, h11, frozenlist, click, charset_normalizer, chardet, certifi, binaryornot, attrs, annotated-types, annotated-doc, aiohappyeyeballs, yarl, uvicorn, typing-inspection, sqlalchemy, requests, python-dateutil, pydantic-core, opentelemetry-api, markdown-it-py, Mako, fs, anyio, aiosignal, watchfiles, starlette, rich, requests-oauthlib, pydantic, docker, alembic, aiohttp, pydantic-settings, kubernetes, fastapi, kathara
+#11 13.11 Successfully installed Mako-1.4.3 MarkupSafe-3.0.4 aiohappyeyeballs-2.7.1 aiohttp-3.14.4 aiosignal-1.4.0 alembic-1.20.0 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 appdirs-1.4.4 attrs-26.1.0 binaryornot-0.6.0 certifi-2026.7.22 chardet-5.2.0 charset_normalizer-3.5.2 click-8.5.0 docker-7.2.0 durationpy-0.11 fastapi-0.142.2 frozenlist-1.8.0 fs-2.4.16 h11-0.16.0 httptools-0.8.0 idna-3.20 kathara-3.8.3 kubernetes-36.0.3 markdown-it-py-4.2.0 mdurl-0.1.2 multidict-6.9.1 oauthlib-4.0.0 opentelemetry-api-1.45.0 propcache-0.5.4 pydantic-2.13.5 pydantic-core-2.46.5 pydantic-settings-2.15.0 pygments-2.21.0 pyroute2-0.9.6 python-dateutil-2.9.0.post0 python-dotenv-1.2.4 python-multipart-0.0.32 pyyaml-6.0.3 requests-2.34.2 requests-oauthlib-2.0.0 rich-15.0.0 setuptools-80.10.2 six-1.17.0 sqlalchemy-2.1.3 starlette-1.7.0 typing-extensions-4.16.0 typing-inspection-0.4.4 urllib3-2.8.0 uvicorn-0.54.0 uvloop-0.23.0 watchfiles-1.3.0 websocket-client-1.9.2 websockets-17.2 yarl-1.25.1
+#11 13.11 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#11 13.25 
+#11 13.25 [notice] A new release of pip is available: 25.0.1 -> 26.2.1
+#11 13.25 [notice] To update, run: pip install --upgrade pip
+#11 DONE 13.6s
+
+#12 [6/7] COPY . .
+#12 DONE 0.2s
+
+#13 [7/7] RUN mkdir -p /app/data
+#13 DONE 0.1s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 4.0s done
+#14 exporting manifest sha256:a7217c6f111057facba45583187dbb8d127eebb9d0799ce44d41072b057dfebf done
+#14 exporting config sha256:248345fec9e5e29d22dbc4d1b7fc29e7060af381b2e309cd40045a2e245a6273 done
+#14 exporting attestation manifest sha256:505384265608585b723083c5fe9b6d3187e606dc3b8a095ce4f7fabe355aa3b5 done
+#14 exporting manifest list sha256:3bb561f9bb594a011b0bf074a60a0c71f25303a4d1fb2db11b7bb17e35d4d2a8 done
+#14 naming to docker.io/library/ae3gisv3-backend:latest done
+#14 unpacking to docker.io/library/ae3gisv3-backend:latest
+#14 unpacking to docker.io/library/ae3gisv3-backend:latest 1.5s done
+#14 DONE 5.5s
+
+#15 resolving provenance for metadata file
+#15 DONE 0.0s
+ Image ae3gisv3-backend Built 
+ Container ae3gisv3-backend-1 Recreate 
+ Container ae3gisv3-backend-1 Recreated 
+ Container ae3gisv3-backend-1 Starting 
+ Container ae3gisv3-backend-1 Started 
+=== 2026-10-06 09:50:12 UTC · 01-burst-matrix (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 2576cddd0bca4ed3a5a05ee750f0c31a: m4-macbook-air · burst-matrix · traffic matrix on 100 hosts
+  … images
+  … baseline: the host at rest (30s)
+  … deploy: waiting for the host to go quiet
+  … deploy: reference (20.0s, nothing deployed)
+  … deploy: deploying 109 nodes
+  … deploy: settling (20.0s)
+        deploy  nodes   109  deploy    12.8s  ready   0.66s  destroy      –s    13.4 MB/node  host mem     –%  ok
+  … cell 001/100 mesh·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 001/100 mesh·tcp·500K·500ms: idle (10s)
+  … cell 001/100 mesh·tcp·500K·500ms: traffic: ramp 5s + hold 60s
+cell 001/100 mesh·tcp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 101%  ok
+  … cell 002/100 mesh·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 002/100 mesh·tcp·250K·250ms: traffic: ramp 5s + hold 60s
+cell 002/100 mesh·tcp·250K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 003/100 cs·udp·500K·500ms: waiting for the host to go quiet
+  … cell 003/100 cs·udp·500K·500ms: traffic: ramp 5s + hold 60s
+cell 003/100 cs·udp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 100%  ok
+  … cell 004/100 cs·udp·100K·100ms: waiting for the host to go quiet
+  … cell 004/100 cs·udp·100K·100ms: traffic: ramp 5s + hold 60s
+cell 004/100 cs·udp·100K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.7%  delivered 100%  ok
+  … cell 005/100 mesh·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 005/100 mesh·tcp·100K·500ms: traffic: ramp 5s + hold 60s
+cell 005/100 mesh·tcp·100K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 101%  ok
+  … cell 006/100 cs·udp·100K·250ms: waiting for the host to go quiet
+  … cell 006/100 cs·udp·100K·250ms: traffic: ramp 5s + hold 60s
+cell 006/100 cs·udp·100K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 100%  ok
+  … cell 007/100 cs·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 007/100 cs·tcp·250K·2000ms: traffic: ramp 5s + hold 60s
+cell 007/100 cs·tcp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 101%  ok
+  … cell 008/100 cs·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 008/100 cs·udp·500K·2000ms: traffic: ramp 5s + hold 60s
+cell 008/100 cs·udp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.7%  delivered 100%  ok
+  … cell 009/100 cs·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 009/100 cs·tcp·100K·1000ms: traffic: ramp 5s + hold 60s
+cell 009/100 cs·tcp·100K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  14.8%  delivered 101%  ok
+  … cell 010/100 mesh·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 010/100 mesh·tcp·50K·500ms: traffic: ramp 5s + hold 60s
+cell 010/100 mesh·tcp·50K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 101%  ok
+  … cell 011/100 mesh·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 011/100 mesh·tcp·1M·1000ms: traffic: ramp 5s + hold 60s
+cell 011/100 mesh·tcp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+  … cell 012/100 mesh·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 012/100 mesh·udp·500K·1000ms: traffic: ramp 5s + hold 60s
+cell 012/100 mesh·udp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.3%  delivered 101%  ok
+  … cell 013/100 mesh·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 013/100 mesh·tcp·50K·250ms: traffic: ramp 5s + hold 60s
+cell 013/100 mesh·tcp·50K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.3%  delivered 100%  ok
+  … cell 014/100 mesh·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 014/100 mesh·udp·100K·1000ms: traffic: ramp 5s + hold 60s
+cell 014/100 mesh·udp·100K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 101%  ok
+  … cell 015/100 mesh·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 015/100 mesh·tcp·250K·500ms: traffic: ramp 5s + hold 60s
+cell 015/100 mesh·tcp·250K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.0%  delivered 101%  ok
+  … cell 016/100 mesh·udp·100K·500ms: waiting for the host to go quiet
+  … cell 016/100 mesh·udp·100K·500ms: traffic: ramp 5s + hold 60s
+cell 016/100 mesh·udp·100K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 101%  ok
+  … cell 017/100 cs·udp·1M·100ms: waiting for the host to go quiet
+  … cell 017/100 cs·udp·1M·100ms: traffic: ramp 5s + hold 60s
+cell 017/100 cs·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.1%  delivered 100%  ok
+  … cell 018/100 mesh·udp·500K·100ms: waiting for the host to go quiet
+  … cell 018/100 mesh·udp·500K·100ms: idle (10s)
+  … cell 018/100 mesh·udp·500K·100ms: traffic: ramp 5s + hold 60s
+cell 018/100 mesh·udp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 019/100 mesh·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 019/100 mesh·tcp·50K·1000ms: traffic: ramp 5s + hold 60s
+cell 019/100 mesh·tcp·50K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 101%  ok
+  … cell 020/100 mesh·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 020/100 mesh·udp·100K·2000ms: traffic: ramp 5s + hold 60s
+cell 020/100 mesh·udp·100K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 101%  ok
+  … cell 021/100 mesh·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 021/100 mesh·tcp·50K·2000ms: traffic: ramp 5s + hold 60s
+cell 021/100 mesh·tcp·50K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 103%  ok
+  … cell 022/100 cs·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 022/100 cs·tcp·1M·500ms: traffic: ramp 5s + hold 60s
+cell 022/100 cs·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 82%  ok
+  … cell 023/100 cs·tcp·250K·500ms: waiting for the host to go quiet
+  … cell 023/100 cs·tcp·250K·500ms: idle (10s)
+  … cell 023/100 cs·tcp·250K·500ms: traffic: ramp 5s + hold 60s
+cell 023/100 cs·tcp·250K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 101%  ok
+  … cell 024/100 cs·tcp·1M·1000ms: waiting for the host to go quiet
+  … cell 024/100 cs·tcp·1M·1000ms: idle (10s)
+  … cell 024/100 cs·tcp·1M·1000ms: traffic: ramp 5s + hold 60s
+cell 024/100 cs·tcp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 82%  ok
+  … cell 025/100 cs·tcp·500K·500ms: waiting for the host to go quiet
+  … cell 025/100 cs·tcp·500K·500ms: idle (10s)
+  … cell 025/100 cs·tcp·500K·500ms: traffic: ramp 5s + hold 60s
+cell 025/100 cs·tcp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … cell 026/100 cs·udp·1M·250ms: waiting for the host to go quiet
+  … cell 026/100 cs·udp·1M·250ms: traffic: ramp 5s + hold 60s
+cell 026/100 cs·udp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.4%  delivered 100%  ok
+  … cell 027/100 mesh·udp·250K·500ms: waiting for the host to go quiet
+  … cell 027/100 mesh·udp·250K·500ms: idle (10s)
+  … cell 027/100 mesh·udp·250K·500ms: traffic: ramp 5s + hold 60s
+cell 027/100 mesh·udp·250K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 101%  ok
+  … cell 028/100 mesh·udp·50K·100ms: waiting for the host to go quiet
+  … cell 028/100 mesh·udp·50K·100ms: idle (10s)
+  … cell 028/100 mesh·udp·50K·100ms: traffic: ramp 5s + hold 60s
+cell 028/100 mesh·udp·50K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 029/100 mesh·tcp·250K·2000ms: waiting for the host to go quiet
+  … cell 029/100 mesh·tcp·250K·2000ms: idle (10s)
+  … cell 029/100 mesh·tcp·250K·2000ms: traffic: ramp 5s + hold 60s
+cell 029/100 mesh·tcp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 102%  ok
+  … cell 030/100 mesh·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 030/100 mesh·udp·250K·1000ms: idle (10s)
+  … cell 030/100 mesh·udp·250K·1000ms: traffic: ramp 5s + hold 60s
+cell 030/100 mesh·udp·250K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 100%  ok
+  … cell 031/100 cs·tcp·50K·250ms: waiting for the host to go quiet
+  … cell 031/100 cs·tcp·50K·250ms: idle (10s)
+  … cell 031/100 cs·tcp·50K·250ms: traffic: ramp 5s + hold 60s
+cell 031/100 cs·tcp·50K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.9%  delivered 100%  ok
+  … cell 032/100 mesh·udp·1M·100ms: waiting for the host to go quiet
+  … cell 032/100 mesh·udp·1M·100ms: idle (10s)
+  … cell 032/100 mesh·udp·1M·100ms: traffic: ramp 5s + hold 60s
+cell 032/100 mesh·udp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 100%  ok
+  … cell 033/100 cs·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 033/100 cs·tcp·100K·2000ms: idle (10s)
+  … cell 033/100 cs·tcp·100K·2000ms: traffic: ramp 5s + hold 60s
+cell 033/100 cs·tcp·100K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.9%  delivered 102%  ok
+  … cell 034/100 mesh·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 034/100 mesh·tcp·500K·250ms: idle (10s)
+  … cell 034/100 mesh·tcp·500K·250ms: traffic: ramp 5s + hold 60s
+cell 034/100 mesh·tcp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.3%  delivered 100%  ok
+  … cell 035/100 cs·udp·100K·500ms: waiting for the host to go quiet
+  … cell 035/100 cs·udp·100K·500ms: idle (10s)
+  … cell 035/100 cs·udp·100K·500ms: traffic: ramp 5s + hold 60s
+cell 035/100 cs·udp·100K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 101%  ok
+  … cell 036/100 mesh·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 036/100 mesh·tcp·250K·1000ms: idle (10s)
+  … cell 036/100 mesh·tcp·250K·1000ms: traffic: ramp 5s + hold 60s
+cell 036/100 mesh·tcp·250K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.3%  delivered 101%  ok
+  … cell 037/100 cs·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 037/100 cs·tcp·500K·1000ms: idle (10s)
+  … cell 037/100 cs·tcp·500K·1000ms: traffic: ramp 5s + hold 60s
+cell 037/100 cs·tcp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+  … cell 038/100 mesh·udp·50K·500ms: waiting for the host to go quiet
+  … cell 038/100 mesh·udp·50K·500ms: idle (10s)
+  … cell 038/100 mesh·udp·50K·500ms: traffic: ramp 5s + hold 60s
+cell 038/100 mesh·udp·50K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 100%  ok
+  … cell 039/100 cs·tcp·50K·500ms: waiting for the host to go quiet
+  … cell 039/100 cs·tcp·50K·500ms: idle (10s)
+  … cell 039/100 cs·tcp·50K·500ms: traffic: ramp 5s + hold 60s
+cell 039/100 cs·tcp·50K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 101%  ok
+  … cell 040/100 cs·tcp·50K·2000ms: waiting for the host to go quiet
+  … cell 040/100 cs·tcp·50K·2000ms: idle (10s)
+  … cell 040/100 cs·tcp·50K·2000ms: traffic: ramp 5s + hold 60s
+cell 040/100 cs·tcp·50K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 101%  ok
+  … cell 041/100 mesh·tcp·100K·2000ms: waiting for the host to go quiet
+  … cell 041/100 mesh·tcp·100K·2000ms: idle (10s)
+  … cell 041/100 mesh·tcp·100K·2000ms: traffic: ramp 5s + hold 60s
+cell 041/100 mesh·tcp·100K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 102%  ok
+  … cell 042/100 cs·tcp·250K·250ms: waiting for the host to go quiet
+  … cell 042/100 cs·tcp·250K·250ms: idle (10s)
+  … cell 042/100 cs·tcp·250K·250ms: traffic: ramp 5s + hold 60s
+cell 042/100 cs·tcp·250K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 043/100 cs·tcp·100K·500ms: waiting for the host to go quiet
+  … cell 043/100 cs·tcp·100K·500ms: idle (10s)
+  … cell 043/100 cs·tcp·100K·500ms: traffic: ramp 5s + hold 60s
+cell 043/100 cs·tcp·100K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 101%  ok
+  … cell 044/100 mesh·udp·250K·100ms: waiting for the host to go quiet
+  … cell 044/100 mesh·udp·250K·100ms: idle (10s)
+  … cell 044/100 mesh·udp·250K·100ms: traffic: ramp 5s + hold 60s
+cell 044/100 mesh·udp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 100%  ok
+  … cell 045/100 mesh·udp·50K·250ms: waiting for the host to go quiet
+  … cell 045/100 mesh·udp·50K·250ms: idle (10s)
+  … cell 045/100 mesh·udp·50K·250ms: traffic: ramp 5s + hold 60s
+cell 045/100 mesh·udp·50K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 100%  ok
+  … cell 046/100 cs·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 046/100 cs·tcp·1M·2000ms: idle (10s)
+  … cell 046/100 cs·tcp·1M·2000ms: traffic: ramp 5s + hold 60s
+cell 046/100 cs·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 85%  ok
+  … cell 047/100 cs·tcp·250K·1000ms: waiting for the host to go quiet
+  … cell 047/100 cs·tcp·250K·1000ms: idle (10s)
+  … cell 047/100 cs·tcp·250K·1000ms: traffic: ramp 5s + hold 60s
+cell 047/100 cs·tcp·250K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 101%  ok
+  … cell 048/100 cs·tcp·500K·250ms: waiting for the host to go quiet
+  … cell 048/100 cs·tcp·500K·250ms: idle (10s)
+  … cell 048/100 cs·tcp·500K·250ms: traffic: ramp 5s + hold 60s
+cell 048/100 cs·tcp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 100%  ok
+  … cell 049/100 mesh·udp·1M·500ms: waiting for the host to go quiet
+  … cell 049/100 mesh·udp·1M·500ms: traffic: ramp 5s + hold 60s
+cell 049/100 mesh·udp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.5%  delivered 101%  ok
+  … cell 050/100 mesh·tcp·500K·1000ms: waiting for the host to go quiet
+  … cell 050/100 mesh·tcp·500K·1000ms: traffic: ramp 5s + hold 60s
+cell 050/100 mesh·tcp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.9%  delivered 101%  ok
+  … cell 051/100 mesh·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 051/100 mesh·udp·50K·1000ms: traffic: ramp 5s + hold 60s
+cell 051/100 mesh·udp·50K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 101%  ok
+  … cell 052/100 cs·udp·50K·100ms: waiting for the host to go quiet
+  … cell 052/100 cs·udp·50K·100ms: traffic: ramp 5s + hold 60s
+cell 052/100 cs·udp·50K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+  … cell 053/100 cs·tcp·50K·1000ms: waiting for the host to go quiet
+  … cell 053/100 cs·tcp·50K·1000ms: traffic: ramp 5s + hold 60s
+cell 053/100 cs·tcp·50K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 101%  ok
+  … cell 054/100 cs·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 054/100 cs·udp·1M·1000ms: traffic: ramp 5s + hold 60s
+cell 054/100 cs·udp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … cell 055/100 cs·udp·250K·250ms: waiting for the host to go quiet
+  … cell 055/100 cs·udp·250K·250ms: traffic: ramp 5s + hold 60s
+cell 055/100 cs·udp·250K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 100%  ok
+  … cell 056/100 cs·udp·250K·100ms: waiting for the host to go quiet
+  … cell 056/100 cs·udp·250K·100ms: traffic: ramp 5s + hold 60s
+cell 056/100 cs·udp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.4%  delivered 100%  ok
+  … cell 057/100 cs·udp·1M·500ms: waiting for the host to go quiet
+  … cell 057/100 cs·udp·1M·500ms: traffic: ramp 5s + hold 60s
+cell 057/100 cs·udp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.3%  delivered 100%  ok
+  … cell 058/100 cs·udp·100K·1000ms: waiting for the host to go quiet
+  … cell 058/100 cs·udp·100K·1000ms: traffic: ramp 5s + hold 60s
+cell 058/100 cs·udp·100K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 101%  ok
+  … cell 059/100 cs·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 059/100 cs·tcp·1M·100ms: traffic: ramp 5s + hold 60s
+cell 059/100 cs·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 83%  ok
+  … cell 060/100 mesh·udp·250K·250ms: waiting for the host to go quiet
+  … cell 060/100 mesh·udp·250K·250ms: idle (10s)
+  … cell 060/100 mesh·udp·250K·250ms: traffic: ramp 5s + hold 60s
+cell 060/100 mesh·udp·250K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 061/100 mesh·udp·500K·500ms: waiting for the host to go quiet
+  … cell 061/100 mesh·udp·500K·500ms: idle (10s)
+  … cell 061/100 mesh·udp·500K·500ms: traffic: ramp 5s + hold 60s
+cell 061/100 mesh·udp·500K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 062/100 mesh·udp·1M·1000ms: waiting for the host to go quiet
+  … cell 062/100 mesh·udp·1M·1000ms: traffic: ramp 5s + hold 60s
+cell 062/100 mesh·udp·1M·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 100%  ok
+  … cell 063/100 cs·udp·250K·1000ms: waiting for the host to go quiet
+  … cell 063/100 cs·udp·250K·1000ms: traffic: ramp 5s + hold 60s
+cell 063/100 cs·udp·250K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.9%  delivered 100%  ok
+  … cell 064/100 cs·udp·500K·100ms: waiting for the host to go quiet
+  … cell 064/100 cs·udp·500K·100ms: traffic: ramp 5s + hold 60s
+cell 064/100 cs·udp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 065/100 mesh·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 065/100 mesh·tcp·100K·100ms: traffic: ramp 5s + hold 60s
+cell 065/100 mesh·tcp·100K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 066/100 mesh·tcp·1M·100ms: waiting for the host to go quiet
+  … cell 066/100 mesh·tcp·1M·100ms: traffic: ramp 5s + hold 60s
+cell 066/100 mesh·tcp·1M·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 100%  ok
+  … cell 067/100 mesh·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 067/100 mesh·tcp·100K·250ms: idle (10s)
+  … cell 067/100 mesh·tcp·100K·250ms: traffic: ramp 5s + hold 60s
+cell 067/100 mesh·tcp·100K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 100%  ok
+  … cell 068/100 mesh·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 068/100 mesh·udp·50K·2000ms: idle (10s)
+  … cell 068/100 mesh·udp·50K·2000ms: traffic: ramp 5s + hold 60s
+cell 068/100 mesh·udp·50K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.9%  delivered 102%  ok
+  … cell 069/100 cs·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 069/100 cs·udp·250K·2000ms: idle (10s)
+  … cell 069/100 cs·udp·250K·2000ms: traffic: ramp 5s + hold 60s
+cell 069/100 cs·udp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … cell 070/100 mesh·udp·1M·250ms: waiting for the host to go quiet
+  … cell 070/100 mesh·udp·1M·250ms: idle (10s)
+  … cell 070/100 mesh·udp·1M·250ms: traffic: ramp 5s + hold 60s
+cell 070/100 mesh·udp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.3%  delivered 100%  ok
+  … cell 071/100 mesh·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 071/100 mesh·tcp·250K·100ms: idle (10s)
+  … cell 071/100 mesh·tcp·250K·100ms: traffic: ramp 5s + hold 60s
+cell 071/100 mesh·tcp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 072/100 cs·udp·50K·500ms: waiting for the host to go quiet
+  … cell 072/100 cs·udp·50K·500ms: idle (10s)
+  … cell 072/100 cs·udp·50K·500ms: traffic: ramp 5s + hold 60s
+cell 072/100 cs·udp·50K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.2%  delivered 100%  ok
+  … cell 073/100 mesh·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 073/100 mesh·udp·1M·2000ms: idle (10s)
+  … cell 073/100 mesh·udp·1M·2000ms: traffic: ramp 5s + hold 60s
+cell 073/100 mesh·udp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 074/100 cs·tcp·100K·250ms: waiting for the host to go quiet
+  … cell 074/100 cs·tcp·100K·250ms: idle (10s)
+  … cell 074/100 cs·tcp·100K·250ms: traffic: ramp 5s + hold 60s
+cell 074/100 cs·tcp·100K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 075/100 mesh·udp·100K·100ms: waiting for the host to go quiet
+  … cell 075/100 mesh·udp·100K·100ms: idle (10s)
+  … cell 075/100 mesh·udp·100K·100ms: traffic: ramp 5s + hold 60s
+cell 075/100 mesh·udp·100K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 076/100 mesh·tcp·1M·2000ms: waiting for the host to go quiet
+  … cell 076/100 mesh·tcp·1M·2000ms: idle (10s)
+  … cell 076/100 mesh·tcp·1M·2000ms: traffic: ramp 5s + hold 60s
+cell 076/100 mesh·tcp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 100%  ok
+  … cell 077/100 mesh·tcp·1M·500ms: waiting for the host to go quiet
+  … cell 077/100 mesh·tcp·1M·500ms: idle (10s)
+  … cell 077/100 mesh·tcp·1M·500ms: traffic: ramp 5s + hold 60s
+cell 077/100 mesh·tcp·1M·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  17.0%  delivered 100%  ok
+  … cell 078/100 cs·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 078/100 cs·tcp·1M·250ms: idle (10s)
+  … cell 078/100 cs·tcp·1M·250ms: traffic: ramp 5s + hold 60s
+cell 078/100 cs·tcp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 81%  ok
+  … cell 079/100 cs·udp·500K·250ms: waiting for the host to go quiet
+  … cell 079/100 cs·udp·500K·250ms: traffic: ramp 5s + hold 60s
+cell 079/100 cs·udp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 080/100 cs·udp·1M·2000ms: waiting for the host to go quiet
+  … cell 080/100 cs·udp·1M·2000ms: traffic: ramp 5s + hold 60s
+cell 080/100 cs·udp·1M·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 081/100 cs·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 081/100 cs·tcp·500K·100ms: traffic: ramp 5s + hold 60s
+cell 081/100 cs·tcp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 100%  ok
+  … cell 082/100 mesh·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 082/100 mesh·tcp·50K·100ms: idle (10s)
+  … cell 082/100 mesh·tcp·50K·100ms: traffic: ramp 5s + hold 60s
+cell 082/100 mesh·tcp·50K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.4%  delivered 100%  ok
+  … cell 083/100 cs·udp·100K·2000ms: waiting for the host to go quiet
+  … cell 083/100 cs·udp·100K·2000ms: idle (10s)
+  … cell 083/100 cs·udp·100K·2000ms: traffic: ramp 5s + hold 60s
+cell 083/100 cs·udp·100K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.9%  delivered 101%  ok
+  … cell 084/100 cs·udp·50K·2000ms: waiting for the host to go quiet
+  … cell 084/100 cs·udp·50K·2000ms: idle (10s)
+  … cell 084/100 cs·udp·50K·2000ms: traffic: ramp 5s + hold 60s
+cell 084/100 cs·udp·50K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.6%  delivered 100%  ok
+  … cell 085/100 cs·udp·50K·1000ms: waiting for the host to go quiet
+  … cell 085/100 cs·udp·50K·1000ms: idle (10s)
+  … cell 085/100 cs·udp·50K·1000ms: traffic: ramp 5s + hold 60s
+cell 085/100 cs·udp·50K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 101%  ok
+  … cell 086/100 cs·udp·500K·1000ms: waiting for the host to go quiet
+  … cell 086/100 cs·udp·500K·1000ms: idle (10s)
+  … cell 086/100 cs·udp·500K·1000ms: traffic: ramp 5s + hold 60s
+cell 086/100 cs·udp·500K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … cell 087/100 cs·udp·50K·250ms: waiting for the host to go quiet
+  … cell 087/100 cs·udp·50K·250ms: idle (10s)
+  … cell 087/100 cs·udp·50K·250ms: traffic: ramp 5s + hold 60s
+cell 087/100 cs·udp·50K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.5%  delivered 100%  ok
+  … cell 088/100 mesh·udp·250K·2000ms: waiting for the host to go quiet
+  … cell 088/100 mesh·udp·250K·2000ms: idle (10s)
+  … cell 088/100 mesh·udp·250K·2000ms: traffic: ramp 5s + hold 60s
+cell 088/100 mesh·udp·250K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 102%  ok
+  … cell 089/100 mesh·tcp·500K·100ms: waiting for the host to go quiet
+  … cell 089/100 mesh·tcp·500K·100ms: idle (10s)
+  … cell 089/100 mesh·tcp·500K·100ms: traffic: ramp 5s + hold 60s
+cell 089/100 mesh·tcp·500K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.7%  delivered 100%  ok
+  … cell 090/100 mesh·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 090/100 mesh·tcp·500K·2000ms: idle (10s)
+  … cell 090/100 mesh·tcp·500K·2000ms: traffic: ramp 5s + hold 60s
+cell 090/100 mesh·tcp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.9%  delivered 102%  ok
+  … cell 091/100 cs·tcp·100K·100ms: waiting for the host to go quiet
+  … cell 091/100 cs·tcp·100K·100ms: idle (10s)
+  … cell 091/100 cs·tcp·100K·100ms: traffic: ramp 5s + hold 60s
+cell 091/100 cs·tcp·100K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 092/100 cs·tcp·500K·2000ms: waiting for the host to go quiet
+  … cell 092/100 cs·tcp·500K·2000ms: idle (10s)
+  … cell 092/100 cs·tcp·500K·2000ms: traffic: ramp 5s + hold 60s
+cell 092/100 cs·tcp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.8%  delivered 100%  ok
+  … cell 093/100 cs·tcp·250K·100ms: waiting for the host to go quiet
+  … cell 093/100 cs·tcp·250K·100ms: idle (10s)
+  … cell 093/100 cs·tcp·250K·100ms: traffic: ramp 5s + hold 60s
+cell 093/100 cs·tcp·250K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  15.7%  delivered 100%  ok
+  … cell 094/100 mesh·udp·500K·2000ms: waiting for the host to go quiet
+  … cell 094/100 mesh·udp·500K·2000ms: idle (10s)
+  … cell 094/100 mesh·udp·500K·2000ms: traffic: ramp 5s + hold 60s
+cell 094/100 mesh·udp·500K·2000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.5%  delivered 101%  ok
+  … cell 095/100 mesh·udp·100K·250ms: waiting for the host to go quiet
+  … cell 095/100 mesh·udp·100K·250ms: traffic: ramp 5s + hold 60s
+cell 095/100 mesh·udp·100K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 100%  ok
+  … cell 096/100 mesh·tcp·1M·250ms: waiting for the host to go quiet
+  … cell 096/100 mesh·tcp·1M·250ms: traffic: ramp 5s + hold 60s
+cell 096/100 mesh·tcp·1M·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.8%  delivered 100%  ok
+  … cell 097/100 cs·tcp·50K·100ms: waiting for the host to go quiet
+  … cell 097/100 cs·tcp·50K·100ms: idle (10s)
+  … cell 097/100 cs·tcp·50K·100ms: traffic: ramp 5s + hold 60s
+cell 097/100 cs·tcp·50K·100ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 100%  ok
+  … cell 098/100 cs·udp·250K·500ms: waiting for the host to go quiet
+  … cell 098/100 cs·udp·250K·500ms: idle (10s)
+  … cell 098/100 cs·udp·250K·500ms: traffic: ramp 5s + hold 60s
+cell 098/100 cs·udp·250K·500ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.1%  delivered 101%  ok
+  … cell 099/100 mesh·tcp·100K·1000ms: waiting for the host to go quiet
+  … cell 099/100 mesh·tcp·100K·1000ms: idle (10s)
+  … cell 099/100 mesh·tcp·100K·1000ms: traffic: ramp 5s + hold 60s
+cell 099/100 mesh·tcp·100K·1000ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 101%  ok
+  … cell 100/100 mesh·udp·500K·250ms: waiting for the host to go quiet
+  … cell 100/100 mesh·udp·500K·250ms: idle (10s)
+  … cell 100/100 mesh·udp·500K·250ms: traffic: ramp 5s + hold 60s
+cell 100/100 mesh·udp·500K·250ms  nodes   109  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem  16.6%  delivered 100%  ok
+  … teardown: destroying
+  burst-matrix: succeeded: 100 of 100 cells passed
+=== 2026-10-06 12:24:38 UTC · suite finished: /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-traffic/summary.md
+=== traffic exit 0

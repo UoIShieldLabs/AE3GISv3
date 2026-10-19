@@ -1,0 +1,644 @@
+=== 2026-10-06 03:36:39 UTC · suite random on m4-macbook-air → /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-random
+  bringing the backend up in bench mode (docker compose)
+  building 2 image(s): ae3gis.local/nettools, ae3gis.local/zeek
+  not available here: ae3gis.local/malicious-client (Builds only for linux/amd64; this host is linux/arm64)
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-06 03:37:06 UTC · 01-census (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 20c78193e56e4d4f9aef7e63f5020606: m4-macbook-air · census · census of 29 cases
+  … preflight
+  … images: Building Zeek (1/1) · [1/6] FROM docker.io/library/ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+  … baseline: the host at rest (30s)
+  … workstation · kathara/base: waiting for the host to go quiet
+  … workstation · kathara/base: reference (20.0s, nothing deployed)
+  … workstation · kathara/base: settling (30.0s)
+  … workstation · kathara/base: holding idle (30s)
+workstation · kathara/base  nodes    10  deploy     1.8s  ready   0.02s  destroy    0.6s    10.3 MB/node  host mem   7.6%  ok
+  … router · kathara/frr: waiting for the host to go quiet
+  … router · kathara/frr: reference (20.0s, nothing deployed)
+  … router · kathara/frr: settling (30.0s)
+  … router · kathara/frr: holding idle (30s)
+router · kathara/frr  nodes    10  deploy     1.7s  ready   0.00s  destroy    0.6s     0.1 MB/node  host mem   7.4%  ok
+  … switch · kathara/base: waiting for the host to go quiet
+  … switch · kathara/base: reference (20.0s, nothing deployed)
+  … switch · kathara/base: settling (30.0s)
+  … switch · kathara/base: holding idle (30s)
+switch · kathara/base  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s    13.6 MB/node  host mem   7.6%  ok
+  … switch · ae3gis.local/open-vswitch: waiting for the host to go quiet
+  … switch · ae3gis.local/open-vswitch: reference (20.0s, nothing deployed)
+  … switch · ae3gis.local/open-vswitch: settling (30.0s)
+  … switch · ae3gis.local/open-vswitch: holding idle (30s)
+switch · ae3gis.local/open-vswitch  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s     7.6 MB/node  host mem   7.7%  ok
+  … firewall · kathara/frr: waiting for the host to go quiet
+  … firewall · kathara/frr: reference (20.0s, nothing deployed)
+  … firewall · kathara/frr: settling (30.0s)
+  … firewall · kathara/frr: holding idle (30s)
+firewall · kathara/frr  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s     3.7 MB/node  host mem   6.9%  ok
+  … firewall · ae3gis.local/iptables: waiting for the host to go quiet
+  … firewall · ae3gis.local/iptables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/iptables: settling (30.0s)
+  … firewall · ae3gis.local/iptables: holding idle (30s)
+firewall · ae3gis.local/iptables  nodes    10  deploy     1.4s  ready   0.00s  destroy    0.6s    12.6 MB/node  host mem   7.2%  ok
+  … firewall · ae3gis.local/nftables: waiting for the host to go quiet
+  … firewall · ae3gis.local/nftables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/nftables: settling (30.0s)
+  … firewall · ae3gis.local/nftables: holding idle (30s)
+firewall · ae3gis.local/nftables  nodes    10  deploy     1.5s  ready   0.00s  destroy    0.6s    11.0 MB/node  host mem   7.1%  ok
+  … firewall · ae3gis.local/firehol: waiting for the host to go quiet
+  … firewall · ae3gis.local/firehol: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/firehol: settling (30.0s)
+  … firewall · ae3gis.local/firehol: holding idle (30s)
+firewall · ae3gis.local/firehol  nodes    10  deploy     1.7s  ready   0.00s  destroy    0.6s    13.8 MB/node  host mem   7.2%  ok
+  … ids · ae3gis.local/suricata: waiting for the host to go quiet
+  … ids · ae3gis.local/suricata: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/suricata: settling (30.0s)
+  … ids · ae3gis.local/suricata: holding idle (30s)
+ids · ae3gis.local/suricata  nodes    10  deploy     1.5s  ready   0.03s  destroy    0.6s    40.2 MB/node  host mem   8.8%  ok
+  … ids · ae3gis.local/snort3: waiting for the host to go quiet
+  … ids · ae3gis.local/snort3: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort3: settling (30.0s)
+  … ids · ae3gis.local/snort3: holding idle (30s)
+ids · ae3gis.local/snort3  nodes    10  deploy     1.4s  ready   0.02s  destroy    0.6s     4.7 MB/node  host mem   7.4%  ok
+  … ids · ae3gis.local/snort2: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort2: settling (30.0s)
+  … ids · ae3gis.local/snort2: holding idle (30s)
+ids · ae3gis.local/snort2  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    10.2 MB/node  host mem   7.5%  ok
+ids · ae3gis.local/zeek  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Building Zeek failed: BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+  … siem · ae3gis.local/wazuh-manager: waiting for the host to go quiet
+  … siem · ae3gis.local/wazuh-manager: reference (20.0s, nothing deployed)
+  … siem · ae3gis.local/wazuh-manager: settling (30.0s)
+  … siem · ae3gis.local/wazuh-manager: holding idle (30s)
+siem · ae3gis.local/wazuh-manager  nodes    10  deploy     1.7s  ready   0.04s  destroy    2.4s   248.8 MB/node  host mem  22.9%  stopped (Docker's disk 100.0% > 90% for 3 sweeps)
+  … web-server · httpd:alpine: waiting for the host to go quiet
+  … web-server · httpd:alpine: reference (20.0s, nothing deployed)
+  … web-server · httpd:alpine: settling (30.0s)
+  … web-server · httpd:alpine: holding idle (30s)
+web-server · httpd:alpine  nodes    10  deploy     1.7s  ready   0.03s  destroy    0.7s    21.2 MB/node  host mem   7.5%  ok
+  … web-server · ae3gis.local/apache: waiting for the host to go quiet
+  … web-server · ae3gis.local/apache: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/apache: settling (30.0s)
+  … web-server · ae3gis.local/apache: holding idle (30s)
+web-server · ae3gis.local/apache  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    13.3 MB/node  host mem   7.6%  ok
+  … web-server · ae3gis.local/nginx: waiting for the host to go quiet
+  … web-server · ae3gis.local/nginx: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/nginx: deploying 10 nodes
+  … web-server · ae3gis.local/nginx: settling (30.0s)
+  … web-server · ae3gis.local/nginx: holding idle (30s)
+web-server · ae3gis.local/nginx  nodes    10  deploy     1.5s  ready   0.02s  destroy    0.6s    16.7 MB/node  host mem   7.8%  ok
+  … file-server · kathara/base: reference (20.0s, nothing deployed)
+  … file-server · kathara/base: settling (30.0s)
+  … file-server · kathara/base: holding idle (30s)
+file-server · kathara/base  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s    11.7 MB/node  host mem   7.5%  ok
+  … file-server · ae3gis.local/samba: waiting for the host to go quiet
+  … file-server · ae3gis.local/samba: reference (20.0s, nothing deployed)
+  … file-server · ae3gis.local/samba: settling (30.0s)
+  … file-server · ae3gis.local/samba: holding idle (30s)
+file-server · ae3gis.local/samba  nodes    10  deploy     1.9s  ready   0.02s  destroy    0.7s    11.7 MB/node  host mem   7.6%  ok
+  … ftp-server · ae3gis.local/vsftpd: waiting for the host to go quiet
+  … ftp-server · ae3gis.local/vsftpd: reference (20.0s, nothing deployed)
+  … ftp-server · ae3gis.local/vsftpd: deploying 10 nodes
+  … ftp-server · ae3gis.local/vsftpd: settling (30.0s)
+  … ftp-server · ae3gis.local/vsftpd: holding idle (30s)
+ftp-server · ae3gis.local/vsftpd  nodes    10  deploy     1.5s  ready   0.03s  destroy    0.6s     8.2 MB/node  host mem   7.5%  ok
+  … database-server · postgres:alpine: reference (20.0s, nothing deployed)
+  … database-server · postgres:alpine: settling (30.0s)
+  … database-server · postgres:alpine: holding idle (30s)
+database-server · postgres:alpine  nodes    10  deploy     2.1s  ready   0.02s  destroy    0.6s    24.1 MB/node  host mem   8.7%  ok
+  … dns-server · kathara/base: waiting for the host to go quiet
+  … dns-server · kathara/base: reference (20.0s, nothing deployed)
+  … dns-server · kathara/base: settling (30.0s)
+  … dns-server · kathara/base: holding idle (30s)
+dns-server · kathara/base  nodes    10  deploy     1.6s  ready   0.02s  destroy    0.6s     8.0 MB/node  host mem   7.8%  ok
+  … dhcp-server · ae3gis.local/isc-dhcp: waiting for the host to go quiet
+  … dhcp-server · ae3gis.local/isc-dhcp: reference (20.0s, nothing deployed)
+  … dhcp-server · ae3gis.local/isc-dhcp: deploying 10 nodes
+  … dhcp-server · ae3gis.local/isc-dhcp: settling (30.0s)
+  … dhcp-server · ae3gis.local/isc-dhcp: holding idle (30s)
+dhcp-server · ae3gis.local/isc-dhcp  nodes    10  deploy     1.8s  ready   0.02s  destroy    0.6s     9.4 MB/node  host mem   7.8%  ok
+  … workstation · ae3gis.local/benign-client: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/benign-client: settling (30.0s)
+  … workstation · ae3gis.local/benign-client: holding idle (30s)
+workstation · ae3gis.local/benign-client  nodes    10  deploy     1.5s  ready   0.02s  destroy    0.6s     6.2 MB/node  host mem   7.7%  ok
+  … workstation · ae3gis.local/wazuh-agent: waiting for the host to go quiet
+  … workstation · ae3gis.local/wazuh-agent: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/wazuh-agent: settling (30.0s)
+  … workstation · ae3gis.local/wazuh-agent: holding idle (30s)
+workstation · ae3gis.local/wazuh-agent  nodes    10  deploy     1.7s  ready   0.03s  destroy    0.6s    11.5 MB/node  host mem   7.7%  ok
+  … workstation · ae3gis.local/firefox: waiting for the host to go quiet
+  … workstation · ae3gis.local/firefox: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/firefox: deploying 10 nodes
+  … workstation · ae3gis.local/firefox: settling (30.0s)
+  … workstation · ae3gis.local/firefox: holding idle (30s)
+workstation · ae3gis.local/firefox  nodes    10  deploy     2.2s  ready   0.05s  destroy    0.8s   216.0 MB/node  host mem  20.2%  ok
+attacker · ae3gis.local/malicious-client  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Builds only for linux/amd64; this host is linux/arm64)
+  … plc · kathara/base: waiting for the host to go quiet
+  … plc · kathara/base: reference (20.0s, nothing deployed)
+  … plc · kathara/base: settling (30.0s)
+  … plc · kathara/base: holding idle (30s)
+plc · kathara/base  nodes    10  deploy     1.6s  ready   0.03s  destroy    0.6s     2.7 MB/node  host mem   9.4%  ok
+  … plc · ae3gis.local/openplc: waiting for the host to go quiet
+  … plc · ae3gis.local/openplc: reference (20.0s, nothing deployed)
+  … plc · ae3gis.local/openplc: checking 12 paths
+  … plc · ae3gis.local/openplc: settling (30.0s)
+  … plc · ae3gis.local/openplc: holding idle (30s)
+plc · ae3gis.local/openplc  nodes    10  deploy     2.0s  ready   0.05s  destroy    0.7s    28.9 MB/node  host mem   9.7%  ok
+  … hmi · kathara/base: reference (20.0s, nothing deployed)
+  … hmi · kathara/base: settling (30.0s)
+  … hmi · kathara/base: holding idle (30s)
+hmi · kathara/base  nodes    10  deploy     1.7s  ready   0.02s  destroy    0.6s     4.5 MB/node  host mem   8.4%  ok
+  census: succeeded: 27 of 29 cases usable
+=== 2026-10-06 04:22:08 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 24de392d405e43a98eedb001b4381878: m4-macbook-air · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+  … 100 hosts: destroying
+     100 hosts  nodes   107  deploy    14.3s  ready   4.33s  destroy    6.2s    26.7 MB/node  host mem  23.1%  ok
+  → next 200 hosts: ~93% memory projected at 528 hosts (26.7 MB/node, peak 23.1% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  … 200 hosts: settling (60.0s)
+  … 200 hosts: holding idle (30s)
+  … 200 hosts: destroying
+     200 hosts  nodes   209  deploy    36.5s  ready   1.44s  destroy   17.8s    30.5 MB/node  host mem  46.6%  ok
+  → next 350 hosts: ~93% memory projected at 450 hosts (30.5 MB/node, peak 46.6% now)
+  … 350 hosts: waiting for the host to go quiet
+  … 350 hosts: reference (20.0s, nothing deployed)
+  … 350 hosts: deploying 365 nodes
+  … 350 hosts: settling (60.0s)
+  … 350 hosts: holding idle (30s)
+  … 350 hosts: destroying
+     350 hosts  nodes   365  deploy    76.8s  ready   4.09s  destroy   53.1s    29.2 MB/node  host mem  73.5%  ok
+  → next 420 hosts: ~93% memory projected at 459 hosts (29.2 MB/node, peak 73.5% now)
+  … 420 hosts: waiting for the host to go quiet
+  … 420 hosts: reference (20.0s, nothing deployed)
+  … 420 hosts: deploying 438 nodes
+  … 420 hosts: checking 658 paths
+  … 420 hosts: settling (60.0s)
+  … 420 hosts: holding idle (30s)
+  … 420 hosts: destroying
+     420 hosts  nodes   438  deploy   110.4s  ready   5.53s  destroy   78.9s    28.0 MB/node  host mem  86.3%  ok
+  → next 440 hosts: ~93% memory projected at 459 hosts (28.0 MB/node, peak 86.3% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: checking 684 paths
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   120.1s  ready   5.68s  destroy   86.8s    27.2 MB/node  host mem  89.0%  ok
+  → next 450 hosts: ~93% memory projected at 462 hosts (27.2 MB/node, peak 89.0% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: checking 700 paths
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   139.6s  ready   7.04s  destroy  102.7s    25.8 MB/node  host mem  88.3%  ok
+  → next 470 hosts: ~93% memory projected at 481 hosts (25.8 MB/node, peak 88.3% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   155.8s  ready   8.06s  destroy  114.0s    25.3 MB/node  host mem  89.9%  ok
+  → next 480 hosts: ~93% memory projected at 490 hosts (25.3 MB/node, peak 89.9% now)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: checking 748 paths
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   167.0s  ready   8.38s  destroy  121.0s    24.1 MB/node  host mem  89.5%  ok
+  → next 490 hosts: ~93% memory projected at 503 hosts (24.1 MB/node, peak 89.5% now)
+  … 490 hosts: waiting for the host to go quiet
+  … 490 hosts: reference (20.0s, nothing deployed)
+  … 490 hosts: deploying 510 nodes
+  … 490 hosts: checking 762 paths
+  … 490 hosts: settling (60.0s)
+  … 490 hosts: holding idle (30s)
+  … 490 hosts: destroying
+     490 hosts  nodes   510  deploy   177.8s  ready   9.73s  destroy  127.8s    24.2 MB/node  host mem  90.7%  ok
+  → memory peaked at 90.7% at 490 hosts
+  random-idle-run1: succeeded: ceiling 490 hosts
+=== 2026-10-06 05:15:11 UTC · 03-random-idle-run2 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark d5c96fcbda96421a94880c02de802309: m4-macbook-air · random-idle run 2 · adaptive from 340 hosts
+  seed: 2
+  start: 340
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 340 hosts: waiting for the host to go quiet
+  … 340 hosts: reference (20.0s, nothing deployed)
+  … 340 hosts: deploying 354 nodes
+  … 340 hosts: settling (60.0s)
+  … 340 hosts: holding idle (30s)
+  … 340 hosts: destroying
+     340 hosts  nodes   354  deploy    67.8s  ready   3.41s  destroy   55.0s    27.3 MB/node  host mem  65.1%  ok
+  → next 440 hosts: ~93% memory projected at 515 hosts (27.3 MB/node, peak 65.1% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   111.5s  ready   5.45s  destroy   92.3s    24.0 MB/node  host mem  77.4%  ok
+  → next 500 hosts: ~93% memory projected at 547 hosts (24.0 MB/node, peak 77.4% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: checking 750 paths
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   151.4s  ready   8.85s  destroy  123.3s    23.0 MB/node  host mem  86.3%  ok
+  → next 530 hosts: ~93% memory projected at 546 hosts (23.0 MB/node, peak 86.3% now)
+  … 530 hosts: waiting for the host to go quiet
+  … 530 hosts: reference (20.0s, nothing deployed)
+  … 530 hosts: deploying 551 nodes
+  … 530 hosts: settling (60.0s)
+  … 530 hosts: holding idle (30s)
+  … 530 hosts: destroying
+     530 hosts  nodes   551  deploy   176.3s  ready   7.34s  destroy  139.0s    21.7 MB/node  host mem  88.2%  ok
+  → next 550 hosts: ~93% memory projected at 567 hosts (21.7 MB/node, peak 88.2% now)
+  … 550 hosts: waiting for the host to go quiet
+  … 550 hosts: reference (20.0s, nothing deployed)
+  … 550 hosts: deploying 572 nodes
+  … 550 hosts: checking 828 paths
+  … 550 hosts: settling (60.0s)
+  … 550 hosts: holding idle (30s)
+  … 550 hosts: destroying
+     550 hosts  nodes   572  deploy   198.0s  ready   9.31s  destroy  158.5s    21.1 MB/node  host mem  90.0%  ok
+  → next 560 hosts: ~93% memory projected at 574 hosts (21.1 MB/node, peak 90.0% now)
+  … 560 hosts: waiting for the host to go quiet
+  … 560 hosts: reference (20.0s, nothing deployed)
+  … 560 hosts: deploying 582 nodes
+  … 560 hosts: checking 844 paths
+  … 560 hosts: settling (60.0s)
+  … 560 hosts: holding idle (30s)
+  … 560 hosts: destroying
+     560 hosts  nodes   582  deploy   208.6s  ready  10.65s  destroy  156.7s    20.4 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 560 hosts
+  random-idle-run2: succeeded: ceiling 560 hosts
+=== 2026-10-06 06:00:20 UTC · 04-random-idle-run3 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 96ddd0a8fe7449529710cc8916a6f3bc: m4-macbook-air · random-idle run 3 · adaptive from 390 hosts
+  seed: 3
+  start: 390
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 390 hosts: waiting for the host to go quiet
+  … 390 hosts: reference (20.0s, nothing deployed)
+  … 390 hosts: deploying 405 nodes
+  … 390 hosts: checking 614 paths
+  … 390 hosts: settling (60.0s)
+  … 390 hosts: holding idle (30s)
+  … 390 hosts: destroying
+     390 hosts  nodes   405  deploy    81.7s  ready   4.30s  destroy   76.5s    28.4 MB/node  host mem  74.8%  ok
+  → next 450 hosts: ~93% memory projected at 494 hosts (28.4 MB/node, peak 74.8% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   126.8s  ready   7.36s  destroy  112.9s    28.0 MB/node  host mem  91.2%  ok
+  → memory peaked at 91.2% at 450 hosts
+  random-idle-run3: succeeded: ceiling 450 hosts
+=== 2026-10-06 06:13:55 UTC · 05-random-idle-run4 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark e0df2faffe454325974a3668986885ed: m4-macbook-air · random-idle run 4 · adaptive from 310 hosts
+  seed: 4
+  start: 310
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 310 hosts: waiting for the host to go quiet
+  … 310 hosts: reference (20.0s, nothing deployed)
+  … 310 hosts: deploying 324 nodes
+  … 310 hosts: settling (60.0s)
+  … 310 hosts: holding idle (30s)
+  … 310 hosts: destroying
+     310 hosts  nodes   324  deploy    70.0s  ready   4.12s  destroy   53.6s    30.7 MB/node  host mem  65.7%  ok
+  → next 400 hosts: ~93% memory projected at 458 hosts (30.7 MB/node, peak 65.7% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: checking 610 paths
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   127.4s  ready   6.87s  destroy   88.5s    28.7 MB/node  host mem  82.4%  ok
+  → next 440 hosts: ~93% memory projected at 460 hosts (28.7 MB/node, peak 82.4% now)
+  … 440 hosts: waiting for the host to go quiet
+  … 440 hosts: reference (20.0s, nothing deployed)
+  … 440 hosts: deploying 458 nodes
+  … 440 hosts: checking 680 paths
+  … 440 hosts: settling (60.0s)
+  … 440 hosts: holding idle (30s)
+  … 440 hosts: destroying
+     440 hosts  nodes   458  deploy   153.0s  ready   7.19s  destroy  108.6s    27.1 MB/node  host mem  87.3%  ok
+  → next 460 hosts: ~93% memory projected at 472 hosts (27.1 MB/node, peak 87.3% now)
+  … 460 hosts: waiting for the host to go quiet
+  … 460 hosts: reference (20.0s, nothing deployed)
+  … 460 hosts: deploying 480 nodes
+  … 460 hosts: checking 712 paths
+  … 460 hosts: settling (60.0s)
+  … 460 hosts: holding idle (30s)
+  … 460 hosts: destroying
+     460 hosts  nodes   480  deploy   182.8s  ready   9.19s  destroy  125.3s    26.2 MB/node  host mem  90.4%  ok
+  → memory peaked at 90.4% at 460 hosts
+  random-idle-run4: succeeded: ceiling 460 hosts
+=== 2026-10-06 06:41:47 UTC · 06-random-idle-run5 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 3569900b809141a0adcb6b3ea4cc649e: m4-macbook-air · random-idle run 5 · adaptive from 320 hosts
+  seed: 5
+  start: 320
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 320 hosts: waiting for the host to go quiet
+  … 320 hosts: reference (20.0s, nothing deployed)
+  … 320 hosts: deploying 334 nodes
+  … 320 hosts: checking 500 paths
+  … 320 hosts: settling (60.0s)
+  … 320 hosts: holding idle (30s)
+  … 320 hosts: destroying
+     320 hosts  nodes   334  deploy    80.8s  ready   3.79s  destroy   55.2s    30.7 MB/node  host mem  66.5%  ok
+  → next 400 hosts: ~93% memory projected at 457 hosts (30.7 MB/node, peak 66.5% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: checking 622 paths
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   117.0s  ready   6.50s  destroy   82.0s    27.1 MB/node  host mem  78.8%  ok
+  → next 450 hosts: ~93% memory projected at 485 hosts (27.1 MB/node, peak 78.8% now)
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: checking 698 paths
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   133.5s  ready   6.94s  destroy   95.0s    25.3 MB/node  host mem  85.3%  ok
+  → next 480 hosts: ~93% memory projected at 500 hosts (25.3 MB/node, peak 85.3% now)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: checking 746 paths
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   143.0s  ready   7.47s  destroy  108.6s    24.1 MB/node  host mem  88.1%  ok
+  → next 500 hosts: ~93% memory projected at 513 hosts (24.1 MB/node, peak 88.1% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   161.3s  ready   7.29s  destroy  116.9s    23.6 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 500 hosts
+  random-idle-run5: succeeded: ceiling 500 hosts
+=== 2026-10-06 07:14:56 UTC · 07-random-idle-run6 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 889fd7204d6642d1a42c254c6c6892c2: m4-macbook-air · random-idle run 6 · adaptive from 350 hosts
+  seed: 6
+  start: 350
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 350 hosts: waiting for the host to go quiet
+  … 350 hosts: reference (20.0s, nothing deployed)
+  … 350 hosts: deploying 365 nodes
+  … 350 hosts: settling (60.0s)
+  … 350 hosts: holding idle (30s)
+  … 350 hosts: destroying
+     350 hosts  nodes   365  deploy    69.6s  ready   3.04s  destroy   56.3s    25.6 MB/node  host mem  62.6%  ok
+  → next 470 hosts: ~93% memory projected at 548 hosts (25.6 MB/node, peak 62.6% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   126.4s  ready   6.07s  destroy  103.4s    26.0 MB/node  host mem  87.8%  ok
+  → next 490 hosts: ~93% memory projected at 503 hosts (26.0 MB/node, peak 87.8% now)
+  … 490 hosts: waiting for the host to go quiet
+  … 490 hosts: reference (20.0s, nothing deployed)
+  … 490 hosts: deploying 510 nodes
+  … 490 hosts: checking 768 paths
+  … 490 hosts: settling (60.0s)
+  … 490 hosts: holding idle (30s)
+  … 490 hosts: destroying
+     490 hosts  nodes   510  deploy   144.6s  ready   6.87s  destroy  115.0s    24.4 MB/node  host mem  90.1%  ok
+  → memory peaked at 90.1% at 490 hosts
+  random-idle-run6: succeeded: ceiling 490 hosts
+=== 2026-10-06 07:34:32 UTC · 08-random-idle-run7 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark b6ac7b7f0e2f4f27b32f7438712d7c8e: m4-macbook-air · random-idle run 7 · adaptive from 340 hosts
+  seed: 7
+  start: 340
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 340 hosts: waiting for the host to go quiet
+  … 340 hosts: reference (20.0s, nothing deployed)
+  … 340 hosts: deploying 354 nodes
+  … 340 hosts: settling (60.0s)
+  … 340 hosts: holding idle (30s)
+  … 340 hosts: destroying
+     340 hosts  nodes   354  deploy    63.2s  ready   2.97s  destroy   54.7s    20.1 MB/node  host mem  48.7%  ok
+  → next 560 hosts: ~93% memory projected at 701 hosts (20.1 MB/node, peak 48.7% now)
+  … 560 hosts: waiting for the host to go quiet
+  … 560 hosts: reference (20.0s, nothing deployed)
+  … 560 hosts: deploying 582 nodes
+  … 560 hosts: checking 866 paths
+  … 560 hosts: settling (60.0s)
+  … 560 hosts: holding idle (30s)
+  … 560 hosts: destroying
+     560 hosts  nodes   582  deploy   161.6s  ready   7.31s  destroy  141.1s    19.6 MB/node  host mem  79.5%  ok
+  → next 630 hosts: ~93% memory projected at 672 hosts (19.6 MB/node, peak 79.5% now)
+  … 630 hosts: waiting for the host to go quiet
+  … 630 hosts: reference (20.0s, nothing deployed)
+  … 630 hosts: deploying 655 nodes
+  … 630 hosts: checking 984 paths
+  … 630 hosts: settling (60.0s)
+  … 630 hosts: holding idle (30s)
+  … 630 hosts: destroying
+     630 hosts  nodes   655  deploy   206.1s  ready  10.93s  destroy  181.5s    18.5 MB/node  host mem  89.3%  ok
+  → next 650 hosts: ~93% memory projected at 661 hosts (18.5 MB/node, peak 89.3% now)
+  … 650 hosts: waiting for the host to go quiet
+  … 650 hosts: reference (20.0s, nothing deployed)
+  … 650 hosts: deploying 677 nodes
+  … 650 hosts: checking 1016 paths
+  … 650 hosts: settling (60.0s)
+  … 650 hosts: holding idle (30s)
+  … 650 hosts: destroying
+     650 hosts  nodes   677  deploy   282.8s  ready  29.24s  destroy  197.2s    16.4 MB/node  host mem  85.5%  ok
+  → next 700 hosts: ~93% memory projected at 726 hosts (16.4 MB/node, peak 85.5% now)
+  … 700 hosts: waiting for the host to go quiet
+  … 700 hosts: reference (20.0s, nothing deployed)
+  … 700 hosts: deploying 728 nodes
+  … 700 hosts: checking 1098 paths
+  … 700 hosts: settling (60.0s)
+  … 700 hosts: holding idle (30s)
+  … 700 hosts: destroying
+     700 hosts  nodes   728  deploy   276.6s  ready  32.81s  destroy  233.9s    16.3 MB/node  host mem  90.4%  ok
+  → memory peaked at 90.4% at 700 hosts
+  random-idle-run7: succeeded: ceiling 700 hosts
+=== 2026-10-06 08:20:26 UTC · 09-random-idle-run8 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 0e576ef54d464b67aa82183df5fc2bf0: m4-macbook-air · random-idle run 8 · adaptive from 480 hosts
+  seed: 8
+  start: 480
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 480 hosts: waiting for the host to go quiet
+  … 480 hosts: reference (20.0s, nothing deployed)
+  … 480 hosts: deploying 500 nodes
+  … 480 hosts: settling (60.0s)
+  … 480 hosts: holding idle (30s)
+  … 480 hosts: destroying
+     480 hosts  nodes   500  deploy   113.6s  ready   5.44s  destroy  106.7s    26.4 MB/node  host mem  84.4%  ok
+  → next 510 hosts: ~93% memory projected at 535 hosts (26.4 MB/node, peak 84.4% now)
+  … 510 hosts: waiting for the host to go quiet
+  … 510 hosts: reference (20.0s, nothing deployed)
+  … 510 hosts: deploying 531 nodes
+  … 510 hosts: settling (60.0s)
+  … 510 hosts: holding idle (30s)
+  … 510 hosts: destroying
+     510 hosts  nodes   531  deploy   153.2s  ready   7.95s  destroy  127.0s    23.7 MB/node  host mem  89.3%  ok
+  → next 530 hosts: ~93% memory projected at 536 hosts (23.7 MB/node, peak 89.3% now)
+  … 530 hosts: waiting for the host to go quiet
+  … 530 hosts: reference (20.0s, nothing deployed)
+  … 530 hosts: deploying 551 nodes
+  … 530 hosts: settling (60.0s)
+  … 530 hosts: holding idle (30s)
+  … 530 hosts: destroying
+     530 hosts  nodes   551  deploy   175.8s  ready   8.27s  destroy  137.6s    23.1 MB/node  host mem  91.2%  ok
+  → memory peaked at 91.2% at 530 hosts
+  random-idle-run8: succeeded: ceiling 530 hosts
+=== 2026-10-06 08:43:27 UTC · 10-random-idle-run9 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 2d2e33daa6a64030bd1329147e28dbc5: m4-macbook-air · random-idle run 9 · adaptive from 370 hosts
+  seed: 9
+  start: 370
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 370 hosts: waiting for the host to go quiet
+  … 370 hosts: reference (20.0s, nothing deployed)
+  … 370 hosts: deploying 385 nodes
+  … 370 hosts: settling (60.0s)
+  … 370 hosts: holding idle (30s)
+  … 370 hosts: destroying
+     370 hosts  nodes   385  deploy    74.8s  ready   3.63s  destroy   63.0s    26.5 MB/node  host mem  67.6%  ok
+  → next 470 hosts: ~93% memory projected at 529 hosts (26.5 MB/node, peak 67.6% now)
+  … 470 hosts: waiting for the host to go quiet
+  … 470 hosts: reference (20.0s, nothing deployed)
+  … 470 hosts: deploying 490 nodes
+  … 470 hosts: checking 716 paths
+  … 470 hosts: settling (60.0s)
+  … 470 hosts: holding idle (30s)
+  … 470 hosts: destroying
+     470 hosts  nodes   490  deploy   128.5s  ready   6.87s  destroy  104.3s    24.9 MB/node  host mem  85.1%  ok
+  → next 500 hosts: ~93% memory projected at 523 hosts (24.9 MB/node, peak 85.1% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   150.4s  ready   7.24s  destroy  136.6s    23.6 MB/node  host mem  88.9%  ok
+  → next 520 hosts: ~93% memory projected at 531 hosts (23.6 MB/node, peak 88.9% now)
+  … 520 hosts: waiting for the host to go quiet
+  … 520 hosts: reference (20.0s, nothing deployed)
+  … 520 hosts: deploying 541 nodes
+  … 520 hosts: checking 794 paths
+  … 520 hosts: settling (60.0s)
+  … 520 hosts: holding idle (30s)
+  … 520 hosts: destroying
+     520 hosts  nodes   541  deploy   166.6s  ready   7.58s  destroy  132.9s    22.5 MB/node  host mem  89.2%  ok
+  → next 540 hosts: ~93% memory projected at 548 hosts (22.5 MB/node, peak 89.2% now)
+  … 540 hosts: waiting for the host to go quiet
+  … 540 hosts: reference (20.0s, nothing deployed)
+  … 540 hosts: deploying 561 nodes
+  … 540 hosts: checking 828 paths
+  … 540 hosts: settling (60.0s)
+  … 540 hosts: holding idle (30s)
+  … 540 hosts: destroying
+     540 hosts  nodes   561  deploy   197.5s  ready   9.39s  destroy  146.6s    21.7 MB/node  host mem  90.3%  ok
+  → memory peaked at 90.3% at 540 hosts
+  random-idle-run9: succeeded: ceiling 540 hosts
+=== 2026-10-06 09:20:08 UTC · 11-random-idle-run10 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 284354e08b40494da2bcfcf5e627418a: m4-macbook-air · random-idle run 10 · adaptive from 370 hosts
+  seed: 10
+  start: 370
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 370 hosts: waiting for the host to go quiet
+  … 370 hosts: reference (20.0s, nothing deployed)
+  … 370 hosts: deploying 385 nodes
+  … 370 hosts: settling (60.0s)
+  … 370 hosts: holding idle (30s)
+  … 370 hosts: destroying
+     370 hosts  nodes   385  deploy    73.4s  ready   4.03s  destroy   62.0s    24.3 MB/node  host mem  62.4%  ok
+  → next 500 hosts: ~93% memory projected at 580 hosts (24.3 MB/node, peak 62.4% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  … 500 hosts: checking 776 paths
+  … 500 hosts: settling (60.0s)
+  … 500 hosts: holding idle (30s)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   134.6s  ready   7.23s  destroy  112.4s    22.4 MB/node  host mem  81.8%  ok
+  → next 550 hosts: ~93% memory projected at 585 hosts (22.4 MB/node, peak 81.8% now)
+  … 550 hosts: waiting for the host to go quiet
+  … 550 hosts: reference (20.0s, nothing deployed)
+  … 550 hosts: deploying 572 nodes
+  … 550 hosts: checking 844 paths
+  … 550 hosts: settling (60.0s)
+  … 550 hosts: holding idle (30s)
+  … 550 hosts: destroying
+     550 hosts  nodes   572  deploy   171.5s  ready   8.77s  destroy  137.4s    20.8 MB/node  host mem  87.3%  ok
+  → next 580 hosts: ~93% memory projected at 597 hosts (20.8 MB/node, peak 87.3% now)
+  … 580 hosts: waiting for the host to go quiet
+  … 580 hosts: reference (20.0s, nothing deployed)
+  … 580 hosts: deploying 602 nodes
+  … 580 hosts: settling (60.0s)
+  … 580 hosts: holding idle (30s)
+  … 580 hosts: destroying
+     580 hosts  nodes   602  deploy   188.9s  ready   8.73s  destroy  153.1s    20.1 MB/node  host mem  90.3%  ok
+  → memory peaked at 90.3% at 580 hosts
+  random-idle-run10: succeeded: ceiling 580 hosts
+=== 2026-10-06 09:49:30 UTC · suite finished: /Users/tollanberhanu/workspace/AE3GISv3/backend/benchmark-results/m4-macbook-air/2026-10-06-random/summary.md
