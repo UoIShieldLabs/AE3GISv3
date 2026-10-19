@@ -136,3 +136,29 @@ describe('project() — runtime activity', () => {
     expect(edges[0]).toMatchObject({ id: 'c-wan', source: 'sub-1', target: 'sub-2', data: { captureJobId: 'cap1' } });
   });
 });
+
+describe('project() — interface legs (multi-homing)', () => {
+  function withLeg(): TopologyData {
+    const t = fixture();
+    // h1 (in sub-1) gets an extra leg into sub-2.
+    t.sites[0].subnets[0].containers[2].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.9' }];
+    return t;
+  }
+
+  it('draws a dashed attachment edge when both ends are visible', () => {
+    const { edges } = project({ topology: withLeg(), scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true } });
+    const leg = edges.find((e) => e.id === 'leg:h1:sub-2');
+    expect(leg).toMatchObject({ source: 'h1', target: 'sub-2', selectable: false, data: { variant: 'attachment' } });
+  });
+
+  it('omits the leg edge when the device is not rendered', () => {
+    // site scope with sub-1 collapsed: h1 is not a node, so no leg edge.
+    const { edges } = project({ topology: withLeg(), scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
+  });
+
+  it('omits the leg edge at subnet scope (target subnet not visible)', () => {
+    const { edges } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
+  });
+});

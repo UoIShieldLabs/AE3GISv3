@@ -66,6 +66,16 @@ def find_site(data: Json, site_id: str) -> Json | None:
     return None
 
 
+def interfaces_of(container: Json) -> list[Json]:
+    """Extra interface legs on a container (multi-homing): ``[{subnetId, ip}]``.
+
+    These are additional subnet attachments beyond the container's home subnet
+    (which carries its ``ip``). Shape is validated in ``validation.py``.
+    """
+    legs = container.get("interfaces")
+    return _dicts(legs)
+
+
 def is_router(container: Json) -> bool:
     return catalog.role_for(str(container.get("type", ""))) == "router"
 

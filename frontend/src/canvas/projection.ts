@@ -61,7 +61,7 @@ export type DeviceNode = Node<DeviceNodeData, 'device'>;
 export type GroupNode = Node<GroupNodeData, 'group'>;
 export type CanvasNode = SiteNode | SubnetNode | DeviceNode | GroupNode;
 
-export type EdgeVariant = 'link' | 'uplink' | 'wan' | 'site';
+export type EdgeVariant = 'link' | 'uplink' | 'wan' | 'site' | 'attachment';
 
 export interface CanvasEdgeData extends Record<string, unknown> {
   variant: EdgeVariant;
@@ -390,6 +390,30 @@ class Projector {
     }
   }
 
+  /** Multi-homing: a dashed edge from a device to each extra subnet it attaches
+   *  to (an interface leg), drawn whenever both ends are visible in this scope. */
+  private legEdges() {
+    for (const site of this.input.topology.sites) {
+      for (const subnet of site.subnets) {
+        for (const c of subnet.containers) {
+          for (const leg of c.interfaces ?? []) {
+            const target = this.subnetEndpoint(leg.subnetId);
+            if (!this.visible.has(c.id) || !this.visible.has(target) || c.id === target) continue;
+            const id = `leg:${c.id}:${leg.subnetId}`;
+            this.edges.push({
+              id,
+              source: c.id,
+              target,
+              type: 'topology',
+              selectable: false,
+              data: { variant: 'attachment', kind: 'container', connectionId: id, active: false },
+            });
+          }
+        }
+      }
+    }
+  }
+
   // ── Entry ──
 
   run(): Projection {
@@ -408,6 +432,7 @@ class Projector {
       const subnet = site?.subnets.find((s) => s.id === scope.subnetId);
       if (site && subnet) this.emitLan(subnet, site.id);
     }
+    this.legEdges();
     return { nodes: this.nodes, edges: this.edges };
   }
 }

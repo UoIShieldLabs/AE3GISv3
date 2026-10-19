@@ -54,6 +54,11 @@ export interface TopologySlice {
   updateSubnet: (subnetId: string, updates: Partial<Omit<Subnet, 'id' | 'containers' | 'connections'>>) => void;
   addContainer: (input: AddContainerInput) => string | null;
   updateContainer: (containerId: string, updates: Partial<Omit<Container, 'id'>>) => void;
+  /** Attach a container to another subnet (multi-homing); the leg's IP is the
+   *  next free address in that subnet. No-op if already attached or it's home. */
+  addInterface: (containerId: string, subnetId: string) => void;
+  updateInterfaceIp: (containerId: string, subnetId: string, ip: string) => void;
+  removeInterface: (containerId: string, subnetId: string) => void;
   addConnection: (input: AddConnectionInput) => string | null;
   updateConnection: (id: string, updates: Partial<Omit<Connection, 'id'>>) => void;
   deleteNodes: (ids: string[]) => void;

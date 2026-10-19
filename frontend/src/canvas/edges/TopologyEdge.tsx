@@ -12,6 +12,7 @@ const VARIANT: Record<EdgeVariant, { className: string; width: number; dash?: st
   uplink: { className: 'stroke-fg-subtle', width: 1.5, dash: '6 4' },
   wan: { className: 'stroke-accent', width: 1.75 },
   site: { className: 'stroke-accent', width: 1.75, dash: '9 5' },
+  attachment: { className: 'stroke-warning', width: 1.5, dash: '2 3' },
 };
 
 export const TopologyEdge = memo(function TopologyEdge({ id, source, target, data, selected }: EdgeProps<CanvasEdge>) {

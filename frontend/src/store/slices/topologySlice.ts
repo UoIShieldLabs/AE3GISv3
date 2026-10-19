@@ -4,7 +4,7 @@ import { generateId } from '@/lib/ids';
 import { getNextAvailableIp } from '@/utils/validation';
 import { displayNameFor } from '@/catalog/catalog';
 import {
-  gatewayOf, hasConnection, isRouterType, locate, locateConnection, nextName, siteRouter,
+  gatewayOf, hasConnection, isRouterType, locate, locateConnection, nextName, siteRouter, usedIpsInSubnet,
 } from '@/lib/topology';
 import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
@@ -81,6 +81,25 @@ function dropNodes(top: TopologyData, ids: string[]) {
     site.subnetConnections.forEach(scrubRefs);
   }
   top.siteConnections.forEach(scrubRefs);
+
+  // Scrub multi-homing refs orphaned by the deletion: interface legs into a
+  // subnet that no longer exists, and mirror targets that are gone.
+  const liveSubnets = new Set<string>();
+  const liveContainers = new Set<string>();
+  for (const site of top.sites)
+    for (const sn of site.subnets) {
+      liveSubnets.add(sn.id);
+      for (const c of sn.containers) liveContainers.add(c.id);
+    }
+  for (const site of top.sites)
+    for (const sn of site.subnets)
+      for (const c of sn.containers) {
+        if (c.interfaces) {
+          c.interfaces = c.interfaces.filter((leg) => liveSubnets.has(leg.subnetId));
+          if (!c.interfaces.length) delete c.interfaces;
+        }
+        if (c.mirrorTo && !liveContainers.has(c.mirrorTo)) delete c.mirrorTo;
+      }
 }
 
 export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
@@ -206,6 +225,40 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       if (hit.subnet.gateway === undefined && isRouterType(hit.container.type)) hit.subnet.gateway = hit.container.ip;
       s.dirty = true;
     }, false, 'updateContainer'),
+
+  // ── Interface legs (multi-homing) ──
+  addInterface: (containerId, subnetId) =>
+    set((s) => {
+      const top = s.topology as TopologyData;
+      const c = locate(top, containerId);
+      const sub = locate(top, subnetId);
+      if (c?.kind !== 'container' || sub?.kind !== 'subnet') return;
+      if (c.subnet.id === subnetId) return; // can't leg into its own home subnet
+      const legs = c.container.interfaces ?? [];
+      if (legs.some((l) => l.subnetId === subnetId)) return; // already attached
+      const ip = getNextAvailableIp(sub.subnet.cidr, usedIpsInSubnet(top, subnetId)) ?? '';
+      c.container.interfaces = [...legs, { subnetId, ip }];
+      s.dirty = true;
+    }, false, 'addInterface'),
+
+  updateInterfaceIp: (containerId, subnetId, ip) =>
+    set((s) => {
+      const hit = locate(s.topology as TopologyData, containerId);
+      if (hit?.kind !== 'container' || !hit.container.interfaces) return;
+      const leg = hit.container.interfaces.find((l) => l.subnetId === subnetId);
+      if (!leg) return;
+      leg.ip = ip;
+      s.dirty = true;
+    }, false, 'updateInterfaceIp'),
+
+  removeInterface: (containerId, subnetId) =>
+    set((s) => {
+      const hit = locate(s.topology as TopologyData, containerId);
+      if (hit?.kind !== 'container' || !hit.container.interfaces) return;
+      hit.container.interfaces = hit.container.interfaces.filter((l) => l.subnetId !== subnetId);
+      if (!hit.container.interfaces.length) delete hit.container.interfaces;
+      s.dirty = true;
+    }, false, 'removeInterface'),
 
   // ── Connections ──
   addConnection: ({ from, to, label }) => {

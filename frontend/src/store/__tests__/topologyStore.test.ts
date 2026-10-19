@@ -233,3 +233,88 @@ describe('topology store — loading', () => {
     expect(S().topology.traffic?.flows).toBeUndefined();
   });
 });
+
+describe('topology store — interface legs (multi-homing)', () => {
+  function twoSubnets() {
+    const siteId = S().addSite({ name: 'S' });
+    const a = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const b = S().addSubnet({ siteId, name: 'B', cidr: '10.0.2.0/24', autoInfra: false })!;
+    const host = S().addContainer({ subnetId: a, type: 'workstation', ip: '10.0.1.5' })!;
+    return { siteId, a, b, host };
+  }
+
+  const leggedContainer = (id: string) => {
+    const hit = locate(S().topology, id);
+    if (hit?.kind !== 'container') throw new Error('not a container');
+    return hit.container;
+  };
+
+  it('addInterface attaches a device to another subnet with the next free IP', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    expect(leggedContainer(host).interfaces).toEqual([{ subnetId: b, ip: '10.0.2.1' }]);
+    expect(S().dirty).toBe(true);
+  });
+
+  it('addInterface ignores the home subnet and duplicates', () => {
+    const { a, b, host } = twoSubnets();
+    S().addInterface(host, a); // home subnet — rejected
+    S().addInterface(host, b);
+    S().addInterface(host, b); // duplicate — rejected
+    expect(leggedContainer(host).interfaces).toHaveLength(1);
+  });
+
+  it('updateInterfaceIp and removeInterface edit the leg', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    S().updateInterfaceIp(host, b, '10.0.2.50');
+    expect(leggedContainer(host).interfaces![0].ip).toBe('10.0.2.50');
+    S().removeInterface(host, b);
+    expect(leggedContainer(host).interfaces).toBeUndefined();
+  });
+
+  it('deleting the target subnet scrubs the orphaned leg', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    S().deleteNodes([b]);
+    expect(leggedContainer(host).interfaces).toBeUndefined();
+  });
+
+  it('deleting a mirror target clears mirrorTo', () => {
+    const { a, host } = twoSubnets();
+    const sw = S().addContainer({ subnetId: a, type: 'switch', ip: '10.0.1.2' })!;
+    S().updateContainer(sw, { mirrorTo: host });
+    expect(leggedContainer(sw).mirrorTo).toBe(host);
+    S().deleteNodes([host]);
+    expect(leggedContainer(sw).mirrorTo).toBeUndefined();
+  });
+
+  it('normalize keeps well-formed legs and drops malformed ones', () => {
+    S().loadTopology({
+      sites: [{
+        id: 's', name: 'S', location: '', subnets: [{
+          id: 'a', name: 'A', cidr: '10.0.1.0/24', containers: [{
+            id: 'h', name: 'H', type: 'workstation', ip: '10.0.1.5',
+            interfaces: [{ subnetId: 'b', ip: '10.0.2.5' }, { subnetId: 123 }, 'nope'],
+          }], connections: [],
+        }], subnetConnections: [],
+      }],
+      siteConnections: [],
+    });
+    expect(leggedContainer('h').interfaces).toEqual([{ subnetId: 'b', ip: '10.0.2.5' }]);
+  });
+
+  it('normalize drops an empty interfaces array', () => {
+    S().loadTopology({
+      sites: [{
+        id: 's', name: 'S', location: '', subnets: [{
+          id: 'a', name: 'A', cidr: '10.0.1.0/24',
+          containers: [{ id: 'h', name: 'H', type: 'workstation', ip: '10.0.1.5', interfaces: [] }],
+          connections: [],
+        }], subnetConnections: [],
+      }],
+      siteConnections: [],
+    });
+    expect('interfaces' in leggedContainer('h')).toBe(false);
+  });
+});

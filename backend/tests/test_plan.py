@@ -173,3 +173,176 @@ def test_plan_serialises_with_links_and_images():
     assert all(len(link["endpoints"]) == 2 for link in d["links"])
     assert "kathara/frr" in d["images"]
     assert _node(plan, "rA").machine_name == "ra"
+
+
+# ── Multi-homing: interface legs (interfaces[]) ───────────────────────────
+
+
+def _multihomed_topology():
+    """IT-LAN + OT-LAN in one site. ``fw`` is a dual-homed router (the gateway
+    of both subnets); ``historian`` is a dual-homed HOST (IT/OT) that must not
+    forward. Legs are declared via ``interfaces[]`` and attach to the OT switch.
+    """
+    return {
+        "name": "ics",
+        "sites": [
+            {
+                "id": "site1",
+                "name": "Lab",
+                "subnets": [
+                    {
+                        "id": "it",
+                        "name": "IT-LAN",
+                        "cidr": "10.0.5.0/24",
+                        "gateway": "10.0.5.1",
+                        "containers": [
+                            {
+                                "id": "fw",
+                                "name": "fw",
+                                "type": "firewall",
+                                "ip": "10.0.5.1",
+                                "interfaces": [{"subnetId": "ot", "ip": "10.0.3.1"}],
+                            },
+                            {"id": "itsw", "name": "it-sw", "type": "switch", "ip": "10.0.5.2"},
+                            {
+                                "id": "historian",
+                                "name": "hist",
+                                "type": "database-server",
+                                "ip": "10.0.5.20",
+                                "interfaces": [{"subnetId": "ot", "ip": "10.0.3.20"}],
+                            },
+                        ],
+                        "connections": [
+                            {"id": "c1", "from": "itsw", "to": "fw"},
+                            {"id": "c3", "from": "itsw", "to": "historian"},
+                        ],
+                    },
+                    {
+                        "id": "ot",
+                        "name": "OT-LAN",
+                        "cidr": "10.0.3.0/24",
+                        # No explicit gateway: it must resolve to fw's leg (10.0.3.1).
+                        "containers": [
+                            {"id": "otsw", "name": "ot-sw", "type": "switch", "ip": "10.0.3.2"},
+                            {"id": "plc", "name": "plc", "type": "plc", "ip": "10.0.3.50"},
+                        ],
+                        "connections": [{"id": "c4", "from": "otsw", "to": "plc"}],
+                    },
+                ],
+                "subnetConnections": [],
+            }
+        ],
+        "siteConnections": [],
+    }
+
+
+def test_dualhomed_host_addresses_every_leg_without_forwarding():
+    plan = build_lab_plan(_multihomed_topology(), "ics")
+    hist = _node(plan, "historian")
+    assert hist.role == "host"
+    ips = {(i.ip, i.prefix_len) for i in hist.interfaces}
+    assert ("10.0.5.20", "24") in ips
+    assert ("10.0.3.20", "24") in ips
+    assert any("ip addr add 10.0.5.20/24" in c for c in hist.startup)
+    assert any("ip addr add 10.0.3.20/24" in c for c in hist.startup)
+    # A host must never silently route between its legs.
+    assert not any("ip_forward" in c for c in hist.startup)
+    # Default route via the home (IT) subnet's gateway only.
+    assert any("ip route replace default via 10.0.5.1" in c for c in hist.startup)
+
+
+def test_dualhomed_router_forwards_and_addresses_both_legs():
+    plan = build_lab_plan(_multihomed_topology(), "ics")
+    fw = _node(plan, "fw")
+    assert fw.role == "router"
+    assert "sysctl -w net.ipv4.ip_forward=1" in fw.startup
+    assert any("ip addr add 10.0.5.1/24" in c for c in fw.startup)
+    assert any("ip addr add 10.0.3.1/24" in c for c in fw.startup)
+
+
+def test_leg_shares_collision_domain_with_target_subnet_switch():
+    plan = build_lab_plan(_multihomed_topology(), "ics")
+    otsw = _node(plan, "otsw")
+    sw_cds = {i.collision_domain for i in otsw.interfaces}
+    # The OT switch bridges every OT leg: plc, fw's leg and historian's leg.
+    for cid in ("plc", "fw", "historian"):
+        node = _node(plan, cid)
+        ot_leg = next(i for i in node.interfaces if i.ip and i.ip.startswith("10.0.3."))
+        assert ot_leg.collision_domain in sw_cds, f"{cid} OT leg not bridged by the switch"
+
+
+def test_subnet_gateway_resolves_through_a_leg_router():
+    # OT-LAN has no explicit gateway; it should resolve to fw's leg (10.0.3.1),
+    # so an OT host (plc) gets its default route via it.
+    plan = build_lab_plan(_multihomed_topology(), "ics")
+    plc = _node(plan, "plc")
+    assert any("ip route replace default via 10.0.3.1" in c for c in plc.startup)
+
+
+def test_leg_with_unknown_subnet_is_ignored():
+    topo = _multihomed_topology()
+    topo["sites"][0]["subnets"][0]["containers"][0]["interfaces"] = [
+        {"subnetId": "does-not-exist", "ip": "10.9.9.9"}
+    ]
+    plan = build_lab_plan(topo, "ics")  # must not raise
+    fw = _node(plan, "fw")
+    assert not any("10.9.9.9" in c for c in fw.startup)
+
+
+# ── OVS port mirroring (SPAN) ─────────────────────────────────────────────
+
+
+def _mirror_topology(switch_image="ae3gis.local/open-vswitch"):
+    return {
+        "name": "m",
+        "sites": [
+            {
+                "id": "s",
+                "name": "s",
+                "subnets": [
+                    {
+                        "id": "ot",
+                        "name": "OT",
+                        "cidr": "10.0.3.0/24",
+                        "gateway": "10.0.3.1",
+                        "containers": [
+                            {
+                                "id": "sw",
+                                "name": "sw",
+                                "type": "switch",
+                                "ip": "10.0.3.2",
+                                "image": switch_image,
+                                "mirrorTo": "ids",
+                            },
+                            {"id": "plc", "name": "plc", "type": "plc", "ip": "10.0.3.50"},
+                            {"id": "ids", "name": "ids", "type": "ids", "ip": "10.0.3.40"},
+                        ],
+                        "connections": [
+                            {"id": "a", "from": "sw", "to": "plc"},
+                            {"id": "b", "from": "sw", "to": "ids"},
+                        ],
+                    }
+                ],
+                "subnetConnections": [],
+            }
+        ],
+        "siteConnections": [],
+    }
+
+
+def test_ovs_switch_mirrors_to_the_ids_facing_port():
+    plan = build_lab_plan(_mirror_topology(), "m")
+    sw = _node(plan, "sw")
+    ids_cd = _node(plan, "ids").interfaces[0].collision_domain
+    port = next(i.name for i in sw.interfaces if i.collision_domain == ids_cd)
+    mirror = next((c for c in sw.startup if "create mirror" in c), None)
+    assert mirror is not None
+    assert f"get port {port}" in mirror
+    assert "select-all=true" in mirror
+    assert "mirrors=@m" in mirror
+
+
+def test_no_mirror_without_own_bridge_switch():
+    plan = build_lab_plan(_mirror_topology(switch_image="kathara/base"), "m")
+    sw = _node(plan, "sw")
+    assert not any("create mirror" in c for c in sw.startup)

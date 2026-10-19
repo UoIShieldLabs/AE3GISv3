@@ -127,6 +127,43 @@ export function siteRouter(site: Site): Container | undefined {
   return undefined;
 }
 
+/** IPs already used in a subnet: home container IPs plus any interface legs
+ *  (multi-homing) attached to it from elsewhere in the topology. */
+export function usedIpsInSubnet(t: TopologyData, subnetId: string): string[] {
+  const ips: string[] = [];
+  for (const site of t.sites) {
+    for (const subnet of site.subnets) {
+      const isTarget = subnet.id === subnetId;
+      for (const c of subnet.containers) {
+        if (isTarget && c.ip) ips.push(c.ip);
+        for (const leg of c.interfaces ?? []) {
+          if (leg.subnetId === subnetId && leg.ip) ips.push(leg.ip);
+        }
+      }
+    }
+  }
+  return ips;
+}
+
+/** Routers attached to a subnet — in-subnet members and routers reaching it via
+ *  an interface leg — each with the IP it holds on that subnet. Drives the
+ *  gateway picker so a multi-homed firewall can be a subnet's gateway. */
+export function routersForSubnet(t: TopologyData, subnetId: string): { id: string; name: string; ip: string }[] {
+  const out: { id: string; name: string; ip: string }[] = [];
+  for (const site of t.sites) {
+    for (const subnet of site.subnets) {
+      for (const c of subnet.containers) {
+        if (!isRouterType(c.type)) continue;
+        if (subnet.id === subnetId && c.ip) out.push({ id: c.id, name: c.name, ip: c.ip });
+        for (const leg of c.interfaces ?? []) {
+          if (leg.subnetId === subnetId && leg.ip) out.push({ id: c.id, name: c.name, ip: leg.ip });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 // ── Counts ────────────────────────────────────────────────────────────
 
 function isSubnet(x: TopologyData | Site | Subnet): x is Subnet {

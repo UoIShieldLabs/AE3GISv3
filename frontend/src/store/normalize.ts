@@ -1,7 +1,7 @@
 // Bring any topology JSON (old saves, presets, hand-written imports) up to the
 // shape the editor relies on: arrays present, every connection has an id,
 // every node has a position. Unknown fields are preserved.
-import type { Connection, Position, Site, Subnet, TopologyData } from '@/types/topology';
+import type { Connection, NetworkInterface, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { generateId } from '@/lib/ids';
 import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
@@ -91,6 +91,16 @@ export function normalizeTopology(input: unknown, report?: NormalizeReport): Top
         if (typeof c.name !== 'string') c.name = c.id;
         if (typeof c.type !== 'string') c.type = 'workstation';
         if (typeof c.ip !== 'string') c.ip = '';
+        // Multi-homing: keep only well-formed interface legs; drop an empty list.
+        if (Array.isArray(c.interfaces)) {
+          c.interfaces = c.interfaces.filter(
+            (leg): leg is NetworkInterface =>
+              isObj(leg) && typeof leg.subnetId === 'string' && typeof leg.ip === 'string',
+          );
+          if (!c.interfaces.length) delete c.interfaces;
+        } else if (c.interfaces !== undefined) {
+          delete c.interfaces;
+        }
       }
     }
   }
