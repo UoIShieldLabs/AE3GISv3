@@ -1,7 +1,8 @@
 // One refresher app-wide for GET /images. Polls every couple of seconds while
 // something is building or syncing, while the Images sheet is open, or while a
 // deploy runs (its images step may be building); otherwise it refreshes on
-// window focus and after jobs finish. Also announces builds as they end.
+// window focus and after jobs finish. Also announces builds and syncs as they
+// end, and re-fetches the catalog when a registry changed it.
 import * as api from '@/api/client';
 import { useAppStore } from '@/store';
 import { toast } from '@/ui';
@@ -13,7 +14,15 @@ let inflight: Promise<void> | null = null;
 let installed = false;
 
 function busy(report: api.ImagesReport | null): boolean {
-  return !!report && (report.images.some((i) => i.active_job) || report.sources.some((s) => s.active_job));
+  return (
+    !!report &&
+    (report.images.some((i) => i.active_job) || report.sources.some((s) => s.active_job) || (report.registries ?? []).some((r) => r.active_job))
+  );
+}
+
+/** Changes whenever a registry is added, removed or synced (by anyone). */
+function registriesKey(report: api.ImagesReport | null): string {
+  return (report?.registries ?? []).map((r) => `${r.id}@${r.synced_at ?? ''}`).join(',');
 }
 
 function announce(prev: api.ImagesReport | null, next: api.ImagesReport) {
@@ -37,6 +46,21 @@ function announce(prev: api.ImagesReport | null, next: api.ImagesReport) {
       toast.success(`Synced ${src.name}`, { description: compare ?? undefined });
     } else if (job?.status === 'failed') toast.error(`Sync of ${src.name} failed`, { description: job.error ?? undefined });
   }
+  const registries = new Map((prev.registries ?? []).map((r) => [r.id, r]));
+  for (const reg of next.registries ?? []) {
+    if (!registries.get(reg.id)?.active_job || reg.active_job) continue;
+    const job = reg.last_job;
+    if (job?.status === 'succeeded') toast.success(`Synced ${reg.namespace}`, { description: registrySummary(reg) });
+    else if (job?.status === 'failed') toast.error(`Sync of ${reg.namespace} failed`, { description: job.error ?? undefined });
+  }
+}
+
+/** "3 images loaded · 1 rejected · 2 pending" for a registry. */
+export function registrySummary(reg: api.Registry): string {
+  const parts = [`${reg.loaded?.length ?? 0} image${reg.loaded?.length === 1 ? '' : 's'} loaded`];
+  if (reg.rejected?.length) parts.push(`${reg.rejected.length} rejected`);
+  if (reg.pending?.length) parts.push(`${reg.pending.length} pending`);
+  return parts.join(' · ');
 }
 
 function schedule() {
@@ -56,7 +80,10 @@ export function refreshImages(): Promise<void> {
     try {
       const report = await api.getImages();
       announce(st.images, report);
+      const catalogChanged = !!st.images && registriesKey(st.images) !== registriesKey(report);
       useAppStore.getState().setImagesReport(report);
+      // A registry sync (here or in another browser) changed the catalog.
+      if (catalogChanged) void useAppStore.getState().refreshCatalog();
     } catch (err) {
       useAppStore.getState().setImagesReport(useAppStore.getState().images, api.errorMessage(err));
     } finally {

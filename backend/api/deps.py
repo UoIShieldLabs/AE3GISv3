@@ -13,6 +13,7 @@ from services.artifacts import ArtifactStore
 from services.images import ImageManager
 from services.jobs import JobRunner
 from services.live import LiveHub
+from services.registries import RegistryManager
 
 
 def get_settings(request: Request) -> Settings:
@@ -37,6 +38,10 @@ def get_runner(request: Request) -> JobRunner:
 
 def get_images(request: Request) -> ImageManager:
     return request.app.state.images
+
+
+def get_registries(request: Request) -> RegistryManager:
+    return request.app.state.registries
 
 
 def get_artifacts(request: Request) -> ArtifactStore:

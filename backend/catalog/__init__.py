@@ -5,6 +5,11 @@ Both the deployment engine (to pick a container image and decide how to
 configure a node) and the frontend (served via ``GET /api/v1/catalog``) consume
 this. Images are data here, never hardcoded in Python, so a new image set ships
 by editing the JSON only.
+
+Images loaded from Docker Hub registries (``services/registries``) are merged
+over the built-in catalog (``catalog/registry.py``) and installed with
+``set_registry_overlay``: every reader below then sees them. The overlay is
+process-wide, like the file cache; ``builtin_model`` ignores it.
 """
 
 from __future__ import annotations
@@ -34,8 +39,8 @@ def parse_catalog(raw: dict) -> Catalog:
 
 
 @lru_cache(maxsize=1)
-def load_model() -> Catalog:
-    """Load, validate, and cache the catalog."""
+def builtin_model() -> Catalog:
+    """Load, validate, and cache the built-in catalog (``node_types.json``)."""
     try:
         raw = json.loads(_CATALOG_PATH.read_text())
     except FileNotFoundError as exc:  # pragma: no cover - config error
@@ -45,15 +50,40 @@ def load_model() -> Catalog:
     return parse_catalog(raw)
 
 
-@lru_cache(maxsize=1)
+_overlay: Catalog | None = None
+# (model, its JSON dump): re-dumped when the model changes.
+_dumped: tuple[Catalog, dict] | None = None
+
+
+def set_registry_overlay(model: Catalog | None) -> None:
+    """Serve ``model`` (the built-in catalog merged with registries); None: built-in only."""
+    global _overlay
+    _overlay = model
+
+
+def load_model() -> Catalog:
+    """The catalog in effect: the built-in one, with any registries' images merged."""
+    return _overlay or builtin_model()
+
+
 def load_catalog() -> dict:
-    """The validated catalog as plain JSON (what the API serves)."""
-    return load_model().model_dump(mode="json")
+    """The catalog in effect as plain JSON (what the API serves)."""
+    global _dumped
+    model = load_model()
+    cached = _dumped
+    if cached is None or cached[0] is not model:
+        cached = _dumped = (model, model.model_dump(mode="json"))
+    return cached[1]
 
 
 def node_types() -> dict:
     """Return the mapping of type name -> spec."""
     return load_catalog()["types"]
+
+
+def builtin_node_types() -> dict:
+    """The built-in types only (results that must not depend on configured registries)."""
+    return builtin_model().model_dump(mode="json")["types"]
 
 
 def get_type(type_name: str) -> dict | None:

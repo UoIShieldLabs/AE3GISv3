@@ -18,4 +18,14 @@ export const createCatalogSlice: SliceCreator<CatalogSlice> = (set, get) => ({
       set({ catalogStatus: 'error' }, false, 'loadCatalog/error');
     }
   },
+
+  refreshCatalog: async () => {
+    try {
+      const catalog = await fetchCatalog();
+      applyCatalog(catalog);
+      set({ catalog, catalogStatus: 'ready' }, false, 'refreshCatalog');
+    } catch {
+      // Keep what we have; the next refresh (or reload) catches up.
+    }
+  },
 });

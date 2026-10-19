@@ -1,8 +1,16 @@
 """Benchmark metrics, stop criteria and the report."""
 
+import pytest
+
 from domain import benchmark as bm
 
-STOP = {"max_mem_pct": 90, "max_psi_mem_full": 10, "min_delivered_ratio": 0.8, "max_loss_pct": 5}
+STOP = {
+    "max_mem_pct": 90,
+    "max_psi_mem_full": 10,
+    "max_disk_pct": 90,
+    "min_delivered_ratio": 0.8,
+    "max_loss_pct": 5,
+}
 
 
 def test_watch_needs_sustained_host_thresholds_but_not_for_ooms():
@@ -14,6 +22,10 @@ def test_watch_needs_sustained_host_thresholds_but_not_for_ooms():
     assert w.check(hot, {}) is None and w.check({"mem_used_pct": 50}, {}) is None  # streak broken
     assert w.check({}, {"oom": ["h1"]}) == ("oom", "out of memory: h1")
     assert w.check({}, {"missing": ["h2"]})[0] == "node_exited"
+    w.reset()
+    full = {"disk_used_pct": 96.0}
+    assert w.check(full, {}) is None and w.check(full, {}) is None
+    assert w.check(full, {}) == ("disk", "Docker's disk 96.0% > 90% for 3 sweeps")
     lag = {"sweep_ms": 1500.0}
     for _ in range(2):
         assert w.check(lag, {}) is None
@@ -229,3 +241,101 @@ def test_next_scale_climbs_fast_then_slows_near_the_target():
     assert nxt == 110  # not 125
     nxt, _, _ = bm.next_scale(row(10, 2), a, mem_total=total, nodes_for=nodes_for, max_scale=14720)
     assert nxt == 20  # ×2 from 10 hosts, though the minimum step is 25
+
+
+def test_retry_scale_steps_down_then_bisects():
+    assert bm.retry_scale(None, 400, 0.7, 25) == 275  # a first step too big: 70% of it
+    assert bm.retry_scale(None, 30, 0.7, 25) is None  # nothing left below
+    assert bm.retry_scale(400, 700, 0.7, 25) == 550  # halfway to the best pass
+    assert bm.retry_scale(400, 425, 0.7, 25) is None  # bracketed
+    assert bm.retry_scale(None, 400, 0, 25) is None  # descend 0: no retries
+
+
+def test_next_scale_stays_below_a_failed_scale():
+    row = {"scale": 300, "marginal_mem_per_node": 10e6, "mem_pre": 1e9, "hold_mem_pct_max": 50}
+    adaptive = {"min_step": 25, "max_factor": 2.0}
+    common = {"mem_total": 16e9, "nodes_for": lambda h: h, "max_scale": 5000}
+    assert bm.next_scale(row, adaptive, **common)[0] == 600
+    nxt, code, why = bm.next_scale(row, adaptive, cap=400, **common)
+    assert (nxt, code) == (375, "next") and "below 400" in why
+    nxt, code, why = bm.next_scale({**row, "scale": 375}, adaptive, cap=400, **common)
+    assert nxt is None and code == "bracketed" and "between 375 and 400" in why
+
+
+def test_census_cases():
+    types = {
+        "router": {"images": ["kathara/frr"]},
+        "workstation": {"images": ["kathara/base", "ae3gis.local/firefox"]},
+        "hmi": {"images": ["kathara/base", "ae3gis.local/scadabr"]},
+    }
+    cases = bm.census_cases(types, {"ae3gis.local/scadabr"}, None)
+    assert cases[0] == bm.CENSUS_REFERENCE  # the reference first, once
+    assert [bm.case_label(c) for c in cases[1:]] == [
+        "router · kathara/frr",
+        "workstation · ae3gis.local/firefox",
+        "hmi · kathara/base",
+    ]
+    given = bm.census_cases(types, set(), [{"type": "router", "image": "kathara/frr"}])
+    assert given == [bm.CENSUS_REFERENCE, {"type": "router", "image": "kathara/frr"}]
+    with pytest.raises(ValueError, match="has no image"):
+        bm.census_cases(types, set(), [{"type": "router", "image": "kathara/base"}])
+    with pytest.raises(ValueError, match="Unknown"):
+        bm.census_cases(types, set(), [{"type": "toaster", "image": "x"}])
+
+
+def test_census_table_estimates_a_case_nodes_host_memory():
+    def row(case, outcome="ok", reason=None, delta=None, nodes=10, own=None):
+        t, image = case.split(" · ")
+        r = {"case": case, "case_type": t, "case_image": image, "outcome": outcome}
+        r.update(reason=reason, detail=reason, nodes=nodes, deploy_s=2.0, ready_s=0.5)
+        if delta is not None:
+            r.update(mem_pre=1e9, mem_settle=1e9 + delta)
+        r["by_image"] = {case: {"count": 5, "mem_mean": own, "cpu_mean": 0.1}} if own else {}
+        return r
+
+    ref = "workstation · kathara/base"
+    rows = [
+        row(ref, delta=100e6, own=1e6),  # 10 nodes: 10 MB each
+        row("siem · wazuh", delta=50e6 + 5 * 650e6, own=640e6),  # 5 base + 5 heavy
+        row("ids · zeek", outcome="stopped", reason="memory"),
+        row("plc · openplc", outcome="failed", reason="not_ready"),
+        row("attacker · x", outcome="skipped", reason="image_unavailable"),
+    ]
+    table = {c["case"]: c for c in bm.census_table(rows, per_image=5)}
+    assert table[ref]["host_mem_per_node"] == 10e6
+    assert table["siem · wazuh"]["host_mem_per_node"] == 650e6
+    assert table["siem · wazuh"]["cgroup_mem_per_node"] == 640e6
+    assert table["ids · zeek"]["usable"]  # only the host ran out
+    assert not table["plc · openplc"]["usable"] and not table["attacker · x"]["usable"]
+    assert table["attacker · x"]["reason"] == "image_unavailable"
+
+
+def test_matrix_cells_order_and_patterns():
+    matrix = {
+        "patterns": [
+            {"id": "cs", "kind": "clients_to_servers", "servers": ["srv-1"], "bitrate": None},
+            {"id": "mesh", "kind": "mesh", "fanout": 2},
+        ],
+        "axes": {"protocol": ["tcp", "udp"], "bitrate": ["50K", "1M"], "burst_interval_ms": [100]},
+    }
+    cells = bm.matrix_cells(matrix)  # no pattern axis: every pattern
+    assert len(cells) == 8 and cells[0]["id"] == "cs·tcp·50K·100ms"
+    assert cells[-1] == {
+        "pattern": "mesh",
+        "protocol": "udp",
+        "bitrate": "1M",
+        "burst_interval_ms": 100,
+        "id": "mesh·udp·1M·100ms",
+    }
+    a, b = bm.matrix_order(cells, 1, 1, True), bm.matrix_order(cells, 1, 2, True)
+    assert sorted(c["id"] for c in a) == sorted(c["id"] for c in cells) and a != b
+    assert a == bm.matrix_order(cells, 1, 1, True) and bm.matrix_order(cells, 1, 1, False) == cells
+    pattern = bm.matrix_pattern(matrix, cells[1])
+    assert pattern == {
+        "id": "cs",
+        "kind": "clients_to_servers",
+        "servers": ["srv-1"],
+        "protocol": "tcp",
+        "bitrate": "1M",
+        "burst_interval_ms": 100,
+    }

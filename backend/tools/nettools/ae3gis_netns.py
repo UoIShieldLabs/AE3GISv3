@@ -21,10 +21,19 @@ spec is a JSON file (``--spec``):
 
 Servers start first; they are ready when their port shows up as LISTEN in
 ``/proc/<pid>/net/tcp`` or ``tcp6`` (dual-stack listeners only appear in the
-latter). Clients then start, spread over ``ramp_s``; a client that fails
-within its first seconds is restarted up to ``retries`` times. SIGINT/SIGTERM:
-clients get SIGINT (iperf3 then prints its end), servers follow, stragglers are
-killed after ``grace_s``.
+latter). Clients then start, spread over ``ramp_s`` (client i at i/n of it;
+behind schedule, at once); a client that fails within its first seconds is
+restarted up to ``retries`` times. Once every client has been started,
+``clients_started`` says so: a caller measuring the run starts its window
+there, not at a fixed time after the request (thousands of processes take a
+while to start). SIGINT/SIGTERM: clients get SIGINT (iperf3 then prints its
+end), servers follow, stragglers are killed after ``grace_s``.
+
+Run processes start through ``nsenter --net=/proc/<pid>/ns/net`` (BusyBox:
+``setns``, then ``exec``), which lets Python spawn them with ``posix_spawn``:
+about 2000 a second, against about 40 a second for a fork that runs ``setns``
+in Python before ``exec``. Probes keep the latter (the benchmarks' "network
+ready" times were measured with it).
 
 ``probe``: ping each ``target`` from each node until it answers or
 ``timeout_s`` passes (the "network ready" check)::
@@ -34,8 +43,9 @@ killed after ``grace_s``.
 
 Events (one JSON object per line): ``started`` {p, t, attempt}, ``out`` / ``err``
 {p, line}, ``exit`` {p, code, t}, ``retry`` {p, attempt}, ``listening`` {p},
-``servers_ready`` {n, failed}, ``probe`` {node, target, ok, t, attempts},
-``error`` {code, message}, ``done`` {...}.
+``servers_ready`` {n, failed}, ``clients_started`` {n, failed, never_started,
+t}, ``probe`` {node, target, ok, t, attempts}, ``error`` {code, message},
+``done`` {...}.
 """
 
 from __future__ import annotations
@@ -48,6 +58,7 @@ import os
 import signal
 import sys
 import time
+from collections.abc import Awaitable, Callable
 
 PROC = "/proc"
 RETRY_WINDOW_S = 10.0
@@ -94,6 +105,19 @@ async def spawn_in(pid: int, argv: list[str], **kwargs) -> asyncio.subprocess.Pr
         os.close(fd)
 
 
+async def spawn_nsenter(pid: int, argv: list[str], **kwargs) -> asyncio.subprocess.Process:
+    """Start ``argv`` in the network namespace of ``pid`` through ``nsenter``,
+    which execs it in place (same PID). No ``preexec_fn`` and no new session,
+    so Python can use ``posix_spawn``; ``close_fds`` is moot as Python opens
+    every descriptor close-on-exec."""
+    return await asyncio.create_subprocess_exec(
+        "nsenter", f"--net={PROC}/{pid}/ns/net", *argv, close_fds=False, **kwargs
+    )
+
+
+Spawner = Callable[..., Awaitable[asyncio.subprocess.Process]]
+
+
 class Proc:
     def __init__(self, spec: dict) -> None:
         self.id: str = spec["id"]
@@ -106,6 +130,7 @@ class Proc:
         self.attempt = 0
         self.code: int | None = None
         self.finished = asyncio.Event()
+        self.spawned = asyncio.Event()  # its first start was attempted
 
     @property
     def running(self) -> bool:
@@ -128,13 +153,13 @@ async def _pipe(proc: Proc, stream: asyncio.StreamReader, kind: str) -> None:
         emit({"k": kind, "p": proc.id, "line": line.decode("utf-8", "replace").rstrip("\n")})
 
 
-async def supervise(proc: Proc, stop: asyncio.Event) -> None:
+async def supervise(proc: Proc, stop: asyncio.Event, spawn: Spawner = spawn_in) -> None:
     """Run ``proc`` to completion, restarting an early failure if allowed."""
     while True:
         proc.attempt += 1
         started = time.monotonic()
         try:
-            proc.process = await spawn_in(
+            proc.process = await spawn(
                 proc.pid,
                 proc.argv,
                 stdin=asyncio.subprocess.DEVNULL,
@@ -146,9 +171,11 @@ async def supervise(proc: Proc, stop: asyncio.Event) -> None:
             emit({"k": "err", "p": proc.id, "line": f"cannot start: {exc}"})
             proc.code = -2
             emit({"k": "exit", "p": proc.id, "code": proc.code, "t": round(time.time(), 3)})
+            proc.spawned.set()
             proc.finished.set()
             return
         emit({"k": "started", "p": proc.id, "t": round(time.time(), 3), "attempt": proc.attempt})
+        proc.spawned.set()
         await asyncio.gather(
             _pipe(proc, proc.process.stdout, "out"), _pipe(proc, proc.process.stderr, "err")
         )
@@ -177,24 +204,33 @@ async def _wait(procs: list[Proc], timeout: float) -> list[Proc]:
     return [p for p in procs if not p.finished.is_set()]
 
 
-async def self_test(pid: int) -> str | None:
+async def self_test(pid: int, spawn: Spawner = spawn_in) -> str | None:
     """Why this container cannot enter node namespaces, or None if it can."""
     try:
-        p = await spawn_in(pid, ["true"])
+        p = await spawn(pid, ["true"])
         await p.wait()
         return None if p.returncode == 0 else f"exit {p.returncode}"
     except Exception as exc:  # PermissionError surfaces as SubprocessError
         return f"{type(exc).__name__}: {exc}"
 
 
-async def run(spec: dict, stop: asyncio.Event) -> int:
+async def pick_spawner(pid: int) -> tuple[Spawner | None, str | None]:
+    """``nsenter`` if it can enter ``pid``'s namespace, else ``setns`` in a
+    fork; (None, why) if neither can."""
+    if await self_test(pid, spawn_nsenter) is None:
+        return spawn_nsenter, None
+    problem = await self_test(pid, spawn_in)
+    return (spawn_in, None) if problem is None else (None, problem)
+
+
+async def run(spec: dict, stop: asyncio.Event, spawn: Spawner | None = None) -> int:
     procs = [Proc(p) for p in spec.get("procs", [])]
     servers = [p for p in procs if p.role == "server"]
     clients = [p for p in procs if p.role != "server"]
     grace = float(spec.get("grace_s", 10))
-    if procs:
-        problem = await self_test(procs[0].pid)
-        if problem:
+    if procs and spawn is None:
+        spawn, problem = await pick_spawner(procs[0].pid)
+        if spawn is None:
             emit(
                 {
                     "k": "error",
@@ -206,7 +242,9 @@ async def run(spec: dict, stop: asyncio.Event) -> int:
                 }
             )
             return 3
-    tasks = [asyncio.ensure_future(supervise(p, stop)) for p in servers]
+        emit({"k": "spawner", "name": "nsenter" if spawn is spawn_nsenter else "setns"})
+    spawn = spawn or spawn_nsenter
+    tasks = [asyncio.ensure_future(supervise(p, stop, spawn)) for p in servers]
 
     # Servers first, each ready once its port is listening.
     deadline = time.monotonic() + float(spec.get("ready_timeout_s", 10))
@@ -223,19 +261,41 @@ async def run(spec: dict, stop: asyncio.Event) -> int:
     failed = [p.id for p in servers if p.port and (p.finished.is_set() or p in waiting)]
     emit({"k": "servers_ready", "n": len(servers) - len(failed), "failed": failed})
 
-    # Then clients, spread over the ramp.
+    # Then clients, spread over the ramp: client i at i/n of it, or at once
+    # when behind (starting thousands takes a while).
     ramp = float(spec.get("ramp_s", 0))
     started: list[Proc] = []
+    t0 = time.monotonic()
     for i, p in enumerate(clients):
         if stop.is_set():
             break
-        if ramp and i:
+        due = t0 + ramp * i / len(clients) - time.monotonic()
+        if due > 0:
             with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(stop.wait(), timeout=ramp / len(clients))
+                await asyncio.wait_for(stop.wait(), timeout=due)
             if stop.is_set():
                 break
-        tasks.append(asyncio.ensure_future(supervise(p, stop)))
+        else:
+            await asyncio.sleep(0)  # let the ones already scheduled start
+        tasks.append(asyncio.ensure_future(supervise(p, stop, spawn)))
         started.append(p)
+
+    # Every client started (or failed to): from here the run is at full load.
+    pending = asyncio.ensure_future(asyncio.gather(*(p.spawned.wait() for p in started)))
+    stopper = asyncio.ensure_future(stop.wait())
+    await asyncio.wait({pending, stopper}, return_when=asyncio.FIRST_COMPLETED)
+    for f in (pending, stopper):
+        f.cancel()
+    unspawned = [p.id for p in started if p.spawned.is_set() and p.process is None]
+    emit(
+        {
+            "k": "clients_started",
+            "n": sum(1 for p in started if p.process is not None),
+            "failed": unspawned,
+            "never_started": [p.id for p in clients if not p.spawned.is_set()],
+            "t": round(time.time(), 3),
+        }
+    )
 
     # Until every client is done, or a stop.
     stopper = asyncio.ensure_future(stop.wait())

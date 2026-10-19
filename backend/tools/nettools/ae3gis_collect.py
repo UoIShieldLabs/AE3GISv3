@@ -6,6 +6,7 @@ with the host's cgroup tree mounted read-only (``--root``). Each sweep reads,
 for the host (on Docker Desktop: its Linux VM) and every Docker container:
 
 - host: ``/proc/stat`` CPU ticks, ``/proc/meminfo``, load, PSI stall totals,
+  Docker's disk (statvfs of this container's root: [total, available]),
   process count; per-name totals for Docker's own processes (``infra``)
 - containers: cgroup v2 CPU usage, memory, pids and OOM kills, and the
   interface counters of the container's network namespace (read through
@@ -182,7 +183,21 @@ def read_host(proc: str) -> dict:
         text = _read(f"{proc}/pressure/{res}")
         if text:
             host["psi"][res] = parse_psi(text)
+    disk = read_disk("/")
+    if disk:
+        host["disk"] = disk
     return host
+
+
+def read_disk(path: str) -> list[int] | None:
+    """[total, available] bytes of the filesystem holding ``path``. This
+    container's root lives in Docker's data root, so "/" is Docker's disk
+    (on Docker Desktop: the VM's), where every node's writable layer goes."""
+    try:
+        st = os.statvfs(path)
+    except OSError:
+        return None
+    return [st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize]
 
 
 def read_infra(proc: str) -> tuple[dict[str, list[int]], int]:

@@ -172,7 +172,7 @@ export interface paths {
         };
         /**
          * List Images
-         * @description Host build support, image sources, and the status of each image.
+         * @description Host build support, image sources and registries, and the status of each image.
          *
          *     Without ``topology_id``: every image the catalog describes.
          */
@@ -431,6 +431,70 @@ export interface paths {
          * @description Create a new topology from a preset template.
          */
         post: operations["load_preset_api_v1_presets__preset_id__load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Registries
+         * @description Every registry, with what its last sync loaded, rejected and skipped.
+         */
+        get: operations["list_registries_api_v1_registries_get"];
+        put?: never;
+        /**
+         * Add Registry
+         * @description Add a Docker Hub namespace (by URL or name) and start its first sync.
+         */
+        post: operations["add_registry_api_v1_registries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries/{registry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Registry
+         * @description Remove a registry: its images and types leave the catalog.
+         */
+        delete: operations["remove_registry_api_v1_registries__registry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/registries/{registry_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Registry
+         * @description Re-read the namespace (a sync already running returns its job).
+         */
+        post: operations["sync_registry_api_v1_registries__registry_id__sync_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1024,7 +1088,8 @@ export interface components {
          *     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
          *     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
          *     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
-         *     highest passing scale is then run ``confirm`` more times.
+         *     highest passing scale is then run ``confirm`` more times. A step that fails
+         *     on a host limit is retried lower (``descend``).
          */
         BenchmarkAdaptive: {
             /**
@@ -1037,6 +1102,11 @@ export interface components {
              * @default 2
              */
             confirm: number;
+            /**
+             * Descend
+             * @default 0.7
+             */
+            descend: number;
             /**
              * Max Factor
              * @default 2
@@ -1065,6 +1135,67 @@ export interface components {
              */
             target_mem_pct: number;
         };
+        /**
+         * BenchmarkCensus
+         * @description One step per node image: ``per_image`` nodes of a type · image as the
+         *     client hosts of a small generated campus (base router, switches and one
+         *     server around them), deployed, checked and measured alone. ``cases``
+         *     defaults to every catalog type's non-hidden images; workstation ·
+         *     kathara/base always runs first, as the reference. Failures don't stop it.
+         */
+        BenchmarkCensus: {
+            /** Cases */
+            cases?: components["schemas"]["CensusCase"][] | null;
+            /**
+             * Per Image
+             * @default 5
+             */
+            per_image: number;
+        };
+        /**
+         * BenchmarkMatrix
+         * @description Traffic cells on one deployment: every combination of the ``axes``
+         *     values (``pattern``: ids of ``patterns``, default all of them; the others
+         *     override the pattern's field) runs in turn for ``hold_s``, in a seeded
+         *     shuffled order unless ``shuffle`` is off, after a quiet ``gap_s``.
+         */
+        BenchmarkMatrix: {
+            /** Axes */
+            axes?: {
+                [key: string]: unknown[];
+            };
+            /** Cells */
+            cells?: string[] | null;
+            /**
+             * Gap S
+             * @default 10
+             */
+            gap_s: number;
+            /** Grid */
+            grid?: string[] | null;
+            /**
+             * Interval S
+             * @default 10
+             */
+            interval_s: number;
+            /** Patterns */
+            patterns: components["schemas"]["MatrixPattern"][];
+            /**
+             * Ramp S
+             * @default 5
+             */
+            ramp_s: number;
+            /**
+             * Seed
+             * @default 0
+             */
+            seed: number;
+            /**
+             * Shuffle
+             * @default true
+             */
+            shuffle: boolean;
+        };
         /** BenchmarkMonitor */
         BenchmarkMonitor: {
             /**
@@ -1080,6 +1211,8 @@ export interface components {
             /** Id */
             id: string;
             job: components["schemas"]["JobOut"];
+            /** Kind */
+            kind: string;
             /** Label */
             label: string;
             /** Live */
@@ -1105,6 +1238,7 @@ export interface components {
              * @default false
              */
             allow_busy_host: boolean;
+            census?: components["schemas"]["BenchmarkCensus"] | null;
             /**
              * Cooldown S
              * @default 20
@@ -1121,10 +1255,18 @@ export interface components {
              */
             keep_last: boolean;
             /**
+             * Keep Samples
+             * @default false
+             */
+            keep_samples: boolean;
+            /** Kind */
+            kind?: ("sweep" | "adaptive" | "census" | "matrix") | null;
+            /**
              * Label
              * @default
              */
             label: string;
+            matrix?: components["schemas"]["BenchmarkMatrix"] | null;
             monitor?: components["schemas"]["BenchmarkMonitor"];
             /**
              * Notes
@@ -1146,6 +1288,11 @@ export interface components {
              * @default 1
              */
             repetitions: number;
+            /**
+             * Rest S
+             * @default 0
+             */
+            rest_s: number;
             /** Scale */
             scale?: number[];
             /**
@@ -1167,6 +1314,11 @@ export interface components {
              * @default 1800
              */
             deploy_timeout_s: number;
+            /**
+             * Max Disk Pct
+             * @default 90
+             */
+            max_disk_pct: number | null;
             /**
              * Max Loss Pct
              * @default 5
@@ -1413,6 +1565,13 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** CensusCase */
+        CensusCase: {
+            /** Image */
+            image: string;
+            /** Type */
+            type: string;
+        };
         /** ContextOut */
         ContextOut: {
             /** Events */
@@ -1563,6 +1722,7 @@ export interface components {
              * @default
              */
             name: string;
+            random?: components["schemas"]["RandomPools"] | null;
             /**
              * Router Type
              * @default router
@@ -1619,6 +1779,7 @@ export interface components {
              * @default 48
              */
             hosts_per_switch: number;
+            random?: components["schemas"]["RandomPools"] | null;
             /**
              * Router Type
              * @default router
@@ -1776,6 +1937,8 @@ export interface components {
             host: components["schemas"]["HostBuildOut"];
             /** Images */
             images: components["schemas"]["ImageStatusOut"][];
+            /** Registries */
+            registries?: components["schemas"]["RegistryOut"][];
             /** Sources */
             sources: components["schemas"]["SourceOut"][];
         };
@@ -1814,6 +1977,8 @@ export interface components {
         Iperf3Flow: {
             /** Bitrate */
             bitrate?: string | null;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
             /** Client */
             client: string;
             /**
@@ -1991,6 +2156,64 @@ export interface components {
             kind: "link";
         };
         /**
+         * MatrixPattern
+         * @description A traffic matrix's pattern: its axes may give the bitrate (and burst).
+         */
+        MatrixPattern: {
+            /** Bitrate */
+            bitrate?: string | null;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
+            /** Clients */
+            clients?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Direction
+             * @default forward
+             * @enum {string}
+             */
+            direction: "forward" | "reverse" | "bidir";
+            /**
+             * Each
+             * @default one
+             * @enum {string}
+             */
+            each: "one" | "all";
+            /**
+             * Fanout
+             * @default 1
+             */
+            fanout: number;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "clients_to_servers" | "mesh";
+            /** Length */
+            length?: number | null;
+            /** Nodes */
+            nodes?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+            /**
+             * Omit S
+             * @default 0
+             */
+            omit_s: number;
+            /**
+             * Parallel
+             * @default 1
+             */
+            parallel: number;
+            /**
+             * Protocol
+             * @default tcp
+             * @enum {string}
+             */
+            protocol: "tcp" | "udp";
+            /** Servers */
+            servers?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+        };
+        /**
          * MixEntry
          * @description A share of the hosts (or switches): ``weight`` relative to the others.
          */
@@ -2123,6 +2346,8 @@ export interface components {
             images?: string[];
             /** Label */
             label: string;
+            /** Origin */
+            origin?: string | null;
             /** Purduelevel */
             purdueLevel?: number | null;
             /**
@@ -2201,6 +2426,16 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * PoolEntry
+         * @description A node type and the images it may run (each drawn with equal odds).
+         */
+        PoolEntry: {
+            /** Images */
+            images: string[];
+            /** Type */
+            type: string;
+        };
         /** PresetList */
         PresetList: {
             /** Presets */
@@ -2235,12 +2470,102 @@ export interface components {
             /** Topology Id */
             topology_id?: string | null;
         };
+        /**
+         * RandomPools
+         * @description Random topologies: each node draws a pool entry with equal odds, then
+         *     one of its images (see domain/generator).
+         */
+        RandomPools: {
+            /** Hosts */
+            hosts: components["schemas"]["PoolEntry"][];
+            /** Routers */
+            routers?: components["schemas"]["PoolEntry"][] | null;
+            /** Switches */
+            switches?: components["schemas"]["PoolEntry"][] | null;
+        };
         /** ReconcileResult */
         ReconcileResult: {
             /** Orphans */
             orphans: number;
             /** Reset */
             reset: number;
+        };
+        /** RegistryCreate */
+        RegistryCreate: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * RegistryImageOut
+         * @description An image a registry contributes to the catalog.
+         */
+        RegistryImageOut: {
+            /** Name */
+            name: string;
+            /** New Type */
+            new_type: boolean;
+            /** Platforms */
+            platforms?: string[];
+            /** Ref */
+            ref: string;
+            /** Repo */
+            repo: string;
+            /** Tag */
+            tag: string;
+            /** Type */
+            type: string;
+        };
+        /** RegistryOut */
+        RegistryOut: {
+            active_job?: components["schemas"]["JobOut"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Hub Url */
+            hub_url: string;
+            /** Id */
+            id: string;
+            last_job?: components["schemas"]["JobOut"] | null;
+            /** Loaded */
+            loaded?: components["schemas"]["RegistryImageOut"][];
+            /** Namespace */
+            namespace: string;
+            /** Pending */
+            pending?: string[];
+            /** Pulls Remaining */
+            pulls_remaining?: number | null;
+            /** Rejected */
+            rejected?: components["schemas"]["RegistryRejectedOut"][];
+            /**
+             * Repositories
+             * @default 0
+             */
+            repositories: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Synced At */
+            synced_at?: string | null;
+            /** Url */
+            url: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /**
+         * RegistryRejectedOut
+         * @description A repo marked for AE3GIS whose image does not follow the standard.
+         */
+        RegistryRejectedOut: {
+            /** Reasons */
+            reasons: string[];
+            /** Repo */
+            repo: string;
+            /** Tag */
+            tag: string;
         };
         /**
          * RegistrySource
@@ -2252,6 +2577,8 @@ export interface components {
              * @enum {string}
              */
             kind: "registry";
+            /** Registry */
+            registry?: string | null;
         };
         /** RuntimeOut */
         RuntimeOut: {
@@ -2402,6 +2729,8 @@ export interface components {
         TrafficPattern: {
             /** Bitrate */
             bitrate: string;
+            /** Burst Interval Ms */
+            burst_interval_ms?: number | null;
             /** Clients */
             clients?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
             /**
@@ -3327,6 +3656,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_registries_api_v1_registries_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_registry_api_v1_registries_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_registry_api_v1_registries__registry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                registry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_registry_api_v1_registries__registry_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                registry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobOut"];
                 };
             };
             /** @description Validation Error */

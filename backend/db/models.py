@@ -7,7 +7,7 @@ content change and backs optimistic concurrency on PUT.
 
 Jobs record every long-running operation with ordered steps. A job's
 ``subject`` is what it serialises on (``topology:<id>``, ``image:<ref>``,
-``source:<name>``, ``capture:…``, ``traffic:<id>``); ``topology_id`` is set
+``source:<name>``, ``registry:<id>``, ``capture:…``, ``traffic:<id>``); ``topology_id`` is set
 for jobs that belong to a topology. Events are
 an append-only log per topology that the UI, reconcile, and a future agent can
 read.
@@ -32,7 +32,16 @@ def new_id() -> str:
 
 
 TOPOLOGY_STATUSES = ("idle", "deploying", "deployed", "destroying", "error")
-JOB_KINDS = ("deploy", "destroy", "purge", "build", "sync_source", "capture", "traffic")
+JOB_KINDS = (
+    "deploy",
+    "destroy",
+    "purge",
+    "build",
+    "sync_source",
+    "sync_registry",
+    "capture",
+    "traffic",
+)
 JOB_STATUSES = ("queued", "running", "succeeded", "failed", "cancelled")
 
 
@@ -92,3 +101,23 @@ class Event(Base):
     type = Column(String, nullable=False)  # e.g. job.step, deploy.finished, reconcile.stale
     message = Column(Text, nullable=False)
     data = Column(JSON, nullable=True)
+
+
+class Registry(Base):
+    """A Docker Hub namespace whose standard images join the catalog.
+
+    ``snapshot`` is what its last successful sync saw (see
+    ``catalog.registry.Snapshot``); the catalog is merged from it at startup and
+    after every change, without touching the network.
+    """
+
+    __tablename__ = "registries"
+
+    id = Column(String, primary_key=True, default=new_id)
+    kind = Column(String, default="dockerhub", nullable=False)
+    namespace = Column(String, nullable=False, unique=True)
+    # What the user entered (e.g. https://hub.docker.com/u/<namespace>).
+    url = Column(String, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    synced_at = Column(DateTime, nullable=True)
+    snapshot = Column(JSON, nullable=True)

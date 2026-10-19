@@ -40,7 +40,13 @@ export function ImagePicker({ type, value, onChange, id }: ImagePickerProps) {
     const opts: ComboboxOption[] = variants.map((ref) => {
       const st = status(ref);
       const spec = imageSpecFor(ref);
-      const tags = [ref === def ? 'default' : null, spec?.stability === 'experimental' ? 'experimental' : null, st ? statusLabel(st).toLowerCase() : null].filter(Boolean);
+      const origin = spec?.source?.kind === 'registry' ? spec.source.registry : null;
+      const tags = [
+        ref === def ? 'default' : null,
+        origin ? `from ${origin}` : null,
+        spec?.stability === 'experimental' ? 'experimental' : null,
+        st ? statusLabel(st).toLowerCase() : null,
+      ].filter(Boolean);
       return {
         value: ref,
         label: imageNameFor(ref),

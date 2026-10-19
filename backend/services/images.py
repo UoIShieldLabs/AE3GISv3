@@ -51,6 +51,17 @@ _SUPPORT_TTL_S = 30.0
 _RELAY_INTERVAL_S = 1.0
 
 
+def runs_on(host: str, platforms: list[str]) -> bool:
+    """Whether an image published for ``platforms`` runs natively on ``host``
+    ("linux/arm64" matches "linux/arm64/v8")."""
+    return any(p == host or p.startswith(host + "/") for p in platforms)
+
+
+def pick_platform(platforms: list[str]) -> str:
+    """The platform to pull an image the host can only emulate: amd64 if published."""
+    return "linux/amd64" if "linux/amd64" in platforms else platforms[0]
+
+
 def image_subject(ref: str) -> str:
     return f"image:{ref}"
 
@@ -426,9 +437,32 @@ class ImageManager:
             runner.patch_step(job_id, step, jobs=[j.id for j in builds])
             runner.log(job_id, "Building " + ", ".join(names[r] for r in to_build))
 
+        host = (await self.support()).platform
+        foreign = {
+            r["ref"]: pick_platform(r["platforms"])
+            for r in rows
+            if r["kind"] == "registry"
+            and r["platforms"]
+            and "unknown" not in host
+            and not runs_on(host, r["platforms"])
+        }
         for i, image in enumerate(to_pull, 1):
             runner.progress(job_id, step, f"Pulling {image} ({i}/{len(to_pull)})")
-            await self.engine.pull_image(image, lambda m, jid=job_id: runner.progress(jid, step, m))
+            await self.engine.pull_image(
+                image,
+                lambda m, jid=job_id: runner.progress(jid, step, m),
+                platform=foreign.get(image),
+            )
+        if foreign:
+            listed = ", ".join(f"{names[r]} ({p})" for r, p in foreign.items())
+            runner.event(
+                job_id,
+                "deploy.images_emulated",
+                f"{len(foreign)} image(s) are not published for {host} and run emulated "
+                f"(slower): {listed}",
+                level="warning",
+                data={"refs": list(foreign), "host": host},
+            )
 
         for i, build in enumerate(builds, 1):
             ref = str((build.params or {}).get("ref", ""))

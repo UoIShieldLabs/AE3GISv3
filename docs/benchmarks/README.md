@@ -8,47 +8,101 @@ alone or together:
 |---|---|---|
 | **Monitor** | Records CPU, memory and network of chosen nodes, the host (on Docker Desktop: its Linux VM) and Docker's own processes, every N seconds | Dock tab (⌘K → *Start monitor*, or right-click a node) · `POST /topologies/{id}/monitors` |
 | **Traffic** | Generates iperf3 load: picked flows, clients → servers, or a mesh; hundreds of flows from one driver container | Dock tab (⌘K → *New traffic run*) · `POST /topologies/{id}/traffic/runs` |
-| **Benchmark** | Sweeps generated topologies of growing size (deploy → check the network → settle → load → destroy), measuring each step, until the host stops coping | Headless: `backend/scripts/bench.py` · results on the Library page (*Benchmarks*) |
+| **Benchmark** | Generated topologies deployed, checked, loaded and measured step by step: sweeps of growing size, climbs to the host's limit, image censuses, traffic matrices | Headless: `./bench.sh` (a suite per host) or `backend/scripts/bench.py` (one spec) · results on the Library page (*Benchmarks*) |
 
-This page is about benchmarks: how to run one, what the numbers mean, and how
-to get numbers you can trust and compare between machines.
+This page is about benchmarks: how to run them on a machine, what the numbers
+mean, and how to get numbers you can trust and compare between machines. To
+run the cross-machine suites on a new machine, follow the checklist in
+[RUNNING.md](RUNNING.md).
 
-## Run a benchmark
+## Run the suites on a host
 
-1. **Start AE3GIS without auto-reload** (a reload stops a running benchmark),
-   and name the machine:
+A **suite** (`backend/benchmarks/suites/`) is a list of specs run one after
+the other. The same suites run on every machine, so their results compare:
 
-   ```bash
-   export AE3GIS_HOST_LABEL=my-laptop
-   export AE3GIS_GIT_COMMIT=$(git rev-parse HEAD)
-   docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d --build
-   ```
+| Suite | Runs | Answers |
+|---|---|---|
+| `baseline` | `baseline/idle-sweep`, `clients-servers-sweep`, `mesh-sweep` (3 repetitions each) | memory per node, deploy/destroy time, how many idle nodes fit; when 1 Mb/s per host stops getting through (TCP to two servers, UDP mesh) |
+| `realistic` | `realistic/realistic-idle-sweep` | how many nodes of a chosen mixed campus fit (a climb to over 90% memory) |
+| `random` | `random/image-census`, then 10 × `random/random-idle` | which images run here and what each costs; how many nodes of a random mix of every type fit, and how much that varies with the mix |
+| `traffic` | `traffic/burst-limits` (a limit search) | for each of 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts it comfortably supports and where it starts to fail, 50 hosts apart |
+| `full` | all of the above | two days or more on a 16 GB Docker Desktop VM |
 
-2. **Pick a spec** from `backend/benchmarks/specs/` (or write one):
+From the repository root:
 
-   | Spec | Load | Answers |
-   |---|---|---|
-   | `idle-sweep.json` | none | memory per node, deploy/destroy time, how many idle nodes fit |
-   | `client-server-sweep.json` | each host → one of two servers, 1 Mb/s TCP | the same under many-to-few traffic, and whether it still gets through |
-   | `mesh-sweep.json` | each host → the next two hosts, 1 Mb/s UDP | east-west load across subnets |
-   | `realistic-idle-sweep.json` | none, but every image runs its own services | how many nodes of a mixed campus (workstations, servers, an IDS, Open vSwitch, a firewall core) fit: an adaptive sweep that climbs until memory is over 90% |
+```bash
+./bench.sh list                          # the suites and their runs
+./bench.sh full --host m4-dd16           # name the machine (and its Docker setup)
+./bench.sh random --host m4-dd16 --dry-run
+./bench.sh random --host m4-dd16 --resume   # continue after a crash or reboot
+```
 
-3. **Run it** (from `backend/`, any Python 3.11+, no venv needed):
+`bench.sh` needs Docker and Python 3.11+ (stdlib only; on Windows run
+`python backend\scripts\bench_suite.py run full --host …`). It:
 
-   ```bash
-   python scripts/bench.py benchmarks/specs/idle-sweep.json --label my-laptop-idle --out-dir ../docs/benchmarks
-   ```
+1. checks the git tree is clean (`--allow-dirty` records it instead), brings
+   the backend up without auto-reload at this commit with the host label
+   (`docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d`),
+   checks the engine is Kathará and nothing is deployed, and builds every image
+   the suite needs once, up front (images that can't build here, like
+   `malicious-client` on arm64, are recorded);
+2. keeps the machine awake while it runs (`caffeinate`, `systemd-inhibit`, or
+   the Windows equivalent; a closed laptop lid still sleeps);
+3. **restarts Docker before every benchmark** and records the host at rest:
+   Kathará's VDE plugin leaves tap devices and memory behind after every
+   destroy (5 GB after one sweep on macOS), which would count against the next
+   benchmark. Docker Desktop: `docker desktop restart` (4.37+; older macOS
+   versions quit and reopen the app). Linux has no safe default: pass
+   `--restart-cmd "sudo -n systemctl restart docker"` (a sudoers rule), or
+   `--restart none`. On Linux a Docker restart doesn't remove the leaked taps;
+   compare the resting memory the summary shows;
+4. runs each spec through the API, follows it, and saves everything in
+   `backend/benchmark-results/<host>/<date>-<suite>/` (kept out of git):
 
-   It prints a line per step and, at the end, saves `<date>-<label>.md` (the
-   report) and `<date>-<label>.zip` (everything recorded). Ctrl-C once finishes
-   the current step and stops; twice cancels now. Either way the benchmark
-   removes what it deployed. `--scale 10,25,50` overrides the spec's steps.
-   The benchmark runs in the backend, not in this script: if the script dies
-   (or you close the terminal), `python scripts/bench.py --attach <id> --out-dir …`
-   follows it again and saves the results at the end.
+   | File | What it is |
+   |---|---|
+   | `manifest.json` | the suite and its fingerprint, the commit, the prebuild, and per run: status, benchmark id, seed, resting memory, outcome |
+   | `run.log` | the console output |
+   | `NN-<run>/` | `spec.json` (exactly what was submitted), `report.md`, `export.zip`, `benchmark.json` |
+   | `summary.md` | one line per run, and the random climbs folded together |
+
+A failed benchmark gets one retry after a Docker restart (`--retries`). Ctrl-C
+once: the running benchmark finishes its step, is saved, and the suite stops;
+twice: cancel now. `--resume` keeps finished runs, follows a benchmark still
+running, and reruns failed ones with `--retry-failed`. A suite item can run
+several times (`runs`, `seeds`), take the images a census found usable
+(`pool_from`), start a climb near the previous run's ceiling
+(`start_from_previous`), and override spec fields (`overrides`). A suite of
+your own can live anywhere (`./bench.sh path/to/suite.json …`); its specs are
+paths under `backend/benchmarks/specs/`, or absolute.
+
+**A new host, before the first run:** give Docker Desktop the CPUs and memory
+you want to measure and note them (the report records what Docker sees; the
+macOS baseline is 8 CPUs / 16 GB); plug in and leave the lid open; close other
+heavy apps; check `./bench.sh <suite> --host … --dry-run`.
+
+## Run one benchmark
+
+Start the backend without auto-reload (a reload stops a running benchmark),
+then run a spec from `backend/` with any Python 3.11+:
+
+```bash
+export AE3GIS_HOST_LABEL=my-laptop AE3GIS_GIT_COMMIT=$(git rev-parse HEAD)
+docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d --build
+cd backend && python scripts/bench.py benchmarks/specs/baseline/idle-sweep.json --label my-laptop-idle
+```
+
+It prints a line per step and saves `<date>-<label>.md` (the report) and
+`<date>-<label>.zip` (everything recorded) in `--out-dir`. Ctrl-C once
+finishes the current step and stops; twice cancels now; either way the
+benchmark removes what it deployed. `--scale 10,25,50` overrides the spec's
+steps. The benchmark runs in the backend, not in the script: `python
+scripts/bench.py --attach <id>` follows it again.
 
 The benchmark refuses to start while other labs run or other jobs load the
 host (`allow_busy_host: true` overrides, and is recorded with the results).
+`rest_s` measures the host at rest before the first step (the report's *At
+rest* line).
 
 ## What a step does
 
@@ -86,7 +140,8 @@ one, to find the edge without guessing it:
   "approach": 0.6,         // close this share of the projected gap per step
   "max_factor": 2.0,       // never more than double
   "min_step": 25,          // steps in multiples of this, at least this
-  "confirm": 2             // then rerun the highest passing scale this often
+  "confirm": 2,            // then rerun the highest passing scale this often
+  "descend": 0.7           // a failed first step: retry at this share of it
 },
 "stop": { "max_mem_pct": 95, "project_memory": false, … }
 ```
@@ -99,6 +154,13 @@ and is the ceiling), at a failing step, or at the generator's largest topology;
 the report says which (*climb: …*). Keep `max_mem_pct` above `reach_mem_pct`
 as the safety stop, and `project_memory` off (the climb never jumps past its
 own projection).
+
+A step that fails because the host ran out (memory, memory pressure, an OOM,
+a node gone, a slow, partial or failed deploy, hosts not ready) is retried
+lower instead of ending the climb: at `descend` (default 0.7) of a first step
+that was too big, or halfway down to the best passing scale. The climb then
+stays below the lowest failed scale and ends as *bracketed* when no step is
+left between. `descend: 0` ends the climb at the first failure.
 
 ### Mixed topologies
 
@@ -130,6 +192,166 @@ images beforehand (Images sheet, or `POST /api/v1/images/builds`); otherwise
 the benchmark's `images` step builds them before the first step, which only
 delays the start.
 
+### Random mixes
+
+`random` draws every node instead of splitting by weight (`random/random-idle.json`,
+every catalog type but the SIEM: each Wazuh manager downloads and unpacks
+Wazuh's CVE feed, 2–3 GB of disk per node, which made the disk the limit):
+
+```jsonc
+"generate": {
+  "seed": 1,
+  "random": {
+    "hosts":    [{ "type": "workstation", "images": ["kathara/base", "ae3gis.local/firefox"] }, …],  // client hosts
+    "switches": [{ "type": "switch", "images": ["kathara/base", "ae3gis.local/open-vswitch"] }],
+    "routers":  [{ "type": "router", "images": ["kathara/frr"] }, { "type": "firewall", "images": ["kathara/frr", "ae3gis.local/iptables"] }]
+  }
+}
+```
+
+Each node draws an entry with equal odds (every type as likely as any other,
+however many images it has), then one of its images with equal odds,
+independently of the other nodes. Networking types can be client hosts too;
+`routers` covers the core and every subnet's router, which must forward
+(default-drop firewalls belong in `hosts` only). The seed decides the mix: run
+several seeds and compare the spread, since some mixes come out heavier than
+others. Draws are prefix-stable, so a climb's larger steps keep the smaller
+ones' hosts. Rows record their `composition` (nodes per type · image). The
+`random` suite runs 10 seeds, each climb starting at 70% of the previous
+ceiling, and its summary gives each run's ceiling and their mean ± std,
+min–max, plus the share of each type at the ceiling. Some images (the
+benign client, the Wazuh agent) run their own activity, so "idle" means no
+traffic AE3GIS generates.
+
+### Image census
+
+`census: {per_image: 5}` runs one step per catalog type · image (hidden ones
+aside; `cases` picks a list): 5 nodes of it as the client hosts of a small
+campus (a base router and switches, one base server), deployed, checked and
+measured alone. `workstation · kathara/base` runs first as the reference. An
+image that can't run here (platform) or doesn't build is recorded and its
+case skipped; no outcome stops the census. Its table gives each case's
+outcome, whether it is *usable* (it passed, or only the host ran out), deploy
+and ready time, the nodes' own cgroup memory and CPU, what a node writes to
+Docker's disk, and the host memory a
+node of it costs (the step's change less its base nodes, at the reference's
+cost per node; rough at 5 nodes). The suite runner drops what isn't usable
+from the random pools on that host, and records what it dropped.
+
+### Traffic matrix
+
+`matrix` deploys one topology (`scale: [100]`) and runs every combination of
+its `axes` on it, one cell after another:
+
+```jsonc
+"matrix": {
+  "patterns": [{ "id": "cs", "kind": "clients_to_servers", "servers": ["srv-1", "srv-2"] },
+               { "id": "mesh", "kind": "mesh", "fanout": 2, "nodes": { "roles": ["host"], "exclude": ["srv-1", "srv-2"] } }],
+  "axes": { "pattern": ["cs", "mesh"], "protocol": ["tcp", "udp"],
+            "bitrate": ["50K", "100K", "250K", "500K", "1M"], "burst_interval_ms": [100, 250, 500, 1000, 2000] },
+  "grid": ["bitrate", "burst_interval_ms"],   // the report's rows and columns
+  "interval_s": 10, "ramp_s": 5, "gap_s": 10, "shuffle": true, "seed": 1
+}
+```
+
+Axes are `pattern` and any of a pattern's `bitrate`, `burst_interval_ms`,
+`protocol`, `length`, `parallel`, `direction`. Every cell is checked before
+anything deploys. Each cell waits for a quiet host, idles `gap_s` (its CPU
+reference), then starts its traffic (clients spread over `ramp_s`) and holds
+`hold_s` from the moment every client has started (the driver's
+`clients_started`), so a big lab's start-up never eats into the window. A
+client still not started after `ramp_s` + 60 s + 50 ms a flow fails the cell
+as `traffic_start`: the tool's limit, not the network's. (Before this, the
+window began `ramp_s` after the request; in labs of 500+ hosts the clients
+were then still starting through much of it.) Cells run in a
+seeded shuffled order so slow drift doesn't line up with an axis; a degraded
+or failed cell doesn't stop the matrix, a stop criterion does. The report
+draws, per pattern × protocol, a rate × interval grid of: delivered, slowest
+flow, RTT p95 and retransmits (TCP), jitter p95 and loss (UDP), host CPU over
+idle and Docker cores; then the cells in run order. Each cell's `run.json`
+(every flow's summary) is in the export under `traffic/`.
+
+### Traffic limits: each cell's ceiling
+
+A suite item with `limits` searches, for every cell of a matrix spec, the most
+hosts at which the cell's traffic still gets through (delivered ≥
+`min_delivered_ratio`, UDP loss ≤ `max_loss_pct`) and the fewest at which it
+doesn't, `step` hosts apart (`traffic/burst-limits.json` in the `traffic`
+suite):
+
+```jsonc
+{ "id": "burst-limits", "spec": "traffic/burst-limits.json",
+  "limits": {
+    "step": 50, "growth": 0.25, "start_fraction": 0.8, "max_hosts": 1000,
+    "cpu_budget": 0.7, "mem_budget": 0.85,
+    // Docker cores = a + b per 100 Mb/s, measured once (100 hosts, M4): only a starting point
+    "cost": { "cs": { "tcp": [0.7, 5.7], "udp": [0.6, 3.5] }, "mesh": { "tcp": [0.3, 2.3], "udp": [0.5, 1.0] } },
+    "flows_per_host": { "cs": 1, "mesh": 2 },
+    "mem_per_host": { "cs": 16000000, "mesh": 19000000 } } }
+```
+
+Each cell starts at `start_fraction` of its estimate (where its traffic would
+need `cpu_budget` of the host's CPUs, or memory would run out, scaled to the
+host the run finds), grows by `growth` while it passes, halves the gap once it
+fails until the last pass and the first failure are `step` apart, and passes
+its comfortable size a second time to confirm it. The runner plans rounds:
+every unfinished cell asks for its next size, and each size is one matrix
+benchmark (after a Docker restart) running only the cells that want it
+(`matrix.cells`), so cells with similar limits share deployments. A step a
+host limit stops (memory, disk…) counts as a failure marked `mem`, one whose
+clients did not all start in time (`traffic_start`) `tool`; a cell that passes
+at `max_hosts` is reported as `≥ max_hosts`. Resuming a search with results
+from the traffic driver before 2026-10-12 re-checks them, each rule once
+(`reopen_legacy`, `reopened.rules` in the manifest; a finished search is
+re-entered for a rule it hasn't had): a pass counts only if every client ran
+for 90% of its window (`coverage`); a failure that only never-started clients
+explain is dropped (`unstarted`); and so is a failure measured while full
+memory stalls passed `max_psi_mem_full`, a memory-stall stop, or a cell such
+stopped probes never reached (`stalls`: that driver forked itself for every
+process it started, which stalled memory at ~60% use; the current driver
+shows none). Those cells ask again; what was dropped is logged and kept
+under `reopened`. The summary draws a
+rate × interval grid of *comfortable / fails* per pattern × protocol;
+`limits-<item>.json` holds every cell's result and the manifest every probe.
+A suite's `sysctls` are set in Docker's kernel before the first benchmark and
+again after every Docker restart (Docker Desktop resets its VM; on Linux this
+changes the host's own kernel until it reboots), from a one-shot privileged
+container on the host network, and recorded in the manifest. The `traffic`
+suite raises the neighbour (ARP) table from 1024 entries for *all* nodes
+together to 16384: under traffic, the default cut off every host past ~250 in
+mesh (~4 entries each) and ~500 clients → servers (~2 each). Those hosts
+couldn't reach their peers at all ("unable to connect": a block of dead flows,
+whatever the rate), so low-rate limits measured a kernel default instead of
+the machine. After each probe the runner counts the kernel's "neighbour table
+overflow" messages (`neigh_overflows` in the manifest; it should stay 0).
+
+Clients → servers there has one server per 50 clients (`server_mix` with
+`per_hosts`), so its limit is the routed path through the core, not two busy
+server links; mesh stays inside each LAN.
+
+The cells are *rested*: before each one the host must be quiet (CPU under
+`quiet_cpu_pct` for three sweeps, up to `quiet_timeout_s`: a fresh deployment
+of a few hundred nodes keeps Docker busy for minutes) and then idles `gap_s`
+(60 s). Cells that want the same size share a deployment, so without the idle
+minute a run of heavy cells heats a fanless laptop and slows it down (15–60%
+more CPU for the same traffic, measured on an M4 MacBook Air): the limits
+would depend on what ran before and on the room.
+
+**Paced bursts.** `burst_interval_ms` on a pattern (or flow) makes each flow
+send `bitrate × interval` bytes at once, every interval, keeping the mean
+rate: at 1 Mb/s and 2000 ms, 250 KB every 2 s. iperf3 3.16+ ignores
+`--pacing-timer` for this; AE3GIS uses `-b <rate>/<N> -l <len>`, N writes of
+`len` bytes per interval (UDP: datagrams of at most 1400 B, so no IP
+fragments; TCP: writes up to 64 KiB). `-l` is always set, because iperf3's
+default 128 KB TCP write would turn a small cell into one write every few
+seconds. Shapes iperf3 can't send (more than 1000 writes per burst) are
+refused. Keep the iperf3 report interval a multiple of every burst interval
+(the matrix uses 10 s). The first burst goes out at once, so a run carries one
+burst more than its duration asks for: *delivered* can read a few percent over
+100% for long intervals and short runs (1 Mb/s every 2 s over 13 s: 108%; over
+a 65 s cell: ~103%). Checked on a real lab: the bursts leave a node intact
+(2.001 s apart, 250,063 bytes in 179 datagrams within 1.1 ms).
+
 ## What the numbers mean
 
 | Column | Definition |
@@ -145,17 +367,27 @@ delays the start.
 | **Docker cores** | dockerd + containerd + shims + VDE switches over `hold`, in cores |
 | **Host mem % max** | Peak host memory used over `hold` |
 | **Mem stall % max** | PSI "memory full": the share of time every task waited for memory. Anything above 0 means the host is short of memory |
+| **Disk MB/node / Disk % max** | What the step's nodes wrote to Docker's disk, per node (their writable layers), and the disk's peak use over `hold`. Most images write next to nothing; a Wazuh manager writes 2–3 GB |
 | **Delivered** | Received ÷ asked over all flows (traffic sweeps) |
 | **Ceiling** | The largest scale whose every repetition passed. *Nodes per host* is this number, for the load the spec applied |
 
+Traffic steps add a network table, from iperf3's own measurements over the
+whole run: flows, asked Mb/s, delivered, data received, the slowest flow, RTT
+(TCP) and jitter (UDP) as the median and p95 of the flows' own medians and the
+highest reading, retransmits, and loss (all flows / the worst flow). With
+repetitions, a per-scale table gives mean ± std.
+
 ## When a sweep stops
 
-The first criterion met ends the sweep (after removing the step's lab):
+The first criterion met ends a sweep (after removing the step's lab); a climb
+retries lower when the reason is the host running out (see *Adaptive sweeps*);
+a census and a matrix go on past failed cases and cells:
 
 | Reason | When |
 |---|---|
 | `projected_memory` | By the last step's memory per node, this step would cross `max_mem_pct`. It is **not deployed**: a deploy cannot be interrupted, and running the host out of memory can take Docker down with it |
 | `memory` / `memory_pressure` | Host memory over `max_mem_pct`, or memory stalls over `max_psi_mem_full`, for 3 sweeps in a row |
+| `disk` | Docker's disk (where every node's writable layer goes) over `max_disk_pct` (default 90) for 3 sweeps: a full disk fails container starts |
 | `oom` / `node_exited` | A node lost a process to the OOM killer, or stopped running |
 | `monitor_lag` | The collector needed longer than its interval for 3 sweeps (raise `monitor.interval_s`) |
 | `deploy_failed` / `deploy_partial` / `deploy_slow` | The deploy failed, left nodes not running, or took longer than `deploy_timeout_s` |
@@ -175,11 +407,24 @@ The first criterion met ends the sweep (after removing the step's lab):
 - **Repeat.** `repetitions: 3` runs each scale three times; the results carry
   mean, std, min and max per scale (`by_scale` in `benchmark.json`).
 - **Compare like with like.** Every report carries an environment
-  fingerprint (Docker, kernel, Kathará and its network plugin, AE3GIS commit,
-  images). Same fingerprint, same stack.
+  fingerprint (Docker version, kernel, CPUs, memory, cgroup version, Kathará
+  and its network plugin, AE3GIS commit; not the node images). Same
+  fingerprint, same stack. Suite manifests record the suite's own fingerprint
+  (its file and specs) and, for random climbs, the pool each run used.
+- **Start from a clean engine.** The suite runner restarts Docker before each
+  benchmark for this; the *At rest* line and the summary's resting memory show
+  what was left over.
 - **Memory is returned slowly.** After a destroy the host does not get all its
   memory back at once, so each step measures against its own `pre` window;
   raise `cooldown_s` if `mem_pre` keeps climbing between steps.
+- **Watch Docker's disk.** Docker Desktop's virtual disk (Settings → Resources)
+  holds every image and every node's writable layer; build caches and old
+  builders fill it quietly (`docker system df`, `docker buildx prune`). The
+  report's *At rest* line shows how full it was, and `max_disk_pct` stops a step
+  before it fills.
+- **Large labs are slow to list.** AE3GIS waits up to `AE3GIS_DOCKER_TIMEOUT_S`
+  (300 s) for a Docker API call; around a thousand containers, listing them can
+  take over a minute on Docker Desktop's containerd image store.
 - **The tools cost something too.** The collector (~1% of a core, ~8 MB) and
   the traffic driver (its iperf3 processes: ~15% of a core for 12 flows at
   5 Mb/s here) are containers of their own; the monitor reports them as
@@ -193,8 +438,9 @@ Docker socket AE3GIS already uses:
 - the **collector** shares the host's PID and cgroup namespaces and mounts the
   host cgroup tree read-only: it reads files, it changes nothing;
 - the **traffic driver** shares the host's PID namespace with `CAP_SYS_ADMIN`
-  (to enter a node's network namespace with `setns`) and `CAP_SYS_PTRACE` (to
-  open that namespace: Kathará nodes hold capabilities the driver does not).
+  (to enter a node's network namespace: `nsenter` for traffic runs, `setns`
+  for readiness probes) and `CAP_SYS_PTRACE` (to open that namespace: Kathará
+  nodes hold capabilities the driver does not).
 
 On hosts whose AppArmor or SELinux policy blocks `setns` for containers, the
 first traffic run or readiness check fails with *Cannot enter node network

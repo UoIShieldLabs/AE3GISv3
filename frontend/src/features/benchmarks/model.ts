@@ -4,10 +4,18 @@ import type { ChartData } from '@/ui/charts/types';
 
 type Num = number | null | undefined;
 
+/** sweep: fixed scales · adaptive: a climb to the host's limit · census: one
+ *  step per node image · matrix: traffic cells on one deployment. */
+export type BenchKind = 'sweep' | 'adaptive' | 'census' | 'matrix';
+
 export interface BenchRow {
   step: string;
   scale: number;
   rep: number;
+  /** A census case (`type · image`) or a matrix cell id. */
+  case?: string | null;
+  /** A matrix cell's axis values. */
+  cell?: Record<string, unknown> | null;
   outcome: 'ok' | 'stopped' | 'failed' | 'degraded' | string;
   reason?: string | null;
   detail?: string | null;
@@ -38,15 +46,69 @@ export interface ScaleEntry {
   [metric: string]: Spread | number | undefined;
 }
 
+export interface CensusEntry {
+  case: string;
+  outcome: string;
+  usable: boolean;
+}
+
+export interface CellEntry {
+  id: string;
+  outcome: string;
+}
+
 export interface BenchResult {
+  kind?: BenchKind;
   rows?: BenchRow[];
-  by_scale?: ScaleEntry[];
+  by_scale?: ScaleEntry[] | null;
   ceiling?: number | null;
   reason?: string | null;
   detail?: string | null;
   stopped_by?: string | null;
+  /** How a climb ended (adaptive). */
+  limit?: string | null;
   started_at?: string;
   ended_at?: string | null;
+  census?: CensusEntry[];
+  matrix?: CellEntry[];
+}
+
+/** The parts of a benchmark's spec the sheet describes. */
+export interface BenchSpec {
+  kind?: BenchKind;
+  scale?: number[];
+  repetitions?: number;
+  adaptive?: { start?: number; target_mem_pct?: number } | null;
+  census?: { per_image?: number; cases?: unknown[] | null } | null;
+  matrix?: { patterns?: { id: string }[]; axes?: Record<string, unknown[]> } | null;
+  traffic?: unknown;
+}
+
+export const benchKind = (spec: BenchSpec): BenchKind => spec.kind ?? (spec.adaptive ? 'adaptive' : 'sweep');
+
+/** How many cells a matrix makes: its axes multiplied (patterns: all by default). */
+export function matrixCells(spec: BenchSpec): number {
+  const m = spec.matrix;
+  if (!m) return 0;
+  const axes = m.axes ?? {};
+  let n = axes.pattern?.length ?? m.patterns?.length ?? 1;
+  for (const [name, values] of Object.entries(axes)) if (name !== 'pattern') n *= values.length;
+  return n * (spec.repetitions ?? 1);
+}
+
+/** What the benchmark runs, in one line. */
+export function stepsLine(spec: BenchSpec): string {
+  const reps = spec.repetitions ?? 1;
+  switch (benchKind(spec)) {
+    case 'adaptive':
+      return `Climb from ${spec.adaptive?.start ?? '?'} hosts toward ${spec.adaptive?.target_mem_pct ?? 93}% memory`;
+    case 'census':
+      return `Census of ${spec.census?.cases?.length ?? '?'} node images, ${spec.census?.per_image ?? 5} nodes each${reps > 1 ? ` × ${reps}` : ''}`;
+    case 'matrix':
+      return `Traffic matrix of ${matrixCells(spec)} cells on ${spec.scale?.[0] ?? '?'} hosts, deployed once`;
+    default:
+      return `Scale ${(spec.scale ?? []).join(', ')} × ${reps}`;
+  }
 }
 
 const meanOf = (e: ScaleEntry, key: string): number | null => {
@@ -94,11 +156,35 @@ export function outcomeTone(outcome: string): 'success' | 'warning' | 'danger' |
   return 'neutral';
 }
 
-/** One line for the list: how far the sweep got. */
-export function summaryLine(result: BenchResult | null | undefined, scale: readonly number[]): string {
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** One line for the list: how far the benchmark got. */
+export function summaryLine(result: BenchResult | null | undefined, spec: BenchSpec): string {
   const rows = result?.rows ?? [];
-  const parts = [`${rows.length} step${rows.length === 1 ? '' : 's'} of ${scale.length}`];
-  if (result?.ceiling) parts.push(`ceiling ${result.ceiling} hosts`);
+  const parts: string[] = [];
+  switch (benchKind(spec)) {
+    case 'census': {
+      const cases = result?.census ?? [];
+      parts.push(`${cases.length} of ${spec.census?.cases?.length ?? '?'} cases`);
+      if (cases.length) parts.push(`${cases.filter((c) => c.usable).length} usable`);
+      break;
+    }
+    case 'matrix': {
+      const cells = rows.filter((r) => r.cell);
+      parts.push(`${cells.length} of ${matrixCells(spec)} cells`);
+      const off = cells.filter((r) => r.outcome !== 'ok').length;
+      if (off) parts.push(`${off} degraded or failed`);
+      break;
+    }
+    case 'adaptive':
+      parts.push(plural(rows.length, 'step'));
+      if (result?.ceiling) parts.push(`ceiling ${result.ceiling} hosts`);
+      if (result?.limit) parts.push(`climb: ${result.limit}`);
+      break;
+    default:
+      parts.push(`${plural(rows.length, 'step')} of ${(spec.scale?.length ?? 0) * (spec.repetitions ?? 1)}`);
+      if (result?.ceiling) parts.push(`ceiling ${result.ceiling} hosts`);
+  }
   if (result?.reason) parts.push(`stopped: ${result.detail ?? result.reason}`);
   return parts.join(' · ');
 }

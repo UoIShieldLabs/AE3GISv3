@@ -99,7 +99,7 @@
         "type": "object"
       },
       "BenchmarkAdaptive": {
-        "description": "Scales chosen step by step until the host's memory is nearly full\n(generated topologies; replaces ``scale``). Start at ``start`` hosts; after\neach step, project from its marginal memory per node the hosts at which\nmemory would reach ``target_mem_pct`` and close ``approach`` of the gap (at\nleast ``min_step`` hosts, but never past \u00d7``max_factor``). The climb is\nover once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the\nhighest passing scale is then run ``confirm`` more times.",
+        "description": "Scales chosen step by step until the host's memory is nearly full\n(generated topologies; replaces ``scale``). Start at ``start`` hosts; after\neach step, project from its marginal memory per node the hosts at which\nmemory would reach ``target_mem_pct`` and close ``approach`` of the gap (at\nleast ``min_step`` hosts, but never past \u00d7``max_factor``). The climb is\nover once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the\nhighest passing scale is then run ``confirm`` more times. A step that fails\non a host limit is retried lower (``descend``).",
         "properties": {
           "approach": {
             "default": 0.6,
@@ -114,6 +114,13 @@
             "minimum": 0.0,
             "title": "Confirm",
             "type": "integer"
+          },
+          "descend": {
+            "default": 0.7,
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Descend",
+            "type": "number"
           },
           "max_factor": {
             "default": 2.0,
@@ -161,6 +168,126 @@
         "title": "BenchmarkAdaptive",
         "type": "object"
       },
+      "BenchmarkCensus": {
+        "description": "One step per node image: ``per_image`` nodes of a type \u00b7 image as the\nclient hosts of a small generated campus (base router, switches and one\nserver around them), deployed, checked and measured alone. ``cases``\ndefaults to every catalog type's non-hidden images; workstation \u00b7\nkathara/base always runs first, as the reference. Failures don't stop it.",
+        "properties": {
+          "cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CensusCase"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cases"
+          },
+          "per_image": {
+            "default": 5,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Per Image",
+            "type": "integer"
+          }
+        },
+        "title": "BenchmarkCensus",
+        "type": "object"
+      },
+      "BenchmarkMatrix": {
+        "description": "Traffic cells on one deployment: every combination of the ``axes``\nvalues (``pattern``: ids of ``patterns``, default all of them; the others\noverride the pattern's field) runs in turn for ``hold_s``, in a seeded\nshuffled order unless ``shuffle`` is off, after a quiet ``gap_s``.",
+        "properties": {
+          "axes": {
+            "additionalProperties": {
+              "items": {},
+              "type": "array"
+            },
+            "title": "Axes",
+            "type": "object"
+          },
+          "cells": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cells"
+          },
+          "gap_s": {
+            "default": 10,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Gap S",
+            "type": "number"
+          },
+          "grid": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grid"
+          },
+          "interval_s": {
+            "default": 10,
+            "maximum": 60.0,
+            "minimum": 0.5,
+            "title": "Interval S",
+            "type": "number"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/MatrixPattern"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Patterns",
+            "type": "array"
+          },
+          "ramp_s": {
+            "default": 5,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Ramp S",
+            "type": "number"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "shuffle": {
+            "default": true,
+            "title": "Shuffle",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "patterns"
+        ],
+        "title": "BenchmarkMatrix",
+        "type": "object"
+      },
       "BenchmarkMonitor": {
         "properties": {
           "interval_s": {
@@ -193,6 +320,10 @@
           },
           "job": {
             "$ref": "#/components/schemas/JobOut"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
           },
           "label": {
             "title": "Label",
@@ -238,6 +369,7 @@
         "required": [
           "id",
           "label",
+          "kind",
           "status",
           "live",
           "topology_id",
@@ -264,6 +396,16 @@
             "title": "Allow Busy Host",
             "type": "boolean"
           },
+          "census": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkCensus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "cooldown_s": {
             "default": 20,
             "maximum": 3600.0,
@@ -283,11 +425,43 @@
             "title": "Keep Last",
             "type": "boolean"
           },
+          "keep_samples": {
+            "default": false,
+            "title": "Keep Samples",
+            "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sweep",
+                  "adaptive",
+                  "census",
+                  "matrix"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
           "label": {
             "default": "",
             "maxLength": 80,
             "title": "Label",
             "type": "string"
+          },
+          "matrix": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkMatrix"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "monitor": {
             "$ref": "#/components/schemas/BenchmarkMonitor"
@@ -318,6 +492,13 @@
             "minimum": 1.0,
             "title": "Repetitions",
             "type": "integer"
+          },
+          "rest_s": {
+            "default": 0,
+            "maximum": 600.0,
+            "minimum": 0.0,
+            "title": "Rest S",
+            "type": "number"
           },
           "scale": {
             "items": {
@@ -362,6 +543,20 @@
             "minimum": 10.0,
             "title": "Deploy Timeout S",
             "type": "number"
+          },
+          "max_disk_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 90,
+            "title": "Max Disk Pct"
           },
           "max_loss_pct": {
             "anyOf": [
@@ -946,6 +1141,26 @@
         "title": "CategorySpec",
         "type": "object"
       },
+      "CensusCase": {
+        "properties": {
+          "image": {
+            "minLength": 1,
+            "title": "Image",
+            "type": "string"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "image"
+        ],
+        "title": "CensusCase",
+        "type": "object"
+      },
       "ContextOut": {
         "properties": {
           "events": {
@@ -1342,6 +1557,16 @@
             "title": "Name",
             "type": "string"
           },
+          "random": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RandomPools"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "router_type": {
             "default": "router",
             "title": "Router Type",
@@ -1464,6 +1689,16 @@
             "minimum": 1.0,
             "title": "Hosts Per Switch",
             "type": "integer"
+          },
+          "random": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RandomPools"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "router_type": {
             "default": "router",
@@ -1892,6 +2127,13 @@
             "title": "Images",
             "type": "array"
           },
+          "registries": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryOut"
+            },
+            "title": "Registries",
+            "type": "array"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/SourceOut"
@@ -2001,6 +2243,19 @@
               }
             ],
             "title": "Bitrate"
+          },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
           },
           "client": {
             "maxLength": 128,
@@ -2540,6 +2795,180 @@
         "title": "LinkTarget",
         "type": "object"
       },
+      "MatrixPattern": {
+        "description": "A traffic matrix's pattern: its axes may give the bitrate (and burst).",
+        "properties": {
+          "bitrate": {
+            "anyOf": [
+              {
+                "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bitrate"
+          },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
+          },
+          "clients": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clients"
+          },
+          "direction": {
+            "default": "forward",
+            "enum": [
+              "forward",
+              "reverse",
+              "bidir"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "each": {
+            "default": "one",
+            "enum": [
+              "one",
+              "all"
+            ],
+            "title": "Each",
+            "type": "string"
+          },
+          "fanout": {
+            "default": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Fanout",
+            "type": "integer"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,16}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "clients_to_servers",
+              "mesh"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "maximum": 65507.0,
+                "minimum": 16.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "omit_s": {
+            "default": 0,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Omit S",
+            "type": "integer"
+          },
+          "parallel": {
+            "default": 1,
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Parallel",
+            "type": "integer"
+          },
+          "protocol": {
+            "default": "tcp",
+            "enum": [
+              "tcp",
+              "udp"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          },
+          "servers": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/NodeSelector"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servers"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "MatrixPattern",
+        "type": "object"
+      },
       "MixEntry": {
         "description": "A share of the hosts (or switches): ``weight`` relative to the others.",
         "properties": {
@@ -2900,6 +3329,17 @@
             "title": "Label",
             "type": "string"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
           "purdueLevel": {
             "anyOf": [
               {
@@ -3082,6 +3522,30 @@
         "title": "PlanOut",
         "type": "object"
       },
+      "PoolEntry": {
+        "description": "A node type and the images it may run (each drawn with equal odds).",
+        "properties": {
+          "images": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Images",
+            "type": "array"
+          },
+          "type": {
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "images"
+        ],
+        "title": "PoolEntry",
+        "type": "object"
+      },
       "PresetList": {
         "properties": {
           "presets": {
@@ -3155,6 +3619,54 @@
         "title": "PurgeResult",
         "type": "object"
       },
+      "RandomPools": {
+        "description": "Random topologies: each node draws a pool entry with equal odds, then\none of its images (see domain/generator).",
+        "properties": {
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/PoolEntry"
+            },
+            "minItems": 1,
+            "title": "Hosts",
+            "type": "array"
+          },
+          "routers": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PoolEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routers"
+          },
+          "switches": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PoolEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Switches"
+          }
+        },
+        "required": [
+          "hosts"
+        ],
+        "title": "RandomPools",
+        "type": "object"
+      },
       "ReconcileResult": {
         "properties": {
           "orphans": {
@@ -3173,6 +3685,209 @@
         "title": "ReconcileResult",
         "type": "object"
       },
+      "RegistryCreate": {
+        "properties": {
+          "url": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "RegistryCreate",
+        "type": "object"
+      },
+      "RegistryImageOut": {
+        "description": "An image a registry contributes to the catalog.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "new_type": {
+            "title": "New Type",
+            "type": "boolean"
+          },
+          "platforms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Platforms",
+            "type": "array"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "repo",
+          "tag",
+          "type",
+          "name",
+          "new_type"
+        ],
+        "title": "RegistryImageOut",
+        "type": "object"
+      },
+      "RegistryOut": {
+        "properties": {
+          "active_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hub_url": {
+            "title": "Hub Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loaded": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryImageOut"
+            },
+            "title": "Loaded",
+            "type": "array"
+          },
+          "namespace": {
+            "title": "Namespace",
+            "type": "string"
+          },
+          "pending": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pending",
+            "type": "array"
+          },
+          "pulls_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pulls Remaining"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryRejectedOut"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "repositories": {
+            "default": 0,
+            "title": "Repositories",
+            "type": "integer"
+          },
+          "skipped": {
+            "default": 0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "namespace",
+          "url",
+          "hub_url",
+          "created_at"
+        ],
+        "title": "RegistryOut",
+        "type": "object"
+      },
+      "RegistryRejectedOut": {
+        "description": "A repo marked for AE3GIS whose image does not follow the standard.",
+        "properties": {
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo",
+          "tag",
+          "reasons"
+        ],
+        "title": "RegistryRejectedOut",
+        "type": "object"
+      },
       "RegistrySource": {
         "description": "Pull the image by ref from a registry (the default).",
         "properties": {
@@ -3181,6 +3896,17 @@
             "default": "registry",
             "title": "Kind",
             "type": "string"
+          },
+          "registry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registry"
           }
         },
         "title": "RegistrySource",
@@ -3575,6 +4301,19 @@
             "pattern": "^\\d+(\\.\\d+)?[KMGkmg]?$",
             "title": "Bitrate",
             "type": "string"
+          },
+          "burst_interval_ms": {
+            "anyOf": [
+              {
+                "maximum": 60000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst Interval Ms"
           },
           "clients": {
             "anyOf": [
@@ -4552,7 +5291,7 @@
     },
     "/api/v1/images": {
       "get": {
-        "description": "Host build support, image sources, and the status of each image.\n\nWithout ``topology_id``: every image the catalog describes.",
+        "description": "Host build support, image sources and registries, and the status of each image.\n\nWithout ``topology_id``: every image the catalog describes.",
         "operationId": "list_images_api_v1_images_get",
         "parameters": [
           {
@@ -5424,6 +6163,229 @@
         "summary": "Load Preset",
         "tags": [
           "presets"
+        ]
+      }
+    },
+    "/api/v1/registries": {
+      "get": {
+        "description": "Every registry, with what its last sync loaded, rejected and skipped.",
+        "operationId": "list_registries_api_v1_registries_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RegistryOut"
+                  },
+                  "title": "Response List Registries Api V1 Registries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Registries",
+        "tags": [
+          "registries"
+        ]
+      },
+      "post": {
+        "description": "Add a Docker Hub namespace (by URL or name) and start its first sync.",
+        "operationId": "add_registry_api_v1_registries_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Registry",
+        "tags": [
+          "registries"
+        ]
+      }
+    },
+    "/api/v1/registries/{registry_id}": {
+      "delete": {
+        "description": "Remove a registry: its images and types leave the catalog.",
+        "operationId": "remove_registry_api_v1_registries__registry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registry_id",
+            "required": true,
+            "schema": {
+              "title": "Registry Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Registry",
+        "tags": [
+          "registries"
+        ]
+      }
+    },
+    "/api/v1/registries/{registry_id}/sync": {
+      "post": {
+        "description": "Re-read the namespace (a sync already running returns its job).",
+        "operationId": "sync_registry_api_v1_registries__registry_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registry_id",
+            "required": true,
+            "schema": {
+              "title": "Registry Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Registry",
+        "tags": [
+          "registries"
         ]
       }
     },

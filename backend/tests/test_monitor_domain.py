@@ -69,6 +69,11 @@ def test_host_rates():
     assert row["psi_mem_full"] == 25.0  # 0.5 s stalled of 2 s
     assert row["infra"]["dockerd"] == {"count": 1, "rss": 20, "cpu_pct": 10.0}
     assert row["load1"] == 1.5 and row["procs"] == 200
+    assert row["disk_used_pct"] is None  # a collector without disk figures
+    c = m.parse_line(_line(104.0, [300, 0, 200, 1300, 0, 0, 0, 0]))
+    c.host["disk"] = [60 * 10**9, 15 * 10**9]
+    disk = m.host_rates(b, c)
+    assert (disk["disk_total"], disk["disk_used"], disk["disk_used_pct"]) == (60e9, 45e9, 75.0)
 
 
 def _refs():

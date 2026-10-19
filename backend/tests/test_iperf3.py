@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from domain.traffic.iperf3 import Iperf3StreamParser, client_argv, is_interrupt, server_argv
+from domain.traffic.iperf3 import (
+    Iperf3StreamParser,
+    burst_shape,
+    client_argv,
+    is_interrupt,
+    server_argv,
+)
 from domain.traffic.summary import summarize_flow
 
 FIX = Path(__file__).parent / "fixtures" / "iperf3"
@@ -36,6 +42,47 @@ def test_argv():
     assert "-R" in client_argv({"direction": "reverse"}, "h", 1, 1)
     assert server_argv(5201, 1) == ["iperf3", "-s", "-1", "-p", "5201", "--json-stream", "-i", "1"]
     assert server_argv(5202, 1, "10.0.2.1")[-2:] == ["-B", "10.0.2.1"]
+
+
+@pytest.mark.parametrize(
+    ("rate", "ms", "proto", "shape"),
+    [
+        ("50K", 100, "udp", (1, 625)),
+        ("250K", 500, "udp", (12, 1302)),
+        ("1M", 2000, "udp", (179, 1397)),
+        ("50K", 100, "tcp", (1, 625)),
+        ("250K", 500, "tcp", (1, 15625)),
+        ("1M", 2000, "tcp", (4, 62500)),
+    ],
+)
+def test_burst_shape_adds_up_to_one_interval(rate, ms, proto, shape):
+    n, length = burst_shape(rate, ms, proto)
+    assert (n, length) == shape
+    assert n * length == pytest.approx(
+        float(rate[:-1]) * {"K": 1e3, "M": 1e6}[rate[-1]] * ms / 8000, rel=0.002
+    )
+    assert proto == "tcp" or length <= 1400
+
+
+def test_burst_shape_limits():
+    assert burst_shape("1M", 1000, "udp", length=500) == (250, 500)  # a given length is kept
+    with pytest.raises(ValueError, match="allows 1000"):
+        burst_shape("1G", 10000, "udp")
+    with pytest.raises(ValueError, match="too small"):
+        burst_shape("1K", 10, "udp")
+    with pytest.raises(ValueError, match="needs a bitrate"):
+        burst_shape("0", 100, "tcp")
+
+
+def test_burst_argv():
+    udp = client_argv({"protocol": "udp", "bitrate": "1M", "burst_interval_ms": 2000}, "h", 1, 1)
+    assert udp[udp.index("-b") + 1] == "1M/179" and udp[udp.index("-l") + 1] == "1397"
+    # UDP's default rate bursts too; TCP always gets an explicit write size.
+    default = client_argv({"protocol": "udp", "burst_interval_ms": 100}, "h", 1, 1)
+    assert default[default.index("-b") + 1] == "1M/9"  # 12,500 bytes in datagrams of ≤ 1400
+    tcp = client_argv({"bitrate": "250K", "burst_interval_ms": 500}, "h", 1, 1)
+    assert tcp[tcp.index("-b") + 1] == "250K/1" and tcp[tcp.index("-l") + 1] == "15625"
+    assert "-l" not in client_argv({"bitrate": "250K"}, "h", 1, 1)
 
 
 def test_tcp_forward_client_and_server():
@@ -94,3 +141,28 @@ def test_interrupted_runs_report_errors_the_runner_ignores():
 def test_garbage_lines_are_skipped():
     p = Iperf3StreamParser("f", "client")
     assert p.feed(b'not json\n[1,2]\n{"event": "weird"}\n')[0].kind == "other"
+
+
+def test_run_aggregates():
+    from domain.traffic.summary import run_aggregates
+
+    def flow(fid, proto, rate, bps, **extra):
+        d = {"bps": {"mean": bps}, "bytes": int(bps * 10 / 8), **extra}
+        return {"id": fid, "protocol": proto, "bitrate": rate}, {"summary": {"fwd": d}}
+
+    pairs = [
+        flow("t1", "tcp", "1M", 1e6, rtt_ms={"p50": 4.0, "max": 9.0}),
+        flow("t2", "tcp", "1M", 0.5e6, rtt_ms={"p50": 200.0, "max": 460.0}),
+        flow("u1", "udp", "2M", 2e6, jitter_ms={"p50": 0.1, "max": 0.3}, lost_percent=0.0),
+        flow("u2", "udp", "2M", 1.8e6, jitter_ms={"p50": 16.0, "max": 360.0}, lost_percent=8.1),
+        flow("x", "tcp", None, 5e6),  # no rate: not in the ratios
+    ]
+    agg = run_aggregates([f for f, _ in pairs], [r for _, r in pairs])
+    assert agg["rtt_ms_p50"] == 102.0 and agg["rtt_ms_max"] == 460.0
+    assert agg["jitter_ms_p95"] == pytest.approx(15.205) and agg["jitter_ms_max"] == 360.0
+    assert agg["flow_loss_pct_max"] == 8.1
+    assert agg["flow_ratio_min"] == 0.5 and agg["slowest_flow"] == "t2"
+    assert agg["slowest_flow_bps"] == 0.5e6
+    assert agg["bytes_received"] == sum(r["summary"]["fwd"]["bytes"] for _, r in pairs)
+    empty = run_aggregates([], [])
+    assert empty["rtt_ms_p50"] is None and empty["flow_ratio_p05"] is None

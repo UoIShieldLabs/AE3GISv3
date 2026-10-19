@@ -9,15 +9,70 @@ Directions are relative to the flow: ``fwd`` is client → server, ``rev`` is
 server → client (``-R`` makes the whole flow ``rev``; ``--bidir`` has both).
 Output shapes are pinned by fixtures recorded from a real lab
 (``tests/fixtures/iperf3``).
+
+Paced bursts (``burst_interval_ms``): instead of a smooth stream, a flow sends
+``bitrate × interval`` bytes at once, every interval. iperf3 (3.16+) ignores
+``--pacing-timer`` for this: its sender sleeps until its running average falls
+under the rate. ``-b <rate>/<N>`` writes N blocks back to back before that
+check, so N blocks of ``-l`` bytes adding up to one interval's worth give one
+burst per interval (checked on 3.19.1: periods and bytes exact). ``-l`` is
+always set: TCP's default 128 KB write would turn small cells into one write
+every few seconds.
 """
 
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
 DEFAULT_PORT = 5201
+UDP_MAX_LEN = 1400  # one datagram per packet on a 1500-byte MTU (no IP fragments)
+TCP_MAX_LEN = 65536
+MAX_BURST = 1000  # iperf3's limit on N in ``-b rate/N``
+MIN_LEN = 16
+
+_MULT = {"K": 1e3, "M": 1e6, "G": 1e9}
+
+
+def bitrate_bps(raw: str | None) -> float | None:
+    """``"10M"`` → 10e6; None for unset (TCP: unlimited)."""
+    if not raw:
+        return None
+    raw = str(raw).strip()
+    mult = _MULT.get(raw[-1].upper(), 1.0)
+    try:
+        value = float(raw.rstrip("KMGkmg")) * mult
+    except ValueError:
+        return None
+    return value or None
+
+
+def burst_shape(
+    bitrate: str, interval_ms: float, protocol: str, length: int | None = None
+) -> tuple[int, int]:
+    """(N, length) for a burst of ``bitrate × interval``: N writes of
+    ``length`` bytes (``-b rate/N -l length``). Without a ``length`` the writes
+    are as large as allowed (a datagram per packet for UDP). ValueError when
+    the burst can't be shaped."""
+    rate = bitrate_bps(bitrate)
+    if not rate:
+        raise ValueError("A burst needs a bitrate")
+    target = rate * float(interval_ms) / 8000  # bytes per burst
+    if round(target) < MIN_LEN:
+        raise ValueError(f"A burst of {target:.1f} bytes is too small; raise the rate or interval")
+    if length:
+        n = max(1, round(target / length))
+    else:
+        n = max(1, math.ceil(target / (UDP_MAX_LEN if protocol == "udp" else TCP_MAX_LEN)))
+        length = max(MIN_LEN, round(target / n))
+    if n > MAX_BURST:
+        raise ValueError(
+            f"A burst of {target:.0f} bytes needs {n} writes of {length} bytes; iperf3 allows "
+            f"{MAX_BURST} (raise the length or shorten the interval)"
+        )
+    return n, length
 
 
 @dataclass
@@ -53,14 +108,20 @@ class Iperf3Event:
 def client_argv(flow: dict[str, Any], server_ip: str, port: int, interval: float) -> list[str]:
     argv = ["iperf3", "-c", server_ip, "-p", str(port), "--json-stream", "-i", _num(interval)]
     argv += ["-t", str(int(flow.get("duration_s") or 0))]
-    if flow.get("protocol") == "udp":
-        argv += ["-u", "-b", str(flow.get("bitrate") or "1M")]
-    elif flow.get("bitrate"):
-        argv += ["-b", str(flow["bitrate"])]
+    udp = flow.get("protocol") == "udp"
+    rate = str(flow.get("bitrate") or ("1M" if udp else ""))
+    length = flow.get("length")
+    if udp:
+        argv.append("-u")
+    if rate and flow.get("burst_interval_ms"):
+        n, length = burst_shape(rate, flow["burst_interval_ms"], "udp" if udp else "tcp", length)
+        argv += ["-b", f"{rate}/{n}"]
+    elif rate:
+        argv += ["-b", rate]
     if (flow.get("parallel") or 1) > 1:
         argv += ["-P", str(flow["parallel"])]
-    if flow.get("length"):
-        argv += ["-l", str(flow["length"])]
+    if length:
+        argv += ["-l", str(length)]
     if flow.get("omit_s"):
         argv += ["-O", str(flow["omit_s"])]
     direction = flow.get("direction") or "forward"

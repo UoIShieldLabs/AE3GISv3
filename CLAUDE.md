@@ -20,6 +20,7 @@ Developer onboarding and the full architecture rationale live in
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
+./bench.sh check && ./bench.sh <suite> --host <name>   # benchmark suites on this host: docs/benchmarks/RUNNING.md
 cd backend && python -m pytest && ruff check . && ruff format --check .   # backend checks (CI)
 cd backend && python -m uvicorn main:create_app --factory --reload --port 8000
 cd backend && python scripts/export_openapi.py   # regenerate openapi.json after API changes
@@ -28,6 +29,10 @@ cd frontend && npm run api:types                 # regenerate src/api/schema.d.t
 
 Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
 `privileged`, no host netns). Push to `main` → SSH deploy via `.github/workflows/deploy.yml`.
+
+**Asked to run the benchmarks on a machine?** Follow `docs/benchmarks/RUNNING.md`
+(the `random` idle and `traffic` suites), including its section for Claude:
+`./bench.sh check` first, and ask before fixing anything destructive.
 
 ## Architecture
 
@@ -52,12 +57,14 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `topo.clab.yml`; ContainerLab uses `iface_base=1`). Plan links carry their
   `connection_id`; `links.py` resolves capture targets against them. Also
   `pcap.py`/`packets.py` (pcap framing, packet summaries), `traffic/` (iperf3
-  argv + json-stream parser, `patterns` → flows, incremental flow summaries),
+  argv incl. paced bursts `-b rate/N -l len` + json-stream parser, `patterns` → flows, incremental flow summaries),
   `telemetry.py` (counters → rates), `monitor.py` (collector sweeps → host
   rates, container groups, aggregates), `selectors.py` (node sets by id /
   type / subnet / role), `generator.py` (parametric benchmark topologies,
-  optionally a seeded mix of types/images by weight),
-  `benchmark.py` (step metrics, stop criteria, adaptive next scale, report),
+  optionally a seeded mix of types/images by weight, or random pools: each
+  node draws a type with equal odds, then an image),
+  `benchmark.py` (step metrics, stop criteria, adaptive next scale and
+  retries, census table, matrix cells, report per kind),
   `environment.py` (run environment + fingerprint).
 - `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
@@ -65,18 +72,20 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `engine_state` is saved before the engine runs so failures clean up and leave
   `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
   **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
-  `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
+  `registry:<id>`, `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
   `benchmark` — at a time; steps on the
   job row mirrored to events; per-job log files via `joblogs`; `wait`/`cancel`,
   and `request_stop` for `stoppable` kinds (winds down, keeps output, ends
   `succeeded`); `set_result` → `Job.result`; bulk output in `artifacts`
   (`data/artifacts/<job>/`)), `images` + `sources` (node images built from
-  Dockerfiles, see below), `capture` (sidecar job), `monitor` (collector
+  Dockerfiles, see below), `registries` + `dockerhub` (Docker Hub namespaces
+  whose standard images join the catalog, see below), `capture` (sidecar job), `monitor` (collector
   helper → `MonitorSession`: CSVs + live sweeps; benchmarks embed one),
   `traffic` (+ `traffic_generators`; flows/patterns through the netns driver),
   `netns_driver` (the driver helper: iperf3 runs, readiness pings),
-  `benchmark` (scale sweeps: generate → deploy → probe → settle → hold →
-  destroy, stop criteria; see `docs/benchmarks/`); `live` (per-job WebSocket
+  `benchmark` (kinds sweep | adaptive | census | matrix; a step is place →
+  reference → deploy → ready → settle → hold → destroy, helpers shared by all
+  kinds; a matrix deploys once and runs its cells; see `docs/benchmarks/`); `live` (per-job WebSocket
   fan-out), `activity` (running captures/runs/monitors; destroy stops them
   first), `environment` (run
   metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
@@ -129,7 +138,8 @@ would slow every poll and load the daemon being measured.
   (never `app=kathara`). Helpers: the monitor's collector (`ae3gis-collect`:
   host PID + cgroup namespaces, cgroupfs read-only; reads /proc and cgroups,
   never the Docker API) and the traffic driver (`ae3gis-netns`: host PID +
-  `CAP_SYS_ADMIN` + `CAP_SYS_PTRACE`, `setns` into node netns; not privileged;
+  `CAP_SYS_ADMIN` + `CAP_SYS_PTRACE`; runs start processes through `nsenter`
+  (posix_spawn, ~2000/s), probes with `setns` in a fork; not privileged;
   `AE3GIS_DRIVER_SECURITY_OPT` for AppArmor/SELinux hosts). The tools image is
   `ae3gis.local/nettools` (`backend/tools/nettools/`, catalog `tools` map;
   rebuilt when stale before a tool job). `engine/fake_helpers.py` simulates both.
@@ -154,6 +164,31 @@ engine configures a node; unknown types default to `host`. Adding a node type is
 a single `node_types.json` edit (the palette, add menus, inspector type picker
 and Purdue view all read the catalog). A container with no `image` follows its
 type's default.
+
+The catalog *in effect* is that file merged with the images loaded from Docker
+Hub registries (`catalog/registry.py`, installed process-wide with
+`catalog.set_registry_overlay`, rebuilt from the DB at startup and after every
+registry add/remove/sync). All the catalog readers see the merge;
+`builtin_model()` does not (benchmark censuses use it). Registry images carry
+`source.registry`, types they define `origin`.
+
+### Node images from Docker Hub registries
+A registry is a Docker Hub namespace the user adds (by URL, `registries` table,
+per instance, never in git). Images follow **`docs/image-standard.md`**: the
+repo's short description starts with `[ae3gis]` (other repos are never
+inspected) and the image carries `io.ae3gis.schema` + `io.ae3gis.type` labels
+(parsed by `domain/image_labels.py`; a built-in type id joins that type as a
+variant, a new id defines a type from its `io.ae3gis.default` image's
+`io.ae3gis.type.*` labels; `shell`/`own-bridge` as in the catalog). A sync job
+(`list → inspect → apply`) lists repos/tags through the Hub API (free), reads
+labels through the registry (one Docker Hub pull per image: anonymous limit
+100/h per IP), reuses labels while a tag's digest is unchanged, and stops while
+`AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are `pending`). The
+registry's snapshot is stored and merged without network; rejected images keep
+their reasons for the UI. Deploys pull an image not published for the host's
+platform as amd64 (`pull_image(platform=)`) with a `deploy.images_emulated`
+warning. Tests use `tests/hubfake.py` (an in-memory Hub behind an httpx
+`MockTransport`).
 
 ### Node images built from Dockerfiles
 Images with a `build` source (refs under `ae3gis.local/`, which fails closed
@@ -273,12 +308,17 @@ tables record every long operation.
   WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}` and
   `…/monitors/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
   race every wait against client disconnect, see `api/live_ws.py`).
-- `topologies/generate` (a parametric topology), `benchmarks` (202 + a sweep
-  job), `benchmarks/{id}[/report.md|/export]`; headless via
-  `backend/scripts/bench.py` with specs in `backend/benchmarks/specs/` and
+- `topologies/generate` (a parametric topology), `benchmarks` (202 + a
+  sweep, climb, census or matrix job), `benchmarks/{id}[/report.md|/export]`;
+  headless via `./bench.sh` (`backend/scripts/bench_suite.py`: a suite from
+  `backend/benchmarks/suites/` per host, Docker restarted between benchmarks,
+  results in `backend/benchmark-results/<host>/`) or `backend/scripts/bench.py`
+  (one spec from `backend/benchmarks/specs/<category>/`), with
   `docker-compose.bench.yml` (no `--reload`: a reload kills a benchmark).
-- `images?topology_id=` (build support, sources, per-image status),
+- `images?topology_id=` (build support, sources, registries, per-image status),
   `images/builds` (202 + build jobs), `sources/{name}/sync` (202 + a job).
+- `registries` — list, add `{url}` (201, starts a sync), `{id}/sync` (202 + a
+  job), `DELETE {id}` (409 `registry_busy` while syncing).
 - `system` — `health`, `labs` (reconcile report), `environment`, `reconcile`,
   `labs/{hash}/purge`.
 - `catalog`, `presets` as before.

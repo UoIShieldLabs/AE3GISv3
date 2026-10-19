@@ -27,6 +27,8 @@ export type JobLog = S['JobLogOut'];
 export type ImagesReport = S['ImagesReport'];
 export type ImageStatus = S['ImageStatusOut'];
 export type ImageSource = S['SourceOut'];
+export type Registry = S['RegistryOut'];
+export type RegistryImage = S['RegistryImageOut'];
 export type Activity = S['ActivityOut'];
 export type Artifact = S['ArtifactOut'];
 export type DeployedInterfaces = S['DeployedInterfacesOut'];
@@ -244,6 +246,18 @@ export function buildImages(refs: string[], fresh = false): Promise<Job[]> {
 }
 export function syncSource(name: string): Promise<Job> {
   return request(`${V1}/sources/${encodeURIComponent(name)}/sync`, { method: 'POST' });
+}
+
+// ── Registries (Docker Hub namespaces whose standard images join the catalog)
+/** Add a namespace by Docker Hub URL or name; its first sync starts right away. */
+export function addRegistry(url: string): Promise<Registry> {
+  return request(`${V1}/registries`, json({ url }));
+}
+export function syncRegistry(id: string): Promise<Job> {
+  return request(`${V1}/registries/${encodeURIComponent(id)}/sync`, { method: 'POST' });
+}
+export function removeRegistry(id: string): Promise<void> {
+  return request(`${V1}/registries/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 // ── Presets ────────────────────────────────────────────────────────

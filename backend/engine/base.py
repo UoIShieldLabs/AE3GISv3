@@ -307,7 +307,12 @@ class DeploymentEngine(Protocol):
 
     async def images_present(self, images: list[str]) -> dict[str, bool]: ...
 
-    async def pull_image(self, image: str, on_progress: Progress) -> None: ...
+    async def pull_image(
+        self, image: str, on_progress: Progress, platform: str | None = None
+    ) -> None:
+        """Pull ``image``; ``platform`` (e.g. "linux/amd64") picks one other than
+        the host's, for images published only for it (run emulated)."""
+        ...
 
     async def inspect_images(self, refs: list[str]) -> dict[str, ImageInfo | None]:
         """Local image details per ref (None when absent)."""

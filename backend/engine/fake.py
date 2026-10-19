@@ -17,7 +17,8 @@ reports running. Test hooks:
   ``oom_nodes``: nodes whose cgroup reports an OOM kill.
 - ``traffic_interval``: seconds between iperf3 intervals of the fake driver;
   ``fail_listen``: nodes whose traffic servers never listen; ``unreachable``:
-  nodes whose readiness probes fail.
+  nodes whose readiness probes fail; ``unstarted_clients``: how many of a
+  run's last clients the driver never gets to start.
 
 A capture sidecar behaves like tcpdump: it streams a pcap and prints its
 totals when signalled. Helpers (``start_helper``: the collector and the netns
@@ -194,6 +195,8 @@ class FakeEngine:
         self.crash_nodes: dict[str, str] = {}
         self.present_images: set[str] | None = None  # None = everything present
         self.pulled: list[str] = []
+        # The platform each pull asked for (None: the host's).
+        self.pull_platforms: dict[str, str | None] = {}
         self.pull_gate: asyncio.Event | None = None
         self.built: dict[str, ImageInfo] = {}  # normalized ref -> image
         self.builds: list[BuildSpec] = []
@@ -214,9 +217,14 @@ class FakeEngine:
         self.fail_helper: dict[str, str] = {}
         self.monitor_interval: float | None = None
         self.fake_mem_per_node = 10_000_000
+        self.fake_disk_per_node = 1_000_000  # what each node writes to Docker's disk
+        # The fake network's capacity per traffic run (b/s): above it every
+        # flow delivers its share. None: everything gets through.
+        self.traffic_capacity_bps: float | None = None
         self.oom_nodes: set[str] = set()
         self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail
+        self.unstarted_clients = 0  # a run's last clients the fake driver never starts
         self._pids: dict[tuple[str, str], int] = {}
 
     @staticmethod
@@ -341,10 +349,13 @@ class FakeEngine:
             arch=self.platform.split("/")[-1],
         )
 
-    async def pull_image(self, image: str, on_progress: Progress) -> None:
+    async def pull_image(
+        self, image: str, on_progress: Progress, platform: str | None = None
+    ) -> None:
         if self.pull_gate is not None:
             await self.pull_gate.wait()
         self.pulled.append(image)
+        self.pull_platforms[image] = platform
         on_progress(f"{image}: Pull complete")
         if self.present_images is not None:
             self.present_images.add(image)
@@ -552,7 +563,7 @@ class FakeEngine:
         }
 
 
-def make_engine(name: str):
+def make_engine(name: str, *, docker_timeout_s: float = 300):
     """Engine factory used by the app (``Settings.engine``)."""
     if name == "fake":
         engine = FakeEngine()
@@ -561,4 +572,4 @@ def make_engine(name: str):
         return engine
     from engine.kathara.engine import KatharaEngine
 
-    return KatharaEngine()
+    return KatharaEngine(docker_timeout_s=docker_timeout_s)

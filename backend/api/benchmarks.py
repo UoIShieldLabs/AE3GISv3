@@ -39,6 +39,7 @@ def benchmark_out(job: Job) -> dict[str, Any]:
     return {
         "id": job.id,
         "label": params.get("label") or "",
+        "kind": bm.kind_of(params),
         "status": job.status,
         "live": job.is_active,
         "topology_id": params.get("topology_id"),

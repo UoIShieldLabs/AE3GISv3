@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Deployment engine: "kathara" (default) or "fake" (in-memory, for tests
     # and for running the UI without Docker).
     engine: str = "kathara"
+    # Seconds AE3GIS's Docker API calls may take (docker-py defaults to 60,
+    # too short for listing ~1000 containers on a loaded host).
+    docker_timeout_s: float = 300
 
     log_level: str = "INFO"
 
@@ -50,6 +53,14 @@ class Settings(BaseSettings):
     # e.g. to iterate on Dockerfiles; in Docker the path must be mounted.
     max_concurrent_builds: int = 2
     source_overrides: dict[str, Path] = {}
+
+    # Docker Hub registries (images following docs/image-standard.md). Reading
+    # an image's labels counts as a Docker Hub pull (anonymous: 100/hour per
+    # IP); a sync stops reading while this many pulls are left, so deploys
+    # can still pull, and leaves the rest for the next sync.
+    registry_pull_reserve: int = 10
+    # Seconds one Docker Hub request may take.
+    registry_timeout_s: float = 20
 
     # Captures and traffic runs keep their output (pcaps, time series, run.json)
     # under data_dir/artifacts/<job id>/, deleted after the retention period.

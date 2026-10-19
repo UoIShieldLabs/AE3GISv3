@@ -33,7 +33,8 @@ and destroy jobs stay attached to it).
 Artifacts (``data/artifacts/<job>/``): ``benchmark.json`` (spec, environment,
 rows, outcome), ``results.csv`` (a row per step), ``report.md``, the monitor's
 ``host.csv`` / ``nodes.csv`` / ``ifaces.csv`` / ``markers.csv`` (with a
-``step`` column), and ``topologies/<step>.json``.
+``step`` column), ``topologies/<step>.json``, and per traffic step
+``traffic/<step>/`` (the run's ``run.json`` and ``totals.ndjson``).
 """
 
 from __future__ import annotations
@@ -44,6 +45,8 @@ import csv
 import io
 import json
 import logging
+import re
+import shutil
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -63,12 +66,15 @@ from domain.generator import (
     GeneratorError,
     GeneratorParams,
     check,
-    check_types,
+    check_catalog,
     counts,
     generate,
+    kinds_used,
     max_hosts,
 )
 from domain.topology import images_in
+from domain.traffic.iperf3 import burst_shape
+from domain.traffic.patterns import PatternError, expand
 from engine.base import EngineState
 from services import deployment, environment, events, jobs, netns_driver, topologies, traffic
 from services import monitor as monitor_service
@@ -83,6 +89,10 @@ RESULTS_NAME = "results.csv"
 REPORT_NAME = "report.md"
 # Jobs that do not make the host busy (they don't load it for long).
 QUIET_KINDS = ("build", "sync_source")
+# How long a step's traffic may take to start every client before its window
+# begins anyway (beyond its ramp): starting thousands of processes takes a while.
+STARTUP_BASE_S = 60.0
+STARTUP_PER_FLOW_S = 0.05
 
 
 def list_benchmarks(db: Session, limit: int = 50) -> list[Job]:
@@ -98,6 +108,55 @@ def _gen_params(spec: dict[str, Any], hosts: int) -> GeneratorParams:
     g = dict((spec.get("topology") or {}).get("generate") or {})
     g.pop("hosts", None)
     return GeneratorParams(hosts=hosts, **g)
+
+
+def _hidden_images() -> set[str]:
+    # A census covers the built-in catalog only: its results must not depend
+    # on which registries an instance has added.
+    model = catalog.builtin_model()
+    return {ref for ref, img in model.images.items() if img.stability == "hidden"}
+
+
+def _census_params(spec: dict[str, Any], case: dict[str, Any]) -> GeneratorParams:
+    """A census case's topology: ``per_image`` client hosts of the case's type
+    and image, around them the plain campus (router, switches, one server)."""
+    g = dict((spec.get("topology") or {}).get("generate") or {})
+    for key in (
+        "hosts",
+        "host_mix",
+        "random",
+        "server_mix",
+        "switch_mix",
+        "core_type",
+        "core_image",
+    ):
+        g.pop(key, None)
+    g["servers"] = 1
+    k = int((spec.get("census") or {}).get("per_image") or 5)
+    mix = [{"type": case["type"], "image": case["image"], "weight": 1}]
+    return GeneratorParams(hosts=k, **{**g, "host_mix": mix})
+
+
+def _check_matrix(
+    matrix: dict[str, Any], data: dict[str, Any] | None, spec: dict[str, Any], scale: list[int]
+) -> None:
+    """Every cell must make flows on the step's topology, in shapes iperf3 can
+    send, before anything is deployed (a refused cell mid-run wastes the run)."""
+    if data is None:
+        data = generate(_gen_params(spec, scale[0]))
+    nodes = list(selectors.node_index(data))
+    for cell in bm.selected_cells(matrix):
+        pattern = bm.matrix_pattern(matrix, cell)
+        flows = expand([pattern], lambda sel: selectors.resolve(data, nodes, sel or "all"))
+        for f in flows[:1]:
+            if f.get("burst_interval_ms"):
+                udp = f.get("protocol") == "udp"
+                burst_shape(
+                    str(f.get("bitrate") or ("1M" if udp else "")),
+                    f["burst_interval_ms"],
+                    "udp" if udp else "tcp",
+                    f.get("length"),
+                )
 
 
 def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job:
@@ -124,6 +183,20 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 )
             generated = False
             scale = [len(selectors.node_index(topo.data))]
+        elif spec.get("census"):
+            census = dict(spec["census"])
+            try:
+                census["cases"] = bm.census_cases(
+                    catalog.builtin_node_types(), _hidden_images(), census.get("cases")
+                )
+                first_case = _census_params(spec, census["cases"][0])
+                check(first_case)
+            except (GeneratorError, ValueError, TypeError) as exc:
+                raise Invalid(str(exc), code="bad_census") from exc
+            extra["census"] = census
+            scale = [int(census.get("per_image") or 5)]
+            topo, _ = topologies.create(db, name=f"bench: {label}", data=generate(first_case))
+            generated = True
         else:
             adaptive = spec.get("adaptive")
             scale = list(spec.get("scale") or [])
@@ -135,7 +208,7 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
             try:
                 for hosts in [first] if adaptive else [min(scale), max(scale)]:
                     check(_gen_params(spec, hosts))
-                check_types(_gen_params(spec, first), set(catalog.node_types()))
+                check_catalog(_gen_params(spec, first), catalog.node_types())
             except (GeneratorError, TypeError) as exc:
                 raise Invalid(str(exc), code="bad_generator") from exc
             if adaptive:
@@ -145,6 +218,11 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 db, name=f"bench: {label}", data=generate(_gen_params(spec, first))
             )
             generated = True
+        if spec.get("matrix"):
+            try:
+                _check_matrix(spec["matrix"], topo.data if not generated else None, spec, scale)
+            except (PatternError, ValueError) as exc:
+                raise Invalid(str(exc), code="bad_matrix") from exc
         params = {
             **spec,
             **extra,
@@ -192,6 +270,10 @@ class Bench:
         self.by_image: list[dict[str, Any]] = []
         # How an adaptive sweep's climb ended.
         self.limit: str | None = None
+        # The host at rest before the first step (``rest_s``).
+        self.rest: dict[str, Any] | None = None
+        # A census's images that could not be prepared: image → (reason, detail).
+        self.image_errors: dict[str, tuple[str, str]] = {}
         self.armed = False
         self.trip: tuple[str, str] | None = None
         self.tripped = asyncio.Event()
@@ -346,48 +428,42 @@ def readiness_probes(data: dict[str, Any], pids: dict[str, int]) -> list[dict[st
     return probes
 
 
-async def run_step(
-    b: Bench,
-    name: str,
-    scale: int,
-    rep: int,
-    ends: Callable[[dict[str, Any]], bool] | None = None,
-) -> dict[str, Any]:
-    """One step. ``ends``: whether the sweep ends after this step (``keep_last``
-    keeps its lab), asked once the step is measured; by default a step that
-    did not pass, or the plan's last (``b.is_last``)."""
-    runner, spec = b.runner, b.spec
-    settings = runner.settings
-    assert settings is not None and b.session is not None
-    topology_id = spec["topology_id"]
-    row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
-    row["reason"] = row["detail"] = None
+Window = tuple[float, float] | None
 
-    def fail(outcome: str, reason: str, detail: str) -> None:
-        if row["outcome"] == "ok":
-            row.update(outcome=outcome, reason=reason, detail=detail)
 
-    # The step's topology.
-    topo = _topo(runner, topology_id)
-    if spec.get("generated"):
-        data = generate(_gen_params(spec, scale))
+def _fail(row: dict[str, Any], outcome: str, reason: str, detail: str) -> None:
+    """Record a step's outcome; the first one that isn't ``ok`` sticks."""
+    if row["outcome"] == "ok":
+        row.update(outcome=outcome, reason=reason, detail=detail)
+
+
+def _place(b: Bench, row: dict[str, Any], data: dict[str, Any] | None, artifact: str) -> Topology:
+    """Put the step's topology (``data``; None keeps the stored one) on the
+    benchmark's library row, keep a copy as ``topologies/<artifact>.json``,
+    and note its size and images."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    if data is not None:
         with runner.session_factory() as db:
-            t = db.get(Topology, topology_id)
-            topologies.update(db, t, data=data)
+            topologies.update(db, db.get(Topology, topology_id), data=data)
         store = runner.artifacts
         assert store is not None
         tdir = store.dir(b.job_id) / "topologies"
         tdir.mkdir(exist_ok=True)
-        (tdir / f"{scale}-{rep}.json").write_text(json.dumps(data))
-        topo = _topo(runner, topology_id)
+        (tdir / f"{artifact}.json").write_text(json.dumps(data))
+    topo = _topo(runner, topology_id)
     plan = topologies.plan_for(topo)
     row["nodes"] = len(plan.nodes)
     row["links"] = len(plan.collision_domains)
+    row["composition"] = bm.composition((n.type, n.image) for n in plan.nodes)
     b.image_of = {n.id: n.image for n in plan.nodes}
     b.by_image = []
-    windows: dict[str, tuple[float, float] | None] = {"pre": None, "settle": None, "hold": None}
+    return topo
 
-    # 1. pre: the reference, nothing deployed, once the host is quiet.
+
+async def _reference(b: Bench, row: dict[str, Any], name: str) -> Window:
+    """The reference window: nothing of ours deployed, once the host is quiet."""
+    spec = b.spec
+    assert b.session is not None
     b.session.set_scope(m.Scope(step=name))
     b.progress(name, "waiting for the host to go quiet")
     row["quiet_wait_s"] = await b.quiet(
@@ -396,172 +472,304 @@ async def run_step(
     b.progress(name, f"reference ({spec.get('cooldown_s', 20)}s, nothing deployed)")
     t0 = b.now()
     await asyncio.sleep(float(spec.get("cooldown_s") or 0))
-    windows["pre"] = (t0, b.now())
+    return (t0, b.now())
 
+
+async def _deploy(b: Bench, row: dict[str, Any], name: str) -> EngineState | None:
+    """Deploy the step's topology (arming the stop criteria); its engine state,
+    or None when it was not deployed (projected to exhaust the host, refused,
+    failed or partial). A slow deploy is marked but goes on."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    assert b.session is not None
+    # Would this step exhaust the host? (A deploy cannot be interrupted.)
+    latest = b.session.host_rows[-1] if b.session.host_rows else None
+    projected = bm.projected_memory(b.rows, latest, row["nodes"], b.stop)
+    if projected is not None:
+        _fail(row, "stopped", *projected)
+        b.mark(f"{name}: not deployed ({projected[1]})")
+        return None
+    b.arm()
+    b.mark(f"{name}: deploy ({row['nodes']} nodes, {row['links']} links)")
+    b.progress(name, f"deploying {row['nodes']} nodes")
     try:
-        # Would this step exhaust the host? (A deploy cannot be interrupted.)
-        latest = b.session.host_rows[-1] if b.session.host_rows else None
-        projected = bm.projected_memory(b.rows, latest, row["nodes"], b.stop)
-        if projected is not None:
-            fail("stopped", *projected)
-            b.mark(f"{name}: not deployed ({projected[1]})")
-            return row
-
-        # 2. deploy
-        b.arm()
-        b.mark(f"{name}: deploy ({row['nodes']} nodes, {row['links']} links)")
-        b.progress(name, f"deploying {row['nodes']} nodes")
-        try:
-            deploy = await _run_job(
-                runner,
-                lambda db: deployment.start_deploy(db, runner, db.get(Topology, topology_id)),
-            )
-        except (Conflict, Invalid) as exc:  # e.g. the topology does not validate
-            fail("failed", "deploy_refused", str(exc))
-            return row
-        row["deploy_job"] = deploy.id
-        row["deploy_s"] = _elapsed(deploy)
-        row["deploy_phases"] = bm.deploy_phases(deploy.steps or [])
-        if deploy.status != "succeeded":
-            fail("failed", "deploy_failed", deploy.error or deploy.status)
-            return row
-        with runner.session_factory() as db:
-            partial = db.scalars(
-                select(Event).where(Event.job_id == deploy.id, Event.type == "deploy.partial")
-            ).first()
-        if partial is not None:
-            fail("failed", "deploy_partial", partial.message)
-            return row
-        if row["deploy_s"] and row["deploy_s"] > float(b.stop.get("deploy_timeout_s") or 1e9):
-            fail("stopped", "deploy_slow", f"deploy took {row['deploy_s']:.0f}s")
-        topo = _topo(runner, topology_id)
-        state = EngineState.from_dict(topo.engine_state)
-        assert state is not None
-        b.session.set_scope(
-            m.Scope(
-                lab_hash=state.lab_hash,
-                node_for_machine={mn: nid for nid, mn in state.nodes.items()},
-                step=name,
-            )
+        deploy = await _run_job(
+            runner,
+            lambda db: deployment.start_deploy(db, runner, db.get(Topology, topology_id)),
         )
-        b.mark(f"{name}: deployed in {row['deploy_s']}s")
+    except (Conflict, Invalid) as exc:  # e.g. the topology does not validate
+        _fail(row, "failed", "deploy_refused", str(exc))
+        return None
+    row["deploy_job"] = deploy.id
+    row["deploy_s"] = _elapsed(deploy)
+    row["deploy_phases"] = bm.deploy_phases(deploy.steps or [])
+    if deploy.status != "succeeded":
+        _fail(row, "failed", "deploy_failed", deploy.error or deploy.status)
+        return None
+    with runner.session_factory() as db:
+        partial = db.scalars(
+            select(Event).where(Event.job_id == deploy.id, Event.type == "deploy.partial")
+        ).first()
+    if partial is not None:
+        _fail(row, "failed", "deploy_partial", partial.message)
+        return None
+    if row["deploy_s"] and row["deploy_s"] > float(b.stop.get("deploy_timeout_s") or 1e9):
+        _fail(row, "stopped", "deploy_slow", f"deploy took {row['deploy_s']:.0f}s")
+    state = EngineState.from_dict(_topo(runner, topology_id).engine_state)
+    assert state is not None
+    b.session.set_scope(_lab_scope(state, name))
+    b.mark(f"{name}: deployed in {row['deploy_s']}s")
+    return state
 
-        # 3. network ready
-        pids = await runner.engine.node_pids(state)
-        probes = readiness_probes(topo.data, pids)
-        b.progress(name, f"checking {len(probes)} paths")
-        ready = await netns_driver.probe(
-            runner.engine,
-            settings,
-            image=catalog.tool_image("driver"),
-            job_id=b.job_id,
-            owner=settings.ensure_instance_id(),
-            lab_hash=state.lab_hash,
-            probes=probes,
-            timeout_s=float(b.stop.get("ready_timeout_s") or 300),
+
+async def _ready(
+    b: Bench, row: dict[str, Any], name: str, data: dict[str, Any], state: EngineState
+) -> bool:
+    """Network ready: every host reaches its gateway and a far host in time.
+    True when the step can go on."""
+    runner = b.runner
+    settings = runner.settings
+    assert settings is not None
+    pids = await runner.engine.node_pids(state)
+    probes = readiness_probes(data, pids)
+    b.progress(name, f"checking {len(probes)} paths")
+    ready = await netns_driver.probe(
+        runner.engine,
+        settings,
+        image=catalog.tool_image("driver"),
+        job_id=b.job_id,
+        owner=settings.ensure_instance_id(),
+        lab_hash=state.lab_hash,
+        probes=probes,
+        timeout_s=float(b.stop.get("ready_timeout_s") or 300),
+    )
+    ok_t = [r["t"] for r in ready["results"] if r.get("ok")]
+    row["ready_s"] = max(ok_t) if ok_t else None
+    row["probes"] = len(probes)
+    row["probes_failed"] = ready["failed"]
+    if ready.get("error"):
+        _fail(row, "failed", "probe_error", ready["error"])
+    elif ready["failed"]:
+        bad = sorted({r["node"] for r in ready["results"] if not r.get("ok")})
+        _fail(
+            row,
+            "failed",
+            "not_ready",
+            f"{ready['failed']} path(s) unreachable from {', '.join(bad[:5])}",
         )
-        ok_t = [r["t"] for r in ready["results"] if r.get("ok")]
-        row["ready_s"] = max(ok_t) if ok_t else None
-        row["probes"] = len(probes)
-        row["probes_failed"] = ready["failed"]
-        if ready.get("error"):
-            fail("failed", "probe_error", ready["error"])
-        elif ready["failed"]:
-            bad = sorted({r["node"] for r in ready["results"] if not r.get("ok")})
-            fail(
-                "failed",
-                "not_ready",
-                f"{ready['failed']} path(s) unreachable from {', '.join(bad[:5])}",
-            )
-        b.mark(f"{name}: network ready in {row['ready_s']}s")
-        if row["outcome"] != "ok":
-            return row
+    b.mark(f"{name}: network ready in {row['ready_s']}s")
+    return row["outcome"] == "ok"
 
-        # 4. settle
-        b.progress(name, f"settling ({spec.get('settle_s', 20)}s)")
-        t1 = b.now()
-        if await b.pause(float(spec.get("settle_s") or 0)):
+
+async def _settle(b: Bench, name: str) -> Window:
+    """Deployed and idle for ``settle_s``; raises Tripped."""
+    b.progress(name, f"settling ({b.spec.get('settle_s', 20)}s)")
+    t1 = b.now()
+    if await b.pause(float(b.spec.get("settle_s") or 0)):
+        raise Tripped
+    return (t1, b.now())
+
+
+async def _hold(
+    b: Bench,
+    row: dict[str, Any],
+    name: str,
+    windows: dict[str, Window],
+    hold_s: float,
+    load: dict[str, Any] | None,
+) -> None:
+    """``hold_s`` idle, or under ``load`` (``patterns``, ``interval_s``,
+    ``ramp_s``: one traffic run). Under load the window begins once every
+    client has started (``_traffic_up``), so its start-up and ramp stay out of
+    it at any size; a client still not started by then fails the step as
+    ``traffic_start``: the tool's limit, not the network's. Sets
+    ``windows["hold"]``, then raises Tripped if a criterion fired."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    t2 = b.now()
+    if not load:
+        b.progress(name, f"holding idle ({hold_s:g}s)")
+        tripped = await b.pause(hold_s)
+        windows["hold"] = (t2, b.now())
+        if tripped:
             raise Tripped
-        windows["settle"] = (t1, b.now())
-
-        # 5. hold
-        t_spec = spec.get("traffic")
-        t2 = b.now()
-        if t_spec:
-            b.progress(name, "starting traffic")
-            with runner.session_factory() as db:
-                run = traffic.start_run(
-                    db,
-                    runner,
-                    db.get(Topology, topology_id),
-                    {
-                        "label": f"benchmark {name}",
-                        "patterns": t_spec.get("patterns") or [],
-                        "flows": [],
-                        "duration_s": None,
-                        "interval_s": t_spec.get("interval_s") or b.interval,
-                        "ramp_s": t_spec.get("ramp_s") or 0.0,
-                    },
-                )
-                run_id = run.id
-            row["traffic_job"] = run_id
-            ramp = float(t_spec.get("ramp_s") or 0.0)
-            b.progress(name, f"traffic: ramp {ramp:.0f}s + hold {spec.get('hold_s', 60)}s")
-            tripped = await b.pause(ramp)
-            t2 = b.now()
-            if not tripped:
-                tripped = await b.pause(float(spec.get("hold_s") or 0))
-            windows["hold"] = (t2, b.now())
-            done = await _stop_traffic(runner, topology_id)
-            totals = ((done.result or {}) if done else {}).get("totals") or {}
-            row.update(
-                flows=totals.get("flows"),
-                offered_bps=totals.get("offered_bps"),
-                delivered_bps=totals.get("delivered_bps"),
-                delivered_ratio=totals.get("delivered_ratio"),
-                lost_percent=totals.get("lost_percent"),
-                retransmits=totals.get("retransmits"),
-                flows_with_errors=totals.get("flows_with_errors"),
+        return
+    b.progress(name, "starting traffic")
+    try:
+        with runner.session_factory() as db:
+            run = traffic.start_run(
+                db,
+                runner,
+                db.get(Topology, topology_id),
+                {
+                    "label": f"benchmark {name}",
+                    "patterns": load.get("patterns") or [],
+                    "flows": [],
+                    "duration_s": None,
+                    "interval_s": load.get("interval_s") or b.interval,
+                    "ramp_s": load.get("ramp_s") or 0.0,
+                },
             )
-            if done is not None and done.status == "failed":
-                fail("failed", "traffic_failed", done.error or "the traffic run failed")
-            if tripped:
-                raise Tripped
-            verdict = bm.traffic_verdict(totals, b.stop)
-            if verdict:
-                fail("degraded", *verdict)
-        else:
-            b.progress(name, f"holding idle ({spec.get('hold_s', 60)}s)")
-            if await b.pause(float(spec.get("hold_s") or 0)):
-                windows["hold"] = (t2, b.now())
-                raise Tripped
-            windows["hold"] = (t2, b.now())
+            row["traffic_job"] = run.id
+    except (Conflict, Invalid) as exc:
+        windows["hold"] = None
+        _fail(row, "failed", "traffic_refused", str(exc))
+        return
+    flows = len((run.params or {}).get("flows") or [])
+    b.progress(name, f"traffic: starting {flows} flow(s)")
+    tripped, startup_s, begun = await _traffic_up(
+        b, run.id, flows, float(load.get("ramp_s") or 0.0)
+    )
+    row["traffic_startup_s"] = startup_s
+    row["flows_not_started"] = max(0, flows - begun)
+    t2 = b.now()
+    if not tripped:
+        b.progress(name, f"traffic: {begun} flow(s) running after {startup_s:g}s; hold {hold_s:g}s")
+        tripped = await b.pause(hold_s)
+    windows["hold"] = (t2, b.now())
+    done = await _stop_traffic(runner, topology_id)
+    totals = ((done.result or {}) if done else {}).get("totals") or {}
+    row.update({k: totals.get(k) for k in bm.TRAFFIC_ROW_KEYS})
+    _keep_traffic(b, row["traffic_job"], load.get("slug") or str(row["step"]))
+    if done is not None and done.status == "failed":
+        _fail(row, "failed", "traffic_failed", done.error or "the traffic run failed")
+    if tripped:
+        raise Tripped
+    if row["flows_not_started"]:
+        _fail(
+            row,
+            "failed",
+            "traffic_start",
+            f"{row['flows_not_started']} of {flows} client(s) had not started after {startup_s:g}s",
+        )
+    verdict = bm.traffic_verdict(totals, b.stop)
+    if verdict:
+        _fail(row, "degraded", *verdict)
+
+
+async def _traffic_up(b: Bench, run_id: str, flows: int, ramp: float) -> tuple[bool, float, int]:
+    """Wait until traffic run ``run_id`` has started every client (the
+    driver's ``clients_started``), it ends, a criterion trips, or the start-up
+    budget runs out. Returns (tripped, seconds waited, clients started)."""
+    start = time.monotonic()
+    budget = ramp + STARTUP_BASE_S + STARTUP_PER_FLOW_S * flows
+    subject = traffic.subject(b.spec["topology_id"])
+    tripped = False
+    while time.monotonic() - start < budget:
+        rec = traffic.active_recorder(run_id)
+        if rec is not None and rec.startup is not None:
+            break
+        with b.runner.session_factory() as db:
+            active = jobs.active_for_subject(db, subject)
+        if active is None or active.id != run_id:
+            break  # it ended (failed) before starting its clients
+        if await b.pause(0.25):
+            tripped = True
+            break
+    rec = traffic.active_recorder(run_id)
+    begun = rec.clients_begun() if rec is not None else 0
+    return tripped, round(time.monotonic() - start, 1), begun
+
+
+def _keep_traffic(b: Bench, run_id: str, slug: str) -> None:
+    """Copy a step's traffic run summary (``run.json``: every flow's summary;
+    ``totals.ndjson``: what arrived per interval; ``flows.ndjson`` too with
+    ``keep_samples``) into ``traffic/<slug>/``, so the benchmark's export
+    holds its network results."""
+    store = b.runner.artifacts
+    assert store is not None
+    names = [traffic.RUN_NAME, traffic.TOTALS_NAME]
+    if b.spec.get("keep_samples"):
+        names.append(traffic.FLOWS_NAME)
+    dest = store.dir(b.job_id) / "traffic" / _slug(slug)
+    for name in names:
+        src = store.dir(run_id) / name
+        if src.exists():
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dest / name)
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-") or "step"
+
+
+async def _finish(b: Bench, row: dict[str, Any], windows: dict[str, Window]) -> None:
+    """Disarm, measure the step's windows and stop its traffic."""
+    runner, topology_id = b.runner, b.spec["topology_id"]
+    assert b.session is not None
+    b.armed = False
+    if b.trip is not None:
+        _fail(row, "stopped", *b.trip)
+    row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
+    row["by_image"] = bm.image_metrics(b.by_image, windows)
+    await _stop_traffic(runner, topology_id)
+
+
+async def _teardown(b: Bench, row: dict[str, Any], name: str, last: bool) -> None:
+    """Destroy the step's lab unless it is the sweep's ``last`` and
+    ``keep_last`` keeps it."""
+    if last and b.spec.get("keep_last"):
+        return
+    b.progress(name, "destroying")
+    destroy = await _destroy(b.runner, b.spec["topology_id"])
+    if destroy is not None:
+        row["destroy_job"] = destroy.id
+        row["destroy_s"] = _elapsed(destroy)
+        if destroy.status != "succeeded":
+            _fail(row, "failed", "destroy_failed", destroy.error or destroy.status)
+    b.mark(f"{name}: destroyed")
+
+
+async def run_step(
+    b: Bench,
+    name: str,
+    scale: int,
+    rep: int,
+    ends: Callable[[dict[str, Any]], bool] | None = None,
+    *,
+    data: dict[str, Any] | None = None,
+    artifact: str | None = None,
+    case: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One step: place, reference, deploy, ready, settle, hold, measure,
+    destroy. ``data``: the step's topology (default: generated at ``scale``,
+    or the stored one). ``ends``: whether the sweep ends after this step
+    (``keep_last`` keeps its lab), asked once the step is measured; by
+    default a step that did not pass, or the plan's last (``b.is_last``)."""
+    spec = b.spec
+    row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
+    row["reason"] = row["detail"] = None
+    if case:
+        row.update(case=bm.case_label(case), case_type=case["type"], case_image=case["image"])
+    if data is None and spec.get("generated"):
+        data = generate(_gen_params(spec, scale))
+    topo = _place(b, row, data, artifact or f"{scale}-{rep}")
+    if case:
+        # Per-image numbers of the case's own nodes (the generated client
+        # hosts), not of the base router, switches and server around them.
+        b.image_of = {nid: row["case"] for nid in b.image_of if nid.startswith("h")}
+    windows: dict[str, Window] = {"pre": None, "settle": None, "hold": None}
+    windows["pre"] = await _reference(b, row, name)
+    try:
+        state = await _deploy(b, row, name)
+        if state is None or not await _ready(b, row, name, topo.data, state):
+            return row
+        windows["settle"] = await _settle(b, name)
+        load = spec.get("traffic")
+        if load:
+            load = {**load, "slug": f"{scale}-{rep}"}
+        await _hold(b, row, name, windows, float(spec.get("hold_s") or 0), load)
     except Tripped:
         pass
     finally:
-        b.armed = False
-        if b.trip is not None:
-            fail("stopped", *b.trip)
-        row.update(bm.step_metrics(b.session.host_rows, b.agg, windows, row.get("nodes") or 0))
-        row["by_image"] = bm.image_metrics(b.by_image, windows)
-        await _stop_traffic(runner, topology_id)
+        await _finish(b, row, windows)
         last = ends(row) if ends else (row["outcome"] != "ok" or b.is_last)
-        if not (last and spec.get("keep_last")):
-            b.progress(name, "destroying")
-            destroy = await _destroy(runner, topology_id)
-            if destroy is not None:
-                row["destroy_job"] = destroy.id
-                row["destroy_s"] = _elapsed(destroy)
-                if destroy.status != "succeeded":
-                    fail("failed", "destroy_failed", destroy.error or destroy.status)
-            b.mark(f"{name}: destroyed")
+        await _teardown(b, row, name, last)
     return row
 
 
 def _write_results(directory: Path, rows: list[dict[str, Any]]) -> None:
     flat = []
     for r in rows:
-        f = {k: v for k, v in r.items() if k not in ("deploy_phases", "by_image")}
+        f = {k: v for k, v in r.items() if k not in ("deploy_phases", "by_image", "composition")}
         for phase, secs in (r.get("deploy_phases") or {}).items():
             f[f"deploy_{phase}_s"] = secs
         flat.append(f)
@@ -608,17 +816,29 @@ def _halts(b: Bench, row: dict[str, Any]) -> bool:
 async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     """An adaptive sweep: each step's scale follows from the last one's memory
     (``bm.next_scale``) until memory peaks at the target or a step fails, then
-    the highest passing scale runs ``confirm`` more times."""
+    the highest passing scale runs ``confirm`` more times. A step that fails
+    on a host limit is retried lower (``bm.retry_scale``: ``descend`` of a
+    first step too big for the host, else halfway down to the best passing
+    scale), and the climb stays below it."""
     runner, spec = b.runner, b.spec
     max_scale = int(spec.get("max_scale") or adaptive["start"])
     scale: int | None = min(int(adaptive["start"]), max_scale)
     confirm = int(adaptive.get("confirm") or 0)
     max_steps = int(adaptive.get("max_steps") or 20)
+    descend = float(adaptive.get("descend") or 0)
+    unit = max(1, int(adaptive.get("min_step") or 25))
     stopped_by = "max_steps"
     nxt: tuple[int | None, str, str] | None = None
+    cap: int | None = None  # the lowest scale that failed on a host limit
 
     def passed(row: dict[str, Any]) -> bool:  # a scale for the confirm runs
         return any(r["outcome"] == "ok" for r in [*b.rows, row])
+
+    def retry(row: dict[str, Any]) -> int | None:
+        if row["reason"] not in bm.HOST_LIMITS:
+            return None
+        best = max((r["scale"] for r in b.rows if r["outcome"] == "ok"), default=None)
+        return bm.retry_scale(best, int(row["scale"]), descend, unit)
 
     def climb_ends(final: bool) -> Callable[[dict[str, Any]], bool]:
         # A climb step's own memory decides whether the climb goes on, so the
@@ -626,6 +846,8 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
         def ends(row: dict[str, Any]) -> bool:
             nonlocal nxt
             if _halts(b, row):
+                if not final and retry(row) is not None:
+                    return False
                 return not (confirm and passed(row))
             host = b.session.host_rows[-1] if b.session and b.session.host_rows else {}
             nxt = bm.next_scale(
@@ -634,6 +856,7 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
                 mem_total=host.get("mem_total"),
                 nodes_for=lambda h: counts(_gen_params(spec, h))["nodes"],
                 max_scale=max_scale,
+                cap=cap,
             )
             return (final or nxt[0] is None) and not (confirm and passed(row))
 
@@ -642,13 +865,23 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     for i in range(max_steps):
         assert scale is not None
         nxt = None
-        row = await step(scale, 1, f"{scale} hosts", climb_ends(i == max_steps - 1))
+        final = i == max_steps - 1
+        row = await step(scale, 1, f"{scale} hosts", climb_ends(final))
         if runner.stop_requested(b.job_id):
             return runner.stop_code(b.job_id) or "user"
         if _halts(b, row):
-            stopped_by = f"criterion:{row['reason']}"
-            b.limit = f"{scale} hosts failed ({row['reason']})"
-            break
+            lower = None if final else retry(row)
+            if lower is None:
+                stopped_by = f"criterion:{row['reason']}"
+                b.limit = f"{scale} hosts failed ({row['reason']})"
+                break
+            cap = scale if cap is None else min(cap, scale)
+            why = f"{scale} hosts failed ({row['reason']}): trying {lower} hosts"
+            row["next"] = why
+            b.mark(why)
+            persist()
+            scale = lower
+            continue
         assert nxt is not None
         scale, code, why = nxt
         row["next"] = why
@@ -671,6 +904,181 @@ async def _climb(b: Bench, adaptive: dict[str, Any], step, persist) -> str:
     return stopped_by
 
 
+async def _matrix(b: Bench, persist) -> str:
+    """Per repetition: deploy once (a row of its own: deploy, ready, memory),
+    then every cell in its order (a row each: a quiet idle gap, then the
+    cell's traffic for ``hold_s``), then destroy. A failed or degraded cell
+    doesn't stop the matrix; a stop criterion (the host ran out) does."""
+    runner, spec, job_id = b.runner, b.spec, b.job_id
+    mx = spec["matrix"]
+    scale = int(spec["scale"][0])
+    reps = int(spec.get("repetitions") or 1)
+    cells = bm.selected_cells(mx)
+    hold_s = float(spec.get("hold_s") or 0)
+    stopped_by = "completed"
+
+    def suffix(rep: int) -> str:
+        return f" #{rep}" if reps > 1 else ""
+
+    for rep in range(1, reps + 1):
+        name = f"deploy{suffix(rep)}"
+        row: dict[str, Any] = {"step": name, "scale": scale, "rep": rep, "outcome": "ok"}
+        row["reason"] = row["detail"] = None
+        state: EngineState | None = None
+        async with runner.step(job_id, name):
+            data = generate(_gen_params(spec, scale)) if spec.get("generated") else None
+            topo = _place(b, row, data, f"{scale}-{rep}")
+            windows: dict[str, Window] = {"pre": None, "settle": None, "hold": None}
+            windows["pre"] = await _reference(b, row, name)
+            try:
+                state = await _deploy(b, row, name)
+                if state is not None and await _ready(b, row, name, topo.data, state):
+                    windows["settle"] = await _settle(b, name)
+            except Tripped:
+                pass
+            await _finish(b, row, windows)
+            b.rows.append(row)
+            persist()
+        if row["outcome"] == "ok" and state is not None:
+            stopped_by = await _cells(b, state, row, rep, cells, hold_s, suffix(rep), persist)
+        name = f"teardown{suffix(rep)}"
+        async with runner.step(job_id, name):
+            await _teardown(b, row, name, last=rep == reps or stopped_by != "completed")
+            persist()
+        if row["outcome"] != "ok":
+            return f"criterion:{row['reason']}"
+        if stopped_by != "completed":
+            return stopped_by
+    return stopped_by
+
+
+async def _cells(
+    b: Bench,
+    state: EngineState,
+    deployed: dict[str, Any],
+    rep: int,
+    cells: list[dict[str, Any]],
+    hold_s: float,
+    suffix: str,
+    persist,
+) -> str:
+    runner, spec, job_id = b.runner, b.spec, b.job_id
+    assert b.session is not None
+    mx = spec["matrix"]
+    order = bm.matrix_order(cells, int(mx.get("seed") or 0), rep, mx.get("shuffle", True))
+    for i, cell in enumerate(order, 1):
+        name = f"cell {i:03d}/{len(order)} {cell['id']}{suffix}"
+        row: dict[str, Any] = {"step": name, "scale": deployed["scale"], "rep": rep}
+        row.update(outcome="ok", reason=None, detail=None, case=cell["id"], order=i)
+        row.update(cell={k: v for k, v in cell.items() if k != "id"})
+        row.update(nodes=deployed.get("nodes"), links=deployed.get("links"))
+        async with runner.step(job_id, name):
+            b.session.set_scope(_lab_scope(state, name))
+            b.progress(name, "waiting for the host to go quiet")
+            row["quiet_wait_s"] = await b.quiet(
+                float(spec.get("quiet_cpu_pct") or 10), float(spec.get("quiet_timeout_s") or 300)
+            )
+            b.progress(name, f"idle ({mx.get('gap_s', 10):g}s)")
+            t0 = b.now()
+            await asyncio.sleep(float(mx.get("gap_s") or 0))
+            windows: dict[str, Window] = {"pre": None, "settle": (t0, b.now()), "hold": None}
+            load = {
+                "patterns": [bm.matrix_pattern(mx, cell)],
+                "interval_s": mx.get("interval_s") or 10,
+                "ramp_s": mx.get("ramp_s") or 0,
+                "slug": f"{i:03d}-{cell['id']}{'-' + str(rep) if suffix else ''}",
+            }
+            b.arm()
+            try:
+                await _hold(b, row, name, windows, hold_s, load)
+            except Tripped:
+                pass
+            await _finish(b, row, windows)
+            row["idle_cpu_mean"] = bm.window_mean(
+                b.session.host_rows, windows["settle"], "vm_cpu_pct"
+            )
+            if row.get("hold_cpu_mean") is not None and row["idle_cpu_mean"] is not None:
+                row["cpu_delta"] = round(row["hold_cpu_mean"] - row["idle_cpu_mean"], 2)
+            b.rows.append(row)
+            persist()
+            runner.progress(
+                job_id, name, row["outcome"] + (f": {row['detail']}" if row.get("detail") else "")
+            )
+        if row["outcome"] == "stopped":
+            return f"criterion:{row['reason']}"
+        if runner.stop_requested(job_id):
+            return runner.stop_code(job_id) or "user"
+    return "completed"
+
+
+def _lab_scope(state: EngineState, step: str) -> m.Scope:
+    """The monitor's scope for a step of a deployed lab."""
+    return m.Scope(
+        lab_hash=state.lab_hash,
+        node_for_machine={mn: nid for nid, mn in state.nodes.items()},
+        step=step,
+    )
+
+
+async def _census(b: Bench, step) -> str:
+    """Every case in turn (× ``repetitions``); a case whose image could not be
+    prepared is skipped, and no outcome stops the census (a user stop does)."""
+    runner, spec = b.runner, b.spec
+    cases = spec["census"]["cases"]
+    k = int(spec["census"].get("per_image") or 5)
+    reps = int(spec.get("repetitions") or 1)
+    plan = [(c, r) for c in cases for r in range(1, reps + 1)]
+    for i, (case, rep) in enumerate(plan):
+        label = bm.case_label(case)
+        name = label + (f" #{rep}" if reps > 1 else "")
+        failed = b.image_errors.get(case["image"])
+        if failed:
+            row = {"step": name, "scale": k, "rep": rep, "outcome": "skipped"}
+            row.update(case=label, case_type=case["type"], case_image=case["image"])
+            row.update(reason=failed[0], detail=failed[1])
+            await step(k, rep, name, skip=row)
+            continue
+        data = generate(_census_params(spec, case))
+        await step(
+            k,
+            rep,
+            name,
+            lambda r, last=i == len(plan) - 1: last,
+            data=data,
+            artifact=_slug(f"{label}-{rep}"),
+            case=case,
+        )
+        if runner.stop_requested(b.job_id):
+            return runner.stop_code(b.job_id) or "user"
+    return "completed"
+
+
+async def _prepare_census_images(b: Bench, job_id: str, images: list[str]) -> None:
+    """Prepare every case's image, recording (not raising) the ones that
+    can't run here (``b.image_errors``: image → (reason, detail))."""
+    manager = b.runner.images
+    assert manager is not None
+    rows = await manager.statuses(images)
+    for r in rows:
+        if r["status"] == "unavailable":
+            b.image_errors[r["ref"]] = ("image_unavailable", r.get("reason") or "unavailable")
+    ok = [r["ref"] for r in rows if r["ref"] not in b.image_errors]
+    try:
+        await manager.ensure_images(b.runner, job_id, ok)
+    except Exception:  # find which: one at a time (joining builds still running)
+        for ref in ok:
+            try:
+                await manager.ensure_images(b.runner, job_id, [ref])
+            except Exception as exc:
+                b.image_errors[ref] = ("image_failed", str(exc))
+    if b.image_errors:
+        b.runner.log(
+            job_id,
+            "Skipping cases of: "
+            + ", ".join(f"{ref} ({why})" for ref, (why, _) in b.image_errors.items()),
+        )
+
+
 async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     settings, store, hub = runner.settings, runner.artifacts, runner.live
     assert settings is not None and store is not None and hub is not None
@@ -689,22 +1097,39 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
     first_adaptive = int(adaptive["start"]) if adaptive else 0
 
     def snapshot(final: bool = False) -> dict[str, Any]:
-        last = next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
+        census = spec.get("census")
+        matrix = spec.get("matrix")
+        # A census goes on past failed cases: they are in its table, not "the reason".
+        # A matrix goes on past degraded or failed cells (in its table too),
+        # and a climb past steps it retried lower: only a failure that ended
+        # it is "the reason".
+        retried = adaptive and not str(stopped_by or "").startswith("criterion:")
+        last = (
+            None
+            if census or matrix or retried
+            else next((r for r in reversed(b.rows) if r["outcome"] != "ok"), None)
+        )
         out = {
             "label": spec.get("label") or "",
+            "kind": bm.kind_of(spec),
             "started_at": started.isoformat(),
             "ended_at": datetime.now(UTC).isoformat() if final else None,
             "topology_id": spec["topology_id"],
             "rows": b.rows,
-            "by_scale": bm.by_scale(b.rows),
-            "ceiling": bm.ceiling(b.rows),
+            "by_scale": None if census or matrix else bm.by_scale(b.rows),
+            "ceiling": None if census or matrix else bm.ceiling(b.rows),
             "reason": last["reason"] if last else None,
             "detail": last["detail"] if last else None,
             "stopped_by": stopped_by,
             "limit": b.limit,
+            "rest": b.rest,
             "phase": None if final else b.phase,
             "environment_fingerprint": env.get("fingerprint"),
         }
+        if census:
+            out["census"] = bm.census_table(b.rows, int(census.get("per_image") or 5))
+        if matrix:
+            out["matrix"] = bm.matrix_table(b.rows)
         return out
 
     def persist(final: bool = False) -> None:
@@ -740,11 +1165,22 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
 
         async with runner.step(job_id, "images"):
             assert runner.images is not None
-            if spec.get("generated"):
-                data = generate(_gen_params(spec, max(scales) if scales else first_adaptive))
+            if spec.get("census"):
+                cases = spec["census"]["cases"]
+                # The campus around the cases must come up; the cases may fail.
+                base = images_in(generate(_census_params(spec, cases[0])))
+                await runner.images.ensure_images(runner, job_id, base)
+                await _prepare_census_images(b, job_id, [c["image"] for c in cases])
             else:
-                data = _topo(runner, spec["topology_id"]).data
-            await runner.images.ensure_images(runner, job_id, images_in(data))
+                if spec.get("generated"):
+                    p = _gen_params(spec, max(scales) if scales else first_adaptive)
+                    needed = images_in(generate(p)) + [
+                        catalog.resolve_image(t, img) for t, img in kinds_used(p)
+                    ]
+                else:
+                    needed = images_in(_topo(runner, spec["topology_id"]).data)
+                needed = list(dict.fromkeys(i for i in needed if i))
+                await runner.images.ensure_images(runner, job_id, needed)
             tools = list(
                 dict.fromkeys([catalog.tool_image("collector"), catalog.tool_image("driver")])
             )
@@ -771,12 +1207,25 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
             monitor_service.register_session(job_id, b.session)
             await b.session.start()
             b.mark("benchmark started")
+            rest_s = float(spec.get("rest_s") or 0)
+            if rest_s:
+                runner.progress(job_id, "baseline", f"the host at rest ({rest_s:g}s)")
+                t0 = b.now()
+                await asyncio.sleep(rest_s)
+                b.rest = bm.rest_metrics(b.session.host_rows, (t0, b.now()))
+                persist()
 
         async def step(
-            scale: int, rep: int, name: str, ends: Callable[[dict[str, Any]], bool] | None = None
+            scale: int,
+            rep: int,
+            name: str,
+            ends: Callable[[dict[str, Any]], bool] | None = None,
+            *,
+            skip: dict[str, Any] | None = None,
+            **kw: Any,
         ) -> dict[str, Any]:
             async with runner.step(job_id, name):
-                row = await run_step(b, name, scale, rep, ends)
+                row = skip or await run_step(b, name, scale, rep, ends, **kw)
                 b.rows.append(row)
                 persist()
                 runner.progress(
@@ -786,7 +1235,11 @@ async def run_benchmark(runner: JobRunner, job_id: str) -> None:
                 )
             return row
 
-        if adaptive:
+        if spec.get("census"):
+            stopped_by = await _census(b, step)
+        elif spec.get("matrix"):
+            stopped_by = await _matrix(b, persist)
+        elif adaptive:
             stopped_by = await _climb(b, adaptive, step, persist)
         else:
             plan = [(s, r) for s in scales for r in range(1, reps + 1)]

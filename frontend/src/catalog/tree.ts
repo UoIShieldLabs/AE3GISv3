@@ -10,6 +10,8 @@ export interface CatalogVariant {
   stability: Stability;
   /** Built by AE3GIS from a Dockerfile (vs pulled from a registry). */
   built: boolean;
+  /** The Docker Hub registry (namespace) it was loaded from; undefined for built-in images. */
+  origin?: string;
   isDefault: boolean;
 }
 
@@ -42,6 +44,7 @@ function variantsOf(catalog: Catalog, spec: NodeTypeSpec): CatalogVariant[] {
       description: img?.description ?? '',
       stability,
       built: img?.source?.kind === 'build',
+      origin: img?.source?.kind === 'registry' ? img.source.registry ?? undefined : undefined,
       isDefault: ref === spec.defaultImage,
     });
   }
@@ -64,7 +67,7 @@ export function buildCatalogTree(catalog: Catalog | null, query = ''): CatalogCa
     if (q) {
       const typeHit = has([name, type, spec.label, spec.description, spec.category, categoryLabel(spec.category, catalog)], q);
       if (!typeHit) {
-        variants = variants.filter((v) => has([v.name, v.ref, v.description], q));
+        variants = variants.filter((v) => has([v.name, v.ref, v.description, v.origin], q));
         if (!variants.length) continue;
         matchedVariants = true;
       }

@@ -78,7 +78,7 @@ class JobOut(BaseModel):
     # Set for topology jobs (deploy/destroy); None for image builds and syncs.
     topology_id: str | None = None
     # What the job serialises on: topology:<id> | image:<ref> | source:<name> |
-    # capture:<topology>:<node>:<interface> | traffic:<topology>.
+    # registry:<id> | capture:<topology>:<node>:<interface> | traffic:<topology>.
     subject: str | None = None
     kind: str
     status: str
@@ -145,9 +145,58 @@ class ImageStatusOut(BaseModel):
     last_job: JobOut | None = None
 
 
+class RegistryImageOut(BaseModel):
+    """An image a registry contributes to the catalog."""
+
+    ref: str
+    repo: str
+    tag: str
+    # The node type it is a variant of.
+    type: str
+    name: str
+    platforms: list[str] = Field(default_factory=list)
+    # True if the registry defined the type (False: it joined an existing one).
+    new_type: bool
+
+
+class RegistryRejectedOut(BaseModel):
+    """A repo marked for AE3GIS whose image does not follow the standard."""
+
+    repo: str
+    tag: str
+    reasons: list[str]
+
+
+class RegistryOut(BaseModel):
+    id: str
+    namespace: str
+    url: str
+    hub_url: str
+    created_at: datetime
+    synced_at: datetime | None = None
+    # Repositories in the namespace at the last sync, and those without the
+    # [ae3gis] marker (never inspected).
+    repositories: int = 0
+    skipped: int = 0
+    # Repos whose labels were not read last time (Docker Hub's pull limit).
+    pending: list[str] = Field(default_factory=list)
+    pulls_remaining: int | None = None
+    loaded: list[RegistryImageOut] = Field(default_factory=list)
+    rejected: list[RegistryRejectedOut] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    active_job: JobOut | None = None
+    last_job: JobOut | None = None
+
+
+class RegistryCreate(BaseModel):
+    # A Docker Hub URL (https://hub.docker.com/u/<namespace>) or a namespace.
+    url: str = Field(min_length=1, max_length=512)
+
+
 class ImagesReport(BaseModel):
     host: HostBuildOut
     sources: list[SourceOut]
+    registries: list[RegistryOut] = Field(default_factory=list)
     images: list[ImageStatusOut]
 
 
@@ -458,6 +507,18 @@ class Iperf3Flow(BaseModel):
     direction: Literal["forward", "reverse", "bidir"] = "forward"
     # Seconds of warm-up left out of the results.
     omit_s: int = Field(default=0, ge=0, le=60)
+    # Paced bursts: send bitrate × interval at once, every this many ms.
+    burst_interval_ms: int | None = Field(default=None, ge=10, le=60000)
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):
+        if self.burst_interval_ms and self.protocol == "tcp" and _unlimited(self.bitrate):
+            raise ValueError("burst_interval_ms needs a bitrate")
+        return self
+
+
+def _unlimited(bitrate: str | None) -> bool:
+    return not bitrate or float(bitrate.rstrip("KMGkmg") or 0) == 0
 
 
 class TrafficPattern(BaseModel):
@@ -482,6 +543,14 @@ class TrafficPattern(BaseModel):
     length: int | None = Field(default=None, ge=16, le=65507)
     direction: Literal["forward", "reverse", "bidir"] = "forward"
     omit_s: int = Field(default=0, ge=0, le=60)
+    # Paced bursts: each flow sends bitrate × interval at once, every this many ms.
+    burst_interval_ms: int | None = Field(default=None, ge=10, le=60000)
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):
+        if self.burst_interval_ms and _unlimited(self.bitrate):
+            raise ValueError("burst_interval_ms needs a bitrate")
+        return self
 
 
 class TrafficRunRequest(BaseModel):
@@ -621,6 +690,23 @@ class ServerMixEntry(BaseModel):
         return self
 
 
+class PoolEntry(BaseModel):
+    """A node type and the images it may run (each drawn with equal odds)."""
+
+    type: str = Field(min_length=1)
+    images: list[str] = Field(min_length=1)
+
+
+class RandomPools(BaseModel):
+    """Random topologies: each node draws a pool entry with equal odds, then
+    one of its images (see domain/generator)."""
+
+    hosts: list[PoolEntry] = Field(min_length=1)  # every client host
+    switches: list[PoolEntry] | None = Field(default=None, min_length=1)  # every switch
+    # The core and the client subnets' routers (they must forward traffic).
+    routers: list[PoolEntry] | None = Field(default=None, min_length=1)
+
+
 class GeneratorSpec(BaseModel):
     """The shape of a generated topology (see domain/generator)."""
 
@@ -641,6 +727,8 @@ class GeneratorSpec(BaseModel):
     core_type: str | None = None
     core_image: str | None = None
     seed: int = 0
+    # A random topology instead (replaces host_mix, switch_mix, core_* per pool).
+    random: RandomPools | None = None
 
 
 class GenerateRequest(GeneratorSpec):
@@ -682,6 +770,9 @@ class BenchmarkStop(BaseModel):
     max_mem_pct: float | None = Field(default=90, gt=0, le=100)
     # Share of time every task stalled on memory (PSI "full"), per sweep.
     max_psi_mem_full: float | None = Field(default=10, ge=0, le=100)
+    # Docker's disk (where every node's writable layer goes): a full disk fails
+    # container starts, so a step over this stops (a climb then retries lower).
+    max_disk_pct: float | None = Field(default=90, gt=0, le=100)
     min_delivered_ratio: float | None = Field(default=0.8, ge=0, le=1)
     max_loss_pct: float | None = Field(default=5, ge=0, le=100)
     # A step whose traffic falls short ends the sweep (else it is noted and the sweep goes on).
@@ -698,7 +789,8 @@ class BenchmarkAdaptive(BaseModel):
     memory would reach ``target_mem_pct`` and close ``approach`` of the gap (at
     least ``min_step`` hosts, but never past ×``max_factor``). The climb is
     over once a step's memory peaks at ``reach_mem_pct`` (or a step fails); the
-    highest passing scale is then run ``confirm`` more times."""
+    highest passing scale is then run ``confirm`` more times. A step that fails
+    on a host limit is retried lower (``descend``)."""
 
     start: int = Field(ge=1)
     target_mem_pct: float = Field(default=93, gt=0, le=100)
@@ -708,6 +800,10 @@ class BenchmarkAdaptive(BaseModel):
     min_step: int = Field(default=25, ge=1)
     max_steps: int = Field(default=20, ge=1, le=100)
     confirm: int = Field(default=2, ge=0, le=10)
+    # A step that fails on a host limit (memory, a slow or failed deploy…) is
+    # retried lower: this fraction of a first step that was too big, else
+    # halfway down to the best passing scale. 0 ends the climb instead.
+    descend: float = Field(default=0.7, ge=0, lt=1)
 
     @model_validator(mode="after")
     def _reach_below_target(self) -> BenchmarkAdaptive:
@@ -716,9 +812,104 @@ class BenchmarkAdaptive(BaseModel):
         return self
 
 
+class MatrixPattern(TrafficPattern):
+    """A traffic matrix's pattern: its axes may give the bitrate (and burst)."""
+
+    bitrate: str | None = Field(default=None, pattern=r"^\d+(\.\d+)?[KMGkmg]?$")
+
+    @model_validator(mode="after")
+    def _burst_needs_a_rate(self):  # checked per cell, once the axes fill it in
+        return self
+
+
+# What a matrix axis may vary: the pattern (by id) or a pattern field.
+MATRIX_AXES = (
+    "pattern",
+    "bitrate",
+    "burst_interval_ms",
+    "protocol",
+    "length",
+    "parallel",
+    "direction",
+)
+MATRIX_MAX_CELLS = 500
+
+
+class BenchmarkMatrix(BaseModel):
+    """Traffic cells on one deployment: every combination of the ``axes``
+    values (``pattern``: ids of ``patterns``, default all of them; the others
+    override the pattern's field) runs in turn for ``hold_s``, in a seeded
+    shuffled order unless ``shuffle`` is off, after a quiet ``gap_s``."""
+
+    patterns: list[MatrixPattern] = Field(min_length=1, max_length=8)
+    axes: dict[str, list[Any]] = Field(default_factory=dict)
+    # The two axes the report draws as a grid (rows, columns); default: the
+    # first two axes other than pattern and protocol.
+    grid: list[str] | None = Field(default=None, min_length=2, max_length=2)
+    # iperf3's report interval: a multiple of every burst interval keeps the
+    # bursts per sample even.
+    interval_s: float = Field(default=10, ge=0.5, le=60)
+    ramp_s: float = Field(default=5, ge=0, le=600)
+    gap_s: float = Field(default=10, ge=0, le=3600)
+    shuffle: bool = True
+    seed: int = 0
+    # Run only these cells (their ids, e.g. "cs·tcp·250K·500ms"); default all.
+    cells: list[str] | None = Field(default=None, min_length=1, max_length=MATRIX_MAX_CELLS)
+
+    @model_validator(mode="after")
+    def _cells(self) -> BenchmarkMatrix:
+        ids = [p.id for p in self.patterns]
+        if len(set(ids)) != len(ids):
+            raise ValueError("matrix pattern ids must be unique")
+        for name, values in self.axes.items():
+            if name not in MATRIX_AXES:
+                raise ValueError(f"unknown matrix axis {name!r} (one of {', '.join(MATRIX_AXES)})")
+            if not values or len({str(v) for v in values}) != len(values):
+                raise ValueError(f"matrix axis {name!r} needs distinct values")
+        unknown = set(map(str, self.axes.get("pattern") or [])) - set(ids)
+        if unknown:
+            raise ValueError(f"matrix axis pattern names unknown pattern(s) {sorted(unknown)}")
+        if self.grid and not set(self.grid) <= set(self.axes):
+            raise ValueError("matrix grid must name two of its axes")
+        n = len(self.axes.get("pattern") or ids)
+        for name, values in self.axes.items():
+            if name != "pattern":
+                n *= len(values)
+        if n > MATRIX_MAX_CELLS:
+            raise ValueError(f"the matrix has {n} cells; at most {MATRIX_MAX_CELLS}")
+        # Every cell must be a valid pattern (e.g. a burst needs a bitrate).
+        base = {p.id: p.model_dump(exclude_none=True) for p in self.patterns}
+        for pid in self.axes.get("pattern") or ids:
+            others = [(k, v) for k, v in self.axes.items() if k != "pattern"]
+            combos: list[dict[str, Any]] = [{}]
+            for k, vs in others:
+                combos = [{**c, k: v} for c in combos for v in vs]
+            for c in combos:
+                TrafficPattern.model_validate({**base[str(pid)], **c})
+        return self
+
+
+class CensusCase(BaseModel):
+    type: str = Field(min_length=1)
+    image: str = Field(min_length=1)
+
+
+class BenchmarkCensus(BaseModel):
+    """One step per node image: ``per_image`` nodes of a type · image as the
+    client hosts of a small generated campus (base router, switches and one
+    server around them), deployed, checked and measured alone. ``cases``
+    defaults to every catalog type's non-hidden images; workstation ·
+    kathara/base always runs first, as the reference. Failures don't stop it."""
+
+    per_image: int = Field(default=5, ge=1, le=50)
+    cases: list[CensusCase] | None = Field(default=None, min_length=1, max_length=200)
+
+
 class BenchmarkRequest(BaseModel):
     label: str = Field(default="", max_length=80)
     notes: str = Field(default="", max_length=2000)
+    # What the benchmark does; inferred from the spec when omitted.
+    kind: Literal["sweep", "adaptive", "census", "matrix"] | None = None
     topology: BenchmarkTopology = Field(
         default_factory=lambda: BenchmarkTopology(generate=GeneratorSpec())
     )
@@ -726,6 +917,10 @@ class BenchmarkRequest(BaseModel):
     scale: list[int] = Field(default_factory=list, max_length=100)
     # Or let the sweep pick each step's scale until memory is nearly full.
     adaptive: BenchmarkAdaptive | None = None
+    # Or survey node images, one step each (no scale, adaptive or traffic).
+    census: BenchmarkCensus | None = None
+    # Or run traffic cells on one deployment (one scale; no adaptive or traffic).
+    matrix: BenchmarkMatrix | None = None
     repetitions: int = Field(default=1, ge=1, le=20)
     cooldown_s: float = Field(default=20, ge=0, le=3600)
     # Before each step's reference window, wait (up to quiet_timeout_s) until
@@ -735,6 +930,8 @@ class BenchmarkRequest(BaseModel):
     quiet_timeout_s: float = Field(default=300, ge=0, le=3600)
     settle_s: float = Field(default=20, ge=0, le=3600)
     hold_s: float = Field(default=60, ge=0, le=86400)
+    # Seconds the host is measured at rest before the first step (0 = not).
+    rest_s: float = Field(default=0, ge=0, le=600)
     monitor: BenchmarkMonitor = Field(default_factory=BenchmarkMonitor)
     traffic: BenchmarkTraffic | None = None
     stop: BenchmarkStop = Field(default_factory=BenchmarkStop)
@@ -742,6 +939,8 @@ class BenchmarkRequest(BaseModel):
     allow_busy_host: bool = False
     # Leave the last step's lab deployed for inspection.
     keep_last: bool = False
+    # Also copy each traffic run's per-interval samples into the export (big).
+    keep_samples: bool = False
 
     @field_validator("scale")
     @classmethod
@@ -756,10 +955,38 @@ class BenchmarkRequest(BaseModel):
             raise ValueError("adaptive replaces scale and needs a generated topology")
         return self
 
+    @model_validator(mode="after")
+    def _kind(self) -> BenchmarkRequest:
+        if self.census is not None and (
+            self.scale or self.adaptive or self.traffic or self.topology.generate is None
+        ):
+            raise ValueError("a census takes no scale, adaptive or traffic, and generates")
+        if self.matrix is not None and (
+            self.census
+            or self.adaptive
+            or self.traffic
+            or (self.topology.generate is not None and len(self.scale) != 1)
+        ):
+            raise ValueError("a matrix takes one scale and no census, adaptive or traffic")
+        inferred = (
+            "census"
+            if self.census is not None
+            else "matrix"
+            if self.matrix is not None
+            else "adaptive"
+            if self.adaptive is not None
+            else "sweep"
+        )
+        if self.kind is not None and self.kind != inferred:
+            raise ValueError(f"kind {self.kind!r} does not match the spec (a {inferred})")
+        self.kind = inferred
+        return self
+
 
 class BenchmarkOut(BaseModel):
     id: str  # the benchmark's job id
     label: str
+    kind: str  # sweep | adaptive | census | matrix
     status: str
     live: bool
     topology_id: str | None

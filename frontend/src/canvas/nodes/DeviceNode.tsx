@@ -4,6 +4,7 @@ import { Activity, Radio } from 'lucide-react';
 import { colorFor, labelFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
 import { cn } from '@/lib/cn';
+import { useAppStore } from '@/store';
 import { Tooltip } from '@/ui';
 import type { DeviceNode as DeviceNodeType } from '../projection';
 import { NODE_SIZE } from '../constants';
@@ -20,6 +21,9 @@ const STATUS_CLASS = {
 
 export const DeviceNode = memo(function DeviceNode({ id, data, selected, dragging }: NodeProps<DeviceNodeType>) {
   const { container, status, isGateway, captureJobId, traffic } = data;
+  // colorFor/labelFor read the catalog's lookup maps: re-render when it changes
+  // (a registry sync can add the type a placed node uses).
+  useAppStore((s) => s.catalog);
   const color = colorFor(container.type);
   const zoom = useZoomLevel();
   const compact = zoom !== 'full';

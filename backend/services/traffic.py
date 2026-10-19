@@ -43,9 +43,9 @@ from api.errors import Conflict, Invalid
 from db.models import Job, Topology
 from domain import selectors
 from domain.topology import find_container
-from domain.traffic.iperf3 import Iperf3StreamParser, is_interrupt
+from domain.traffic.iperf3 import Iperf3StreamParser, burst_shape, is_interrupt
 from domain.traffic.patterns import PatternError, assign_ports, expand, offered_bps
-from domain.traffic.summary import FlowSummary
+from domain.traffic.summary import FlowSummary, run_aggregates
 from engine.base import EngineState
 from services import environment, events, jobs, monitor
 from services.jobs import JobRunner
@@ -120,6 +120,9 @@ class RunRecorder:
         self.exited: dict[str, int] = {}
         self.proc_errors: dict[str, list[str]] = {}  # stderr / start failures, per proc
         self.processes = 0
+        # The driver's ``clients_started``: every client started (or failed
+        # to), seconds after t0 — where a measurement window may begin.
+        self.startup: dict[str, Any] | None = None
 
     # ── driver events (any thread) ──
     def on_event(self, evt: dict[str, Any]) -> None:
@@ -142,6 +145,13 @@ class RunRecorder:
                     offset = float(evt.get("t", time.time())) - self.t0
                     self._parsers[proc].offset = offset
                     self._parsers[server_proc(flow_id)].offset = offset
+            elif k == "clients_started":
+                self.startup = {
+                    "s": round(float(evt.get("t") or time.time()) - self.t0, 3),
+                    "clients": int(evt.get("n") or 0),
+                    "failed": len(evt.get("failed") or []),
+                    "never_started": len(evt.get("never_started") or []),
+                }
             elif k == "retry" and proc in self._parsers:
                 flow_id, role = split_proc(proc)
                 old = self._parsers[proc]
@@ -169,6 +179,11 @@ class RunRecorder:
                 last[s["direction"]] = (s["t"], s["bps"])
 
     # ── the loop's view ──
+    def clients_begun(self) -> int:
+        """Clients started so far (running or not)."""
+        with self._lock:
+            return sum(1 for p in self.started if split_proc(p)[1] == "client")
+
     def running_clients(self) -> list[str]:
         return [
             fid
@@ -306,6 +321,18 @@ def plan_flows(
         f["bind_server"] = not f.get("server_address")
         f["server_address"] = str(server_ip)
         f.setdefault("generator", "iperf3")
+        if f.get("burst_interval_ms"):
+            udp = f.get("protocol") == "udp"
+            try:
+                n, length = burst_shape(
+                    str(f.get("bitrate") or ("1M" if udp else "")),
+                    f["burst_interval_ms"],
+                    "udp" if udp else "tcp",
+                    f.get("length"),
+                )
+            except ValueError as exc:
+                raise Invalid(f"Flow {f['id']!r}: {exc}", code="bad_burst") from exc
+            f["burst"] = {"count": n, "length": length, "bytes": n * length}
     assign_ports(flows)
     return flows
 
@@ -611,6 +638,8 @@ def _flow_result(f: dict[str, Any], recorder: RunRecorder) -> dict[str, Any]:
         "protocol": f.get("protocol") or "tcp",
         "direction": f.get("direction") or "forward",
         "bitrate": f.get("bitrate"),
+        "burst_interval_ms": f.get("burst_interval_ms"),
+        "burst": f.get("burst"),
         "port": f.get("port"),
         "summary": recorder.summaries[f["id"]].result(),
         "errors": recorder.errors(f["id"]),
@@ -644,6 +673,7 @@ def totals(flows: list[dict[str, Any]], per_flow: list[dict[str, Any]], processe
         "lost_percent": round(100 * lost / packets, 4) if packets else None,
         "flows_with_errors": sum(1 for r in per_flow if r["errors"]),
         "flows_without_data": no_data,
+        **run_aggregates(flows, per_flow),
     }
 
 
@@ -659,6 +689,7 @@ def _result(params, recorder, started, stopped_by, env) -> tuple[dict, dict]:
         "duration_s": round((ended - started).total_seconds(), 3),
         "stopped_by": stopped_by,
         "totals": totals(flows, per_flow, recorder.processes),
+        "startup": recorder.startup,
         "environment_fingerprint": env.get("fingerprint"),
     }
     full = {**base, "flows": per_flow}

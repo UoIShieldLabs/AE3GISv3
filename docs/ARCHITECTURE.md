@@ -237,6 +237,16 @@ palette, add menus, inspector type picker, and Purdue view automatically (they
 all read one grouping, `frontend/src/catalog/tree.ts`). Only a genuinely new
 glyph needs code, in `frontend/src/catalog/icons.tsx`.
 
+**The catalog in effect = the file + registries.** Images loaded from Docker
+Hub namespaces (§5.6, "Docker Hub registries") are merged over the built-in
+catalog (`catalog/registry.py`) and installed with
+`catalog.set_registry_overlay`; every reader (`load_model`, `role_for`,
+`image_shell`, the served `/catalog`…) then sees them. It is process-wide, like
+the file cache, and rebuilt from the DB at startup. `builtin_model()` ignores
+it: benchmark censuses use it, so their results do not depend on which
+registries an instance added. Registry images carry `source.registry` and the
+types they define `origin` (the namespace); `node_types.json` never changes.
+
 ### 4.4 (Bonus) The API contract is generated
 
 `backend/openapi.json` is generated from the live app by
@@ -294,6 +304,7 @@ rather than matching message text.
 | `GET /jobs/{id}/log?offset=`, `POST /jobs/{id}/cancel` | A job's log (by byte offset), cancellation |
 | `GET /images?topology_id=` | Build support, image sources, and each image's status |
 | `POST /images/builds`, `POST /sources/{name}/sync` | 202 + build jobs / a sync job |
+| `GET/POST /registries`, `POST /registries/{id}/sync`, `DELETE /registries/{id}` | Docker Hub namespaces whose images join the catalog (§5.6) |
 | `GET /topologies/{id}/context` | Record + diagnostics + plan + runtime + events |
 | `GET /topologies/{id}/interfaces` | The deployed lab's interfaces and links (what captures can target) |
 | `POST /jobs/{id}/stop`, `GET /jobs/{id}/artifacts[/{name}]` | Stop an open-ended job (keeps its output); the files a job produced |
@@ -302,7 +313,7 @@ rather than matching message text.
 | `POST/GET /topologies/{id}/traffic/runs`, `GET /traffic/runs/{id}[/samples\|/export]` | Traffic runs: flows and patterns (§5.7) |
 | `POST/GET /topologies/{id}/monitors`, `GET /monitors/{id}[/samples\|/export]` | Monitors: CPU, memory, network of nodes and host (§5.7) |
 | `POST /topologies/generate` | A topology from a few numbers (the benchmarks' generator) |
-| `POST/GET /benchmarks`, `GET /benchmarks/{id}[/report.md\|/export]` | Scale sweeps (§5.8) |
+| `POST/GET /benchmarks`, `GET /benchmarks/{id}[/report.md\|/export]` | Sweeps, climbs, image censuses, traffic matrices (§5.8) |
 | `GET /system/health`, `/system/labs`, `/system/environment`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
 | `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}` | Live packets / flow samples / monitor sweeps |
@@ -443,6 +454,35 @@ Images with a `build` source in the catalog are built by AE3GIS
   **Images** sheet (library, *More*, ⌘K) manages sources, builds and logs; the
   deploy status badge opens the job's steps and logs, build logs included.
 
+#### Docker Hub registries
+
+Prebuilt images can come from a Docker Hub namespace instead
+(`services/registries.py`, `services/dockerhub.py`). Image authors follow
+[the AE3GIS image standard](image-standard.md): the repo's short description
+starts with `[ae3gis]`, the image says in `io.ae3gis.*` labels which node type
+it is a variant of (a built-in one, which it joins, or a new one it defines)
+and how to run it (`shell`, `own-bridge`, a new type's role, color…).
+
+- **Registries** are rows in the `registries` table (per instance, added from
+  the Images sheet by URL). Each keeps a **snapshot** of its last successful
+  sync: per marked repo the tag read, its digest, platforms and labels.
+- A **sync** is a job (subject `registry:<id>`; steps list → inspect → apply).
+  Listing repos and tags uses the Hub API, which does not count as pulls;
+  reading labels (manifest + config blob) costs one pull per image, so labels
+  are reused while a tag's digest is unchanged, and the sync stops reading
+  while `AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are *pending*).
+- **Merging** happens at startup and after every add, remove or sync, from the
+  DB only (`catalog/registry.py`, labels parsed by `domain/image_labels.py`),
+  and yields a report per registry: loaded, rejected (with reasons), warnings.
+  A failed sync keeps the previous snapshot. Nothing syncs on its own.
+- **Deploys** pull registry images like any other. An image not published for
+  the host's platform is pulled for amd64 (or its first platform) with a
+  `deploy.images_emulated` warning: buildx pushes an index even for one
+  platform, and `docker pull` on arm64 rejects an index without arm64.
+- **Removing** a registry drops its images and types from the catalog; nodes
+  keep their `type`/`image`, so a removed new type deploys as a plain host
+  (`type.unknown` warns).
+
 ---
 
 ### 5.7 Sidecars and helpers: captures, monitors, traffic
@@ -471,6 +511,10 @@ like any node image, named by the catalog's `tools` map: `capture`,
     `/proc/<pid>/ns/net`, since Kathará nodes hold capabilities the driver
     lacks). It starts processes inside nodes' network namespaces (iperf3 ends,
     pings) and is the only writer to its stdout, so events never interleave.
+    Traffic processes start through BusyBox `nsenter` (`setns` + `exec`, same
+    PID), so Python can `posix_spawn` them: ~2000 a second against ~40 for a
+    fork running `setns` in Python, which probes keep (the benchmarks' "network
+    ready" times were measured with it).
     Not a privileged container; on AppArmor/SELinux hosts set
     `AE3GIS_DRIVER_SECURITY_OPT`.
 
@@ -504,7 +548,9 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   (`domain/traffic/patterns.py`: clients → servers, mesh; hosts by default),
   each server port counted per node. One driver helper runs every flow's
   `iperf3 -s -1 -B <address>` and `iperf3 -c --json-stream` (clients spread
-  over `ramp_s`, early connect failures retried); output is parsed
+  over `ramp_s`, early connect failures retried; `clients_started` once every
+  client has started, recorded as the run's `startup`, where a benchmark's
+  window begins); output is parsed
   (`domain/traffic/iperf3.py`, pinned by real fixtures) into samples, summed
   per flow as they arrive (`FlowSummary`, nothing kept in memory), and into
   all-flow totals (delivered vs. asked) once per interval. Artifacts:
@@ -524,16 +570,31 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   images are rebuilt when stale before a tool job (`rebuild_stale`): the
   scripts must match the code that reads their output.
 
-### 5.8 Benchmarks: scale sweeps
+### 5.8 Benchmarks
 
 `services/benchmark.py` (kind `benchmark`, subject `benchmark`: one at a time,
-the benchmark owns the host) sweeps a topology through growing `scale` steps
-and stops at the first one that fails. The topology is generated
-(`domain/generator.py`: a servers subnet behind a core router, client /24s of
-up to 230 hosts behind their own routers, access switches under a distribution
-switch; at most 64 client subnets) or an existing one repeated. One monitor
-session records the host and every container for the whole sweep; each step,
-on that timeline:
+the benchmark owns the host) runs one of four **kinds** (`domain/benchmark.kind_of`):
+
+- **sweep**: a topology through growing `scale` steps (× `repetitions`), up to
+  the first step that fails;
+- **adaptive**: a climb whose next scale follows from the last step's memory
+  per node until memory peaks near full. A step that fails because the host ran
+  out is retried lower (`retry_scale`: a share of a start that was too big,
+  else halfway to the best pass), and the climb stays below it;
+- **census**: one step per catalog type · image, its nodes as the client hosts
+  of a small campus. Images that can't run here are recorded and skipped, and
+  no outcome stops it;
+- **matrix**: one deployment, then every combination of traffic `axes` (a cell
+  each, in a seeded shuffled order, after an idle gap), then one destroy.
+
+The topology is generated (`domain/generator.py`: a servers subnet behind a
+core router, client /24s of up to 230 hosts behind their own routers, access
+switches under a distribution switch; at most 64 client subnets; hosts plain,
+mixed by weight, or drawn from random type/image pools) or an existing one
+repeated. One monitor session records the host and every container for the
+whole benchmark (after `rest_s` at rest). A step is a composition of shared
+helpers (`_place`, `_reference`, `_deploy`, `_ready`, `_settle`, `_hold`,
+`_finish`, `_teardown`); on the monitor's timeline:
 
 ```
 quiet (the last teardown drains) → pre (nothing deployed) → deploy job → network
@@ -550,10 +611,20 @@ cannot be interrupted. Metrics per step come from the windows: **marginal
 memory per node** (host memory used in `settle` minus `pre`, per node: shims,
 VDE switches and kernel included) beside the containers' own cgroup memory,
 Docker's own processes per node, deploy phases, time to network ready,
-destroy time, host CPU/memory/PSI under load, delivered/asked. Results:
-`benchmark.json`, `results.csv`, `report.md`, the monitor's CSVs (with a
-`step` column). Run headless with `backend/scripts/bench.py` (specs in
-`backend/benchmarks/specs/`); `docs/benchmarks/` explains the method.
+destroy time, host CPU/memory/PSI under load, and the traffic run's totals
+(delivered/asked, RTT and jitter percentiles, loss, the slowest flow). Results:
+`benchmark.json`, `results.csv`, `report.md` (per kind: step table, census
+table, matrix grids), the monitor's CSVs (with a `step` column), and each
+traffic run's summary under `traffic/`.
+
+Headless: `bench.sh` (`backend/scripts/bench_suite.py`, stdlib only) runs a
+suite (`backend/benchmarks/suites/`: specs from `backend/benchmarks/specs/<category>/`)
+on a host. It brings the backend up in bench mode at the commit, builds the
+images, keeps the host awake, restarts Docker before each benchmark (leaked
+taps and memory otherwise skew the next), passes a census's usable images to
+random climbs and a climb's ceiling to the next run, and writes a manifest,
+the reports and a summary per host. `backend/scripts/bench.py` runs one spec.
+`docs/benchmarks/` explains the method.
 
 ## 6. Frontend
 
@@ -777,6 +848,12 @@ Add the Dockerfile to a source repository (e.g. a folder in
 `node_types.json` (`ae3gis.local/<name>`, a `build` source naming the folder,
 `platforms` if it is not multi-arch) and list it in a type's `images`. Start it
 as `experimental` until it has been built and deployed once.
+
+### Publish node images on Docker Hub
+Follow [the image standard](image-standard.md): mark the repo's description
+with `[ae3gis]`, label the image (`io.ae3gis.schema`, `io.ae3gis.type`, and a new
+type's name and role), push, then add the namespace in **Images → Add registry**
+(or press *Sync* on it). Rejected images list their reasons there.
 
 ### Add an API endpoint
 Route in `api/`, logic in `services/`, pure helpers in `domain/`. Then:
