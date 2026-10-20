@@ -72,6 +72,9 @@ class NodePlan:
     env: dict[str, str] = field(default_factory=dict)
     # Shell for the boot commands if the image has no bash (None: engine default).
     shell: str | None = None
+    # Sysctls applied at container creation (``/proc/sys`` is read-only at
+    # runtime under Kathara, so ``net.ipv4.ip_forward`` must be set here).
+    sysctls: dict[str, str] = field(default_factory=dict)
 
     @property
     def machine_name(self) -> str:
@@ -89,6 +92,7 @@ class NodePlan:
             "startup": list(self.startup),
             "env": dict(self.env),
             "shell": self.shell,
+            "sysctls": dict(self.sysctls),
         }
 
 
@@ -585,6 +589,15 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
             own_bridge=catalog.own_bridge(image),
         )
 
+        # IP forwarding, set at creation (read-only /proc/sys at runtime). Kathara
+        # defaults every machine to forwarding on; a router keeps it, a multi-homed
+        # host turns it off so it cannot silently route around a firewall.
+        sysctls: dict[str, str] = {}
+        if role == "router":
+            sysctls["net.ipv4.ip_forward"] = "1"
+        elif role == "host" and len(new_iface_ips) >= 2:
+            sysctls["net.ipv4.ip_forward"] = "0"
+
         plan.nodes.append(
             NodePlan(
                 id=cid,
@@ -596,6 +609,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 startup=startup,
                 env=catalog.image_env(image),
                 shell=catalog.image_shell(image),
+                sysctls=sysctls,
             )
         )
 
@@ -689,7 +703,8 @@ def _startup_commands(
             cmds.append(f"ip route replace default via {gateway}")
 
     elif role == "router":
-        cmds.append("sysctl -w net.ipv4.ip_forward=1")
+        # IP forwarding is enabled via a creation-time sysctl (see build_lab_plan);
+        # /proc/sys is read-only at runtime, so a `sysctl -w` here would no-op.
         for iface in ifaces:
             r_ip, r_pfx = iface_ips.get(iface, (None, None))
             if r_ip:

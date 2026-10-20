@@ -57,7 +57,9 @@ def test_all_nodes_present_with_roles_and_images():
 def test_router_gets_ip_forward_and_cross_subnet_static_route():
     plan = build_lab_plan(_two_subnet_topology(), "demo-lab")
     rA = _node(plan, "rA")
-    assert "sysctl -w net.ipv4.ip_forward=1" in rA.startup
+    # IP forwarding is a creation-time sysctl (read-only /proc/sys at runtime).
+    assert rA.sysctls.get("net.ipv4.ip_forward") == "1"
+    assert not any("ip_forward" in c for c in rA.startup)
     assert any("ip addr add 10.0.1.1/24" in c for c in rA.startup)
     # PtP /30 WAN address to the peer router
     assert any("10.255.0.1/30" in c for c in rA.startup)
@@ -245,7 +247,9 @@ def test_dualhomed_host_addresses_every_leg_without_forwarding():
     assert ("10.0.3.20", "24") in ips
     assert any("ip addr add 10.0.5.20/24" in c for c in hist.startup)
     assert any("ip addr add 10.0.3.20/24" in c for c in hist.startup)
-    # A host must never silently route between its legs.
+    # A multi-homed host must not route between its legs: forwarding off, set as
+    # a creation-time sysctl (not a runtime command, since /proc/sys is read-only).
+    assert hist.sysctls.get("net.ipv4.ip_forward") == "0"
     assert not any("ip_forward" in c for c in hist.startup)
     # Default route via the home (IT) subnet's gateway only.
     assert any("ip route replace default via 10.0.5.1" in c for c in hist.startup)
@@ -255,7 +259,7 @@ def test_dualhomed_router_forwards_and_addresses_both_legs():
     plan = build_lab_plan(_multihomed_topology(), "ics")
     fw = _node(plan, "fw")
     assert fw.role == "router"
-    assert "sysctl -w net.ipv4.ip_forward=1" in fw.startup
+    assert fw.sysctls.get("net.ipv4.ip_forward") == "1"
     assert any("ip addr add 10.0.5.1/24" in c for c in fw.startup)
     assert any("ip addr add 10.0.3.1/24" in c for c in fw.startup)
 

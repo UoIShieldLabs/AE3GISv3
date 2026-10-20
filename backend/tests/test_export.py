@@ -35,7 +35,8 @@ def test_kathara_zip_has_startup_files():
     z = zipfile.ZipFile(io.BytesIO(kathara.build_zip(_plan())))
     names = set(z.namelist())
     assert {"lab.conf", "README.txt", "ra.startup", "ha.startup"} <= names
-    assert "sysctl -w net.ipv4.ip_forward=1" in z.read("ra.startup").decode()
+    # IP forwarding is a creation-time sysctl meta in lab.conf, not a boot command.
+    assert 'ra[sysctl]="net.ipv4.ip_forward=1"' in z.read("lab.conf").decode()
 
 
 def test_containerlab_yaml_uses_eth1_and_pairs_links():

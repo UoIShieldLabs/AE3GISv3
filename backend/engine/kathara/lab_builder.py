@@ -40,6 +40,9 @@ def build_lab(plan: LabPlan):
             machine.add_meta("shell", node.shell)
         for key, value in node.env.items():
             machine.add_meta("env", f"{key}={value}")
+        for key, value in node.sysctls.items():
+            # Applied at container creation; /proc/sys is read-only at runtime.
+            machine.add_meta("sysctl", f"{key}={value}")
 
         for iface in node.interfaces:
             lab.connect_machine_to_link(

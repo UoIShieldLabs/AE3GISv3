@@ -66,3 +66,12 @@ def test_docker_client_gets_the_configured_timeout(monkeypatch):
     engine = make_engine("kathara", docker_timeout_s=420)
     assert engine._docker() == "client"
     assert seen == {"timeout": 420}
+
+
+def test_router_machine_gets_ip_forward_sysctl_meta():
+    # A router carries net.ipv4.ip_forward=1 as a creation-time sysctl (Kathara
+    # applies it at container creation; /proc/sys is read-only at runtime).
+    plan = build_lab_plan(TWO_SUBNETS, "ae3gis_demo")
+    lab, names = build_lab(plan)
+    rA = lab.machines[names["rA"]]
+    assert rA.get_sysctls().get("net.ipv4.ip_forward") == 1
