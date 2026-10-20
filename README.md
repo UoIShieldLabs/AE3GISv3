@@ -108,9 +108,10 @@ AE3GIS_ENGINE=fake python -m uvicorn main:create_app --factory --port 8000   # n
 ## Deferred features
 
 Removed from the wired app in this foundation pass, to be re-added on the engine
-abstraction later: firewall rule editor, attack scenarios and scripts, classroom
-mode (sessions/student slots), Wireshark packet capture, container web-UI proxy,
-and the AI assistant. Scenario data still round-trips in saved topologies.
+abstraction later: firewall rule editor, classroom
+mode (sessions/student slots), container web-UI proxy,
+and the AI assistant. (Packet capture and the scenario runner — a classroom
+step-through of commands on lab nodes — have since shipped.)
 
 ## Deployment images
 

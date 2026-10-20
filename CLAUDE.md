@@ -73,7 +73,7 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
   **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
   `registry:<id>`, `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
-  `benchmark` — at a time; steps on the
+  `scenario:<topo>`, `benchmark` — at a time; steps on the
   job row mirrored to events; per-job log files via `joblogs`; `wait`/`cancel`,
   and `request_stop` for `stoppable` kinds (winds down, keeps output, ends
   `succeeded`); `set_result` → `Job.result`; bulk output in `artifacts`
@@ -83,6 +83,8 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   helper → `MonitorSession`: CSVs + live sweeps; benchmarks embed one),
   `traffic` (+ `traffic_generators`; flows/patterns through the netns driver),
   `netns_driver` (the driver helper: iperf3 runs, readiness pings),
+  `scenario` (classroom step-through: run a step or a stored phase in order via
+  `engine.exec_stream`, streaming each command's output; stoppable, one per topology),
   `benchmark` (kinds sweep | adaptive | census | matrix; a step is place →
   reference → deploy → ready → settle → hold → destroy, helpers shared by all
   kinds; a matrix deploys once and runs its cells; see `docs/benchmarks/`); `live` (per-job WebSocket
@@ -236,7 +238,7 @@ tables record every long operation.
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
   `expanded`, theme, tool, panels, zoom, collapsed palette categories),
-  `dock` (typed dock tabs: terminal | capture | traffic | monitor;
+  `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario;
   `openTerminal` wraps it), `activity` (running captures/traffic runs/monitors
   from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
@@ -264,8 +266,8 @@ tables record every long operation.
   `interactions/dnd.ts`, context menu in `CanvasContextMenu.tsx`.
 - **Shell** (`shell/`): TopBar, Sidebar (Palette with drag-and-drop, Explorer
   tree), Inspector (context-sensitive forms that commit on blur), Dock
-  (`features/dock`: terminal / capture / traffic tabs, bodies lazy-loaded and kept
-  mounted), StatusBar, CommandPalette (⌘K),
+  (`features/dock`: terminal / capture / traffic / monitor / scenario tabs, bodies
+  lazy-loaded and kept mounted), StatusBar, CommandPalette (⌘K),
   Breadcrumb. `features/topology/AddEntityProvider` owns every "add…" dialog so
   toolbar, palette, menus and drops share one flow. Deployment actions are plain
   functions in `features/deployment/actions.ts`; status polling is a singleton.
@@ -280,7 +282,10 @@ tables record every long operation.
   pattern: clients → servers / mesh; live totals and per-flow charts via
   `ui/charts/TimeSeriesChart` on uPlot with `--chart-N` tokens, run summary +
   environment). Monitor: `features/monitor` (node selection form, host / group /
-  per-node charts; history from `/samples`, then live sweeps). Benchmarks:
+  per-node charts; history from `/samples`, then live sweeps). Scenario runner:
+  `features/scenario` (author phases/steps with a node picker + command field,
+  undo-tracked; Run step / Run phase buttons, deploy-gated; live per-step output
+  over the scenario WS, mirroring the traffic panel). Benchmarks:
   `features/benchmarks/BenchmarksSheet` (read-only, on the library page).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
@@ -305,8 +310,10 @@ tables record every long operation.
   (whole-record pcap, live for `curl … | wireshark -k -i -`), `captures/{id}/packets`;
   `topologies/{id}/traffic/runs` (flows and/or patterns), `traffic/runs/{id}[/samples|/export]`;
   `topologies/{id}/monitors`, `monitors/{id}[/samples|/export]`;
-  WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}` and
-  `…/monitors/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
+  `topologies/{id}/scenario/steps/run` and `…/scenario/phases/{phaseId}/run` (202 + a
+  run job), `scenario/runs/{id}[/samples|/export]`;
+  WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`,
+  `…/monitors/{job}` and `…/scenario/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
   race every wait against client disconnect, see `api/live_ws.py`).
 - `topologies/generate` (a parametric topology), `benchmarks` (202 + a
   sweep, climb, census or matrix job), `benchmarks/{id}[/report.md|/export]`;
@@ -334,6 +341,6 @@ reads the token from `app.state.settings`, so a test app carries its own.
 Student/classroom auth is still deferred.
 
 ## Deferred (rebuild on the engine abstraction later)
-Firewall editor, scenarios/scripts, classroom mode, web-UI proxy, AI assistant,
+Firewall editor, classroom mode, web-UI proxy, AI assistant,
 more traffic generators (Locust, Modbus, pcap replay), comparison views over
 benchmark exports, a shared-LAN deploy mode and per-node resource limits. Keep the `DeploymentEngine` seam and the catalog when adding them back.

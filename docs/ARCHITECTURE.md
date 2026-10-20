@@ -312,11 +312,12 @@ rather than matching message text.
 | `GET /captures/{id}/pcap?follow=`, `/captures/{id}/packets` | The pcap (live with `follow`), packet summaries |
 | `POST/GET /topologies/{id}/traffic/runs`, `GET /traffic/runs/{id}[/samples\|/export]` | Traffic runs: flows and patterns (§5.7) |
 | `POST/GET /topologies/{id}/monitors`, `GET /monitors/{id}[/samples\|/export]` | Monitors: CPU, memory, network of nodes and host (§5.7) |
+| `POST /topologies/{id}/scenario/steps/run`, `…/scenario/phases/{phaseId}/run`, `GET /scenario/runs/{id}[/samples\|/export]` | Scenario runner: step through commands on nodes (§5.7) |
 | `POST /topologies/generate` | A topology from a few numbers (the benchmarks' generator) |
 | `POST/GET /benchmarks`, `GET /benchmarks/{id}[/report.md\|/export]` | Sweeps, climbs, image censuses, traffic matrices (§5.8) |
 | `GET /system/health`, `/system/labs`, `/system/environment`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
-| `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}` | Live packets / flow samples / monitor sweeps |
+| `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}`, `…/scenario/{job}` | Live packets / flow samples / monitor sweeps / scenario step output |
 
 `context` exists for clients that need the whole picture at once — a support
 view, or the planned agent.
@@ -355,16 +356,17 @@ sequenceDiagram
   verify`. Each transition is written to the job row and mirrored into `events`.
 - **Subjects.** A job serialises on its `subject`: `topology:<id>`,
   `image:<ref>`, `source:<name>`, `capture:<topology>:<node>:<interface>`,
-  `traffic:<topology>`, `monitor:<topology>` or `benchmark` (one sweep on the
+  `traffic:<topology>`, `monitor:<topology>`, `scenario:<topology>` or
+  `benchmark` (one sweep on the
   whole host). One job runs at a time per subject; a second
   deploy returns 409 `job_active`, while a second build of the same image
   (or capture of the same interface) returns the running job. Captures,
-  traffic runs and monitors set `topology_id` but have their own subjects, so
+  traffic runs, monitors and scenario runs set `topology_id` but have their own subjects, so
   they never block deploy or destroy; `/runtime` lists them as `activity`. A
   benchmark has no `topology_id`: it drives its topology's deploy and destroy
   jobs like a user would (`runner.wait` on each).
 - **Stop vs cancel.** Cancel aborts. Kinds registered `stoppable` (capture,
-  traffic, monitor, benchmark: finish the current step) can also be *stopped* (`POST /jobs/{id}/stop`): the handler winds
+  traffic, monitor, scenario, benchmark: finish the current step) can also be *stopped* (`POST /jobs/{id}/stop`): the handler winds
   down, keeps what it recorded, and the job ends `succeeded`. A job's `result`
   (JSON) holds what it produced; bulk output goes to
   `data/artifacts/<job id>/` (downloadable, deleted after 30 days).
@@ -490,7 +492,11 @@ and how to run it (`shell`, `own-bridge`, a new type's role, color…).
 Three features watch or drive a deployed lab, each its own job kind:
 **captures** (packets), **monitors** (resource use) and **traffic runs**
 (load). They never block deploy or destroy, destroy stops them first, and each
-records its environment (below). The tools live in one image,
+records its environment (below). A fourth, the **scenario runner** (job kind
+`scenario`, §5.7a), shares the same job/live-WS machinery but needs no tool
+image or sidecar: it runs each step with `engine.exec_stream` — a plain
+`docker exec` in the node (resolved by label), output streamed — so writes stay
+in the container. The tools live in one image,
 `ae3gis.local/nettools` (`backend/tools/nettools/`, built by the image pipeline
 like any node image, named by the catalog's `tools` map: `capture`,
 `collector`, `driver`), and run in two kinds of container:
@@ -569,6 +575,29 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   previous process left (label `ae3gis.owner` = this instance's id). Tool
   images are rebuilt when stale before a tool job (`rebuild_stale`): the
   scripts must match the code that reads their output.
+
+### 5.7a Scenario runner (classroom step-through)
+
+An instructor's saved, ordered list of steps — each an ordinary admin/client
+command on a lab node — run as a job so a class can click through a walkthrough
+and reproduce it. The data lives frontend-side in `topology.data.scenarios`
+(`Scenario → AttackPhase → ScriptExecution`, opaque to the backend); the only
+new backend capability is `engine.exec_stream` (see §5.7 intro).
+
+- **Service** `services/scenario.py` (kind `scenario`, subject
+  `scenario:<topology>`, stoppable): `run step` takes an ad-hoc
+  `{containerId, script, args?}`; `run phase` reads a stored phase's steps by id
+  from the opaque data. Steps run **in order**; a stop takes effect between
+  steps (a long command in flight is left to finish or abandoned — the lab is
+  the containment boundary), and each step is capped at
+  `scenario_step_max_seconds`. A non-zero exit is recorded, not fatal (a command
+  failing is a normal teaching outcome). Output streams over the per-job live WS
+  (`{step}`, `{output}`, `{end}`); `run.json` and the per-step results land in
+  the job's artifacts.
+- **Frontend** `features/scenario`: a dock tab authors phases/steps (node picker
+  + command field, undo-tracked like the rest of the topology) and runs a step
+  or phase (deploy-gated; the backend runs from what was deployed, so running
+  needs a saved, deployed lab), showing each step's command and streamed output.
 
 ### 5.8 Benchmarks
 
@@ -909,10 +938,8 @@ job, which ships over SSH on merge to `main`.
 Deferred features, with the seams already in place — see
 [`FUTURE_WORK.md`](../FUTURE_WORK.md):
 
-- **Node exec / script runner** on the Docker-by-label exec path the sidecars
-  use, with `backend/scripts/catalog.json` as its input.
 - **More traffic generators** behind `services/traffic_generators.py`: Locust
-  (HTTP), Modbus/TCP polling, pcap replay; ICS scenarios built on them.
+  (HTTP), Modbus/TCP polling, pcap replay.
 - **Comparisons**: sweeps over image variants, resource limits and hosts; a
   compare view over benchmark exports (their fingerprints say what differs);
   a shared-LAN deploy mode (one collision domain per subnet instead of a link
@@ -925,5 +952,6 @@ Deferred features, with the seams already in place — see
   local build (§5.6).
 
 > A note on `backend/scripts/`: the read-only mounting its README describes was
-> a ContainerLab feature and is **not** wired to the Kathará engine. The catalog
-> there is kept as input for the script runner above.
+> a ContainerLab feature and is **not** wired to the Kathará engine. The scenario
+> runner (§5.7a) deliberately does not revive it — its steps are plain commands
+> run through `engine.exec_stream`, not scripts mounted into the node.

@@ -1,7 +1,15 @@
 # Implementation brief: the scenario runner (classroom step-through)
 
-**Status:** not built — this is a design brief for an implementing agent. The
-feature is listed under "Deferred" in `CLAUDE.md` as "scenarios/scripts".
+**Status:** implemented. Backend: `engine.exec_stream` (base/kathara/fake),
+`services/scenario.py` (kind `scenario`, subject `scenario:<topology>`,
+stoppable), `api/scenario.py` (run step/phase → 202 + job, runs list, samples,
+export, live WS). Frontend: store CRUD for phases/steps (undo-tracked) and a
+`features/scenario` dock panel (author + Run step / Run phase + live output).
+See `docs/ARCHITECTURE.md` §5.7a. The notes below are the original design brief,
+kept for rationale; two decisions landed differently (confirmed with the user):
+execution **streams** output rather than one-shot capture, and the existing
+type names (`AttackPhase`/`ScriptExecution`) and JSON keys were **kept** (no
+rename), so old data round-trips unchanged.
 
 ## What it is and why
 
