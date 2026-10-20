@@ -1,5 +1,12 @@
 import { planNodeFor, usePlan } from '@/features/deployment/usePlan';
+import { Fragment } from 'react';
 import { Section } from './Section';
+
+// Kathara turns forwarding on for every machine; the plan sets it per role.
+const FORWARDING_NOTE: Record<string, string> = {
+  'net.ipv4.ip_forward=1': 'routes between its interfaces',
+  'net.ipv4.ip_forward=0': "won't route between its interfaces",
+};
 
 /** What the backend will actually instantiate for this device (from the saved design). */
 export function DeploymentSection({ nodeId }: { nodeId: string }) {
@@ -17,6 +24,15 @@ export function DeploymentSection({ nodeId }: { nodeId: string }) {
             <span className="text-fg-muted">Machine</span><span className="font-mono">{node.machine_name}</span>
             <span className="text-fg-muted">Role</span><span>{node.role}</span>
             <span className="text-fg-muted">Image</span><span className="truncate font-mono">{node.image}</span>
+            {Object.entries(node.sysctls ?? {}).map(([key, value]) => (
+              <Fragment key={key}>
+                <span className="text-fg-muted">Sysctl</span>
+                <span className="font-mono" title={FORWARDING_NOTE[`${key}=${value}`]}>
+                  {key}={value}
+                  {FORWARDING_NOTE[`${key}=${value}`] ? <span className="ml-1.5 font-sans text-fg-subtle">({FORWARDING_NOTE[`${key}=${value}`]})</span> : null}
+                </span>
+              </Fragment>
+            ))}
           </div>
           <div>
             <div className="mb-1 text-2xs font-semibold uppercase tracking-wide text-fg-subtle">Interfaces</div>

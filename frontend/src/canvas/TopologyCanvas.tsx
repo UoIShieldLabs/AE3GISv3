@@ -115,15 +115,20 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   }, [fitKey, nodesInitialized, rf]);
 
   // ── Mutations ──
-  const removeItems = useCallback((nodeIds: string[], edgeIds: string[]) => {
+  const removeItems = useCallback((ids: string[], edgeIds: string[]) => {
     if (readOnly) return;
+    // Guests (leg-attached devices shown in another subnet's view) live elsewhere:
+    // deleting one here would remove a device from a subnet that isn't on screen.
+    const guests = new Set(rf.getNodes().filter((n) => n.type === 'device' && n.data.guest).map((n) => n.id));
+    const nodeIds = ids.filter((id) => !guests.has(id));
+    if (nodeIds.length < ids.length) toast("A device joining through a leg is deleted in its own subnet", { description: 'Or remove its leg in the inspector.' });
     const count = nodeIds.length + edgeIds.length;
     if (!count) return;
     const st = useAppStore.getState();
     st.deleteItems(nodeIds, edgeIds);
     st.clearSelection();
     toast(`Deleted ${count} item${count === 1 ? '' : 's'}`, { action: { label: 'Undo', onClick: () => undo() } });
-  }, [readOnly]);
+  }, [readOnly, rf]);
 
   const drillInto = useCallback((id: string) => {
     const hit = locate(useAppStore.getState().topology, id);

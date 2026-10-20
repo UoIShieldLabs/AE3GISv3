@@ -10,6 +10,8 @@ export interface PlanNode {
   image: string;
   interfaces: { name: string; collision_domain: string; ip: string | null; prefix_len: string | null }[];
   startup: string[];
+  /** Kernel settings applied at creation (e.g. net.ipv4.ip_forward). */
+  sysctls?: Record<string, string>;
 }
 
 const cache = new Map<string, Promise<api.PlanOut>>();
