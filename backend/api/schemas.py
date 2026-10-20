@@ -625,6 +625,56 @@ class TrafficRunOut(BaseModel):
     ws_path: str
 
 
+# ── scenario runner ─────────────────────────────────────────────────────
+
+
+class ScenarioStepRequest(BaseModel):
+    """One ad-hoc step: a command on a node (``script`` is a shell command line;
+    ``args`` are appended, each shell-quoted)."""
+
+    containerId: str = Field(min_length=1, max_length=200)
+    script: str = Field(min_length=1, max_length=4000)
+    args: list[str] = Field(default_factory=list, max_length=64)
+    label: str = Field(default="", max_length=80)
+
+
+class ScenarioPhaseRunRequest(BaseModel):
+    label: str = Field(default="", max_length=80)
+
+
+class ScenarioStepResult(BaseModel):
+    index: int
+    container_id: str
+    command: str
+    status: Literal["ok", "failed", "timeout", "error", "stopped", "running"]
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    truncated: bool = False
+    started_at: str | None = None
+    ended_at: str | None = None
+
+
+class ScenarioRunOut(BaseModel):
+    id: str  # the run's job id
+    topology_id: str
+    label: str
+    status: str
+    live: bool
+    step_count: int
+    node_ids: list[str] = []
+    # The planned steps ({index, container_id, command}); empty in listings.
+    steps: list[dict[str, Any]] = []
+    # The outcome: per-step results, counts, stopped_by.
+    result: dict[str, Any] | None = None
+    job: JobOut
+    ws_path: str
+
+
+class ScenarioSamplesOut(BaseModel):
+    steps: list[ScenarioStepResult]
+
+
 # ── monitors ──────────────────────────────────────────────────────────
 
 

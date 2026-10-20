@@ -20,7 +20,7 @@ from db.models import Job
 from services import jobs
 from services.jobs import JobRunner
 
-LIVE_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor")
+LIVE_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor", "scenario")
 
 
 def activity_dict(job: Job) -> dict[str, Any]:
