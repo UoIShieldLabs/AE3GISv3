@@ -329,9 +329,25 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
         gw = _find_gateway_router(containers, sid)
         if gw:
             gateway_router_map[sid] = gw
+    # A subnet with no router of its own can be gated by a router reaching it
+    # through a leg (a firewall gatewaying two subnets): links drawn from that
+    # subnet resolve to it, preferring the one that holds the subnet's gateway.
+    for sid, meta in subnet_meta.items():
+        if sid in gateway_router_map:
+            continue
+        leg_routers = [
+            (cid, m)
+            for cid, mems in container_memberships.items()
+            if _is_router(cid)
+            for m in mems
+            if m.get("leg") and m["subnet_id"] == sid
+        ]
+        if leg_routers:
+            best = next((cid for cid, m in leg_routers if m["ip"] == meta["gateway"]), None)
+            gateway_router_map[sid] = best or leg_routers[0][0]
     for site_id, subnets in site_id_subnets.items():
         for subnet in subnets:
-            gw = _find_gateway_router(subnet.get("containers", []), subnet.get("id"))
+            gw = gateway_router_map.get(subnet.get("id"))
             if gw:
                 site_gateway_router_map[site_id] = gw
                 break
@@ -425,23 +441,32 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
         _add_link(conn, None, "site")
 
     # Interface legs become real interfaces by attaching to the target subnet's
-    # L2: prefer its switch (which bridges the new collision domain into the
-    # subnet), else its gateway router, else any other member.
+    # L2. Its switch bridges the new collision domain into the subnet. Without
+    # one, the leg links straight to a member not yet wired in that subnet (a
+    # router first): that member then takes its address on this link, so the
+    # two share a segment. A member already wired there keeps its address on
+    # its other link, so a leg to it would be dead; validation warns instead.
+    def _wired(cid: str, sid: str) -> bool:
+        return any(sub == sid and cid in (frm, to) for frm, _, to, _, sub, _ in link_registry)
+
     def _attach_target(sid: str, exclude: str) -> str | None:
         members = [
             cid
             for cid, mems in container_memberships.items()
             if cid != exclude and any(m["subnet_id"] == sid for m in mems)
         ]
-        for role in ("switch", "router"):
-            hit = next((cid for cid in members if container_role.get(cid) == role), None)
-            if hit:
-                return hit
-        return members[0] if members else None
+        switch = next((c for c in members if container_role.get(c) == "switch"), None)
+        if switch:
+            return switch
+        free = [c for c in members if not _wired(c, sid)]
+        return next((c for c in free if container_role.get(c) == "router"), None) or (
+            free[0] if free else None
+        )
 
     for cid in list(container_memberships):
         for m in container_memberships[cid]:
-            if not m.get("leg"):
+            # Already attached as another leg's peer: nothing more to wire.
+            if not m.get("leg") or _wired(cid, m["subnet_id"]):
                 continue
             peer = _attach_target(m["subnet_id"], cid)
             if peer:

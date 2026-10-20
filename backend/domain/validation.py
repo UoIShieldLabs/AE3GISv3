@@ -66,6 +66,18 @@ def _valid_ip(ip: Any) -> ipaddress.IPv4Address | None:
     return addr if isinstance(addr, ipaddress.IPv4Address) else None
 
 
+def _reserved(ip: ipaddress.IPv4Address, net: ipaddress.IPv4Network | None) -> str | None:
+    """Why ``ip`` can't be a device address in ``net`` (its network or broadcast
+    address), or None. /31 and /32 have no reserved addresses."""
+    if net is None or net.prefixlen >= 31 or ip not in net:
+        return None
+    if ip == net.network_address:
+        return "network"
+    if ip == net.broadcast_address:
+        return "broadcast"
+    return None
+
+
 def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, many checks
     out: list[Diagnostic] = []
 
@@ -105,6 +117,9 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
     subnet_label: dict[str, str] = {}  # nid -> display name (for messages)
     container_is_switch: dict[str, bool] = {}
     container_leg_subnets: dict[str, set[str]] = {}  # cid -> subnets reached by a leg
+    subnet_has_switch: dict[str, bool] = {}
+    subnet_linked: dict[str, set[str]] = {}  # nid -> devices already wired in that subnet
+    subnet_leg_routers: dict[str, set[str]] = {}  # nid -> routers reaching it via a leg
 
     for si, site in enumerate(sites(data)):
         spath = f"sites[{si}]"
@@ -133,6 +148,14 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
             site_subnets[sid].add(nid)
             subnet_containers[nid] = set()
             subnet_has_router[nid] = False
+            subnet_has_switch[nid] = False
+            subnet_linked[nid] = {
+                str(v)
+                for conn in subnet.get("connections") or []
+                if isinstance(conn, dict)
+                for v in (conn.get("from"), conn.get("to"))
+                if v
+            }
 
             net = _valid_cidr(subnet.get("cidr"))
             subnet_cidr[nid] = net
@@ -206,6 +229,8 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                 container_home.setdefault(cid, nid)
                 container_is_router.setdefault(cid, is_router(c))
                 container_is_switch.setdefault(cid, catalog.role_for(ctype) == "switch")
+                if catalog.role_for(ctype) == "switch":
+                    subnet_has_switch[nid] = True
                 container_label.setdefault(cid, str(c.get("name") or cid))
                 if isinstance(c.get("interfaces"), list) and c.get("interfaces"):
                     container_legs.append((cid, cpath, c.get("interfaces"), nid))
@@ -232,6 +257,13 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                         err(
                             "ip.outside_subnet",
                             f"{ip_raw} is outside {subnet.get('cidr')}",
+                            f"{cpath}.ip",
+                            cid,
+                        )
+                    elif reserved := _reserved(ip, net):
+                        err(
+                            "ip.reserved",
+                            f"{ip_raw} is the {reserved} address of {subnet.get('cidr')}",
                             f"{cpath}.ip",
                             cid,
                         )
@@ -326,16 +358,12 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
         if isinstance(frm, str) and frm and frm == to:
             err("connection.self", "A connection cannot link a node to itself", ref.path)
 
-    for nid in subnets_with_uplinks:
-        if not subnet_has_router.get(nid):
-            err(
-                "subnet.no_router",
-                "This subnet links to other subnets but has no router to route through",
-                subnet_path[nid],
-                nid,
-            )
-
     # ── interface legs (multi-homing) ──
+    legs_into: dict[str, set[str]] = {}  # nid -> devices with a leg into it
+    for cid, _cpath, legs, _home in container_legs:
+        for leg in legs:
+            if isinstance(leg, dict) and isinstance(leg.get("subnetId"), str):
+                legs_into.setdefault(leg["subnetId"], set()).add(cid)
     for cid, cpath, legs, home_nid in container_legs:
         if container_is_switch.get(cid):
             err(
@@ -405,6 +433,34 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                     f"{lpath}.ip",
                     cid,
                 )
+            elif reserved := _reserved(lip, tnet):
+                err(
+                    "interface.ip_reserved",
+                    f"{lip_raw} is the {reserved} address of {subnet_label.get(lsid, lsid)}",
+                    f"{lpath}.ip",
+                    cid,
+                )
+            # A leg joins its subnet's segment through the subnet's switch, else
+            # by a direct link to a device not yet wired there (see plan.py).
+            members = subnet_containers.get(lsid, set())
+            peers = members | (legs_into.get(lsid, set()) - {cid})
+            if not peers:
+                warn(
+                    "interface.no_peer",
+                    f"{subnet_label.get(lsid, lsid)} has no devices, so this leg connects to nothing",
+                    f"{lpath}.subnetId",
+                    cid,
+                )
+            elif not subnet_has_switch.get(lsid) and not (
+                (members - subnet_linked.get(lsid, set())) or (peers - members)
+            ):
+                warn(
+                    "interface.no_switch",
+                    f"{subnet_label.get(lsid, lsid)} has no switch, so this leg can't join its "
+                    "segment: add a switch to it",
+                    f"{lpath}.subnetId",
+                    cid,
+                )
             used = subnet_used_ips.setdefault(lsid, {})
             key = str(lip)
             if key in used and used[key] != cid:
@@ -418,6 +474,16 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
             used[key] = cid
             if container_is_router.get(cid):
                 subnet_router_ips.setdefault(lsid, set()).add(key)
+                subnet_leg_routers.setdefault(lsid, set()).add(cid)
+
+    for nid in subnets_with_uplinks:
+        if not subnet_has_router.get(nid) and not subnet_leg_routers.get(nid):
+            err(
+                "subnet.no_router",
+                "This subnet links to other subnets but has no router to route through",
+                subnet_path[nid],
+                nid,
+            )
 
     for nid, gw_ip, gpath in deferred_gateways:
         if gw_ip not in subnet_router_ips.get(nid, set()):

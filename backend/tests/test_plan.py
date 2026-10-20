@@ -309,6 +309,144 @@ def test_leg_on_a_switch_is_not_bridged():
     assert not any("10.0.3.9" in c for c in itsw.startup)
 
 
+def _lan(sid, cidr, gw, members, links):
+    return {
+        "id": sid,
+        "name": sid,
+        "cidr": cidr,
+        "gateway": gw,
+        "containers": members,
+        "connections": [{"id": f"{sid}-{a}-{b}", "from": a, "to": b} for a, b in links],
+    }
+
+
+def _site(subnets, subnet_links=()):
+    return {
+        "name": "t",
+        "sites": [
+            {
+                "id": "s1",
+                "name": "S",
+                "location": "",
+                "subnets": subnets,
+                "subnetConnections": [
+                    {"id": f"w-{a}-{b}", "from": a, "to": b} for a, b in subnet_links
+                ],
+            }
+        ],
+        "siteConnections": [],
+    }
+
+
+def _dev(cid, ctype, ip, **extra):
+    return {"id": cid, "name": cid, "type": ctype, "ip": ip, **extra}
+
+
+def test_leg_gated_subnet_can_link_to_another_subnet():
+    # fw (home A) gateways C through a leg; C is linked to D: the link must land
+    # on fw (a /30 to D's router) and routes must flow both ways.
+    topo = _site(
+        [
+            _lan(
+                "A",
+                "10.0.1.0/24",
+                "10.0.1.1",
+                [
+                    _dev(
+                        "fw",
+                        "firewall",
+                        "10.0.1.1",
+                        interfaces=[{"subnetId": "C", "ip": "10.0.3.1"}],
+                    ),
+                    _dev("swA", "switch", "10.0.1.2"),
+                ],
+                [("swA", "fw")],
+            ),
+            _lan(
+                "C",
+                "10.0.3.0/24",
+                "10.0.3.1",
+                [_dev("swC", "switch", "10.0.3.2"), _dev("hC", "workstation", "10.0.3.5")],
+                [("swC", "hC")],
+            ),
+            _lan(
+                "D",
+                "10.0.4.0/24",
+                "10.0.4.1",
+                [_dev("rD", "router", "10.0.4.1"), _dev("swD", "switch", "10.0.4.2")],
+                [("swD", "rD")],
+            ),
+        ],
+        subnet_links=[("C", "D")],
+    )
+    plan = build_lab_plan(topo, "t")
+    fw, rd = _node(plan, "fw"), _node(plan, "rD")
+    shared = {i.collision_domain for i in fw.interfaces} & {
+        i.collision_domain for i in rd.interfaces
+    }
+    assert len(shared) == 1, "the C-D link must be a link between fw and rD"
+    assert any("ip route add 10.0.3.0/24 via" in c for c in rd.startup)
+    assert any("ip route add 10.0.4.0/24 via" in c for c in fw.startup)
+
+
+def _switchless(c_members, c_links, legs):
+    # h (home A) legs into C; C has no switch.
+    return _site(
+        [
+            _lan(
+                "A",
+                "10.0.1.0/24",
+                "10.0.1.1",
+                [
+                    _dev("rA", "router", "10.0.1.1"),
+                    _dev("swA", "switch", "10.0.1.2"),
+                    _dev("h", "workstation", "10.0.1.5", interfaces=legs),
+                ],
+                [("swA", "rA"), ("swA", "h")],
+            ),
+            _lan("C", "10.0.3.0/24", "", c_members, c_links),
+        ]
+    )
+
+
+def test_leg_into_a_switchless_subnet_links_to_an_unwired_router():
+    topo = _switchless(
+        [_dev("rC", "router", "10.0.3.1")], [], [{"subnetId": "C", "ip": "10.0.3.7"}]
+    )
+    plan = build_lab_plan(topo, "t")
+    h, rc = _node(plan, "h"), _node(plan, "rC")
+    cd = (
+        {i.collision_domain for i in h.interfaces} & {i.collision_domain for i in rc.interfaces}
+    ).pop()
+    # Both ends are addressed on that link, so they share the segment.
+    assert next(i.ip for i in h.interfaces if i.collision_domain == cd) == "10.0.3.7"
+    assert next(i.ip for i in rc.interfaces if i.collision_domain == cd) == "10.0.3.1"
+
+
+def test_leg_into_a_fully_wired_switchless_subnet_is_not_attached():
+    # rC already holds its C address on its link to hC: a leg to rC would be dead.
+    topo = _switchless(
+        [_dev("rC", "router", "10.0.3.1"), _dev("hC", "workstation", "10.0.3.5")],
+        [("rC", "hC")],
+        [{"subnetId": "C", "ip": "10.0.3.7"}],
+    )
+    h = _node(build_lab_plan(topo, "t"), "h")
+    assert not any(i.ip == "10.0.3.7" for i in h.interfaces)
+
+
+def test_two_legs_into_an_empty_subnet_share_a_segment():
+    topo = _switchless([], [], [{"subnetId": "C", "ip": "10.0.3.7"}])
+    a = topo["sites"][0]["subnets"][0]["containers"]
+    a.append(
+        _dev("h2", "workstation", "10.0.1.6", interfaces=[{"subnetId": "C", "ip": "10.0.3.8"}])
+    )
+    topo["sites"][0]["subnets"][0]["connections"].append({"id": "x", "from": "swA", "to": "h2"})
+    plan = build_lab_plan(topo, "t")
+    h, h2 = _node(plan, "h"), _node(plan, "h2")
+    cd = {i.collision_domain for i in h.interfaces if i.ip == "10.0.3.7"}
+    assert cd and cd == {i.collision_domain for i in h2.interfaces if i.ip == "10.0.3.8"}
+
+
 # ── OVS port mirroring (SPAN) ─────────────────────────────────────────────
 
 

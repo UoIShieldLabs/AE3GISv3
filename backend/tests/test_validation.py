@@ -183,3 +183,47 @@ def test_mirror_to_a_leg_attached_target_is_connected():
     t["sites"][0]["subnets"][0]["containers"].pop()  # drop the in-subnet ids
     t["sites"][0]["subnets"][0]["connections"].pop()
     assert "mirror.target_not_connected" not in codes(t)
+
+
+def test_a_leg_router_lets_its_subnet_link_to_others():
+    # rA legs into subB and gateways it; subB keeps its subnet link but loses rB.
+    t = copy.deepcopy(TWO_SUBNETS)
+    sub_b = t["sites"][0]["subnets"][1]
+    sub_b["containers"] = [c for c in sub_b["containers"] if c["id"] != "rB"]
+    sub_b["connections"] = [c for c in sub_b["connections"] if "rB" not in (c["from"], c["to"])]
+    t["sites"][0]["subnets"][0]["containers"][0]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.1"}
+    ]
+    assert "subnet.no_router" not in codes(t)
+
+
+def test_a_leg_into_an_empty_subnet_warns():
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"].append(
+        {"id": "subE", "name": "E", "cidr": "10.0.9.0/24", "containers": [], "connections": []}
+    )
+    t["sites"][0]["subnets"][0]["containers"][2]["interfaces"] = [
+        {"subnetId": "subE", "ip": "10.0.9.5"}
+    ]
+    d = next(d for d in validate(t) if d.code == "interface.no_peer")
+    assert d.severity == "warning"
+
+
+def test_a_leg_into_a_wired_switchless_subnet_warns():
+    t = copy.deepcopy(TWO_SUBNETS)
+    sub_b = t["sites"][0]["subnets"][1]
+    sub_b["containers"] = [c for c in sub_b["containers"] if c["id"] != "swB"]
+    sub_b["connections"] = [{"id": "d", "from": "rB", "to": "hB"}]
+    t["sites"][0]["subnets"][0]["containers"][2]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.9"}
+    ]
+    assert "interface.no_switch" in codes(t)
+    # With a switch the same leg is fine.
+    assert "interface.no_switch" not in codes(_with_leg({"subnetId": "subB", "ip": "10.0.2.9"}))
+
+
+def test_network_and_broadcast_addresses_are_errors():
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"][0]["containers"][2]["ip"] = "10.0.1.255"
+    assert "ip.reserved" in codes(t)
+    assert "interface.ip_reserved" in codes(_with_leg({"subnetId": "subB", "ip": "10.0.2.0"}))
