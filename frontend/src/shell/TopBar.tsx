@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, Boxes, ChevronDown, Download, FileJson, Layers3, Library, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import { Activity, AlertTriangle, Boxes, ChevronDown, Download, FileJson, Layers3, Library, ListChecks, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
 import type { ExportFormat } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { MOD } from '@/lib/keyboard';
@@ -10,6 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/ui';
 import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
+import { openScenarioPanel } from '@/features/scenario/actions';
 import { ThemeToggle } from './ThemeToggle';
 
 export interface TopBarProps {
@@ -95,6 +96,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <DropdownMenuItem onSelect={() => onExportLab('containerlab')} disabled={!backendId}><PackageOpen /> ContainerLab topology (zip)</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openScenarioPanel()}><ListChecks /> Scenario runner…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => useAppStore.getState().setRunsOpen(true)} disabled={!backendId}><Activity /> Monitors, captures & traffic…</DropdownMenuItem>
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>

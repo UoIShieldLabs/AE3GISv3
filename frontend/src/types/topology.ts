@@ -94,6 +94,8 @@ export interface ScriptExecution {
   containerId: string;
   script: string;
   args?: string[];
+  // Unknown fields from the backend/old data pass through untouched.
+  [key: string]: unknown;
 }
 
 export interface AttackPhase {
@@ -101,6 +103,7 @@ export interface AttackPhase {
   name: string;
   description?: string;
   executions: ScriptExecution[];
+  [key: string]: unknown;
 }
 
 export interface Scenario {
@@ -108,6 +111,7 @@ export interface Scenario {
   name: string;
   description?: string;
   phases: AttackPhase[];
+  [key: string]: unknown;
 }
 
 /** Editor view preferences stored with the topology. */

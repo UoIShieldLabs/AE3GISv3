@@ -501,6 +501,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scenario/runs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_v1_scenario_runs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenario/runs/{job_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Run
+         * @description The run as a zip: run.json (request, per-step results) and the job log.
+         */
+        get: operations["export_run_api_v1_scenario_runs__job_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scenario/runs/{job_id}/samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Samples
+         * @description The run's completed-step results so far (live or finished).
+         */
+        get: operations["get_samples_api_v1_scenario_runs__job_id__samples_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sources/{name}/sync": {
         parameters: {
             query?: never;
@@ -927,6 +984,64 @@ export interface paths {
         get: operations["get_runtime_api_v1_topologies__topology_id__runtime_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/{topology_id}/scenario/phases/{phase_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Phase
+         * @description Run every step of a stored phase, in order.
+         */
+        post: operations["run_phase_api_v1_topologies__topology_id__scenario_phases__phase_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/{topology_id}/scenario/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_v1_topologies__topology_id__scenario_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/{topology_id}/scenario/steps/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Step
+         * @description Run one command on a node. One scenario run at a time per topology
+         *     (409 ``scenario_active``); the topology must be deployed (409 ``bad_state``).
+         */
+        post: operations["run_step_api_v1_topologies__topology_id__scenario_steps_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2597,6 +2712,106 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** ScenarioPhaseRunRequest */
+        ScenarioPhaseRunRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+        };
+        /** ScenarioRunOut */
+        ScenarioRunOut: {
+            /** Id */
+            id: string;
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Live */
+            live: boolean;
+            /**
+             * Node Ids
+             * @default []
+             */
+            node_ids: string[];
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Status */
+            status: string;
+            /** Step Count */
+            step_count: number;
+            /**
+             * Steps
+             * @default []
+             */
+            steps: {
+                [key: string]: unknown;
+            }[];
+            /** Topology Id */
+            topology_id: string;
+            /** Ws Path */
+            ws_path: string;
+        };
+        /** ScenarioSamplesOut */
+        ScenarioSamplesOut: {
+            /** Steps */
+            steps: components["schemas"]["ScenarioStepResult"][];
+        };
+        /**
+         * ScenarioStepRequest
+         * @description One ad-hoc step: a command on a node (``script`` is a shell command line;
+         *     ``args`` are appended, each shell-quoted).
+         */
+        ScenarioStepRequest: {
+            /** Args */
+            args?: string[];
+            /** Containerid */
+            containerId: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Script */
+            script: string;
+        };
+        /** ScenarioStepResult */
+        ScenarioStepResult: {
+            /** Command */
+            command: string;
+            /** Container Id */
+            container_id: string;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Exit Code */
+            exit_code?: number | null;
+            /** Index */
+            index: number;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "failed" | "timeout" | "error" | "stopped" | "running";
+            /**
+             * Stderr
+             * @default
+             */
+            stderr: string;
+            /**
+             * Stdout
+             * @default
+             */
+            stdout: string;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
         /**
          * ServerMixEntry
          * @description Servers of one kind: a fixed ``count``, or one per ``per_hosts`` hosts.
@@ -3799,6 +4014,105 @@ export interface operations {
             };
         };
     };
+    get_run_api_v1_scenario_runs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_run_api_v1_scenario_runs__job_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_samples_api_v1_scenario_runs__job_id__samples_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioSamplesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_source_api_v1_sources__name__sync_post: {
         parameters: {
             query?: never;
@@ -4695,6 +5009,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RuntimeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_phase_api_v1_topologies__topology_id__scenario_phases__phase_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+                phase_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ScenarioPhaseRunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_v1_topologies__topology_id__scenario_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_step_api_v1_topologies__topology_id__scenario_steps_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioStepRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRunOut"];
                 };
             };
             /** @description Validation Error */

@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Activity as ActivityIcon, ChevronDown, ChevronUp, Gauge, Radio, SquareTerminal, X } from 'lucide-react';
+import { Activity as ActivityIcon, ChevronDown, ChevronUp, Gauge, ListChecks, Radio, SquareTerminal, X } from 'lucide-react';
 import { useAppStore, type DockTab } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { cn } from '@/lib/cn';
@@ -10,8 +10,9 @@ const TerminalSession = lazy(() => import('@/features/terminal/TerminalSession')
 const CaptureView = lazy(() => import('@/features/capture/CaptureView').then((m) => ({ default: m.CaptureView })));
 const TrafficPanel = lazy(() => import('@/features/traffic/TrafficPanel').then((m) => ({ default: m.TrafficPanel })));
 const MonitorPanel = lazy(() => import('@/features/monitor/MonitorPanel').then((m) => ({ default: m.MonitorPanel })));
+const ScenarioPanel = lazy(() => import('@/features/scenario/ScenarioPanel').then((m) => ({ default: m.ScenarioPanel })));
 
-const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon, monitor: Gauge } as const;
+const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon, monitor: Gauge, scenario: ListChecks } as const;
 
 function title(tab: DockTab): string {
   return tab.kind === 'terminal' ? tab.name : tab.title;
@@ -29,6 +30,8 @@ function Body({ tab, active }: { tab: DockTab; active: boolean }) {
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><TrafficPanel tabId={tab.id} jobId={tab.jobId} /></div>;
     case 'monitor':
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><MonitorPanel tabId={tab.id} jobId={tab.jobId} /></div>;
+    case 'scenario':
+      return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><ScenarioPanel tabId={tab.id} jobId={tab.jobId} /></div>;
   }
 }
 

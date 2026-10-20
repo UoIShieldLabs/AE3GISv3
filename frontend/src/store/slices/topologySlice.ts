@@ -1,4 +1,4 @@
-import type { Connection, Container, Position, Site, Subnet, TopologyData, SavedFlow } from '@/types/topology';
+import type { AttackPhase, Connection, Container, Position, ScriptExecution, Site, Subnet, TopologyData, SavedFlow } from '@/types/topology';
 import { createEmptyTopology } from '@/types/topology';
 import { generateId } from '@/lib/ids';
 import { getNextAvailableIp } from '@/utils/validation';
@@ -100,6 +100,20 @@ function dropNodes(top: TopologyData, ids: string[]) {
         }
         if (c.mirrorTo && !liveContainers.has(c.mirrorTo)) delete c.mirrorTo;
       }
+
+  // Scrub scenario steps that ran on a node that no longer exists.
+  if (Array.isArray(top.scenarios))
+    for (const scenario of top.scenarios)
+      for (const phase of scenario.phases ?? [])
+        phase.executions = (phase.executions ?? []).filter((e) => liveContainers.has(e.containerId));
+}
+
+function findPhase(top: TopologyData, phaseId: string): AttackPhase | undefined {
+  for (const s of top.scenarios ?? []) {
+    const p = s.phases?.find((ph) => ph.id === phaseId);
+    if (p) return p;
+  }
+  return undefined;
 }
 
 export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
@@ -354,6 +368,105 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       t.traffic = { ...(t.traffic ?? {}), flows: JSON.parse(JSON.stringify(flows)) as SavedFlow[] };
       s.dirty = true;
     }, false, 'setTrafficFlows'),
+
+  // ── Scenarios (classroom step-through; part of the saved design, undoable) ──
+  addScenario: (name) => {
+    const id = generateId('scenario');
+    set((s) => {
+      const t = s.topology as TopologyData;
+      const scenarios = (t.scenarios ??= []);
+      scenarios.push({ id, name: name?.trim() || `Scenario ${scenarios.length + 1}`, phases: [] });
+      s.dirty = true;
+    }, false, 'addScenario');
+    return id;
+  },
+
+  updateScenario: (scenarioId, updates) =>
+    set((s) => {
+      const scenario = (s.topology as TopologyData).scenarios?.find((x) => x.id === scenarioId);
+      if (!scenario) return;
+      Object.assign(scenario, updates);
+      s.dirty = true;
+    }, false, 'updateScenario'),
+
+  removeScenario: (scenarioId) =>
+    set((s) => {
+      const t = s.topology as TopologyData;
+      if (!t.scenarios) return;
+      t.scenarios = t.scenarios.filter((x) => x.id !== scenarioId);
+      s.dirty = true;
+    }, false, 'removeScenario'),
+
+  addPhase: (scenarioId, name) => {
+    const id = generateId('phase');
+    let ok = false;
+    set((s) => {
+      const scenario = (s.topology as TopologyData).scenarios?.find((x) => x.id === scenarioId);
+      if (!scenario) return;
+      const phases = (scenario.phases ??= []);
+      phases.push({ id, name: name?.trim() || `Phase ${phases.length + 1}`, executions: [] });
+      ok = true;
+      s.dirty = true;
+    }, false, 'addPhase');
+    return ok ? id : null;
+  },
+
+  updatePhase: (phaseId, updates) =>
+    set((s) => {
+      const phase = findPhase(s.topology as TopologyData, phaseId);
+      if (!phase) return;
+      Object.assign(phase, updates);
+      s.dirty = true;
+    }, false, 'updatePhase'),
+
+  removePhase: (phaseId) =>
+    set((s) => {
+      for (const scenario of (s.topology as TopologyData).scenarios ?? []) {
+        const before = scenario.phases?.length ?? 0;
+        scenario.phases = (scenario.phases ?? []).filter((p) => p.id !== phaseId);
+        if ((scenario.phases.length ?? 0) !== before) { s.dirty = true; return; }
+      }
+    }, false, 'removePhase'),
+
+  addStep: (phaseId, step) =>
+    set((s) => {
+      const phase = findPhase(s.topology as TopologyData, phaseId);
+      if (!phase) return;
+      (phase.executions ??= []).push({
+        containerId: step.containerId,
+        script: step.script,
+        ...(step.args?.length ? { args: [...step.args] } : {}),
+      } as ScriptExecution);
+      s.dirty = true;
+    }, false, 'addStep'),
+
+  updateStep: (phaseId, index, updates) =>
+    set((s) => {
+      const phase = findPhase(s.topology as TopologyData, phaseId);
+      const step = phase?.executions?.[index];
+      if (!step) return;
+      Object.assign(step, updates);
+      if ('args' in updates && !(updates.args?.length)) delete step.args;
+      s.dirty = true;
+    }, false, 'updateStep'),
+
+  removeStep: (phaseId, index) =>
+    set((s) => {
+      const phase = findPhase(s.topology as TopologyData, phaseId);
+      if (!phase?.executions || index < 0 || index >= phase.executions.length) return;
+      phase.executions.splice(index, 1);
+      s.dirty = true;
+    }, false, 'removeStep'),
+
+  moveStep: (phaseId, from, to) =>
+    set((s) => {
+      const phase = findPhase(s.topology as TopologyData, phaseId);
+      const steps = phase?.executions;
+      if (!steps || from < 0 || from >= steps.length || to < 0 || to >= steps.length || from === to) return;
+      const [moved] = steps.splice(from, 1);
+      steps.splice(to, 0, moved);
+      s.dirty = true;
+    }, false, 'moveStep'),
 
   deleteNodes: (ids) => set((s) => { dropNodes(s.topology as TopologyData, ids); s.dirty = true; }, false, 'deleteNodes'),
 

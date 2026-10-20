@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { Connection, Container, Position, SavedFlow, Site, Subnet, TopologyData } from '@/types/topology';
+import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
 import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
@@ -70,6 +70,20 @@ export interface TopologySlice {
   applyLayout: (scope: Scope, mode: LayoutMode, sizes?: ReadonlyMap<string, { width: number; height: number }>) => void;
   /** Replace the traffic flows saved with the design (undoable). */
   setTrafficFlows: (flows: SavedFlow[]) => void;
+
+  // ── Scenarios (classroom step-through; part of the saved design, undoable) ──
+  addScenario: (name?: string) => string;
+  updateScenario: (scenarioId: string, updates: Partial<Pick<Scenario, 'name' | 'description'>>) => void;
+  removeScenario: (scenarioId: string) => void;
+  addPhase: (scenarioId: string, name?: string) => string | null;
+  updatePhase: (phaseId: string, updates: Partial<Pick<AttackPhase, 'name' | 'description'>>) => void;
+  removePhase: (phaseId: string) => void;
+  /** Append a step (command on a node) to a phase. */
+  addStep: (phaseId: string, step: ScriptExecution) => void;
+  updateStep: (phaseId: string, index: number, updates: Partial<ScriptExecution>) => void;
+  removeStep: (phaseId: string, index: number) => void;
+  /** Reorder a step within its phase. */
+  moveStep: (phaseId: string, from: number, to: number) => void;
 }
 
 export interface DocumentSlice {
@@ -156,12 +170,13 @@ export interface ViewSlice {
   clearSelection: () => void;
 }
 
-/** A tab in the bottom dock. Ids are namespaced: term:<container>, cap:<job>, traffic:<job>|traffic:new, monitor:<job>|monitor:new. */
+/** A tab in the bottom dock. Ids are namespaced: term:<container>, cap:<job>, traffic:<job>|traffic:new, monitor:<job>|monitor:new, scenario:<job>|scenario:new. */
 export type DockTab =
   | { kind: 'terminal'; id: string; containerId: string; name: string; ip?: string }
   | { kind: 'capture'; id: string; jobId: string; title: string }
   | { kind: 'traffic'; id: string; jobId: string | null; title: string; seed?: { client?: string; nonce: number } }
-  | { kind: 'monitor'; id: string; jobId: string | null; title: string; seed?: { nodes?: string[]; nonce: number } };
+  | { kind: 'monitor'; id: string; jobId: string | null; title: string; seed?: { nodes?: string[]; nonce: number } }
+  | { kind: 'scenario'; id: string; jobId: string | null; title: string; seed?: { phaseId?: string; nonce: number } };
 
 export interface DockSlice {
   dockTabs: DockTab[];

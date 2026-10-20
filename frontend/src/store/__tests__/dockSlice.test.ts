@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '@/store';
-import { monitorTabId } from '@/store/slices/dockSlice';
+import { monitorTabId, scenarioTabId } from '@/store/slices/dockSlice';
 
 const st = () => useAppStore.getState();
 
@@ -40,5 +40,18 @@ describe('dock slice', () => {
     st().replaceDockTab('monitor:new', { kind: 'monitor', id: monitorTabId('m1'), jobId: 'm1', title: 'idle' });
     expect(st().dockTabs.map((t) => t.id)).toEqual(['monitor:m1']);
     expect(st().activeDockTabId).toBe('monitor:m1');
+  });
+});
+
+describe('dock slice — scenario tabs', () => {
+  const S = () => useAppStore.getState();
+  beforeEach(() => useAppStore.setState({ dockTabs: [], activeDockTabId: null, dockMinimized: false }));
+
+  it('opens the authoring tab once and a separate run tab per run', () => {
+    S().openDockTab({ kind: 'scenario', id: scenarioTabId(null), jobId: null, title: 'Scenarios' });
+    S().openDockTab({ kind: 'scenario', id: scenarioTabId(null), jobId: null, title: 'Scenarios' });
+    S().openDockTab({ kind: 'scenario', id: scenarioTabId('j9'), jobId: 'j9', title: 'Phase run' });
+    expect(S().dockTabs.map((t) => t.id)).toEqual(['scenario:new', 'scenario:j9']);
+    expect(S().activeDockTabId).toBe('scenario:j9');
   });
 });

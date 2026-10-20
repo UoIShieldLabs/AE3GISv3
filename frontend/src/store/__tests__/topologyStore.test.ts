@@ -318,3 +318,62 @@ describe('topology store — interface legs (multi-homing)', () => {
     expect('interfaces' in leggedContainer('h')).toBe(false);
   });
 });
+
+describe('topology store — scenarios (step-through authoring)', () => {
+  function phaseWithTwoNodes() {
+    const siteId = S().addSite({ name: 'S' });
+    const sn = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const a = S().addContainer({ subnetId: sn, type: 'workstation', ip: '10.0.1.5' })!;
+    const b = S().addContainer({ subnetId: sn, type: 'workstation', ip: '10.0.1.6' })!;
+    const scId = S().addScenario('Demo');
+    const phaseId = S().addPhase(scId, 'Bring up')!;
+    return { scId, phaseId, a, b };
+  }
+
+  it('authoring a scenario is dirty and undoable', () => {
+    const scId = S().addScenario('Demo');
+    expect(S().topology.scenarios?.[0]).toMatchObject({ id: scId, name: 'Demo', phases: [] });
+    expect(S().dirty).toBe(true);
+    undo();
+    expect(S().topology.scenarios).toBeUndefined();
+  });
+
+  it('phases and steps keep their order', () => {
+    const { phaseId, a, b } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'echo A' });
+    S().addStep(phaseId, { containerId: b, script: 'nmap -sn', args: ['10.0.1.0/24'] });
+    const steps = S().topology.scenarios![0].phases[0].executions;
+    expect(steps.map((s) => s.containerId)).toEqual([a, b]);
+    expect(steps[1].args).toEqual(['10.0.1.0/24']);
+    S().moveStep(phaseId, 1, 0);
+    expect(S().topology.scenarios![0].phases[0].executions.map((s) => s.containerId)).toEqual([b, a]);
+  });
+
+  it('updateStep clears args when emptied; removeStep drops by index', () => {
+    const { phaseId, a } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'x', args: ['y'] });
+    S().updateStep(phaseId, 0, { script: 'z', args: [] });
+    const step = S().topology.scenarios![0].phases[0].executions[0];
+    expect(step.script).toBe('z');
+    expect('args' in step).toBe(false);
+    S().removeStep(phaseId, 0);
+    expect(S().topology.scenarios![0].phases[0].executions).toHaveLength(0);
+  });
+
+  it('removePhase and removeScenario prune the tree', () => {
+    const { scId, phaseId } = phaseWithTwoNodes();
+    S().removePhase(phaseId);
+    expect(S().topology.scenarios![0].phases).toHaveLength(0);
+    S().removeScenario(scId);
+    expect(S().topology.scenarios).toHaveLength(0);
+  });
+
+  it('deleting a node scrubs the scenario steps that ran on it', () => {
+    const { phaseId, a, b } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'echo A' });
+    S().addStep(phaseId, { containerId: b, script: 'echo B' });
+    S().deleteNodes([a]);
+    const steps = S().topology.scenarios![0].phases[0].executions;
+    expect(steps.map((s) => s.containerId)).toEqual([b]);
+  });
+});

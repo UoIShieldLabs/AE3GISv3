@@ -44,6 +44,10 @@ export type FlowSample = S['FlowSampleOut'];
 export type TrafficTotals = S['TrafficTotalsOut'];
 export type TrafficPattern = S['TrafficPattern'];
 export type TrafficSamples = S['TrafficSamplesOut'];
+export type ScenarioStepRequest = S['ScenarioStepRequest'];
+export type ScenarioRun = S['ScenarioRunOut'];
+export type ScenarioStepResult = S['ScenarioStepResult'];
+export type ScenarioSamples = S['ScenarioSamplesOut'];
 export type MonitorRequest = S['MonitorRequest'];
 export type Monitor = S['MonitorOut'];
 export type NodeSelector = S['NodeSelector'];
@@ -320,6 +324,29 @@ export function trafficExportUrl(jobId: string): string {
   return `${V1}/traffic/runs/${encodeURIComponent(jobId)}/export`;
 }
 
+// ── Scenario runner ────────────────────────────────────────────────
+export function runScenarioStep(topologyId: string, body: ScenarioStepRequest): Promise<ScenarioRun> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/steps/run`, json(body));
+}
+export function runScenarioPhase(topologyId: string, phaseId: string, label = ''): Promise<ScenarioRun> {
+  return request(
+    `${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/phases/${encodeURIComponent(phaseId)}/run`,
+    json({ label }),
+  );
+}
+export function listScenarioRuns(topologyId: string, limit = 50): Promise<ScenarioRun[]> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/runs?limit=${limit}`);
+}
+export function getScenarioRun(jobId: string): Promise<ScenarioRun> {
+  return request(`${V1}/scenario/runs/${encodeURIComponent(jobId)}`);
+}
+export function scenarioSamples(jobId: string): Promise<ScenarioSamples> {
+  return request(`${V1}/scenario/runs/${encodeURIComponent(jobId)}/samples`);
+}
+export function scenarioExportUrl(jobId: string): string {
+  return `${V1}/scenario/runs/${encodeURIComponent(jobId)}/export`;
+}
+
 // ── Monitors ───────────────────────────────────────────────────────
 export function startMonitor(topologyId: string, body: MonitorRequest): Promise<Monitor> {
   return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/monitors`, json(body));
@@ -367,4 +394,7 @@ export function trafficWsPath(topologyId: string, jobId: string): string {
 }
 export function monitorWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/monitors/${encodeURIComponent(jobId)}`;
+}
+export function scenarioWsPath(topologyId: string, jobId: string): string {
+  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/scenario/${encodeURIComponent(jobId)}`;
 }
