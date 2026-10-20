@@ -136,3 +136,83 @@ describe('project() — runtime activity', () => {
     expect(edges[0]).toMatchObject({ id: 'c-wan', source: 'sub-1', target: 'sub-2', data: { captureJobId: 'cap1' } });
   });
 });
+
+describe('project() — interface legs (multi-homing)', () => {
+  function withLeg(): TopologyData {
+    const t = fixture();
+    // h1 (in sub-1) gets an extra leg into sub-2.
+    t.sites[0].subnets[0].containers[2].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.9' }];
+    return t;
+  }
+
+  it('draws a dashed attachment edge when both ends are visible', () => {
+    const { edges } = project({ topology: withLeg(), scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true } });
+    const leg = edges.find((e) => e.id === 'leg:h1:sub-2');
+    expect(leg).toMatchObject({ source: 'h1', target: 'sub-2', selectable: false, data: { variant: 'attachment' } });
+  });
+
+  it('draws the leg between the subnet cards, naming the device, when its subnet is collapsed', () => {
+    const { edges } = project({ topology: withLeg(), scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
+    expect(edges.find((e) => e.id === 'leg:sub-1:sub-2')).toMatchObject({
+      source: 'sub-1', target: 'sub-2', data: { variant: 'attachment', label: 'H1' },
+    });
+  });
+
+  it('merges legs that collapse onto the same two cards into one edge', () => {
+    const t = withLeg();
+    t.sites[0].subnets[0].containers.push({
+      id: 'h2', name: 'H2', type: 'workstation', ip: '10.0.1.6', position: { x: 300, y: 120 },
+      interfaces: [{ subnetId: 'sub-2', ip: '10.0.2.10' }],
+    });
+    const { edges } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
+    const legs = edges.filter((e) => e.data?.variant === 'attachment');
+    expect(legs).toHaveLength(1);
+    expect(legs[0].data?.label).toBe('H1, H2');
+  });
+
+  it('lands on the switch the leg attaches to when the target subnet is expanded', () => {
+    const t = withLeg();
+    t.sites[0].subnets[1].containers.push({ id: 'sw2', name: 'SW2', type: 'switch', ip: '10.0.2.2', position: { x: 0, y: 120 } });
+    const { edges } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true, 'sub-2': true } });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toMatchObject({ source: 'h1', target: 'sw2' });
+  });
+
+  it('draws a leg across sites between the site cards at root scope', () => {
+    const t = withLeg();
+    t.sites[1].subnets.push({ id: 'sub-b', name: 'SB', cidr: '10.0.9.0/24', containers: [], connections: [], position: { x: 0, y: 0 } });
+    t.sites[0].subnets[0].containers[2].interfaces = [{ subnetId: 'sub-b', ip: '10.0.9.5' }];
+    const { edges } = project({ topology: t, scope: { level: 'root' }, expanded: {} });
+    expect(edges.find((e) => e.id === 'leg:site-a:site-b')).toMatchObject({ source: 'site-a', target: 'site-b', data: { label: 'H1' } });
+  });
+
+  it("lists a device's own legs on its card", () => {
+    const { nodes } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
+    expect(nodes.find((n) => n.id === 'h1')?.data).toMatchObject({ legs: [{ subnet: 'S2', ip: '10.0.2.9' }] });
+  });
+
+  it("shows devices that join a subnet through a leg as guests in that subnet's view", () => {
+    const { nodes, edges } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-2' }, expanded: {} });
+    const guest = nodes.find((n) => n.id === 'h1')!;
+    expect(guest.draggable).toBe(false);
+    expect(guest.data).toMatchObject({ guest: { ip: '10.0.2.9', homeSubnet: 'S1' } });
+    // Wired to the subnet's switch, else its gateway router (sub-2 has only r2).
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toMatchObject({ source: 'h1', target: 'r2' });
+  });
+
+  it('omits the leg edge at subnet scope (target subnet not visible)', () => {
+    const { edges } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
+  });
+
+  it("a subnet gated by a router's leg shows that router as its gateway", () => {
+    const t = fixture();
+    // sub-2 loses its own router; r1 (in sub-1) gateways it through a leg.
+    t.sites[0].subnets[1].containers = [];
+    t.sites[0].subnetConnections = [];
+    t.sites[0].subnets[0].containers[0].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.1' }];
+    const { nodes } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
+    const card = nodes.find((n) => n.id === 'sub-2')!;
+    expect(card.data).toMatchObject({ gateway: { id: 'r1', ip: '10.0.2.1' } });
+  });
+});

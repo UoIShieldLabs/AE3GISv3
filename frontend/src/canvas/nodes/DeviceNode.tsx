@@ -20,7 +20,7 @@ const STATUS_CLASS = {
 } as const;
 
 export const DeviceNode = memo(function DeviceNode({ id, data, selected, dragging }: NodeProps<DeviceNodeType>) {
-  const { container, status, isGateway, captureJobId, traffic } = data;
+  const { container, status, isGateway, captureJobId, traffic, legs, guest } = data;
   // colorFor/labelFor read the catalog's lookup maps: re-render when it changes
   // (a registry sync can add the type a placed node uses).
   useAppStore((s) => s.catalog);
@@ -30,11 +30,12 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
 
   return (
     <div
-      className={nodeCardClass(selected, cn('items-center gap-2.5 px-2.5', dragging && 'shadow-lg'))}
+      className={nodeCardClass(selected, cn('items-center gap-2.5 px-2.5', dragging && 'shadow-lg', guest && 'border-dashed opacity-80'))}
       style={{ width: NODE_SIZE.device.width, height: NODE_SIZE.device.height }}
       data-testid={`node-${id}`}
     >
-      <NodeActions id={id} visible={!!selected && !dragging} container={container} />
+      {/* A guest is edited (or deleted) in its own subnet, not from here. */}
+      <NodeActions id={id} visible={!!selected && !dragging && !guest} container={container} />
       <NodeHandles />
 
       <div
@@ -57,8 +58,19 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
         </div>
         {!compact ? (
           <div className="flex items-center gap-1.5">
-            <span className="truncate font-mono text-2xs text-fg-muted">{container.ip || 'no ip'}</span>
+            <span className={cn('font-mono text-2xs text-fg-muted', guest ? 'shrink-0' : 'truncate')}>{(guest ? guest.ip : container.ip) || 'no ip'}</span>
             {isGateway ? <span className="shrink-0 rounded bg-surface-2 px-1 text-2xs font-medium text-fg-muted">GW</span> : null}
+            {guest ? (
+              <Tooltip content={`Lives in ${guest.homeSubnet} (${container.ip}); joins this subnet through an interface leg`} side="bottom">
+                <span className="min-w-0 truncate text-2xs text-fg-subtle">via {guest.homeSubnet}</span>
+              </Tooltip>
+            ) : legs?.length ? (
+              <Tooltip content={legs.map((l) => `${l.subnet}: ${l.ip}`).join(' · ')} side="bottom">
+                <span className="shrink-0 rounded bg-warning-soft px-1 text-2xs font-medium text-warning" aria-label={`${legs.length} more interface${legs.length === 1 ? '' : 's'}`}>
+                  +{legs.length}
+                </span>
+              </Tooltip>
+            ) : null}
           </div>
         ) : null}
       </div>

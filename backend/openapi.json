@@ -3961,6 +3961,231 @@
         "title": "RuntimeOut",
         "type": "object"
       },
+      "ScenarioPhaseRunRequest": {
+        "properties": {
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "title": "ScenarioPhaseRunRequest",
+        "type": "object"
+      },
+      "ScenarioRunOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "node_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "steps": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "topology_id": {
+            "title": "Topology Id",
+            "type": "string"
+          },
+          "ws_path": {
+            "title": "Ws Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topology_id",
+          "label",
+          "status",
+          "live",
+          "step_count",
+          "job",
+          "ws_path"
+        ],
+        "title": "ScenarioRunOut",
+        "type": "object"
+      },
+      "ScenarioSamplesOut": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioStepResult"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "title": "ScenarioSamplesOut",
+        "type": "object"
+      },
+      "ScenarioStepRequest": {
+        "description": "One ad-hoc step: a command on a node (``script`` is a shell command line;\n``args`` are appended, each shell-quoted).",
+        "properties": {
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Args",
+            "type": "array"
+          },
+          "containerId": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Containerid",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "script": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Script",
+            "type": "string"
+          }
+        },
+        "required": [
+          "containerId",
+          "script"
+        ],
+        "title": "ScenarioStepRequest",
+        "type": "object"
+      },
+      "ScenarioStepResult": {
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "container_id": {
+            "title": "Container Id",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed",
+              "timeout",
+              "error",
+              "stopped",
+              "running"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stderr": {
+            "default": "",
+            "title": "Stderr",
+            "type": "string"
+          },
+          "stdout": {
+            "default": "",
+            "title": "Stdout",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "index",
+          "container_id",
+          "command",
+          "status"
+        ],
+        "title": "ScenarioStepResult",
+        "type": "object"
+      },
       "ServerMixEntry": {
         "description": "Servers of one kind: a fixed ``count``, or one per ``per_hosts`` hosts.",
         "properties": {
@@ -6389,6 +6614,178 @@
         ]
       }
     },
+    "/api/v1/scenario/runs/{job_id}": {
+      "get": {
+        "operationId": "get_run_api_v1_scenario_runs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/api/v1/scenario/runs/{job_id}/export": {
+      "get": {
+        "description": "The run as a zip: run.json (request, per-step results) and the job log.",
+        "operationId": "export_run_api_v1_scenario_runs__job_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Run",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/api/v1/scenario/runs/{job_id}/samples": {
+      "get": {
+        "description": "The run's completed-step results so far (live or finished).",
+        "operationId": "get_samples_api_v1_scenario_runs__job_id__samples_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioSamplesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Samples",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
     "/api/v1/sources/{name}/sync": {
       "post": {
         "description": "Fetch a git source's configured ref; the job reports which images changed.",
@@ -8015,6 +8412,234 @@
         "summary": "Get Runtime",
         "tags": [
           "topologies"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/scenario/phases/{phase_id}/run": {
+      "post": {
+        "description": "Run every step of a stored phase, in order.",
+        "operationId": "run_phase_api_v1_topologies__topology_id__scenario_phases__phase_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "phase_id",
+            "required": true,
+            "schema": {
+              "title": "Phase Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ScenarioPhaseRunRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Phase",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/scenario/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_topologies__topology_id__scenario_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioRunOut"
+                  },
+                  "title": "Response List Runs Api V1 Topologies  Topology Id  Scenario Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/scenario/steps/run": {
+      "post": {
+        "description": "Run one command on a node. One scenario run at a time per topology\n(409 ``scenario_active``); the topology must be deployed (409 ``bad_state``).",
+        "operationId": "run_step_api_v1_topologies__topology_id__scenario_steps_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Step",
+        "tags": [
+          "scenario"
         ]
       }
     },

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { computeTreeLayout, computeCircleLayout, computeGridLayout } from '../algorithms';
 import { nextFreePosition, boundsOf } from '../placement';
+import { scopeLayoutEdges } from '../scope';
+import type { TopologyData } from '@/types/topology';
 
 const box = (id: string) => ({ id, width: 100, height: 50 });
 
@@ -44,5 +46,26 @@ describe('placement', () => {
   it('boundsOf spans all rects', () => {
     const b = boundsOf([{ x: 0, y: 0, width: 10, height: 10 }, { x: 40, y: 20, width: 10, height: 5 }])!;
     expect(b).toEqual({ x: 0, y: 0, width: 50, height: 25 });
+  });
+});
+
+describe('scope layout edges', () => {
+  it('counts interface legs as edges between the subnets they bridge', () => {
+    const topology = {
+      sites: [{
+        id: 's', name: 'S', location: '', position: { x: 0, y: 0 }, subnetConnections: [],
+        subnets: [
+          { id: 'it', name: 'IT', cidr: '10.0.5.0/24', connections: [], containers: [
+            { id: 'fw', name: 'fw', type: 'firewall', ip: '10.0.5.1', interfaces: [{ subnetId: 'ot', ip: '10.0.3.1' }] },
+            { id: 'hist', name: 'hist', type: 'workstation', ip: '10.0.5.20', interfaces: [{ subnetId: 'ot', ip: '10.0.3.20' }] },
+          ] },
+          { id: 'ot', name: 'OT', cidr: '10.0.3.0/24', connections: [], containers: [] },
+        ],
+      }],
+      siteConnections: [],
+    } as TopologyData;
+    // Two legs between the same pair of subnets give one layout edge.
+    expect(scopeLayoutEdges(topology, { level: 'site', siteId: 's' })).toEqual([{ source: 'it', target: 'ot' }]);
+    expect(scopeLayoutEdges(topology, { level: 'root' })).toEqual([]);
   });
 });

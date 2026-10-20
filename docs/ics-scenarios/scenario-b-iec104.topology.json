@@ -1,0 +1,61 @@
+{
+  "name": "ICS Scenario B — IEC-104 / Industroyer",
+  "description": "IT-LAN / OT-LAN / PROCESS with a dual-homed firewall and historian pivot, a dual-homed IEC-104 RTU, and an OVS SPAN port to the IDS. Import this after syncing the `tollan` registry. Node behaviour (RTU/HMI logic, DB+sshd+client tools, process sim) lives in the tollan images; see ics-scenarios-agent-guide.md.",
+  "sites": [
+    {
+      "id": "site-ics",
+      "name": "ICS Lab",
+      "location": "Lab",
+      "subnets": [
+        {
+          "id": "it-lan",
+          "name": "IT-LAN",
+          "cidr": "10.0.5.0/24",
+          "gateway": "10.0.5.1",
+          "containers": [
+            { "id": "fw", "name": "fw", "type": "firewall", "image": "tollan/nftables:latest", "ip": "10.0.5.1", "interfaces": [{ "subnetId": "ot-lan", "ip": "10.0.3.1" }] },
+            { "id": "it-sw", "name": "it-sw", "type": "switch", "ip": "10.0.5.2" },
+            { "id": "attacker", "name": "attacker", "type": "attacker", "image": "tollan/malicious-client:latest", "ip": "10.0.5.10" },
+            { "id": "historian", "name": "historian", "type": "database-server", "image": "tollan/mariadb:latest", "ip": "10.0.5.20", "interfaces": [{ "subnetId": "ot-lan", "ip": "10.0.3.20" }] }
+          ],
+          "connections": [
+            { "id": "it-fw", "from": "it-sw", "to": "fw" },
+            { "id": "it-atk", "from": "it-sw", "to": "attacker" },
+            { "id": "it-hist", "from": "it-sw", "to": "historian" }
+          ]
+        },
+        {
+          "id": "ot-lan",
+          "name": "OT-LAN",
+          "cidr": "10.0.3.0/24",
+          "gateway": "10.0.3.1",
+          "containers": [
+            { "id": "ot-sw", "name": "ot-sw", "type": "switch", "image": "tollan/open-vswitch:latest", "ip": "10.0.3.2", "mirrorTo": "ids" },
+            { "id": "plc", "name": "plc", "type": "plc", "image": "tollan/c104-server:latest", "ip": "10.0.3.50", "interfaces": [{ "subnetId": "process", "ip": "10.0.1.50" }] },
+            { "id": "hmi", "name": "hmi", "type": "hmi", "image": "tollan/c104-hmi:latest", "ip": "10.0.3.30" },
+            { "id": "ids", "name": "ids", "type": "ids", "image": "tollan/zeek:latest", "ip": "10.0.3.40" }
+          ],
+          "connections": [
+            { "id": "ot-plc", "from": "ot-sw", "to": "plc" },
+            { "id": "ot-hmi", "from": "ot-sw", "to": "hmi" },
+            { "id": "ot-ids", "from": "ot-sw", "to": "ids" }
+          ]
+        },
+        {
+          "id": "process",
+          "name": "PROCESS",
+          "cidr": "10.0.1.0/24",
+          "containers": [
+            { "id": "proc-sw", "name": "proc-sw", "type": "switch", "ip": "10.0.1.2" },
+            { "id": "process-sim", "name": "process-sim", "type": "workstation", "image": "tollan/process-sim:latest", "ip": "10.0.1.10" }
+          ],
+          "connections": [
+            { "id": "proc-link", "from": "proc-sw", "to": "process-sim" }
+          ]
+        }
+      ],
+      "subnetConnections": []
+    }
+  ],
+  "siteConnections": []
+}

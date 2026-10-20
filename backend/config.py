@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     traffic_max_seconds: int = 4 * 3600
     # Flows one traffic run may expand to (patterns make many from one line).
     traffic_max_flows: int = 2000
+    # A scenario step runs at most this long before it is stopped and the step
+    # marked timed out (so one hung command can't wedge a phase).
+    scenario_step_max_seconds: int = 600
+    # Steps one scenario phase may run.
+    scenario_max_steps: int = 200
     # Monitors (resource sampling) stop themselves after this long.
     monitor_max_seconds: int = 24 * 3600
     # The Docker host's cgroup v2 tree, bound read-only into the monitor's

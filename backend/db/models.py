@@ -41,6 +41,9 @@ JOB_KINDS = (
     "sync_registry",
     "capture",
     "traffic",
+    "monitor",
+    "benchmark",
+    "scenario",
 )
 JOB_STATUSES = ("queued", "running", "succeeded", "failed", "cancelled")
 

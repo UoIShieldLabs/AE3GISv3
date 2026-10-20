@@ -76,3 +76,154 @@ def test_paths_point_at_the_offending_field():
     t["sites"][0]["subnets"][0]["containers"][2]["ip"] = "bad"
     d = next(d for d in validate(t) if d.code == "ip.invalid")
     assert d.path == "sites[0].subnets[0].containers[2].ip" and d.node_id == "hA"
+
+
+# ── Multi-homing: interface legs ──────────────────────────────────────────
+
+
+def _with_leg(leg):
+    t = copy.deepcopy(TWO_SUBNETS)
+    # hA lives in subA (10.0.1.0/24); give it a leg.
+    t["sites"][0]["subnets"][0]["containers"][2]["interfaces"] = [leg]
+    return t
+
+
+def test_valid_interface_leg_has_no_errors():
+    t = _with_leg({"subnetId": "subB", "ip": "10.0.2.9"})
+    diags = validate(t)
+    assert not has_errors(diags), [d.to_dict() for d in diags]
+
+
+def test_interface_leg_unknown_subnet():
+    assert "interface.subnet_unknown" in codes(_with_leg({"subnetId": "nope", "ip": "10.0.2.9"}))
+
+
+def test_interface_leg_ip_outside_target_subnet():
+    assert "interface.ip_outside_subnet" in codes(_with_leg({"subnetId": "subB", "ip": "10.9.9.9"}))
+
+
+def test_interface_leg_ip_duplicate_in_target_subnet():
+    # 10.0.2.5 is hB's address in subB.
+    assert "interface.ip_duplicate" in codes(_with_leg({"subnetId": "subB", "ip": "10.0.2.5"}))
+
+
+def test_interface_leg_to_own_subnet():
+    assert "interface.home_subnet" in codes(_with_leg({"subnetId": "subA", "ip": "10.0.1.9"}))
+
+
+def test_interface_leg_missing_subnet():
+    assert "interface.subnet_missing" in codes(_with_leg({"ip": "10.0.2.9"}))
+
+
+def test_gateway_may_be_a_leg_attached_router():
+    # rA (a router in subA) legs into subB and is declared subB's gateway.
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"][0]["containers"][0]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.254"}
+    ]
+    t["sites"][0]["subnets"][1]["gateway"] = "10.0.2.254"
+    c = codes(t)
+    assert "gateway.not_router" not in c
+    assert not has_errors(validate(t))
+
+
+# ── Port mirroring (SPAN) ─────────────────────────────────────────────────
+
+
+def _mirror_subnet(switch_image, mirror_to="ids"):
+    t = copy.deepcopy(TWO_SUBNETS)
+    sub = t["sites"][0]["subnets"][0]
+    sub["containers"][1]["image"] = switch_image  # swA
+    sub["containers"][1]["mirrorTo"] = mirror_to
+    sub["containers"].append({"id": "ids", "name": "IDS", "type": "ids", "ip": "10.0.1.40"})
+    sub["connections"].append({"id": "cids", "from": "swA", "to": "ids"})
+    return t
+
+
+def test_mirror_on_ovs_switch_is_clean():
+    assert "mirror.unsupported_switch" not in codes(_mirror_subnet("ae3gis.local/open-vswitch"))
+
+
+def test_mirror_on_plain_switch_warns():
+    assert "mirror.unsupported_switch" in codes(_mirror_subnet("kathara/base"))
+
+
+def test_mirror_unknown_target_errors():
+    assert "mirror.target_unknown" in codes(
+        _mirror_subnet("ae3gis.local/open-vswitch", mirror_to="nope")
+    )
+
+
+def test_interface_leg_on_a_switch_is_an_error():
+    # swA (a switch in subA) must not leg into subB: its bridge would merge them.
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"][0]["containers"][1]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.9"}
+    ]
+    d = next(d for d in validate(t) if d.code == "interface.on_switch")
+    assert d.severity == "error" and d.node_id == "swA"
+
+
+def test_interface_leg_ip_duplicate_names_the_other_device():
+    # hB (Host B) holds 10.0.2.5 on subnet B.
+    d = next(
+        d
+        for d in validate(_with_leg({"subnetId": "subB", "ip": "10.0.2.5"}))
+        if d.code == "interface.ip_duplicate"
+    )
+    assert "'Host B'" in d.message and "B" in d.message
+
+
+def test_mirror_to_a_leg_attached_target_is_connected():
+    # The IDS lives in subB and reaches subA (the switch's subnet) through a leg.
+    t = _mirror_subnet("ae3gis.local/open-vswitch", mirror_to="hB")
+    t["sites"][0]["subnets"][1]["containers"][2]["interfaces"] = [
+        {"subnetId": "subA", "ip": "10.0.1.40"}
+    ]
+    t["sites"][0]["subnets"][0]["containers"].pop()  # drop the in-subnet ids
+    t["sites"][0]["subnets"][0]["connections"].pop()
+    assert "mirror.target_not_connected" not in codes(t)
+
+
+def test_a_leg_router_lets_its_subnet_link_to_others():
+    # rA legs into subB and gateways it; subB keeps its subnet link but loses rB.
+    t = copy.deepcopy(TWO_SUBNETS)
+    sub_b = t["sites"][0]["subnets"][1]
+    sub_b["containers"] = [c for c in sub_b["containers"] if c["id"] != "rB"]
+    sub_b["connections"] = [c for c in sub_b["connections"] if "rB" not in (c["from"], c["to"])]
+    t["sites"][0]["subnets"][0]["containers"][0]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.1"}
+    ]
+    assert "subnet.no_router" not in codes(t)
+
+
+def test_a_leg_into_an_empty_subnet_warns():
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"].append(
+        {"id": "subE", "name": "E", "cidr": "10.0.9.0/24", "containers": [], "connections": []}
+    )
+    t["sites"][0]["subnets"][0]["containers"][2]["interfaces"] = [
+        {"subnetId": "subE", "ip": "10.0.9.5"}
+    ]
+    d = next(d for d in validate(t) if d.code == "interface.no_peer")
+    assert d.severity == "warning"
+
+
+def test_a_leg_into_a_wired_switchless_subnet_warns():
+    t = copy.deepcopy(TWO_SUBNETS)
+    sub_b = t["sites"][0]["subnets"][1]
+    sub_b["containers"] = [c for c in sub_b["containers"] if c["id"] != "swB"]
+    sub_b["connections"] = [{"id": "d", "from": "rB", "to": "hB"}]
+    t["sites"][0]["subnets"][0]["containers"][2]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.9"}
+    ]
+    assert "interface.no_switch" in codes(t)
+    # With a switch the same leg is fine.
+    assert "interface.no_switch" not in codes(_with_leg({"subnetId": "subB", "ip": "10.0.2.9"}))
+
+
+def test_network_and_broadcast_addresses_are_errors():
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"][0]["containers"][2]["ip"] = "10.0.1.255"
+    assert "ip.reserved" in codes(t)
+    assert "interface.ip_reserved" in codes(_with_leg({"subnetId": "subB", "ip": "10.0.2.0"}))

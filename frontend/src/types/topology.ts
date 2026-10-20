@@ -9,9 +9,9 @@
 // catalog (GET /api/catalog).
 //
 // Fields the deployment engine reads (backend/domain/plan.py): site/subnet/
-// container `id`, container `name`/`type`/`ip`/`image`, subnet `cidr`/`gateway`,
-// connection `from`/`to`/`fromContainer`/`toContainer`/`fromInterface`/
-// `toInterface`, and topology `name`. Everything else is editor-only.
+// container `id`, container `name`/`type`/`ip`/`image`/`interfaces`/`mirrorTo`,
+// subnet `cidr`/`gateway`, connection `from`/`to`/`fromContainer`/`toContainer`/
+// `fromInterface`/`toInterface`, and topology `name`. Everything else is editor-only.
 
 export type ContainerType = string;
 
@@ -20,11 +20,27 @@ export interface Position {
   y: number;
 }
 
+/** An extra network interface leg on a container (multi-homing): the node
+ *  attaches to another subnet beyond its home, with its own IP there. */
+export interface NetworkInterface {
+  /** Id of the subnet this leg attaches to (a different subnet in the topology). */
+  subnetId: string;
+  /** This node's IP on that subnet (must be inside the subnet's CIDR). */
+  ip: string;
+  [key: string]: unknown;
+}
+
 export interface Container {
   id: string;
   name: string;
   type: ContainerType;
   ip: string;
+  /** Extra interface legs beyond the home subnet. The home-subnet IP stays in
+   *  `ip` (eth0); each leg becomes another addressed interface at deploy time. */
+  interfaces?: NetworkInterface[];
+  /** Open vSwitch switches only: mirror all bridge traffic to this node's port
+   *  (SPAN), so a passive IDS on that link sees unicast it would otherwise miss. */
+  mirrorTo?: string;
   kind?: string;
   image?: string;
   /** Legacy desired-state field; the engine ignores it and the editor no longer writes it. */
@@ -78,6 +94,8 @@ export interface ScriptExecution {
   containerId: string;
   script: string;
   args?: string[];
+  // Unknown fields from the backend/old data pass through untouched.
+  [key: string]: unknown;
 }
 
 export interface AttackPhase {
@@ -85,6 +103,7 @@ export interface AttackPhase {
   name: string;
   description?: string;
   executions: ScriptExecution[];
+  [key: string]: unknown;
 }
 
 export interface Scenario {
@@ -92,6 +111,7 @@ export interface Scenario {
   name: string;
   description?: string;
   phases: AttackPhase[];
+  [key: string]: unknown;
 }
 
 /** Editor view preferences stored with the topology. */

@@ -26,6 +26,8 @@ def render_lab_conf(plan: LabPlan, *, description: str | None = None) -> str:
         lines.append(f'{m}[image]="{node.image}"')
         for key, value in node.env.items():
             lines.append(f'{m}[env]="{key}={value}"')
+        for key, value in node.sysctls.items():
+            lines.append(f'{m}[sysctl]="{key}={value}"')
         if node.shell:
             lines.append(f'{m}[shell]="{node.shell}"')
         lines.append("")

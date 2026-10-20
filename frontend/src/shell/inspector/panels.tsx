@@ -1,10 +1,11 @@
-import { Activity, Gauge, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2 } from 'lucide-react';
+import { Activity, Gauge, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2, X } from 'lucide-react';
 import type { Container, Site, Subnet } from '@/types/topology';
 import { useAppStore, undo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
-import { colorFor, displayNameFor, labelFor, variantsFor } from '@/catalog/catalog';
+import { colorFor, displayNameFor, effectiveImage, imageSpecFor, labelFor, variantsFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
-import { countContainers, countSubnets, gatewayOf, isRouterType, locate, locateConnection, type Scope } from '@/lib/topology';
+import { canTakeInterfaceLegs, countContainers, countSubnets, gatewayOf, locate, locateConnection, membersOfSubnet, routersForSubnet, usedIpsInSubnet, type Scope } from '@/lib/topology';
+import { planNodeFor, usePlan } from '@/features/deployment/usePlan';
 import { isIpInCidr, isValidCidr, isValidIp } from '@/utils/validation';
 import { Badge, Button, Select, Textarea, toast } from '@/ui';
 import { DeviceTypePicker } from '@/features/topology/DeviceTypePicker';
@@ -106,9 +107,12 @@ export function SitePanel({ site, ctx }: { site: Site; ctx: PanelContext }) {
 
 export function SubnetPanel({ site, subnet, ctx }: { site: Site; subnet: Subnet; ctx: PanelContext }) {
   const { updateSubnet, duplicateNodes, selectNodes, toggleExpanded } = useAppStore.getState();
+  const topology = useAppStore((s) => s.topology);
   const expanded = useAppStore((s) => !!s.expanded[subnet.id]);
   const remove = useRemove();
-  const routers = subnet.containers.filter((c) => isRouterType(c.type));
+  // Routers that can be this subnet's gateway: in-subnet members and routers
+  // reaching it via an interface leg (e.g. a dual-homed firewall).
+  const routers = routersForSubnet(topology, subnet.id);
   const outside = subnet.containers.filter((c) => c.ip && isValidCidr(subnet.cidr) && !isIpInCidr(c.ip, subnet.cidr));
   return (
     <>
@@ -148,12 +152,14 @@ export function SubnetPanel({ site, subnet, ctx }: { site: Site; subnet: Subnet;
 // ── Device ────────────────────────────────────────────────────────────
 
 export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Subnet; container: Container; ctx: PanelContext }) {
-  const { updateContainer, updateSubnet, duplicateNodes, selectNodes, openTerminal } = useAppStore.getState();
+  const { updateContainer, updateSubnet, duplicateNodes, selectNodes, openTerminal, addInterface, updateInterfaceIp, removeInterface } = useAppStore.getState();
+  const topology = useAppStore((s) => s.topology);
   const { status, deployStatus } = useAppShallow((s) => ({ status: s.containerStatus[container.id], deployStatus: s.deployStatus }));
   const remove = useRemove();
   const color = colorFor(container.type);
   const isGateway = gatewayOf(subnet)?.id === container.id;
-  const takenByOthers = subnet.containers.filter((c) => c.id !== container.id).map((c) => c.ip);
+  // Other devices' addresses on this subnet, legs into it included.
+  const takenByOthers = usedIpsInSubnet(topology, subnet.id, container.id);
   void ctx;
 
   const commitIp = (ip: string) => {
@@ -161,6 +167,23 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
     updateContainer(container.id, { ip });
     if (wasGateway) updateSubnet(subnet.id, { gateway: ip });
   };
+
+  // Multi-homing: the extra legs, subnets this device could still attach to, and
+  // (for an Open vSwitch switch) the SPAN mirror target.
+  const legs = container.interfaces ?? [];
+  const attached = new Set(legs.map((l) => l.subnetId));
+  const allSubnets = topology.sites.flatMap((s) => s.subnets.map((sn) => ({ id: sn.id, name: sn.name, cidr: sn.cidr })));
+  const subnetById = new Map(allSubnets.map((s) => [s.id, s]));
+  const candidates = allSubnets.filter((sn) => sn.id !== subnet.id && !attached.has(sn.id));
+  const isOwnBridge = !!imageSpecFor(effectiveImage(container))?.ownBridge;
+  const mirrorCandidates = membersOfSubnet(topology, subnet.id).filter((c) => c.id !== container.id);
+  // Interface names come from the saved plan (the engine numbers them by
+  // connection order, so a leg is not always eth1); hidden while it's stale.
+  const { plan, stale } = usePlan();
+  const planned = stale ? undefined : planNodeFor(plan, container.id);
+  const ifaceFor = (ip: string) => planned?.interfaces.find((i) => i.ip === ip)?.name;
+  const hintFor = (cidr: string, ip: string, home: boolean) =>
+    [cidr, home ? 'home' : null, ifaceFor(ip)].filter(Boolean).join(' · ');
 
   return (
     <>
@@ -199,7 +222,7 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
       </Section>
 
       <Section title="Network">
-        <Row label="IP address" hint={`in ${subnet.cidr}`}>
+        <Row label={subnet.name} hint={hintFor(subnet.cidr, container.ip, true)}>
           <CommitInput
             value={container.ip}
             mono
@@ -207,6 +230,50 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
             validate={(v) => (!isValidIp(v) ? 'Enter a valid IPv4 address' : !isIpInCidr(v, subnet.cidr) ? `Must be inside ${subnet.cidr}` : takenByOthers.includes(v) ? 'Already used in this subnet' : null)}
           />
         </Row>
+        {legs.map((leg) => {
+          const sn = subnetById.get(leg.subnetId);
+          const otherUsed = usedIpsInSubnet(topology, leg.subnetId, container.id);
+          return (
+            <Row key={leg.subnetId} label={sn?.name ?? 'Removed subnet'} hint={sn ? hintFor(sn.cidr, leg.ip, false) : 'subnet removed'}>
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <CommitInput
+                    value={leg.ip}
+                    mono
+                    onCommit={(v) => updateInterfaceIp(container.id, leg.subnetId, v)}
+                    validate={(v) => (!isValidIp(v) ? 'Enter a valid IPv4 address' : sn && !isIpInCidr(v, sn.cidr) ? `Must be inside ${sn.cidr}` : otherUsed.includes(v) ? 'Already used in that subnet' : null)}
+                  />
+                </div>
+                <Button size="icon-xs" variant="ghost" title="Remove interface" onClick={() => removeInterface(container.id, leg.subnetId)}><X /></Button>
+              </div>
+            </Row>
+          );
+        })}
+        {candidates.length && canTakeInterfaceLegs(container.type) ? (
+          <Row label="Add interface" hint="Attach this device to another subnet (multi-homing)">
+            <Select
+              value={undefined}
+              onValueChange={(sid) => addInterface(container.id, sid)}
+              options={candidates.map((sn) => ({ value: sn.id, label: `${sn.name} · ${sn.cidr}` }))}
+              placeholder="Choose a subnet…"
+            />
+          </Row>
+        ) : null}
+        {isOwnBridge || container.mirrorTo ? (
+          <Row
+            label="Mirror traffic to"
+            hint={isOwnBridge
+              ? "SPAN: copy all switch traffic to this node's port (e.g. an IDS)"
+              : 'Not applied: port mirroring needs an Open vSwitch variant'}
+          >
+            <Select
+              value={container.mirrorTo ?? '__none__'}
+              onValueChange={(v) => updateContainer(container.id, { mirrorTo: v === '__none__' ? undefined : v })}
+              options={[{ value: '__none__', label: 'None' }, ...mirrorCandidates.map((c) => ({ value: c.id, label: `${c.name} · ${c.ip}` }))]}
+              mono
+            />
+          </Row>
+        ) : null}
       </Section>
 
       <Section title="Metadata" defaultOpen={!!container.metadata && Object.keys(container.metadata).length > 0}>

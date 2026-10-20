@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore, undo, redo, clearHistory } from '../index';
 import { findSite, findSubnet, locate, locateConnection } from '@/lib/topology';
+import type { TopologyData } from '@/types/topology';
 
 const store = useAppStore;
 const S = () => store.getState();
@@ -231,5 +232,210 @@ describe('topology store — loading', () => {
     expect(S().dirty).toBe(true);
     undo();
     expect(S().topology.traffic?.flows).toBeUndefined();
+  });
+});
+
+describe('topology store — interface legs (multi-homing)', () => {
+  function twoSubnets() {
+    const siteId = S().addSite({ name: 'S' });
+    const a = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const b = S().addSubnet({ siteId, name: 'B', cidr: '10.0.2.0/24', autoInfra: false })!;
+    const host = S().addContainer({ subnetId: a, type: 'workstation', ip: '10.0.1.5' })!;
+    return { siteId, a, b, host };
+  }
+
+  const leggedContainer = (id: string) => {
+    const hit = locate(S().topology, id);
+    if (hit?.kind !== 'container') throw new Error('not a container');
+    return hit.container;
+  };
+
+  it('addInterface attaches a device to another subnet with the next free IP', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    expect(leggedContainer(host).interfaces).toEqual([{ subnetId: b, ip: '10.0.2.1' }]);
+    expect(S().dirty).toBe(true);
+  });
+
+  it('addInterface ignores the home subnet and duplicates', () => {
+    const { a, b, host } = twoSubnets();
+    S().addInterface(host, a); // home subnet — rejected
+    S().addInterface(host, b);
+    S().addInterface(host, b); // duplicate — rejected
+    expect(leggedContainer(host).interfaces).toHaveLength(1);
+  });
+
+  it('updateInterfaceIp and removeInterface edit the leg', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    S().updateInterfaceIp(host, b, '10.0.2.50');
+    expect(leggedContainer(host).interfaces![0].ip).toBe('10.0.2.50');
+    S().removeInterface(host, b);
+    expect(leggedContainer(host).interfaces).toBeUndefined();
+  });
+
+  it('deleting the target subnet scrubs the orphaned leg', () => {
+    const { b, host } = twoSubnets();
+    S().addInterface(host, b);
+    S().deleteNodes([b]);
+    expect(leggedContainer(host).interfaces).toBeUndefined();
+  });
+
+  it('deleting a mirror target clears mirrorTo', () => {
+    const { a, host } = twoSubnets();
+    const sw = S().addContainer({ subnetId: a, type: 'switch', ip: '10.0.1.2' })!;
+    S().updateContainer(sw, { mirrorTo: host });
+    expect(leggedContainer(sw).mirrorTo).toBe(host);
+    S().deleteNodes([host]);
+    expect(leggedContainer(sw).mirrorTo).toBeUndefined();
+  });
+
+  it('normalize keeps well-formed legs and drops malformed ones', () => {
+    S().loadTopology({
+      sites: [{
+        id: 's', name: 'S', location: '', subnets: [{
+          id: 'a', name: 'A', cidr: '10.0.1.0/24', containers: [{
+            id: 'h', name: 'H', type: 'workstation', ip: '10.0.1.5',
+            interfaces: [{ subnetId: 'b', ip: '10.0.2.5' }, { subnetId: 123 }, 'nope'],
+          }], connections: [],
+        }], subnetConnections: [],
+      }],
+      siteConnections: [],
+    });
+    expect(leggedContainer('h').interfaces).toEqual([{ subnetId: 'b', ip: '10.0.2.5' }]);
+  });
+
+  it('normalize drops an empty interfaces array', () => {
+    S().loadTopology({
+      sites: [{
+        id: 's', name: 'S', location: '', subnets: [{
+          id: 'a', name: 'A', cidr: '10.0.1.0/24',
+          containers: [{ id: 'h', name: 'H', type: 'workstation', ip: '10.0.1.5', interfaces: [] }],
+          connections: [],
+        }], subnetConnections: [],
+      }],
+      siteConnections: [],
+    });
+    expect('interfaces' in leggedContainer('h')).toBe(false);
+  });
+});
+
+describe('topology store — scenarios (step-through authoring)', () => {
+  function phaseWithTwoNodes() {
+    const siteId = S().addSite({ name: 'S' });
+    const sn = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const a = S().addContainer({ subnetId: sn, type: 'workstation', ip: '10.0.1.5' })!;
+    const b = S().addContainer({ subnetId: sn, type: 'workstation', ip: '10.0.1.6' })!;
+    const scId = S().addScenario('Demo');
+    const phaseId = S().addPhase(scId, 'Bring up')!;
+    return { scId, phaseId, a, b };
+  }
+
+  it('authoring a scenario is dirty and undoable', () => {
+    const scId = S().addScenario('Demo');
+    expect(S().topology.scenarios?.[0]).toMatchObject({ id: scId, name: 'Demo', phases: [] });
+    expect(S().dirty).toBe(true);
+    undo();
+    expect(S().topology.scenarios).toBeUndefined();
+  });
+
+  it('phases and steps keep their order', () => {
+    const { phaseId, a, b } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'echo A' });
+    S().addStep(phaseId, { containerId: b, script: 'nmap -sn', args: ['10.0.1.0/24'] });
+    const steps = S().topology.scenarios![0].phases[0].executions;
+    expect(steps.map((s) => s.containerId)).toEqual([a, b]);
+    expect(steps[1].args).toEqual(['10.0.1.0/24']);
+    S().moveStep(phaseId, 1, 0);
+    expect(S().topology.scenarios![0].phases[0].executions.map((s) => s.containerId)).toEqual([b, a]);
+  });
+
+  it('updateStep clears args when emptied; removeStep drops by index', () => {
+    const { phaseId, a } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'x', args: ['y'] });
+    S().updateStep(phaseId, 0, { script: 'z', args: [] });
+    const step = S().topology.scenarios![0].phases[0].executions[0];
+    expect(step.script).toBe('z');
+    expect('args' in step).toBe(false);
+    S().removeStep(phaseId, 0);
+    expect(S().topology.scenarios![0].phases[0].executions).toHaveLength(0);
+  });
+
+  it('removePhase and removeScenario prune the tree', () => {
+    const { scId, phaseId } = phaseWithTwoNodes();
+    S().removePhase(phaseId);
+    expect(S().topology.scenarios![0].phases).toHaveLength(0);
+    S().removeScenario(scId);
+    expect(S().topology.scenarios).toHaveLength(0);
+  });
+
+  it('deleting a node scrubs the scenario steps that ran on it', () => {
+    const { phaseId, a, b } = phaseWithTwoNodes();
+    S().addStep(phaseId, { containerId: a, script: 'echo A' });
+    S().addStep(phaseId, { containerId: b, script: 'echo B' });
+    S().deleteNodes([a]);
+    const steps = S().topology.scenarios![0].phases[0].executions;
+    expect(steps.map((s) => s.containerId)).toEqual([b]);
+  });
+});
+
+describe('topology store — legs never collide with other addresses', () => {
+  const box = (id: string) => { const h = locate(S().topology, id); return h?.kind === 'container' ? h.container : undefined; };
+  function legged() {
+    const siteId = S().addSite({ name: 'S' });
+    const a = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const b = S().addSubnet({ siteId, name: 'B', cidr: '10.0.2.0/24', autoInfra: false })!;
+    const host = S().addContainer({ subnetId: a, type: 'workstation', ip: '10.0.1.5' })!;
+    S().addInterface(host, b);
+    return { siteId, a, b, host, legIp: box(host)!.interfaces![0].ip };
+  }
+
+  it('a new device never takes an address a leg already holds', () => {
+    const { b, legIp } = legged();
+    expect(legIp).toBe('10.0.2.1');
+    const dev = S().addContainer({ subnetId: b, type: 'workstation' })!;
+    expect(box(dev)!.ip).not.toBe(legIp);
+  });
+
+  it('linking subnets creates a router on a free address, not on a leg', () => {
+    const { a, b, legIp } = legged();
+    S().addConnection({ from: a, to: b });
+    const routerB = (S().topology as TopologyData).sites[0].subnets.find((s) => s.id === b)!.containers.find((c) => c.type === 'router')!;
+    expect(routerB.ip).not.toBe(legIp);
+  });
+
+  it('a switch never takes a leg (it would bridge both subnets)', () => {
+    const { a, b } = legged();
+    const sw = S().addContainer({ subnetId: a, type: 'switch' })!;
+    S().addInterface(sw, b);
+    expect(box(sw)!.interfaces).toBeUndefined();
+  });
+
+  it('duplicating a multi-homed device re-addresses its legs and drops its mirror target', () => {
+    const { b, host, legIp } = legged();
+    S().updateContainer(host, { mirrorTo: 'somewhere' });
+    const [copy] = S().duplicateNodes([host]);
+    const legs = box(copy)!.interfaces!;
+    expect(legs).toHaveLength(1);
+    expect(legs[0].subnetId).toBe(b);
+    expect(legs[0].ip).not.toBe(legIp);
+    expect(box(copy)!.mirrorTo).toBeUndefined();
+  });
+
+  it('duplicating a subnet drops legs that leave the copy', () => {
+    const { a } = legged();
+    const [copyId] = S().duplicateNodes([a]);
+    const copy = (S().topology as TopologyData).sites[0].subnets.find((s) => s.id === copyId)!;
+    expect(copy.containers.every((c) => !c.interfaces)).toBe(true);
+  });
+
+  it('duplicating a site keeps legs inside the copy, pointed at the copied subnets', () => {
+    const { siteId, legIp } = legged();
+    const [copyId] = S().duplicateNodes([siteId]);
+    const site = (S().topology as TopologyData).sites.find((s) => s.id === copyId)!;
+    const [copyA, copyB] = site.subnets;
+    const leg = copyA.containers[0].interfaces![0];
+    expect(leg.subnetId).toBe(copyB.id);
+    expect(leg.ip).toBe(legIp);
   });
 });

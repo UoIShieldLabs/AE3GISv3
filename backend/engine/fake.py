@@ -9,6 +9,9 @@ reports running. Test hooks:
 - ``pull_gate`` / ``build_gate``: an ``asyncio.Event`` that pulls / builds wait on.
 - ``fail_build``: image ref -> error message.
 - ``fail_sidecar``: sidecar purpose -> stderr text; that sidecar exits 1 at once.
+- ``exec_results``: command line -> (exit code, stdout) for ``exec_stream`` (the
+  scenario runner); unknown commands echo themselves and exit 0, a ``None`` exit
+  code models a command that runs until the step is stopped.
 - ``capture_packets``: frames every capture sidecar emits (default: pings at
   ``capture_pps``).
 - ``fail_helper``: helper purpose -> stderr text; that helper exits 1 at once.
@@ -184,6 +187,81 @@ class FakeSidecar:
         self.exit(-1)
 
 
+class FakeExec:
+    """A command running in a node (``exec_stream``), output produced by a task.
+
+    What it prints and its exit code come from ``engine.exec_results`` keyed on
+    the command line; an unknown command echoes itself and exits 0. A result
+    whose exit code is ``None`` models a command that runs until the step is
+    stopped (``signal``/``remove``).
+    """
+
+    def __init__(self, engine: FakeEngine, node_id: str, argv: list[str], lab: _Lab) -> None:
+        self.engine = engine
+        self.node_id = node_id
+        self.argv = argv
+        machine = lab.state.nodes.get(node_id, node_id)
+        self.name = f"fake-exec-{machine}-{uuid.uuid4().hex[:4]}"
+        self.signalled = asyncio.Event()
+        self._out: asyncio.Queue[tuple[str, bytes] | int] = asyncio.Queue()
+        self._task: asyncio.Task | None = None
+        self.exit_code: int | None = None
+
+    @property
+    def command(self) -> str:
+        """The command line: ``["sh", "-lc", line]`` -> ``line``, else the argv."""
+        if len(self.argv) >= 3 and self.argv[0] in ("sh", "bash") and self.argv[1] in ("-lc", "-c"):
+            return self.argv[2]
+        return " ".join(self.argv)
+
+    def emit(self, stream: str, data: bytes) -> None:
+        self._out.put_nowait((stream, data))
+
+    def exit(self, code: int) -> None:
+        if self.exit_code is None:
+            self.exit_code = code
+            self._out.put_nowait(code)
+
+    def start(self) -> None:
+        self._task = asyncio.get_running_loop().create_task(self._run())
+
+    async def _run(self) -> None:
+        try:
+            self.engine.calls.append(("exec", self.command))
+            code, output = self.engine.exec_results.get(self.command, (0, self.command + "\n"))
+            if output:
+                self.emit("stdout", output if isinstance(output, bytes) else output.encode())
+            if code is None:  # runs until stopped
+                await self.signalled.wait()
+                code = -1
+            self.exit(code)
+        except asyncio.CancelledError:
+            self.exit(-1)
+
+    async def pump(
+        self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
+    ) -> int:
+        try:
+            while True:
+                item = await self._out.get()
+                if isinstance(item, int):
+                    return item
+                stream, data = item
+                (on_stdout if stream == "stdout" else on_stderr)(data)
+        except asyncio.CancelledError:
+            await self.remove()
+            raise
+
+    async def signal(self, sig: str = "SIGINT") -> None:
+        self.signalled.set()
+
+    async def remove(self) -> None:
+        self.signalled.set()
+        if self._task and not self._task.done():
+            self._task.cancel()
+        self.exit(-1)
+
+
 class FakeEngine:
     name = "fake"
 
@@ -207,6 +285,9 @@ class FakeEngine:
         self.can_build = True
         self.sidecars: dict[str, FakeSidecar] = {}
         self.fail_sidecar: dict[str, str] = {}
+        # ``exec_stream`` output: command line -> (exit code, stdout). A ``None``
+        # exit code models a command that runs until the step is stopped.
+        self.exec_results: dict[str, tuple[int | None, str | bytes]] = {}
         self.capture_packets: list[bytes] | None = None
         self.capture_pps = 20.0
         self.traffic_interval = 0.0
@@ -409,6 +490,14 @@ class FakeEngine:
         self.started_sidecars.append(spec)
         sidecar.start()
         return sidecar
+
+    async def exec_stream(self, state: EngineState, node_id: str, argv: list[str]) -> FakeExec:
+        lab = self._lab_for(state)
+        if node_id not in lab.running:
+            raise LookupError(f"Device '{node_id}' is not running")
+        ex = FakeExec(self, node_id, argv, lab)
+        ex.start()
+        return ex
 
     async def list_sidecars(
         self, *, lab_hash: str | None = None, owner: str | None = None

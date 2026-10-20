@@ -28,10 +28,36 @@ export function scopeConnections(topology: TopologyData, scope: Scope): Connecti
   return findSubnet(topology, scope.siteId, scope.subnetId)?.connections ?? [];
 }
 
+/** Interface legs as edges between the scope's children: subnet → subnet at
+ *  site scope, site → site at root, so zones a device bridges sit together. */
+function legLayoutEdges(topology: TopologyData, scope: Scope): LayoutEdge[] {
+  if (scope.level === 'subnet') return [];
+  const siteOf = new Map(topology.sites.flatMap((s) => s.subnets.map((n) => [n.id, s.id] as const)));
+  const seen = new Set<string>();
+  const out: LayoutEdge[] = [];
+  for (const site of topology.sites) {
+    if (scope.level === 'site' && site.id !== scope.siteId) continue;
+    for (const subnet of site.subnets) {
+      for (const c of subnet.containers) {
+        for (const leg of c.interfaces ?? []) {
+          const source = scope.level === 'site' ? subnet.id : site.id;
+          const target = scope.level === 'site' ? leg.subnetId : siteOf.get(leg.subnetId);
+          if (!target || source === target || (scope.level === 'site' && siteOf.get(target) !== site.id)) continue;
+          const key = [source, target].sort().join('|');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ source, target });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /** Edges oriented for a layered layout (router → switch → hosts in a LAN). */
 export function scopeLayoutEdges(topology: TopologyData, scope: Scope): LayoutEdge[] {
   const conns = scopeConnections(topology, scope);
-  if (scope.level !== 'subnet') return conns.map((c) => ({ source: c.from, target: c.to }));
+  if (scope.level !== 'subnet') return [...conns.map((c) => ({ source: c.from, target: c.to })), ...legLayoutEdges(topology, scope)];
   const subnet = findSubnet(topology, scope.siteId, scope.subnetId);
   const rank = new Map(subnet?.containers.map((c) => [c.id, rankFor(c.type)]) ?? []);
   return conns.map((c) => {

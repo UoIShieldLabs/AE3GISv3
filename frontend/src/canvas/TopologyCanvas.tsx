@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow, ReactFlowProvider, Background, BackgroundVariant, MiniMap, Controls,
-  applyNodeChanges, applyEdgeChanges, useReactFlow, useNodesInitialized, useOnSelectionChange,
+  applyNodeChanges, applyEdgeChanges, useReactFlow, useNodesInitialized, useStoreApi,
   SelectionMode, ConnectionMode,
   type NodeChange, type EdgeChange, type Connection, type OnNodeDrag, type NodeMouseHandler, type EdgeMouseHandler,
 } from '@xyflow/react';
@@ -9,6 +9,7 @@ import '@xyflow/react/dist/style.css';
 import { Plus } from 'lucide-react';
 import type { Position } from '@/types/topology';
 import { locate, type Scope } from '@/lib/topology';
+import { applySelectChanges } from './interactions/selection';
 import { useAppStore, undo, redo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
@@ -84,18 +85,45 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
     setEdges(projection.edges);
   }
 
+  // Selection has one writer: select changes go to the store, and the
+  // projection sets `selected` from it (see interactions/selection.ts). Every
+  // other change (dimensions, positions while dragging) stays local.
+  //
+  // React Flow also reads `selected` from its own lookups within the same
+  // gesture: a marquee first deselects everything, then selects what's inside
+  // by comparing with those flags. They only catch up with the store on the
+  // next render, so a node that was already selected would stay deselected.
+  // Mirror each change into them right away, as React Flow does for nodes
+  // itself ("the onNodesChange callback comes too late here").
+  const flowStore = useStoreApi<CanvasNode, CanvasEdge>();
   const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
-    setNodes((nds) => applyNodeChanges(changes.filter((c) => c.type !== 'remove'), nds));
-  }, []);
+    const select = changes.filter((c) => c.type === 'select');
+    if (select.length) {
+      const { nodeLookup } = flowStore.getState();
+      for (const c of select) {
+        const n = nodeLookup.get(c.id);
+        if (n) n.selected = c.selected;
+      }
+      const st = useAppStore.getState();
+      st.setSelection(applySelectChanges(st.selection, 'nodeIds', select));
+    }
+    const rest = changes.filter((c) => c.type !== 'remove' && c.type !== 'select');
+    if (rest.length) setNodes((nds) => applyNodeChanges(rest, nds));
+  }, [flowStore]);
   const onEdgesChange = useCallback((changes: EdgeChange<CanvasEdge>[]) => {
-    setEdges((eds) => applyEdgeChanges(changes.filter((c) => c.type !== 'remove'), eds));
-  }, []);
-
-  useOnSelectionChange({
-    onChange: useCallback(({ nodes: n, edges: e }: { nodes: CanvasNode[]; edges: CanvasEdge[] }) => {
-      useAppStore.getState().setSelection({ nodeIds: n.map((x) => x.id), edgeIds: e.map((x) => x.id) });
-    }, []),
-  });
+    const select = changes.filter((c) => c.type === 'select');
+    if (select.length) {
+      const { edgeLookup } = flowStore.getState();
+      for (const c of select) {
+        const e = edgeLookup.get(c.id);
+        if (e) e.selected = c.selected;
+      }
+      const st = useAppStore.getState();
+      st.setSelection(applySelectChanges(st.selection, 'edgeIds', select));
+    }
+    const rest = changes.filter((c) => c.type !== 'remove' && c.type !== 'select');
+    if (rest.length) setEdges((eds) => applyEdgeChanges(rest, eds));
+  }, [flowStore]);
 
   // ── Fit when the scope changes (after the new nodes are measured) ──
   const scopeKey = scopeKeyOf(scope);
@@ -115,15 +143,20 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   }, [fitKey, nodesInitialized, rf]);
 
   // ── Mutations ──
-  const removeItems = useCallback((nodeIds: string[], edgeIds: string[]) => {
+  const removeItems = useCallback((ids: string[], edgeIds: string[]) => {
     if (readOnly) return;
+    // Guests (leg-attached devices shown in another subnet's view) live elsewhere:
+    // deleting one here would remove a device from a subnet that isn't on screen.
+    const guests = new Set(rf.getNodes().filter((n) => n.type === 'device' && n.data.guest).map((n) => n.id));
+    const nodeIds = ids.filter((id) => !guests.has(id));
+    if (nodeIds.length < ids.length) toast("A device joining through a leg is deleted in its own subnet", { description: 'Or remove its leg in the inspector.' });
     const count = nodeIds.length + edgeIds.length;
     if (!count) return;
     const st = useAppStore.getState();
     st.deleteItems(nodeIds, edgeIds);
     st.clearSelection();
     toast(`Deleted ${count} item${count === 1 ? '' : 's'}`, { action: { label: 'Undo', onClick: () => undo() } });
-  }, [readOnly]);
+  }, [readOnly, rf]);
 
   const drillInto = useCallback((id: string) => {
     const hit = locate(useAppStore.getState().topology, id);

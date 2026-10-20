@@ -113,6 +113,12 @@ export function isInfrastructureType(type: string): boolean {
   return roleFor(type) !== 'host';
 }
 
+/** Switches only bridge their own subnet's segment: they never take an interface
+ *  leg (a leg port would be enslaved into the bridge and merge two subnets). */
+export function canTakeInterfaceLegs(type: string): boolean {
+  return roleFor(type) !== 'switch';
+}
+
 /** The subnet's gateway: the first router-role container. */
 export function gatewayOf(subnet: Subnet): Container | undefined {
   return subnet.containers.find((c) => isRouterType(c.type));
@@ -125,6 +131,70 @@ export function siteRouter(site: Site): Container | undefined {
     if (r) return r;
   }
   return undefined;
+}
+
+/** IPs already used in a subnet: home container IPs plus any interface legs
+ *  (multi-homing) attached to it from elsewhere in the topology. Every IP
+ *  allocation and "already used" check must go through this, or a new device
+ *  can be handed an address a leg already holds (e.g. a firewall's gateway leg).
+ *  `except` leaves out one device's own addresses (when checking its own edit). */
+export function usedIpsInSubnet(t: TopologyData, subnetId: string, except?: string): string[] {
+  const ips: string[] = [];
+  for (const site of t.sites) {
+    for (const subnet of site.subnets) {
+      const isTarget = subnet.id === subnetId;
+      for (const c of subnet.containers) {
+        if (c.id === except) continue;
+        if (isTarget && c.ip) ips.push(c.ip);
+        for (const leg of c.interfaces ?? []) {
+          if (leg.subnetId === subnetId && leg.ip) ips.push(leg.ip);
+        }
+      }
+    }
+  }
+  return ips;
+}
+
+/** Routers attached to a subnet — in-subnet members and routers reaching it via
+ *  an interface leg — each with the IP it holds on that subnet. Drives the
+ *  gateway picker so a multi-homed firewall can be a subnet's gateway. */
+export function routersForSubnet(t: TopologyData, subnetId: string): { id: string; name: string; ip: string }[] {
+  const out: { id: string; name: string; ip: string }[] = [];
+  for (const site of t.sites) {
+    for (const subnet of site.subnets) {
+      for (const c of subnet.containers) {
+        if (!isRouterType(c.type)) continue;
+        if (subnet.id === subnetId && c.ip) out.push({ id: c.id, name: c.name, ip: c.ip });
+        for (const leg of c.interfaces ?? []) {
+          if (leg.subnetId === subnetId && leg.ip) out.push({ id: c.id, name: c.name, ip: leg.ip });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** The router a subnet routes through: the one holding the subnet's `gateway`
+ *  address — in the subnet or reaching it through a leg — else its first router. */
+export function subnetGateway(t: TopologyData, subnet: Subnet): { id: string; name: string; ip: string } | undefined {
+  const routers = routersForSubnet(t, subnet.id);
+  return routers.find((r) => r.ip === subnet.gateway) ?? routers[0];
+}
+
+/** Devices on a subnet's segment: its own members plus devices attached to it
+ *  through an interface leg (with the address they hold there). */
+export function membersOfSubnet(t: TopologyData, subnetId: string): { id: string; name: string; ip: string }[] {
+  const out: { id: string; name: string; ip: string }[] = [];
+  for (const site of t.sites) {
+    for (const subnet of site.subnets) {
+      for (const c of subnet.containers) {
+        if (subnet.id === subnetId) out.push({ id: c.id, name: c.name, ip: c.ip });
+        const leg = (c.interfaces ?? []).find((l) => l.subnetId === subnetId);
+        if (leg) out.push({ id: c.id, name: c.name, ip: leg.ip });
+      }
+    }
+  }
+  return out;
 }
 
 // ── Counts ────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import type { Subnet } from '@/types/topology';
 import { useAppStore } from '@/store';
 import { defaultImageFor, displayNameFor } from '@/catalog/catalog';
 import { getAvailableIps, getSubnetCapacity, isIpInCidr, isValidIp } from '@/utils/validation';
-import { nextName } from '@/lib/topology';
+import { nextName, usedIpsInSubnet } from '@/lib/topology';
 import { Button, Dialog, Field, IconButton, Input, toast } from '@/ui';
 import { DeviceTypePicker } from '../DeviceTypePicker';
 
@@ -39,7 +39,9 @@ function BulkForm({ subnet, onDone }: { subnet: Subnet; onDone: () => void }) {
   const [count, setCount] = useState('5');
   const [rows, setRows] = useState<Row[]>([]);
 
-  const taken = useMemo(() => subnet.containers.map((c) => c.ip).filter(Boolean), [subnet]);
+  // Every address in use on this subnet, interface legs from other subnets included.
+  const topology = useAppStore((s) => s.topology);
+  const taken = useMemo(() => usedIpsInSubnet(topology, subnet.id), [topology, subnet.id]);
   const capacity = getSubnetCapacity(subnet.cidr);
   const free = Math.max(0, capacity - taken.length - rows.length);
 

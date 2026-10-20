@@ -22,6 +22,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 import catalog
+from domain.topology import interfaces_of
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +72,9 @@ class NodePlan:
     env: dict[str, str] = field(default_factory=dict)
     # Shell for the boot commands if the image has no bash (None: engine default).
     shell: str | None = None
+    # Sysctls applied at container creation (``/proc/sys`` is read-only at
+    # runtime under Kathara, so ``net.ipv4.ip_forward`` must be set here).
+    sysctls: dict[str, str] = field(default_factory=dict)
 
     @property
     def machine_name(self) -> str:
@@ -88,6 +92,7 @@ class NodePlan:
             "startup": list(self.startup),
             "env": dict(self.env),
             "shell": self.shell,
+            "sysctls": dict(self.sysctls),
         }
 
 
@@ -187,6 +192,11 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
     container_memberships: dict[str, list[dict]] = defaultdict(list)
     subnet_id_containers: dict[str, list] = {}
     site_id_subnets: dict[str, list] = {}
+    # Resolved cidr / prefix / gateway per subnet id, so interface legs (which
+    # reference another subnet by id) can look up the target subnet's addressing.
+    subnet_meta: dict[str, dict] = {}
+    # Switch node id -> mirror (SPAN) target node id, for OVS port mirroring.
+    container_mirror: dict[str, str] = {}
 
     def _is_router(cid: str) -> bool:
         return container_role.get(cid) == "router"
@@ -218,6 +228,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
 
             if sid:
                 subnet_id_containers[sid] = containers
+                subnet_meta[sid] = {"cidr": cidr, "pfx": pfx, "gateway": gateway}
 
             for c in containers:
                 cid = c["id"]
@@ -226,6 +237,8 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 container_role.setdefault(cid, catalog.role_for(ctype))
                 container_name.setdefault(cid, c.get("name") or cid)
                 container_image.setdefault(cid, catalog.resolve_image(ctype, c.get("image")))
+                if isinstance(c.get("mirrorTo"), str) and c["mirrorTo"]:
+                    container_mirror.setdefault(cid, c["mirrorTo"])
                 container_memberships[cid].append(
                     {
                         "subnet_id": sid,
@@ -235,6 +248,51 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                         "gateway": gateway,
                     }
                 )
+
+    # Extra interface legs (``interfaces[]``): one membership per target subnet,
+    # tagged ``leg`` so Step 2 synthesizes an L2 attachment for it (a home
+    # placement already has a user-drawn connection; a leg does not).
+    for site in topology.get("sites", []):
+        for subnet in site.get("subnets", []):
+            for c in subnet.get("containers", []):
+                # A switch never takes a leg: the leg port would be enslaved into
+                # its bridge and merge two subnets (validation reports it).
+                if container_role.get(c.get("id")) == "switch":
+                    continue
+                for leg in interfaces_of(c):
+                    lsid = leg.get("subnetId")
+                    lmeta = subnet_meta.get(lsid) if isinstance(lsid, str) else None
+                    if not lsid or lmeta is None:
+                        continue
+                    container_memberships[c["id"]].append(
+                        {
+                            "subnet_id": lsid,
+                            "cidr": lmeta["cidr"],
+                            "ip": leg.get("ip", ""),
+                            "prefix_len": lmeta["pfx"],
+                            "gateway": lmeta["gateway"],
+                            "leg": True,
+                        }
+                    )
+
+    # Leg-aware gateway resolution: a subnet with no gateway yet can be gated by
+    # a router attached through a leg (e.g. a firewall that is the gateway of two
+    # subnets). Resolve it from any router member, then backfill memberships.
+    for sid, meta in subnet_meta.items():
+        if meta["gateway"]:
+            continue
+        for cid, mems in container_memberships.items():
+            if container_role.get(cid) != "router":
+                continue
+            m = next((mm for mm in mems if mm["subnet_id"] == sid), None)
+            if m and _gateway_belongs_to_subnet(m["ip"], meta["cidr"]):
+                meta["gateway"] = m["ip"]
+                break
+        if meta["gateway"]:
+            for mems in container_memberships.values():
+                for m in mems:
+                    if m["subnet_id"] == sid and not m["gateway"]:
+                        m["gateway"] = meta["gateway"]
 
     def _primary(cid: str) -> dict:
         return (container_memberships.get(cid) or [{}])[0]
@@ -271,9 +329,25 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
         gw = _find_gateway_router(containers, sid)
         if gw:
             gateway_router_map[sid] = gw
+    # A subnet with no router of its own can be gated by a router reaching it
+    # through a leg (a firewall gatewaying two subnets): links drawn from that
+    # subnet resolve to it, preferring the one that holds the subnet's gateway.
+    for sid, meta in subnet_meta.items():
+        if sid in gateway_router_map:
+            continue
+        leg_routers = [
+            (cid, m)
+            for cid, mems in container_memberships.items()
+            if _is_router(cid)
+            for m in mems
+            if m.get("leg") and m["subnet_id"] == sid
+        ]
+        if leg_routers:
+            best = next((cid for cid, m in leg_routers if m["ip"] == meta["gateway"]), None)
+            gateway_router_map[sid] = best or leg_routers[0][0]
     for site_id, subnets in site_id_subnets.items():
         for subnet in subnets:
-            gw = _find_gateway_router(subnet.get("containers", []), subnet.get("id"))
+            gw = gateway_router_map.get(subnet.get("id"))
             if gw:
                 site_gateway_router_map[site_id] = gw
                 break
@@ -365,6 +439,38 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
             _add_link(conn, None, "subnet")
     for conn in topology.get("siteConnections", []):
         _add_link(conn, None, "site")
+
+    # Interface legs become real interfaces by attaching to the target subnet's
+    # L2. Its switch bridges the new collision domain into the subnet. Without
+    # one, the leg links straight to a member not yet wired in that subnet (a
+    # router first): that member then takes its address on this link, so the
+    # two share a segment. A member already wired there keeps its address on
+    # its other link, so a leg to it would be dead; validation warns instead.
+    def _wired(cid: str, sid: str) -> bool:
+        return any(sub == sid and cid in (frm, to) for frm, _, to, _, sub, _ in link_registry)
+
+    def _attach_target(sid: str, exclude: str) -> str | None:
+        members = [
+            cid
+            for cid, mems in container_memberships.items()
+            if cid != exclude and any(m["subnet_id"] == sid for m in mems)
+        ]
+        switch = next((c for c in members if container_role.get(c) == "switch"), None)
+        if switch:
+            return switch
+        free = [c for c in members if not _wired(c, sid)]
+        return next((c for c in free if container_role.get(c) == "router"), None) or (
+            free[0] if free else None
+        )
+
+    for cid in list(container_memberships):
+        for m in container_memberships[cid]:
+            # Already attached as another leg's peer: nothing more to wire.
+            if not m.get("leg") or _wired(cid, m["subnet_id"]):
+                continue
+            peer = _attach_target(m["subnet_id"], cid)
+            if peer:
+                _add_link({"from": cid, "to": peer}, m["subnet_id"], "container")
 
     # ── Step 3: per-interface IPs + static routes ─────────────────────────
     iface_ips: dict[tuple[str, str], tuple[str, str]] = {}
@@ -512,6 +618,15 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
             own_bridge=catalog.own_bridge(image),
         )
 
+        # IP forwarding, set at creation (read-only /proc/sys at runtime). Kathara
+        # defaults every machine to forwarding on; a router keeps it, a multi-homed
+        # host turns it off so it cannot silently route around a firewall.
+        sysctls: dict[str, str] = {}
+        if role == "router":
+            sysctls["net.ipv4.ip_forward"] = "1"
+        elif role == "host" and len(new_iface_ips) >= 2:
+            sysctls["net.ipv4.ip_forward"] = "0"
+
         plan.nodes.append(
             NodePlan(
                 id=cid,
@@ -523,9 +638,46 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 startup=startup,
                 env=catalog.image_env(image),
                 shell=catalog.image_shell(image),
+                sysctls=sysctls,
             )
         )
+
+    _apply_port_mirrors(plan, container_mirror)
     return plan
+
+
+def _apply_port_mirrors(plan: LabPlan, mirrors: dict[str, str]) -> None:
+    """Append OVS SPAN/port-mirror startup for own-bridge switches.
+
+    A switch with ``mirrorTo`` set to another node mirrors all bridge traffic to
+    the interface facing that node (its IDS SPAN port), so a passive sensor sees
+    unicast it would otherwise miss on a learning bridge. Only own-bridge (Open
+    vSwitch) switches are handled; a plain Linux bridge is left untouched.
+    """
+    if not mirrors:
+        return
+    node_by_id = {n.id: n for n in plan.nodes}
+    cd_ifaces = {n.id: {i.collision_domain: i.name for i in n.interfaces} for n in plan.nodes}
+    for sw_id, target_id in mirrors.items():
+        sw = node_by_id.get(sw_id)
+        if sw is None:
+            continue
+        bridge = catalog.own_bridge(sw.image)
+        if not bridge:
+            continue  # only Open vSwitch mirrors here (validation warns otherwise)
+        shared = set(cd_ifaces.get(sw_id, {})) & set(cd_ifaces.get(target_id, {}))
+        if not shared:
+            continue
+        port = cd_ifaces[sw_id][sorted(shared)[0]]
+        sw.startup.append(
+            # Wait (bounded) for the image to enslave the SPAN port, then mirror
+            # all bridge traffic to it with a single select-all mirror.
+            f"i=0; until ovs-vsctl list-ports {bridge} 2>/dev/null | grep -qx {port} "
+            f"|| [ $i -ge {OWN_BRIDGE_WAIT_S} ]; do i=$((i+1)); sleep 1; done; "
+            f"ovs-vsctl -- --id=@p get port {port} "
+            "-- --id=@m create mirror name=ae3gis_span select-all=true output-port=@p "
+            f"-- set bridge {bridge} mirrors=@m"
+        )
 
 
 def _startup_commands(
@@ -580,7 +732,8 @@ def _startup_commands(
             cmds.append(f"ip route replace default via {gateway}")
 
     elif role == "router":
-        cmds.append("sysctl -w net.ipv4.ip_forward=1")
+        # IP forwarding is enabled via a creation-time sysctl (see build_lab_plan);
+        # /proc/sys is read-only at runtime, so a `sysctl -w` here would no-op.
         for iface in ifaces:
             r_ip, r_pfx = iface_ips.get(iface, (None, None))
             if r_ip:
@@ -589,7 +742,15 @@ def _startup_commands(
             cmds.append(f"ip route add {dest_cidr} via {via_ip}")
 
     else:  # host
-        if ip and ifaces:
+        # Multi-homing aware: address every interface that has an IP (a
+        # dual-homed host — a historian or field device bridging two subnets —
+        # has a leg on each). No ip_forward: a host must not silently route.
+        if iface_ips:
+            for iface in ifaces:
+                h_ip, h_pfx = iface_ips.get(iface, (None, None))
+                if h_ip:
+                    cmds.append(f"ip addr add {h_ip}/{h_pfx} dev {iface}")
+        elif ip and ifaces:  # fallback: an interface with no resolved per-leg IP
             target = home or ifaces[0]
             cmds.append(f"ip addr add {ip}/{pfx} dev {target}")
         if gateway:

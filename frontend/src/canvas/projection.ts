@@ -3,7 +3,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { roleFor, type NodeRole } from '@/catalog/catalog';
-import { countContainers, gatewayOf, type ConnectionKind, type Scope } from '@/lib/topology';
+import { countContainers, gatewayOf, subnetGateway, type ConnectionKind, type Scope } from '@/lib/topology';
 import type { RuntimeStatus, Selection } from '@/store/types';
 import type { Activity } from '@/api/client';
 import { GROUP_HEADER, GROUP_PADDING, NODE_SIZE } from './constants';
@@ -23,7 +23,8 @@ export interface SubnetNodeData extends Record<string, unknown> {
   subnet: Subnet;
   siteId: string;
   containerCount: number;
-  gateway?: Container;
+  /** The router the subnet routes through (a member, or one reaching it through a leg). */
+  gateway?: { id: string; name: string; ip: string };
   /** Runtime state summary for the badge: running / total. */
   running?: number;
 }
@@ -40,6 +41,11 @@ export interface DeviceNodeData extends Record<string, unknown> {
   captureJobId?: string;
   /** It sends or receives generated traffic right now. */
   traffic?: boolean;
+  /** Its extra interface legs, by subnet name (multi-homing). */
+  legs?: { subnet: string; ip: string }[];
+  /** Drawn in another subnet's view because it joins that subnet through a leg:
+   *  the address it holds there and the subnet it lives in. Not draggable. */
+  guest?: { ip: string; homeSubnet: string };
 }
 
 export interface GroupNodeData extends Record<string, unknown> {
@@ -61,7 +67,7 @@ export type DeviceNode = Node<DeviceNodeData, 'device'>;
 export type GroupNode = Node<GroupNodeData, 'group'>;
 export type CanvasNode = SiteNode | SubnetNode | DeviceNode | GroupNode;
 
-export type EdgeVariant = 'link' | 'uplink' | 'wan' | 'site';
+export type EdgeVariant = 'link' | 'uplink' | 'wan' | 'site' | 'attachment';
 
 export interface CanvasEdgeData extends Record<string, unknown> {
   variant: EdgeVariant;
@@ -120,6 +126,9 @@ export interface Projection {
 // ── Helpers ───────────────────────────────────────────────────────────
 
 const ZERO: Position = { x: 0, y: 0 };
+/** Guest cards (leg-attached devices in a LAN view): column gap and row gap. */
+const GUEST_GAP = 96;
+const GUEST_ROW_GAP = 24;
 /** Groups never get narrower than this so the header stays readable. */
 const MIN_GROUP_WIDTH = 300;
 const pos = (p?: Position): Position => (p ? { x: p.x, y: p.y } : ZERO);
@@ -207,6 +216,9 @@ class Projector {
         status: this.status(c.id),
         captureJobId: this.input.activity?.captureNodes.get(c.id),
         traffic: this.input.activity?.trafficNodes.has(c.id) || undefined,
+        legs: c.interfaces?.length
+          ? c.interfaces.map((l) => ({ subnet: this.subnetsById.get(l.subnetId)?.name ?? l.subnetId, ip: l.ip }))
+          : undefined,
       },
     };
   }
@@ -221,10 +233,40 @@ class Projector {
     }
   }
 
-  /** LAN scope: devices at their stored positions. */
+  /** LAN scope: devices at their stored positions, then the guests. */
   private emitLan(subnet: Subnet, siteId: string) {
     for (const c of subnet.containers) this.push(this.deviceNode(c, subnet, siteId));
     this.deviceEdges(subnet);
+    this.emitGuests(subnet);
+  }
+
+  /** Devices from other subnets that join this one through a leg (a firewall
+   *  gatewaying it, a dual-homed historian): drawn at their leg address in a
+   *  column beside the subnet's own devices, wired to the switch the leg
+   *  attaches to. Their position is synthetic, so they can't be dragged. */
+  private emitGuests(subnet: Subnet) {
+    const t = this.input.topology;
+    const guests = t.sites.flatMap((site) =>
+      site.subnets.flatMap((home) =>
+        home.containers.flatMap((c) => {
+          const leg = c.interfaces?.find((l) => l.subnetId === subnet.id);
+          return leg ? [{ c, leg, home, siteId: site.id }] : [];
+        }),
+      ),
+    );
+    if (!guests.length) return;
+    guests.sort((a, b) => a.c.name.localeCompare(b.c.name));
+    const b = boundsOf(subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }))) ?? { x: 0, y: 0, width: 0, height: 0 };
+    const gateway = subnetGateway(t, subnet)?.id;
+    const anchor = subnet.containers.find((c) => roleFor(c.type) === 'switch') ?? gatewayOf(subnet) ?? subnet.containers[0];
+    guests.forEach(({ c, leg, home, siteId }, i) => {
+      const node = this.deviceNode(c, home, siteId);
+      node.position = { x: b.x + b.width + GUEST_GAP, y: b.y + i * (NODE_SIZE.device.height + GUEST_ROW_GAP) };
+      node.draggable = false;
+      node.data = { ...node.data, isGateway: gateway === c.id, guest: { ip: leg.ip, homeSubnet: home.name } };
+      this.push(node);
+      if (anchor) this.pushLeg(`leg:${c.id}:${subnet.id}`, c.id, anchor.id);
+    });
   }
 
   // ── Subnets ──
@@ -246,7 +288,7 @@ class Projector {
         subnet,
         siteId,
         containerCount: countContainers(subnet, { userOnly: true }),
-        gateway: gatewayOf(subnet),
+        gateway: subnetGateway(this.input.topology, subnet),
         running: known > 0 ? running : undefined,
       },
     });
@@ -390,6 +432,51 @@ class Projector {
     }
   }
 
+  private pushLeg(id: string, source: string, target: string, label?: string) {
+    if (!this.visible.has(source) || !this.visible.has(target) || source === target) return;
+    this.edges.push({
+      id,
+      source,
+      target,
+      type: 'topology',
+      selectable: false,
+      data: { variant: 'attachment', kind: 'container', connectionId: id, active: false, label },
+    });
+  }
+
+  /** Multi-homing: a dashed edge for every interface leg, from the device — or,
+   *  when it isn't drawn, its subnet or site card — to the switch the leg
+   *  attaches to, else the target subnet's or site's card. Legs that collapse
+   *  onto the same two cards become one edge naming their devices. */
+  private legEdges() {
+    const t = this.input.topology;
+    const siteOf = new Map(t.sites.flatMap((s) => s.subnets.map((n) => [n.id, s.id] as const)));
+    const merged = new Map<string, { source: string; target: string; names: string[] }>();
+    for (const site of t.sites) {
+      for (const subnet of site.subnets) {
+        for (const c of subnet.containers) {
+          for (const leg of c.interfaces ?? []) {
+            const into = this.subnetsById.get(leg.subnetId);
+            if (!into) continue;
+            const sw = this.input.expanded[into.id] ? into.containers.find((x) => roleFor(x.type) === 'switch')?.id : undefined;
+            const target = [sw, into.id, siteOf.get(into.id)].find((id): id is string => !!id && this.visible.has(id));
+            if (this.visible.has(c.id)) {
+              if (target && !this.edges.some((e) => e.id === `leg:${c.id}:${into.id}`)) this.pushLeg(`leg:${c.id}:${into.id}`, c.id, target);
+              continue;
+            }
+            const source = [subnet.id, site.id].find((id) => this.visible.has(id));
+            if (!source || !target || source === target) continue;
+            const key = `leg:${source}:${target}`;
+            const m = merged.get(key) ?? { source, target, names: [] };
+            m.names.push(c.name);
+            merged.set(key, m);
+          }
+        }
+      }
+    }
+    for (const [id, m] of merged) this.pushLeg(id, m.source, m.target, m.names.join(', '));
+  }
+
   // ── Entry ──
 
   run(): Projection {
@@ -408,6 +495,7 @@ class Projector {
       const subnet = site?.subnets.find((s) => s.id === scope.subnetId);
       if (site && subnet) this.emitLan(subnet, site.id);
     }
+    this.legEdges();
     return { nodes: this.nodes, edges: this.edges };
   }
 }
