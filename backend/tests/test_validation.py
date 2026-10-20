@@ -152,3 +152,34 @@ def test_mirror_unknown_target_errors():
     assert "mirror.target_unknown" in codes(
         _mirror_subnet("ae3gis.local/open-vswitch", mirror_to="nope")
     )
+
+
+def test_interface_leg_on_a_switch_is_an_error():
+    # swA (a switch in subA) must not leg into subB: its bridge would merge them.
+    t = copy.deepcopy(TWO_SUBNETS)
+    t["sites"][0]["subnets"][0]["containers"][1]["interfaces"] = [
+        {"subnetId": "subB", "ip": "10.0.2.9"}
+    ]
+    d = next(d for d in validate(t) if d.code == "interface.on_switch")
+    assert d.severity == "error" and d.node_id == "swA"
+
+
+def test_interface_leg_ip_duplicate_names_the_other_device():
+    # hB (Host B) holds 10.0.2.5 on subnet B.
+    d = next(
+        d
+        for d in validate(_with_leg({"subnetId": "subB", "ip": "10.0.2.5"}))
+        if d.code == "interface.ip_duplicate"
+    )
+    assert "'Host B'" in d.message and "B" in d.message
+
+
+def test_mirror_to_a_leg_attached_target_is_connected():
+    # The IDS lives in subB and reaches subA (the switch's subnet) through a leg.
+    t = _mirror_subnet("ae3gis.local/open-vswitch", mirror_to="hB")
+    t["sites"][0]["subnets"][1]["containers"][2]["interfaces"] = [
+        {"subnetId": "subA", "ip": "10.0.1.40"}
+    ]
+    t["sites"][0]["subnets"][0]["containers"].pop()  # drop the in-subnet ids
+    t["sites"][0]["subnets"][0]["connections"].pop()
+    assert "mirror.target_not_connected" not in codes(t)

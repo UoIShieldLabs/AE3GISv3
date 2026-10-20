@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore, undo, redo, clearHistory } from '../index';
 import { findSite, findSubnet, locate, locateConnection } from '@/lib/topology';
+import type { TopologyData } from '@/types/topology';
 
 const store = useAppStore;
 const S = () => store.getState();
@@ -375,5 +376,66 @@ describe('topology store — scenarios (step-through authoring)', () => {
     S().deleteNodes([a]);
     const steps = S().topology.scenarios![0].phases[0].executions;
     expect(steps.map((s) => s.containerId)).toEqual([b]);
+  });
+});
+
+describe('topology store — legs never collide with other addresses', () => {
+  const box = (id: string) => { const h = locate(S().topology, id); return h?.kind === 'container' ? h.container : undefined; };
+  function legged() {
+    const siteId = S().addSite({ name: 'S' });
+    const a = S().addSubnet({ siteId, name: 'A', cidr: '10.0.1.0/24', autoInfra: false })!;
+    const b = S().addSubnet({ siteId, name: 'B', cidr: '10.0.2.0/24', autoInfra: false })!;
+    const host = S().addContainer({ subnetId: a, type: 'workstation', ip: '10.0.1.5' })!;
+    S().addInterface(host, b);
+    return { siteId, a, b, host, legIp: box(host)!.interfaces![0].ip };
+  }
+
+  it('a new device never takes an address a leg already holds', () => {
+    const { b, legIp } = legged();
+    expect(legIp).toBe('10.0.2.1');
+    const dev = S().addContainer({ subnetId: b, type: 'workstation' })!;
+    expect(box(dev)!.ip).not.toBe(legIp);
+  });
+
+  it('linking subnets creates a router on a free address, not on a leg', () => {
+    const { a, b, legIp } = legged();
+    S().addConnection({ from: a, to: b });
+    const routerB = (S().topology as TopologyData).sites[0].subnets.find((s) => s.id === b)!.containers.find((c) => c.type === 'router')!;
+    expect(routerB.ip).not.toBe(legIp);
+  });
+
+  it('a switch never takes a leg (it would bridge both subnets)', () => {
+    const { a, b } = legged();
+    const sw = S().addContainer({ subnetId: a, type: 'switch' })!;
+    S().addInterface(sw, b);
+    expect(box(sw)!.interfaces).toBeUndefined();
+  });
+
+  it('duplicating a multi-homed device re-addresses its legs and drops its mirror target', () => {
+    const { b, host, legIp } = legged();
+    S().updateContainer(host, { mirrorTo: 'somewhere' });
+    const [copy] = S().duplicateNodes([host]);
+    const legs = box(copy)!.interfaces!;
+    expect(legs).toHaveLength(1);
+    expect(legs[0].subnetId).toBe(b);
+    expect(legs[0].ip).not.toBe(legIp);
+    expect(box(copy)!.mirrorTo).toBeUndefined();
+  });
+
+  it('duplicating a subnet drops legs that leave the copy', () => {
+    const { a } = legged();
+    const [copyId] = S().duplicateNodes([a]);
+    const copy = (S().topology as TopologyData).sites[0].subnets.find((s) => s.id === copyId)!;
+    expect(copy.containers.every((c) => !c.interfaces)).toBe(true);
+  });
+
+  it('duplicating a site keeps legs inside the copy, pointed at the copied subnets', () => {
+    const { siteId, legIp } = legged();
+    const [copyId] = S().duplicateNodes([siteId]);
+    const site = (S().topology as TopologyData).sites.find((s) => s.id === copyId)!;
+    const [copyA, copyB] = site.subnets;
+    const leg = copyA.containers[0].interfaces![0];
+    expect(leg.subnetId).toBe(copyB.id);
+    expect(leg.ip).toBe(legIp);
   });
 });

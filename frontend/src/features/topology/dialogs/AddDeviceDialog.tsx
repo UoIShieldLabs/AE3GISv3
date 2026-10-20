@@ -5,7 +5,8 @@ import { Button, Dialog, DialogClose, Field, Input } from '@/ui';
 import { displayNameFor } from '@/catalog/catalog';
 import { ImagePicker } from '@/features/images/ImagePicker';
 import { getNextAvailableIp, getSubnetCapacity } from '@/utils/validation';
-import { nextName } from '@/lib/topology';
+import { nextName, usedIpsInSubnet } from '@/lib/topology';
+import { useAppStore } from '@/store';
 import type { Subnet } from '@/types/topology';
 import { deviceSchema, type DeviceFormValues } from '../schemas';
 import { DeviceTypePicker } from '../DeviceTypePicker';
@@ -35,7 +36,10 @@ export function AddDeviceDialog({ open, onOpenChange, subnet, onSubmit, presetTy
 }
 
 function DeviceForm({ subnet, presetType, presetImage, onSubmit }: { subnet: Subnet; presetType?: string; presetImage?: string; onSubmit: (v: DeviceFormValues) => void }) {
-  const takenIps = useMemo(() => subnet.containers.map((c) => c.ip).filter(Boolean), [subnet]);
+  // Every address in use on this subnet, interface legs from other subnets included
+  // (a firewall's gateway leg must never be offered to a new device).
+  const topology = useAppStore((s) => s.topology);
+  const takenIps = useMemo(() => usedIpsInSubnet(topology, subnet.id), [topology, subnet.id]);
   const names = useMemo(() => subnet.containers.map((c) => c.name), [subnet]);
   const initialType = presetType ?? 'workstation';
   const schema = useMemo(() => deviceSchema({ cidr: subnet.cidr, takenIps }), [subnet.cidr, takenIps]);

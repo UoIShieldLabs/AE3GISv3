@@ -4,7 +4,7 @@ import { generateId } from '@/lib/ids';
 import { getNextAvailableIp } from '@/utils/validation';
 import { displayNameFor } from '@/catalog/catalog';
 import {
-  gatewayOf, hasConnection, isRouterType, locate, locateConnection, nextName, siteRouter, usedIpsInSubnet,
+  canTakeInterfaceLegs, gatewayOf, hasConnection, isRouterType, locate, locateConnection, nextName, siteRouter, usedIpsInSubnet,
 } from '@/lib/topology';
 import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
@@ -15,10 +15,10 @@ const rects = (items: { position?: Position }[], size: { width: number; height: 
   items.filter((i) => i.position).map((i) => ({ ...i.position!, ...size }));
 
 /** Find or create the gateway router of a subnet; wires the switch → router uplink when creating. */
-function ensureRouter(subnet: Subnet): string {
+function ensureRouter(top: TopologyData, subnet: Subnet): string {
   const existing = gatewayOf(subnet);
   if (existing) return existing.id;
-  const taken = subnet.containers.map((c) => c.ip).filter(Boolean);
+  const taken = usedIpsInSubnet(top, subnet.id);
   const ip = getNextAvailableIp(subnet.cidr, taken) ?? '';
   const id = generateId('node');
   subnet.containers.push({
@@ -47,6 +47,34 @@ function remapIds<T extends { id?: string }>(items: T[], map: Map<string, string
 }
 
 const OFFSET = 32;
+
+/** A duplicated device must not reuse its original's leg addresses or SPAN wiring.
+ *  A single copy keeps its legs on fresh addresses (still multi-homed); copies made
+ *  with their whole subnet/site keep legs and mirrors that point inside the copy
+ *  (remapped through `map`) and drop the ones that point outside it. */
+function rehomeCopy(top: TopologyData, copy: Container, map?: Map<string, string>) {
+  if (copy.interfaces) {
+    if (!canTakeInterfaceLegs(copy.type)) delete copy.interfaces;
+    else if (map) {
+      copy.interfaces = copy.interfaces
+        .filter((leg) => map.has(leg.subnetId))
+        .map((leg) => ({ ...leg, subnetId: map.get(leg.subnetId)! }));
+    } else {
+      copy.interfaces = copy.interfaces.flatMap((leg) => {
+        const target = locate(top, leg.subnetId);
+        if (target?.kind !== 'subnet') return [];
+        const ip = getNextAvailableIp(target.subnet.cidr, usedIpsInSubnet(top, leg.subnetId)) ?? '';
+        return [{ ...leg, ip }];
+      });
+    }
+    if (!copy.interfaces?.length) delete copy.interfaces;
+  }
+  if (copy.mirrorTo) {
+    const target = map?.get(copy.mirrorTo);
+    if (target) copy.mirrorTo = target;
+    else delete copy.mirrorTo;
+  }
+}
 
 function dropConnections(top: TopologyData, ids: string[]) {
   const drop = new Set(ids);
@@ -213,7 +241,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       const h = locate(s.topology as TopologyData, input.subnetId);
       if (h?.kind !== 'subnet') return;
       const { subnet } = h;
-      const taken = subnet.containers.map((c) => c.ip).filter(Boolean);
+      const taken = usedIpsInSubnet(s.topology as TopologyData, subnet.id);
       const ip = input.ip ?? getNextAvailableIp(subnet.cidr, taken) ?? '';
       const name = input.name?.trim() || nextName(subnet.containers.map((c) => c.name), displayNameFor(input.type));
       const position = input.position ?? nextFreePosition(rects(subnet.containers, NODE_SIZE.device), NODE_SIZE.device);
@@ -247,6 +275,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       const c = locate(top, containerId);
       const sub = locate(top, subnetId);
       if (c?.kind !== 'container' || sub?.kind !== 'subnet') return;
+      if (!canTakeInterfaceLegs(c.container.type)) return; // a switch would bridge the two subnets
       if (c.subnet.id === subnetId) return; // can't leg into its own home subnet
       const legs = c.container.interfaces ?? [];
       if (legs.some((l) => l.subnetId === subnetId)) return; // already attached
@@ -300,13 +329,13 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       else if (A.kind === 'subnet' && B.kind === 'subnet') {
         if (A.site.id === B.site.id) {
           if (hasConnection(A.site.subnetConnections, A.subnet.id, B.subnet.id)) return;
-          const fc = ensureRouter(A.subnet);
-          const tc = ensureRouter(B.subnet);
+          const fc = ensureRouter(top, A.subnet);
+          const tc = ensureRouter(top, B.subnet);
           A.site.subnetConnections.push(conn({ from: A.subnet.id, to: B.subnet.id, fromContainer: fc, toContainer: tc }));
         } else {
           if (hasConnection(top.siteConnections, A.site.id, B.site.id)) return;
-          const fc = ensureRouter(A.subnet);
-          const tc = ensureRouter(B.subnet);
+          const fc = ensureRouter(top, A.subnet);
+          const tc = ensureRouter(top, B.subnet);
           top.siteConnections.push(conn({ from: A.site.id, to: B.site.id, fromContainer: fc, toContainer: tc }));
         }
         added = true;
@@ -334,7 +363,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
         if (sub.site.id !== con.site.id || sub.subnet.id === con.subnet.id) return;
         if (!isRouterType(con.container.type)) return;
         if (hasConnection(sub.site.subnetConnections, sub.subnet.id, con.subnet.id)) return;
-        const subRouter = ensureRouter(sub.subnet);
+        const subRouter = ensureRouter(top, sub.subnet);
         const fromIsSub = A.kind === 'subnet';
         sub.site.subnetConnections.push(
           conn({
@@ -487,7 +516,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
         if (!hit) continue;
         if (hit.kind === 'container') {
           const { subnet, container } = hit;
-          const taken = subnet.containers.map((c) => c.ip).filter(Boolean);
+          const taken = usedIpsInSubnet(top, subnet.id);
           const copy: Container = {
             ...JSON.parse(JSON.stringify(container)),
             id: generateId('node'),
@@ -495,6 +524,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
             ip: getNextAvailableIp(subnet.cidr, taken) ?? '',
             position: { x: (container.position?.x ?? 0) + OFFSET, y: (container.position?.y ?? 0) + OFFSET },
           };
+          rehomeCopy(top, copy);
           subnet.containers.push(copy);
           created.push(copy.id);
         } else if (hit.kind === 'subnet') {
@@ -505,6 +535,7 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
             map.set(c.id, nid);
             return { ...JSON.parse(JSON.stringify(c)), id: nid } as Container;
           });
+          containers.forEach((c) => rehomeCopy(top, c, map));
           const copy: Subnet = {
             ...JSON.parse(JSON.stringify(subnet)),
             id: generateId('subnet'),
@@ -528,6 +559,8 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
             });
             return { ...JSON.parse(JSON.stringify(sn)), id: nsid, containers, connections: remapIds(sn.connections, map) } as Subnet;
           });
+          // Legs/mirrors are remapped once every subnet and device of the copy has its new id.
+          subnets.forEach((sn) => sn.containers.forEach((c) => rehomeCopy(top, c, map)));
           const copy: Site = {
             ...JSON.parse(JSON.stringify(site)),
             id: generateId('site'),

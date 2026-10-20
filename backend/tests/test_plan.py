@@ -293,6 +293,22 @@ def test_leg_with_unknown_subnet_is_ignored():
     assert not any("10.9.9.9" in c for c in fw.startup)
 
 
+def test_leg_on_a_switch_is_not_bridged():
+    # A switch leg would put the other subnet's segment into the switch's bridge
+    # (one L2 domain for both subnets). The plan ignores it; validation errors.
+    topo = _multihomed_topology()
+    topo["sites"][0]["subnets"][0]["containers"][1]["interfaces"] = [
+        {"subnetId": "ot", "ip": "10.0.3.9"}
+    ]
+    plan = build_lab_plan(topo, "ics")
+    itsw, otsw = _node(plan, "itsw"), _node(plan, "otsw")
+    shared = {i.collision_domain for i in itsw.interfaces} & {
+        i.collision_domain for i in otsw.interfaces
+    }
+    assert not shared, "the IT switch must not share a segment with the OT switch"
+    assert not any("10.0.3.9" in c for c in itsw.startup)
+
+
 # ── OVS port mirroring (SPAN) ─────────────────────────────────────────────
 
 

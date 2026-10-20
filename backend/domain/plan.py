@@ -255,6 +255,10 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
     for site in topology.get("sites", []):
         for subnet in site.get("subnets", []):
             for c in subnet.get("containers", []):
+                # A switch never takes a leg: the leg port would be enslaved into
+                # its bridge and merge two subnets (validation reports it).
+                if container_role.get(c.get("id")) == "switch":
+                    continue
                 for leg in interfaces_of(c):
                     lsid = leg.get("subnetId")
                     lmeta = subnet_meta.get(lsid) if isinstance(lsid, str) else None

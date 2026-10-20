@@ -101,6 +101,10 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
     container_legs: list[tuple[str, str, Any, str]] = []  # (cid, cpath, legs, home nid)
     deferred_gateways: list[tuple[str, str, str]] = []  # (nid, gateway ip, path)
     mirror_decls: list[tuple[str, str, str, str]] = []  # (cid, cpath, target, image)
+    container_label: dict[str, str] = {}  # cid -> display name (for messages)
+    subnet_label: dict[str, str] = {}  # nid -> display name (for messages)
+    container_is_switch: dict[str, bool] = {}
+    container_leg_subnets: dict[str, set[str]] = {}  # cid -> subnets reached by a leg
 
     for si, site in enumerate(sites(data)):
         spath = f"sites[{si}]"
@@ -125,6 +129,7 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                 err("id.duplicate", f"Duplicate id '{nid}'", npath)
             subnet_ids[nid] = npath
             subnet_path[nid] = npath
+            subnet_label[nid] = str(subnet.get("name") or nid)
             site_subnets[sid].add(nid)
             subnet_containers[nid] = set()
             subnet_has_router[nid] = False
@@ -200,6 +205,8 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                     subnet_has_router[nid] = True
                 container_home.setdefault(cid, nid)
                 container_is_router.setdefault(cid, is_router(c))
+                container_is_switch.setdefault(cid, catalog.role_for(ctype) == "switch")
+                container_label.setdefault(cid, str(c.get("name") or cid))
                 if isinstance(c.get("interfaces"), list) and c.get("interfaces"):
                     container_legs.append((cid, cpath, c.get("interfaces"), nid))
                 if isinstance(c.get("mirrorTo"), str) and c["mirrorTo"]:
@@ -330,6 +337,15 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
 
     # ── interface legs (multi-homing) ──
     for cid, cpath, legs, home_nid in container_legs:
+        if container_is_switch.get(cid):
+            err(
+                "interface.on_switch",
+                "A switch can't have an interface leg: it would bridge both subnets into "
+                "one segment. Connect the subnets through a router or firewall instead",
+                f"{cpath}.interfaces",
+                cid,
+            )
+            continue
         seen_legs: set[str] = set()
         for li, leg in enumerate(legs):
             lpath = f"{cpath}.interfaces[{li}]"
@@ -369,6 +385,7 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                     cid,
                 )
             seen_legs.add(lsid)
+            container_leg_subnets.setdefault(cid, set()).add(lsid)
             linked.add(cid)  # a legged device is attached to something
             lip_raw = leg.get("ip")
             lip = _valid_ip(lip_raw)
@@ -391,9 +408,10 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
             used = subnet_used_ips.setdefault(lsid, {})
             key = str(lip)
             if key in used and used[key] != cid:
+                other = container_label.get(used[key], used[key])
                 err(
                     "interface.ip_duplicate",
-                    f"{lip_raw} is already used in subnet '{lsid}'",
+                    f"{lip_raw} on {subnet_label.get(lsid, lsid)} is also used by '{other}'",
                     f"{lpath}.ip",
                     cid,
                 )
@@ -427,7 +445,10 @@ def validate(data: Any) -> list[Diagnostic]:  # noqa: C901 - one linear pass, ma
                 f"{cpath}.mirrorTo",
                 cid,
             )
-        elif not (container_subnets.get(cid, set()) & container_subnets.get(target, set())):
+        elif not (
+            container_subnets.get(cid, set())
+            & (container_subnets.get(target, set()) | container_leg_subnets.get(target, set()))
+        ):
             warn(
                 "mirror.target_not_connected",
                 "Mirror target is not in the same subnet as the switch",
