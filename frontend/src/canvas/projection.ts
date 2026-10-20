@@ -3,7 +3,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { roleFor, type NodeRole } from '@/catalog/catalog';
-import { countContainers, gatewayOf, type ConnectionKind, type Scope } from '@/lib/topology';
+import { countContainers, gatewayOf, subnetGateway, type ConnectionKind, type Scope } from '@/lib/topology';
 import type { RuntimeStatus, Selection } from '@/store/types';
 import type { Activity } from '@/api/client';
 import { GROUP_HEADER, GROUP_PADDING, NODE_SIZE } from './constants';
@@ -23,7 +23,8 @@ export interface SubnetNodeData extends Record<string, unknown> {
   subnet: Subnet;
   siteId: string;
   containerCount: number;
-  gateway?: Container;
+  /** The router the subnet routes through (a member, or one reaching it through a leg). */
+  gateway?: { id: string; name: string; ip: string };
   /** Runtime state summary for the badge: running / total. */
   running?: number;
 }
@@ -246,7 +247,7 @@ class Projector {
         subnet,
         siteId,
         containerCount: countContainers(subnet, { userOnly: true }),
-        gateway: gatewayOf(subnet),
+        gateway: subnetGateway(this.input.topology, subnet),
         running: known > 0 ? running : undefined,
       },
     });

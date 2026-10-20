@@ -161,4 +161,15 @@ describe('project() — interface legs (multi-homing)', () => {
     const { edges } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
     expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
   });
+
+  it("a subnet gated by a router's leg shows that router as its gateway", () => {
+    const t = fixture();
+    // sub-2 loses its own router; r1 (in sub-1) gateways it through a leg.
+    t.sites[0].subnets[1].containers = [];
+    t.sites[0].subnetConnections = [];
+    t.sites[0].subnets[0].containers[0].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.1' }];
+    const { nodes } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
+    const card = nodes.find((n) => n.id === 'sub-2')!;
+    expect(card.data).toMatchObject({ gateway: { id: 'r1', ip: '10.0.2.1' } });
+  });
 });
