@@ -183,6 +183,33 @@ class Sidecar(Protocol):
         ...
 
 
+@runtime_checkable
+class ExecStream(Protocol):
+    """A command running in a lab node via ``docker exec``, its output streamed.
+
+    Same control surface as a ``Sidecar`` (``pump``/``signal``/``remove``) so the
+    scenario job loop can drive either. Unlike a sidecar it has no container of
+    its own and adds no mounts or extra namespaces: it runs in the node's own
+    filesystem and process space, so ``remove`` just releases the stream.
+    """
+
+    name: str
+    node_id: str
+
+    async def pump(
+        self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
+    ) -> int:
+        """Feed the command's output to the callbacks until it exits; return its
+        exit code. Callbacks may run on a worker thread."""
+        ...
+
+    async def signal(self, sig: str = "SIGINT") -> None: ...
+
+    async def remove(self) -> None:
+        """Stop reading and release the stream (idempotent)."""
+        ...
+
+
 @dataclass
 class HelperSpec:
     """Run ``command`` in ``image`` as a helper container outside every node.
@@ -337,6 +364,16 @@ class DeploymentEngine(Protocol):
 
     async def start_sidecar(self, state: EngineState, spec: SidecarSpec) -> Sidecar:
         """Start a sidecar in the node's network namespace, output already attached."""
+        ...
+
+    async def exec_stream(self, state: EngineState, node_id: str, argv: list[str]) -> ExecStream:
+        """Run ``argv`` in the node (``docker exec``) and stream its output.
+
+        For the scenario runner: an ordinary command in the node's own filesystem
+        and process space — no sidecar, no extra namespaces or mounts, so any
+        writes stay in the container. The node is resolved by label, like
+        ``resolve_container``.
+        """
         ...
 
     async def list_sidecars(

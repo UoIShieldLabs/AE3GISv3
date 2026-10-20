@@ -50,6 +50,7 @@ from engine.docker_sidecar import (
     LABEL_NODE,
     LABEL_OWNER,
     LABEL_PURPOSE,
+    DockerExec,
     DockerSidecar,
     sidecar_filters,
     sidecar_labels,
@@ -412,6 +413,15 @@ class KatharaEngine:
             if node.status != "running":
                 raise LookupError(f"Device '{node.labels.get('name')}' is not running")
             return DockerSidecar.start(self._docker(), node, spec, sidecar_labels(spec, lab_hash))
+
+        return await asyncio.to_thread(_start)
+
+    async def exec_stream(self, state: EngineState, node_id: str, argv: list[str]) -> DockerExec:
+        def _start() -> DockerExec:
+            node = self._node_container(state, node_id)
+            if node.status != "running":
+                raise LookupError(f"Device '{node.labels.get('name')}' is not running")
+            return DockerExec.start(self._docker(), node, argv, node_id)
 
         return await asyncio.to_thread(_start)
 

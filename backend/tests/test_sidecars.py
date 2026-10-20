@@ -3,6 +3,8 @@
 import asyncio
 import json
 
+import pytest
+
 from domain.pcap import PcapSplitter
 from engine.base import EngineState, HelperSpec, SidecarSpec
 from engine.fake import FakeEngine
@@ -200,3 +202,55 @@ def test_interfaces_pids_containers_and_runtime_info(client, wait_jobs, topology
     [sidecar] = [r for r in refs if r.labels.get("ae3gis.sidecar") == "1"]
     assert sidecar.labels["ae3gis.purpose"] == "capture"
     assert {i.node_id for i in info} == {"rA", "swA", "hA", "rB", "swB", "hB"}
+
+
+def test_exec_stream_runs_a_command_and_captures_output(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+    fake_engine.exec_results["ip -o addr"] = (0, "eth0 inet 10.0.0.1/24\n")
+
+    async def run():
+        ex = await fake_engine.exec_stream(state, "hA", ["sh", "-lc", "ip -o addr"])
+        out, err = bytearray(), bytearray()
+        code = await ex.pump(out.extend, err.extend)
+        return code, bytes(out), bytes(err)
+
+    code, out, err = client.portal.call(run)
+    assert code == 0 and b"10.0.0.1/24" in out and not err
+    assert ("exec", "ip -o addr") in fake_engine.calls
+
+
+def test_exec_stream_reports_a_nonzero_exit(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+    fake_engine.exec_results["false"] = (3, "")
+
+    async def run():
+        ex = await fake_engine.exec_stream(state, "hA", ["sh", "-lc", "false"])
+        return await ex.pump(lambda _b: None, lambda _b: None)
+
+    assert client.portal.call(run) == 3
+
+
+def test_exec_stream_stops_a_long_command_on_signal(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+    fake_engine.exec_results["tail -f log"] = (None, "following\n")
+
+    async def run():
+        ex = await fake_engine.exec_stream(state, "hA", ["sh", "-lc", "tail -f log"])
+        out = bytearray()
+        pump = asyncio.ensure_future(ex.pump(out.extend, lambda _b: None))
+        await asyncio.sleep(0.02)
+        await ex.signal("SIGINT")
+        return await pump, bytes(out)
+
+    code, out = client.portal.call(run)
+    assert code == -1 and b"following" in out
+
+
+def test_exec_stream_refuses_a_node_that_is_not_running(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+
+    async def run():
+        await fake_engine.exec_stream(state, "nope", ["sh", "-lc", "echo hi"])
+
+    with pytest.raises(LookupError):
+        client.portal.call(run)

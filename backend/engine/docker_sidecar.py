@@ -246,3 +246,76 @@ class DockerSidecar:
                 self._stream.close()
 
         await asyncio.to_thread(_remove)
+
+
+class DockerExec:
+    """A command running in a lab node via ``docker exec``, output streamed.
+
+    Mirrors ``DockerSidecar``'s ``pump``/``signal``/``remove`` surface so the
+    scenario job loop drives either. It runs in the node's own filesystem and
+    process space and adds no container, namespaces or mounts; ``remove`` only
+    closes the stream (the exec'd process is not forcibly killed — the scenario
+    runner stops between steps, and the lab is the containment boundary).
+    """
+
+    def __init__(self, client: Any, exec_id: str, stream: Any, node_id: str, name: str) -> None:
+        self._client = client
+        self._exec_id = exec_id
+        self._stream = stream
+        self.node_id = node_id
+        self.name = name
+        self._removed = False
+
+    @classmethod
+    def start(cls, client: Any, node_container: Any, argv: list[str], node_id: str) -> DockerExec:
+        """Create the exec and attach its output *before* reading (blocking; call
+        from a worker thread). ``demux=True`` keeps stderr out of stdout."""
+        api = client.api
+        exec_id = api.exec_create(node_container.id, argv, stdout=True, stderr=True, tty=False)[
+            "Id"
+        ]
+        stream = api.exec_start(exec_id, stream=True, demux=True)
+        return cls(client, exec_id, stream, node_id, node_container.name)
+
+    def _pump_sync(
+        self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
+    ) -> int:
+        try:
+            for out, err in self._stream:
+                if out:
+                    on_stdout(out)
+                if err:
+                    on_stderr(err)
+        except Exception as exc:  # the exec/stream ended under us
+            if not self._removed:
+                log.debug("Exec %s stream ended: %s", self.name, exc)
+        finally:
+            with contextlib.suppress(Exception):
+                self._stream.close()
+        if self._removed:
+            return -1
+        try:
+            return int(self._client.api.exec_inspect(self._exec_id).get("ExitCode") or 0)
+        except Exception:  # pragma: no cover - daemon dependent
+            return -1
+
+    async def pump(
+        self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
+    ) -> int:
+        try:
+            return await asyncio.to_thread(self._pump_sync, on_stdout, on_stderr)
+        except asyncio.CancelledError:
+            await self.remove()
+            raise
+
+    async def signal(self, sig: str = "SIGINT") -> None:
+        # A docker exec cannot be signalled through the SDK; closing the stream
+        # ends our read. The step loop stops between steps (best-effort).
+        await self.remove()
+
+    async def remove(self) -> None:
+        if self._removed:
+            return
+        self._removed = True
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(self._stream.close)
