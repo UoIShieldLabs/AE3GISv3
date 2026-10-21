@@ -57,7 +57,8 @@ From the repository root:
    `--restart none`. On Linux a Docker restart doesn't remove the leaked taps;
    compare the resting memory the summary shows;
 4. runs each spec through the API, follows it, and saves everything in
-   `backend/benchmark-results/<host>/<date>-<suite>/` (kept out of git):
+   `backend/benchmark-results/<host>/<date>-<suite>/` (ignored by git; the
+   reports are committed by hand, see [RUNNING.md](RUNNING.md#4-results)):
 
    | File | What it is |
    |---|---|
@@ -299,9 +300,14 @@ every unfinished cell asks for its next size, and each size is one matrix
 benchmark (after a Docker restart) running only the cells that want it
 (`matrix.cells`), so cells with similar limits share deployments. A step a
 host limit stops (memory, disk…) counts as a failure marked `mem`, one whose
-clients did not all start in time (`traffic_start`) `tool`; a cell that passes
-at `max_hosts` is reported as `≥ max_hosts`. Resuming a search with results
-from the traffic driver before 2026-10-12 re-checks them, each rule once
+clients did not all start in time (`traffic_start`) `tool`; a size whose whole
+deployment fails (a dropped Docker connection) is asked for again once before
+its cells fail there; a cell that passes at `max_hosts` is reported as
+`≥ max_hosts`. Before a cell's traffic starts, a client or server missing from
+the engine's node lookup is looked up again a few times (`NODE_RETRY_S` in
+`services/traffic.py`): under load a running node can drop out of one lookup,
+which once failed cells that were fine. Resuming a search with results from
+the traffic driver before 2026-10-12 re-checks them, each rule once
 (`reopen_legacy`, `reopened.rules` in the manifest; a finished search is
 re-entered for a rule it hasn't had): a pass counts only if every client ran
 for 90% of its window (`coverage`); a failure that only never-started clients

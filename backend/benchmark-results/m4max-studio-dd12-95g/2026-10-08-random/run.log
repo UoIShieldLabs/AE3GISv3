@@ -1,0 +1,931 @@
+=== 2026-10-08 18:10:47 UTC · suite random on m4max-studio-dd12-95g → /Users/tberhanu@uidaho.edu/workspace/AE3GISv3/backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random
+  bringing the backend up in bench mode (docker compose)
+  building 18 image(s): ae3gis.local/apache, ae3gis.local/benign-client, ae3gis.local/firefox, ae3gis.local/firehol, ae3gis.local/iptables, ae3gis.local/isc-dhcp, ae3gis.local/nftables, ae3gis.local/nginx, ae3gis.local/open-vswitch, ae3gis.local/openplc, ae3gis.local/samba, ae3gis.local/snort2, ae3gis.local/snort3, ae3gis.local/suricata, ae3gis.local/vsftpd, ae3gis.local/wazuh-agent, ae3gis.local/wazuh-manager, ae3gis.local/zeek
+  not available here: ae3gis.local/malicious-client (Builds only for linux/amd64; this host is linux/arm64)
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-08 18:21:53 UTC · 01-census (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 47f64fe1b07340b9a7ec5fd4ad0b981a: m4max-studio-dd12-95g · census · census of 29 cases
+  … images
+  … images: postgres:alpine: Downloading
+  … images: 1 image(s) ready
+  … baseline: the host at rest (30s)
+  … workstation · kathara/base: waiting for the host to go quiet
+  … workstation · kathara/base: reference (20.0s, nothing deployed)
+  … workstation · kathara/base: settling (30.0s)
+  … workstation · kathara/base: holding idle (30s)
+workstation · kathara/base  nodes    10  deploy     1.1s  ready   0.01s  destroy    0.6s     5.9 MB/node  host mem   2.0%  ok
+  … router · kathara/frr: waiting for the host to go quiet
+  … router · kathara/frr: reference (20.0s, nothing deployed)
+  … router · kathara/frr: settling (30.0s)
+  … router · kathara/frr: holding idle (30s)
+router · kathara/frr  nodes    10  deploy     1.0s  ready   0.00s  destroy    0.6s    15.6 MB/node  host mem   1.9%  ok
+  … switch · kathara/base: waiting for the host to go quiet
+  … switch · kathara/base: reference (20.0s, nothing deployed)
+  … switch · kathara/base: settling (30.0s)
+  … switch · kathara/base: holding idle (30s)
+switch · kathara/base  nodes    10  deploy     1.0s  ready   0.00s  destroy    0.7s    13.9 MB/node  host mem   1.9%  ok
+  … switch · ae3gis.local/open-vswitch: waiting for the host to go quiet
+  … switch · ae3gis.local/open-vswitch: reference (20.0s, nothing deployed)
+  … switch · ae3gis.local/open-vswitch: settling (30.0s)
+  … switch · ae3gis.local/open-vswitch: holding idle (30s)
+switch · ae3gis.local/open-vswitch  nodes    10  deploy     0.9s  ready   0.00s  destroy    0.6s    22.0 MB/node  host mem   2.0%  ok
+  … firewall · kathara/frr: waiting for the host to go quiet
+  … firewall · kathara/frr: reference (20.0s, nothing deployed)
+  … firewall · kathara/frr: settling (30.0s)
+  … firewall · kathara/frr: holding idle (30s)
+firewall · kathara/frr  nodes    10  deploy     1.1s  ready   0.00s  destroy    0.6s    16.4 MB/node  host mem   2.0%  ok
+  … firewall · ae3gis.local/iptables: waiting for the host to go quiet
+  … firewall · ae3gis.local/iptables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/iptables: settling (30.0s)
+  … firewall · ae3gis.local/iptables: holding idle (30s)
+firewall · ae3gis.local/iptables  nodes    10  deploy     0.9s  ready   0.00s  destroy    0.6s    15.3 MB/node  host mem   1.9%  ok
+  … firewall · ae3gis.local/nftables: waiting for the host to go quiet
+  … firewall · ae3gis.local/nftables: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/nftables: settling (30.0s)
+  … firewall · ae3gis.local/nftables: holding idle (30s)
+firewall · ae3gis.local/nftables  nodes    10  deploy     1.0s  ready   0.00s  destroy    0.6s    20.9 MB/node  host mem   2.0%  ok
+  … firewall · ae3gis.local/firehol: waiting for the host to go quiet
+  … firewall · ae3gis.local/firehol: reference (20.0s, nothing deployed)
+  … firewall · ae3gis.local/firehol: settling (30.0s)
+  … firewall · ae3gis.local/firehol: holding idle (30s)
+firewall · ae3gis.local/firehol  nodes    10  deploy     1.1s  ready   0.00s  destroy    0.6s    19.2 MB/node  host mem   2.0%  ok
+  … ids · ae3gis.local/suricata: waiting for the host to go quiet
+  … ids · ae3gis.local/suricata: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/suricata: deploying 10 nodes
+  … ids · ae3gis.local/suricata: settling (30.0s)
+  … ids · ae3gis.local/suricata: holding idle (30s)
+ids · ae3gis.local/suricata  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.6s    49.5 MB/node  host mem   2.3%  ok
+  … ids · ae3gis.local/snort3: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort3: settling (30.0s)
+  … ids · ae3gis.local/snort3: holding idle (30s)
+ids · ae3gis.local/snort3  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    15.2 MB/node  host mem   2.0%  ok
+  … ids · ae3gis.local/snort2: waiting for the host to go quiet
+  … ids · ae3gis.local/snort2: reference (20.0s, nothing deployed)
+  … ids · ae3gis.local/snort2: settling (30.0s)
+  … ids · ae3gis.local/snort2: holding idle (30s)
+ids · ae3gis.local/snort2  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.7s    10.0 MB/node  host mem   1.9%  ok
+ids · ae3gis.local/zeek  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Building Zeek failed: BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+  … siem · ae3gis.local/wazuh-manager: waiting for the host to go quiet
+  … siem · ae3gis.local/wazuh-manager: reference (20.0s, nothing deployed)
+  … siem · ae3gis.local/wazuh-manager: deploying 10 nodes
+  … siem · ae3gis.local/wazuh-manager: settling (30.0s)
+  … siem · ae3gis.local/wazuh-manager: holding idle (30s)
+siem · ae3gis.local/wazuh-manager  nodes    10  deploy     0.9s  ready   0.01s  destroy    2.7s   289.3 MB/node  host mem   6.3%  ok
+  … web-server · httpd:alpine: waiting for the host to go quiet
+  … web-server · httpd:alpine: reference (20.0s, nothing deployed)
+  … web-server · httpd:alpine: settling (30.0s)
+  … web-server · httpd:alpine: holding idle (30s)
+web-server · httpd:alpine  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    13.7 MB/node  host mem   2.0%  ok
+  … web-server · ae3gis.local/apache: waiting for the host to go quiet
+  … web-server · ae3gis.local/apache: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/apache: deploying 10 nodes
+  … web-server · ae3gis.local/apache: settling (30.0s)
+  … web-server · ae3gis.local/apache: holding idle (30s)
+web-server · ae3gis.local/apache  nodes    10  deploy     1.0s  ready   0.02s  destroy    0.7s    16.2 MB/node  host mem   2.0%  ok
+  … web-server · ae3gis.local/nginx: reference (20.0s, nothing deployed)
+  … web-server · ae3gis.local/nginx: settling (30.0s)
+  … web-server · ae3gis.local/nginx: holding idle (30s)
+web-server · ae3gis.local/nginx  nodes    10  deploy     1.0s  ready   0.02s  destroy    0.6s    20.1 MB/node  host mem   2.0%  ok
+  … file-server · kathara/base: waiting for the host to go quiet
+  … file-server · kathara/base: reference (20.0s, nothing deployed)
+  … file-server · kathara/base: settling (30.0s)
+  … file-server · kathara/base: holding idle (30s)
+file-server · kathara/base  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    17.5 MB/node  host mem   2.0%  ok
+  … file-server · ae3gis.local/samba: waiting for the host to go quiet
+  … file-server · ae3gis.local/samba: reference (20.0s, nothing deployed)
+  … file-server · ae3gis.local/samba: checking 12 paths
+  … file-server · ae3gis.local/samba: settling (30.0s)
+  … file-server · ae3gis.local/samba: holding idle (30s)
+file-server · ae3gis.local/samba  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    16.7 MB/node  host mem   2.0%  ok
+  … ftp-server · ae3gis.local/vsftpd: reference (20.0s, nothing deployed)
+  … ftp-server · ae3gis.local/vsftpd: settling (30.0s)
+  … ftp-server · ae3gis.local/vsftpd: holding idle (30s)
+ftp-server · ae3gis.local/vsftpd  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.6s    15.3 MB/node  host mem   2.0%  ok
+  … database-server · postgres:alpine: waiting for the host to go quiet
+  … database-server · postgres:alpine: reference (20.0s, nothing deployed)
+  … database-server · postgres:alpine: settling (30.0s)
+  … database-server · postgres:alpine: holding idle (30s)
+database-server · postgres:alpine  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    19.1 MB/node  host mem   2.1%  ok
+  … dns-server · kathara/base: waiting for the host to go quiet
+  … dns-server · kathara/base: reference (20.0s, nothing deployed)
+  … dns-server · kathara/base: settling (30.0s)
+  … dns-server · kathara/base: holding idle (30s)
+  … dns-server · kathara/base: destroying
+dns-server · kathara/base  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.7s    12.4 MB/node  host mem   2.0%  ok
+  … dhcp-server · ae3gis.local/isc-dhcp: reference (20.0s, nothing deployed)
+  … dhcp-server · ae3gis.local/isc-dhcp: settling (30.0s)
+  … dhcp-server · ae3gis.local/isc-dhcp: holding idle (30s)
+dhcp-server · ae3gis.local/isc-dhcp  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.6s    12.1 MB/node  host mem   2.0%  ok
+  … workstation · ae3gis.local/benign-client: waiting for the host to go quiet
+  … workstation · ae3gis.local/benign-client: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/benign-client: settling (30.0s)
+  … workstation · ae3gis.local/benign-client: holding idle (30s)
+workstation · ae3gis.local/benign-client  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.7s    10.9 MB/node  host mem   2.0%  ok
+  … workstation · ae3gis.local/wazuh-agent: waiting for the host to go quiet
+  … workstation · ae3gis.local/wazuh-agent: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/wazuh-agent: settling (30.0s)
+  … workstation · ae3gis.local/wazuh-agent: holding idle (30s)
+workstation · ae3gis.local/wazuh-agent  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    18.1 MB/node  host mem   2.1%  ok
+  … workstation · ae3gis.local/firefox: waiting for the host to go quiet
+  … workstation · ae3gis.local/firefox: reference (20.0s, nothing deployed)
+  … workstation · ae3gis.local/firefox: settling (30.0s)
+  … workstation · ae3gis.local/firefox: holding idle (30s)
+workstation · ae3gis.local/firefox  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s   219.9 MB/node  host mem   4.1%  ok
+attacker · ae3gis.local/malicious-client  nodes     –  deploy       –s  ready      –s  destroy      –s       – MB/node  host mem     –%  skipped (Builds only for linux/amd64; this host is linux/arm64)
+  … plc · kathara/base: waiting for the host to go quiet
+  … plc · kathara/base: reference (20.0s, nothing deployed)
+  … plc · kathara/base: settling (30.0s)
+  … plc · kathara/base: holding idle (30s)
+plc · kathara/base  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    14.5 MB/node  host mem   2.0%  ok
+  … plc · ae3gis.local/openplc: waiting for the host to go quiet
+  … plc · ae3gis.local/openplc: reference (20.0s, nothing deployed)
+  … plc · ae3gis.local/openplc: settling (30.0s)
+  … plc · ae3gis.local/openplc: holding idle (30s)
+plc · ae3gis.local/openplc  nodes    10  deploy     1.0s  ready   0.01s  destroy    0.6s    41.1 MB/node  host mem   2.2%  ok
+  … hmi · kathara/base: waiting for the host to go quiet
+  … hmi · kathara/base: reference (20.0s, nothing deployed)
+  … hmi · kathara/base: settling (30.0s)
+  … hmi · kathara/base: holding idle (30s)
+hmi · kathara/base  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.6s    16.5 MB/node  host mem   2.0%  ok
+  census: succeeded: 27 of 29 cases usable
+=== 2026-10-08 19:07:12 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 11980395c09244f9a48e13a576b47b87: m4max-studio-dd12-95g · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+     100 hosts  nodes   107  deploy    13.2s  ready   2.19s  destroy    7.3s    38.5 MB/node  host mem   6.2%  ok
+  → next 200 hosts: ~93% memory projected at 2326 hosts (38.5 MB/node, peak 6.2% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  … 200 hosts: settling (60.0s)
+  … 200 hosts: holding idle (30s)
+  … 200 hosts: destroying
+     200 hosts  nodes   209  deploy    38.8s  ready   0.36s  destroy   24.0s    51.9 MB/node  host mem  16.7%  ok
+  → next 400 hosts: ~93% memory projected at 1688 hosts (51.9 MB/node, peak 16.7% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   150.3s  ready   1.41s  destroy   97.6s    47.0 MB/node  host mem  30.1%  ok
+  → next 800 hosts: ~93% memory projected at 1712 hosts (47.0 MB/node, peak 30.1% now)
+  … 800 hosts: waiting for the host to go quiet
+  … 800 hosts: reference (20.0s, nothing deployed)
+  … 800 hosts: deploying 830 nodes
+  … 800 hosts: checking 1210 paths
+  … 800 hosts: settling (60.0s)
+  … 800 hosts: holding idle (30s)
+  … 800 hosts: destroying
+     800 hosts  nodes   830  deploy   656.4s  ready  34.23s  destroy  446.2s    43.7 MB/node  host mem  51.6%  ok
+  → next 1340 hosts: ~93% memory projected at 1707 hosts (43.7 MB/node, peak 51.6% now)
+  … 1340 hosts: waiting for the host to go quiet
+  … 1340 hosts: reference (20.0s, nothing deployed)
+  … 1340 hosts: deploying 1389 nodes
+    1340 hosts  nodes  1389  deploy   615.0s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 1340 hosts failed (deploy_failed): trying 1070 hosts
+  … 1070 hosts: waiting for the host to go quiet
+  … 1070 hosts: reference (20.0s, nothing deployed)
+  … 1070 hosts: deploying 1111 nodes
+  … 1070 hosts: checking 1632 paths
+  … 1070 hosts: settling (60.0s)
+  … 1070 hosts: holding idle (30s)
+  … 1070 hosts: destroying
+    1070 hosts  nodes  1111  deploy  1284.5s  ready  39.37s  destroy  856.3s    44.0 MB/node  host mem  51.9%  ok
+  → next 1330 hosts: ~93% memory projected at 1697 hosts (44.0 MB/node, peak 51.9% now); below 1340, which failed
+  … 1330 hosts: waiting for the host to go quiet
+  … 1330 hosts: reference (20.0s, nothing deployed)
+  … 1330 hosts: deploying 1379 nodes
+    1330 hosts  nodes  1379  deploy  3489.2s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1330 hosts failed (deploy_failed): trying 1200 hosts
+  … 1200 hosts: waiting for the host to go quiet
+  … 1200 hosts: reference (20.0s, nothing deployed)
+  … 1200 hosts: deploying 1244 nodes
+    1200 hosts  nodes  1244  deploy  2723.6s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1200 hosts failed (deploy_failed): trying 1140 hosts
+  … 1140 hosts: waiting for the host to go quiet
+  … 1140 hosts: reference (20.0s, nothing deployed)
+  … 1140 hosts: deploying 1182 nodes
+  … 1140 hosts: checking 1730 paths
+  … 1140 hosts: settling (60.0s)
+  … 1140 hosts: holding idle (30s)
+  … 1140 hosts: destroying
+    1140 hosts  nodes  1182  deploy  1478.1s  ready  44.14s  destroy 1020.5s    36.9 MB/node  host mem  49.5%  ok
+  → next 1190 hosts: ~93% memory projected at 2048 hosts (36.9 MB/node, peak 49.5% now); below 1200, which failed
+  … 1190 hosts: waiting for the host to go quiet
+  … 1190 hosts: reference (20.0s, nothing deployed)
+  … 1190 hosts: deploying 1233 nodes
+    1190 hosts  nodes  1233  deploy  2684.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1190 hosts failed (deploy_failed): trying 1160 hosts
+  … 1160 hosts: waiting for the host to go quiet
+  … 1160 hosts: reference (20.0s, nothing deployed)
+  … 1160 hosts: deploying 1203 nodes
+    1160 hosts  nodes  1203  deploy  2544.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1160 hosts failed (deploy_failed): trying 1150 hosts
+  … 1150 hosts: waiting for the host to go quiet
+  … 1150 hosts: reference (20.0s, nothing deployed)
+  … 1150 hosts: deploying 1193 nodes
+  … 1150 hosts: checking 1744 paths
+  … 1150 hosts: destroying
+    1150 hosts  nodes  1193  deploy  1443.5s  ready  49.98s  destroy  485.4s       – MB/node  host mem     –%  stopped (host memory 96.4% > 95.0% for 3 sweeps)
+  random-idle-run1: succeeded: ceiling 1140 hosts · stopped: memory (host memory 96.4% > 95.0% for 3 sweeps)
+=== 2026-10-09 01:03:49 UTC · 03-random-idle-run2 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark a3c889d675554be48f66a09acfa94253: m4max-studio-dd12-95g · random-idle run 2 · adaptive from 790 hosts
+  seed: 2
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  … 790 hosts: checking 1192 paths
+  … 790 hosts: settling (60.0s)
+  … 790 hosts: holding idle (30s)
+  … 790 hosts: destroying
+     790 hosts  nodes   819  deploy   643.0s  ready  28.43s  destroy  441.0s    59.3 MB/node  host mem  42.6%  ok
+  → next 1220 hosts: ~93% memory projected at 1512 hosts (59.3 MB/node, peak 42.6% now)
+  … 1220 hosts: waiting for the host to go quiet
+  … 1220 hosts: reference (20.0s, nothing deployed)
+  … 1220 hosts: deploying 1266 nodes
+    1220 hosts  nodes  1266  deploy  2958.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1220 hosts failed (deploy_failed): trying 1000 hosts
+  … 1000 hosts: waiting for the host to go quiet
+  … 1000 hosts: reference (20.0s, nothing deployed)
+  … 1000 hosts: deploying 1037 nodes
+  … 1000 hosts: checking 1500 paths
+  … 1000 hosts: settling (60.0s)
+  … 1000 hosts: holding idle (30s)
+  … 1000 hosts: destroying
+    1000 hosts  nodes  1037  deploy  1160.0s  ready  36.91s  destroy  803.7s    36.8 MB/node  host mem  53.2%  ok
+  → next 1210 hosts: ~93% memory projected at 2013 hosts (36.8 MB/node, peak 53.2% now); below 1220, which failed
+  … 1210 hosts: waiting for the host to go quiet
+  … 1210 hosts: reference (20.0s, nothing deployed)
+  … 1210 hosts: deploying 1256 nodes
+    1210 hosts  nodes  1256  deploy  2949.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 1210 hosts failed (deploy_failed): trying 1100 hosts
+  … 1100 hosts: waiting for the host to go quiet
+  … 1100 hosts: reference (20.0s, nothing deployed)
+  … 1100 hosts: deploying 1142 nodes
+  … 1100 hosts: checking 1662 paths
+  … 1100 hosts: settling (60.0s)
+  … 1100 hosts: holding idle (30s)
+  … 1100 hosts: destroying
+    1100 hosts  nodes  1142  deploy  1463.3s  ready  44.54s  destroy  988.0s    37.5 MB/node  host mem  54.4%  ok
+  → next 1200 hosts: ~93% memory projected at 1946 hosts (37.5 MB/node, peak 54.4% now); below 1210, which failed
+  … 1200 hosts: waiting for the host to go quiet
+  … 1200 hosts: reference (20.0s, nothing deployed)
+  … 1200 hosts: deploying 1244 nodes
+  … 1200 hosts: checking 1830 paths
+  … 1200 hosts: settling (60.0s)
+  … 1200 hosts: holding idle (30s)
+  … 1200 hosts: destroying
+    1200 hosts  nodes  1244  deploy  1726.9s  ready  58.95s  destroy 1161.3s    30.3 MB/node  host mem  59.5%  ok
+  → ceiling between 1200 and 1210 hosts (1210 failed)
+  random-idle-run2: succeeded: ceiling 1200 hosts
+=== 2026-10-09 05:17:30 UTC · 04-random-idle-run3 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark c6c1b905d6924647899b5212b05a9100: m4max-studio-dd12-95g · random-idle run 3 · adaptive from 840 hosts
+  seed: 3
+  start: 840
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 840 hosts: waiting for the host to go quiet
+  … 840 hosts: reference (20.0s, nothing deployed)
+  … 840 hosts: deploying 872 nodes
+  … 840 hosts: checking 1296 paths
+  … 840 hosts: settling (60.0s)
+  … 840 hosts: holding idle (30s)
+  … 840 hosts: destroying
+     840 hosts  nodes   872  deploy   718.9s  ready  29.72s  destroy  455.7s    64.2 MB/node  host mem  58.0%  ok
+  → next 1170 hosts: ~93% memory projected at 1392 hosts (64.2 MB/node, peak 58.0% now)
+  … 1170 hosts: reference (20.0s, nothing deployed)
+  … 1170 hosts: deploying 1213 nodes
+    1170 hosts  nodes  1213  deploy   677.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 1170 hosts failed (deploy_failed): trying 1000 hosts
+  … 1000 hosts: waiting for the host to go quiet
+  … 1000 hosts: reference (20.0s, nothing deployed)
+  … 1000 hosts: deploying 1037 nodes
+  … 1000 hosts: checking 1528 paths
+  … 1000 hosts: settling (60.0s)
+  … 1000 hosts: holding idle (30s)
+  … 1000 hosts: destroying
+    1000 hosts  nodes  1037  deploy   990.9s  ready  39.56s  destroy  648.8s    35.1 MB/node  host mem  46.3%  ok
+  → next 1160 hosts: ~93% memory projected at 2108 hosts (35.1 MB/node, peak 46.3% now); below 1170, which failed
+  … 1160 hosts: waiting for the host to go quiet
+  … 1160 hosts: reference (20.0s, nothing deployed)
+  … 1160 hosts: deploying 1203 nodes
+    1160 hosts  nodes  1203  deploy  1861.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 1160 hosts failed (deploy_failed): trying 1080 hosts
+  … 1080 hosts: waiting for the host to go quiet
+  … 1080 hosts: reference (20.0s, nothing deployed)
+  … 1080 hosts: deploying 1121 nodes
+  … 1080 hosts: checking 1654 paths
+  … 1080 hosts: settling (60.0s)
+  … 1080 hosts: holding idle (30s)
+  … 1080 hosts: destroying
+    1080 hosts  nodes  1121  deploy  1243.6s  ready  47.27s  destroy  857.8s    26.1 MB/node  host mem  49.5%  ok
+  → next 1150 hosts: ~93% memory projected at 2689 hosts (26.1 MB/node, peak 49.5% now); below 1160, which failed
+  … 1150 hosts: waiting for the host to go quiet
+  … 1150 hosts: reference (20.0s, nothing deployed)
+  … 1150 hosts: deploying 1193 nodes
+    1150 hosts  nodes  1193  deploy  2491.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 1150 hosts failed (deploy_failed): trying 1120 hosts
+  … 1120 hosts: waiting for the host to go quiet
+  … 1120 hosts: reference (20.0s, nothing deployed)
+  … 1120 hosts: deploying 1162 nodes
+  … 1120 hosts: checking 1718 paths
+  … 1120 hosts: settling (60.0s)
+  … 1120 hosts: holding idle (30s)
+  … 1120 hosts: destroying
+    1120 hosts  nodes  1162  deploy  1353.1s  ready  49.81s  destroy  858.8s    34.3 MB/node  host mem  55.0%  ok
+  → next 1140 hosts: ~93% memory projected at 1955 hosts (34.3 MB/node, peak 55.0% now); below 1150, which failed
+  … 1140 hosts: waiting for the host to go quiet
+  … 1140 hosts: reference (20.0s, nothing deployed)
+  … 1140 hosts: deploying 1182 nodes
+  … 1140 hosts: checking 1754 paths
+  … 1140 hosts: settling (60.0s)
+  … 1140 hosts: holding idle (30s)
+  … 1140 hosts: destroying
+    1140 hosts  nodes  1182  deploy  1418.4s  ready  52.25s  destroy  956.2s    29.3 MB/node  host mem  55.4%  ok
+  → ceiling between 1140 and 1150 hosts (1150 failed)
+  random-idle-run3: succeeded: ceiling 1140 hosts
+=== 2026-10-09 09:38:55 UTC · 05-random-idle-run4 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark a847c78a597944248f6ac2acb6e22ef4: m4max-studio-dd12-95g · random-idle run 4 · adaptive from 790 hosts
+  seed: 4
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  … 790 hosts: checking 1214 paths
+  … 790 hosts: settling (60.0s)
+  … 790 hosts: holding idle (30s)
+  … 790 hosts: destroying
+     790 hosts  nodes   819  deploy   603.5s  ready  30.69s  destroy  428.2s    68.2 MB/node  host mem  57.2%  ok
+  → next 1100 hosts: ~93% memory projected at 1301 hosts (68.2 MB/node, peak 57.2% now)
+  … 1100 hosts: waiting for the host to go quiet
+  … 1100 hosts: reference (20.0s, nothing deployed)
+  … 1100 hosts: deploying 1142 nodes
+  … 1100 hosts: checking 1688 paths
+  … 1100 hosts: settling (60.0s)
+  … 1100 hosts: holding idle (30s)
+  … 1100 hosts: destroying
+    1100 hosts  nodes  1142  deploy  1272.5s  ready  52.73s  destroy  877.5s    33.7 MB/node  host mem  52.8%  ok
+  → next 1630 hosts: ~93% memory projected at 1980 hosts (33.7 MB/node, peak 52.8% now)
+  … 1630 hosts: waiting for the host to go quiet
+  … 1630 hosts: reference (20.0s, nothing deployed)
+  … 1630 hosts: deploying 1690 nodes
+  lost the backend (timed out); waiting for it
+  random-idle-run4 failed: The backend at http://localhost:8000/api/v1 did not answer
+=== 2026-10-09 12:20:18 UTC · 06-random-idle-run5 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark e64d443839d644cdadaa25231da9b3ac: m4max-studio-dd12-95g · random-idle run 5 · adaptive from 790 hosts
+  seed: 5
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … preflight
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  lost the backend (timed out); waiting for it
+  random-idle-run5 failed: The backend at http://localhost:8000/api/v1 did not answer
+=== 2026-10-09 13:34:36 UTC · 07-random-idle-run6 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 1d5b1f248c6e411094f77af581648212: m4max-studio-dd12-95g · random-idle run 6 · adaptive from 790 hosts
+  seed: 6
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … preflight
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  lost the backend (timed out); waiting for it
+  random-idle-run6 failed: The backend at http://localhost:8000/api/v1 did not answer
+=== 2026-10-09 14:38:54 UTC · 08-random-idle-run7 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark f48efbda75aa4833aced1952a5301fa5: m4max-studio-dd12-95g · random-idle run 7 · adaptive from 790 hosts
+  seed: 7
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … preflight
+  … baseline: monitor every 5s
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  lost the backend (timed out); waiting for it
+  random-idle-run7 failed: The backend at http://localhost:8000/api/v1 did not answer
+=== 2026-10-09 15:47:11 UTC · 09-random-idle-run8 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+=== 2026-10-09 21:31:23 UTC · suite random on m4max-studio-dd12-95g → /Users/tberhanu@uidaho.edu/workspace/AE3GISv3/backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random
+  bringing the backend up in bench mode (docker compose)
+  building 1 image(s): ae3gis.local/zeek
+  not available here: ae3gis.local/malicious-client (Builds only for linux/amd64; this host is linux/arm64)
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-09 21:37:43 UTC · 05-random-idle-run4 (failed)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 40c0bab2465e42d4ada7375c318a8e98: m4max-studio-dd12-95g · random-idle run 4 · adaptive from 790 hosts
+  seed: 4
+  start: 790
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 790 hosts: waiting for the host to go quiet
+  … 790 hosts: reference (20.0s, nothing deployed)
+  … 790 hosts: deploying 819 nodes
+  … 790 hosts: checking 1214 paths
+  … 790 hosts: settling (60.0s)
+  … 790 hosts: holding idle (30s)
+  … 790 hosts: destroying
+     790 hosts  nodes   819  deploy   182.2s  ready  28.79s  destroy  198.9s    31.1 MB/node  host mem  26.9%  ok
+  → next 987 hosts: ~93% memory projected at 2888 hosts (31.1 MB/node, peak 26.9% now)
+  … 987 hosts: waiting for the host to go quiet
+  … 987 hosts: reference (20.0s, nothing deployed)
+  … 987 hosts: deploying 1023 nodes
+  … 987 hosts: checking 1520 paths
+  … 987 hosts: settling (60.0s)
+  … 987 hosts: holding idle (30s)
+  … 987 hosts: destroying
+     987 hosts  nodes  1023  deploy   283.0s  ready  41.99s  destroy  285.3s    27.9 MB/node  host mem  32.2%  ok
+  → next 1230 hosts: ~93% memory projected at 3135 hosts (27.9 MB/node, peak 32.2% now)
+  … 1230 hosts: waiting for the host to go quiet
+  … 1230 hosts: reference (20.0s, nothing deployed)
+  … 1230 hosts: deploying 1276 nodes
+  … 1230 hosts: checking 1902 paths
+  … 1230 hosts: settling (60.0s)
+  … 1230 hosts: holding idle (30s)
+  … 1230 hosts: destroying
+    1230 hosts  nodes  1276  deploy   413.9s  ready  50.66s  destroy  428.3s    26.8 MB/node  host mem  39.3%  ok
+  → next 1537 hosts: ~93% memory projected at 3200 hosts (26.8 MB/node, peak 39.3% now)
+  … 1537 hosts: waiting for the host to go quiet
+  … 1537 hosts: reference (20.0s, nothing deployed)
+  … 1537 hosts: deploying 1593 nodes
+  … 1537 hosts: checking 2372 paths
+  … 1537 hosts: settling (60.0s)
+  … 1537 hosts: holding idle (30s)
+  … 1537 hosts: destroying
+    1537 hosts  nodes  1593  deploy   629.1s  ready  71.75s  destroy  634.8s    26.8 MB/node  host mem  48.7%  ok
+  → next 1920 hosts: ~93% memory projected at 3169 hosts (26.8 MB/node, peak 48.7% now)
+  … 1920 hosts: waiting for the host to go quiet
+  … 1920 hosts: reference (20.0s, nothing deployed)
+  … 1920 hosts: deploying 1990 nodes
+  … 1920 hosts: checking 2948 paths
+  … 1920 hosts: settling (60.0s)
+  … 1920 hosts: holding idle (30s)
+  … 1920 hosts: destroying
+    1920 hosts  nodes  1990  deploy   975.5s  ready  95.64s  destroy 1012.9s    27.6 MB/node  host mem  62.3%  ok
+  → next 2400 hosts: ~93% memory projected at 3019 hosts (27.6 MB/node, peak 62.3% now)
+  … 2400 hosts: waiting for the host to go quiet
+  … 2400 hosts: reference (20.0s, nothing deployed)
+  … 2400 hosts: deploying 2486 nodes
+    2400 hosts  nodes  2486  deploy  3234.5s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2400 hosts failed (deploy_failed): trying 2160 hosts
+  … 2160 hosts: waiting for the host to go quiet
+  … 2160 hosts: reference (20.0s, nothing deployed)
+  … 2160 hosts: deploying 2238 nodes
+  … 2160 hosts: checking 3310 paths
+  … 2160 hosts: settling (60.0s)
+  … 2160 hosts: holding idle (30s)
+  … 2160 hosts: destroying
+    2160 hosts  nodes  2238  deploy  1288.2s  ready 111.21s  destroy 1318.1s    26.1 MB/node  host mem  71.9%  ok
+  → next 2390 hosts: ~93% memory projected at 2958 hosts (26.1 MB/node, peak 71.9% now); below 2400, which failed
+  … 2390 hosts: waiting for the host to go quiet
+  … 2390 hosts: reference (20.0s, nothing deployed)
+  … 2390 hosts: deploying 2475 nodes
+    2390 hosts  nodes  2475  deploy  3359.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2390 hosts failed (deploy_failed): trying 2280 hosts
+  … 2280 hosts: waiting for the host to go quiet
+  … 2280 hosts: reference (20.0s, nothing deployed)
+  … 2280 hosts: deploying 2363 nodes
+  … 2280 hosts: checking 3484 paths
+  … 2280 hosts: settling (60.0s)
+  … 2280 hosts: holding idle (30s)
+  … 2280 hosts: destroying
+    2280 hosts  nodes  2363  deploy  1485.5s  ready 117.19s  destroy  875.8s    25.0 MB/node  host mem  74.9%  ok
+  → next 2380 hosts: ~93% memory projected at 2992 hosts (25.0 MB/node, peak 74.9% now); below 2390, which failed
+  … 2380 hosts: waiting for the host to go quiet
+  … 2380 hosts: reference (20.0s, nothing deployed)
+  … 2380 hosts: deploying 2465 nodes
+    2380 hosts  nodes  2465  deploy  2743.7s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2380 hosts failed (deploy_failed): trying 2330 hosts
+  … 2330 hosts: waiting for the host to go quiet
+  … 2330 hosts: reference (20.0s, nothing deployed)
+  … 2330 hosts: deploying 2414 nodes
+    2330 hosts  nodes  2414  deploy   944.5s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 2330 hosts failed (deploy_failed): trying 2300 hosts
+  … 2300 hosts: waiting for the host to go quiet
+  … 2300 hosts: reference (20.0s, nothing deployed)
+  … 2300 hosts: deploying 2384 nodes
+    2300 hosts  nodes  2384  deploy  2538.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2300 hosts failed (deploy_failed): trying 2290 hosts
+  … 2290 hosts: waiting for the host to go quiet
+  … 2290 hosts: reference (20.0s, nothing deployed)
+  … 2290 hosts: deploying 2373 nodes
+    2290 hosts  nodes  2373  deploy  2546.5s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  random-idle-run4: succeeded: ceiling 2280 hosts · stopped: deploy_failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+=== 2026-10-10 05:21:23 UTC · 06-random-idle-run5 (failed)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark b328a83681b8430d878951be6178d9a3: m4max-studio-dd12-95g · random-idle run 5 · adaptive from 1590 hosts
+  seed: 5
+  start: 1590
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1590 hosts: waiting for the host to go quiet
+  … 1590 hosts: reference (20.0s, nothing deployed)
+  … 1590 hosts: deploying 1647 nodes
+  … 1590 hosts: checking 2404 paths
+  … 1590 hosts: settling (60.0s)
+  … 1590 hosts: holding idle (30s)
+  … 1590 hosts: destroying
+    1590 hosts  nodes  1647  deploy   624.1s  ready  76.10s  destroy  686.6s    29.9 MB/node  host mem  50.2%  ok
+  → next 1987 hosts: ~93% memory projected at 2998 hosts (29.9 MB/node, peak 50.2% now)
+  … 1987 hosts: waiting for the host to go quiet
+  … 1987 hosts: reference (20.0s, nothing deployed)
+  … 1987 hosts: deploying 2058 nodes
+  … 1987 hosts: checking 3008 paths
+  … 1987 hosts: settling (60.0s)
+  … 1987 hosts: holding idle (30s)
+  … 1987 hosts: destroying
+    1987 hosts  nodes  2058  deploy  1056.8s  ready 102.68s  destroy 1094.7s    27.6 MB/node  host mem  62.4%  ok
+  → next 2480 hosts: ~93% memory projected at 3079 hosts (27.6 MB/node, peak 62.4% now)
+  … 2480 hosts: waiting for the host to go quiet
+  … 2480 hosts: reference (20.0s, nothing deployed)
+  … 2480 hosts: deploying 2570 nodes
+    2480 hosts  nodes  2570  deploy  3502.5s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2480 hosts failed (deploy_failed): trying 2230 hosts
+  … 2230 hosts: waiting for the host to go quiet
+  … 2230 hosts: reference (20.0s, nothing deployed)
+  … 2230 hosts: deploying 2311 nodes
+  … 2230 hosts: checking 3378 paths
+  … 2230 hosts: settling (60.0s)
+  … 2230 hosts: holding idle (30s)
+  … 2230 hosts: destroying
+    2230 hosts  nodes  2311  deploy  1398.0s  ready 108.30s  destroy 1448.3s    26.6 MB/node  host mem  74.1%  ok
+  → next 2470 hosts: ~93% memory projected at 2931 hosts (26.6 MB/node, peak 74.1% now); below 2480, which failed
+  … 2470 hosts: waiting for the host to go quiet
+  … 2470 hosts: reference (20.0s, nothing deployed)
+  … 2470 hosts: deploying 2560 nodes
+    2470 hosts  nodes  2560  deploy  3339.6s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2470 hosts failed (deploy_failed): trying 2350 hosts
+  … 2350 hosts: waiting for the host to go quiet
+  … 2350 hosts: reference (20.0s, nothing deployed)
+  … 2350 hosts: deploying 2435 nodes
+  … 2350 hosts: checking 3558 paths
+  … 2350 hosts: settling (60.0s)
+  … 2350 hosts: holding idle (30s)
+  … 2350 hosts: destroying
+    2350 hosts  nodes  2435  deploy  1433.6s  ready 126.53s  destroy  876.9s    25.1 MB/node  host mem  76.2%  ok
+  → next 2460 hosts: ~93% memory projected at 3008 hosts (25.1 MB/node, peak 76.2% now); below 2470, which failed
+  … 2460 hosts: waiting for the host to go quiet
+  … 2460 hosts: reference (20.0s, nothing deployed)
+  … 2460 hosts: deploying 2550 nodes
+    2460 hosts  nodes  2550  deploy   938.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 2460 hosts failed (deploy_failed): trying 2400 hosts
+  … 2400 hosts: waiting for the host to go quiet
+  … 2400 hosts: reference (20.0s, nothing deployed)
+  … 2400 hosts: deploying 2486 nodes
+    2400 hosts  nodes  2486  deploy  2552.0s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2400 hosts failed (deploy_failed): trying 2380 hosts
+  … 2380 hosts: waiting for the host to go quiet
+  … 2380 hosts: reference (20.0s, nothing deployed)
+  … 2380 hosts: deploying 2465 nodes
+    2380 hosts  nodes  2465  deploy  2532.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2380 hosts failed (deploy_failed): trying 2360 hosts
+  … 2360 hosts: waiting for the host to go quiet
+  … 2360 hosts: reference (20.0s, nothing deployed)
+  … 2360 hosts: deploying 2445 nodes
+    2360 hosts  nodes  2445  deploy  2494.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  random-idle-run5: succeeded: ceiling 2350 hosts · stopped: deploy_failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+=== 2026-10-10 12:39:58 UTC · 07-random-idle-run6 (failed)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark d379bab877704921bb3368ece7800bb4: m4max-studio-dd12-95g · random-idle run 6 · adaptive from 1640 hosts
+  seed: 6
+  start: 1640
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1640 hosts: waiting for the host to go quiet
+  … 1640 hosts: reference (20.0s, nothing deployed)
+  … 1640 hosts: deploying 1700 nodes
+  … 1640 hosts: checking 2562 paths
+  … 1640 hosts: settling (60.0s)
+  … 1640 hosts: holding idle (30s)
+  … 1640 hosts: destroying
+    1640 hosts  nodes  1700  deploy   665.8s  ready  86.80s  destroy  709.5s    29.6 MB/node  host mem  51.2%  ok
+  → next 2050 hosts: ~93% memory projected at 3030 hosts (29.6 MB/node, peak 51.2% now)
+  … 2050 hosts: waiting for the host to go quiet
+  … 2050 hosts: reference (20.0s, nothing deployed)
+  … 2050 hosts: deploying 2126 nodes
+  … 2050 hosts: checking 3154 paths
+  … 2050 hosts: settling (60.0s)
+  … 2050 hosts: holding idle (30s)
+  … 2050 hosts: destroying
+    2050 hosts  nodes  2126  deploy  1100.3s  ready 105.58s  destroy 1582.9s    28.7 MB/node  host mem  66.7%  failed (RuntimeError: Still running: h3_72)
+  random-idle-run6: succeeded: ceiling 1640 hosts · stopped: destroy_failed (RuntimeError: Still running: h3_72)
+=== 2026-10-10 13:59:18 UTC · 08-random-idle-run7 (failed)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 32649101bbd046b691bd4294137961ac: m4max-studio-dd12-95g · random-idle run 7 · adaptive from 1140 hosts
+  seed: 7
+  start: 1140
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1140 hosts: waiting for the host to go quiet
+  … 1140 hosts: reference (20.0s, nothing deployed)
+  … 1140 hosts: deploying 1182 nodes
+  … 1140 hosts: checking 1784 paths
+  … 1140 hosts: settling (60.0s)
+  … 1140 hosts: holding idle (30s)
+  … 1140 hosts: destroying
+    1140 hosts  nodes  1182  deploy   337.1s  ready  49.97s  destroy  355.8s    24.8 MB/node  host mem  30.9%  ok
+  → next 1420 hosts: ~93% memory projected at 3612 hosts (24.8 MB/node, peak 30.9% now)
+  … 1420 hosts: waiting for the host to go quiet
+  … 1420 hosts: reference (20.0s, nothing deployed)
+  … 1420 hosts: deploying 1473 nodes
+  … 1420 hosts: checking 2216 paths
+  … 1420 hosts: settling (60.0s)
+  … 1420 hosts: holding idle (30s)
+  … 1420 hosts: destroying
+    1420 hosts  nodes  1473  deploy   528.7s  ready  70.14s  destroy  541.1s    25.2 MB/node  host mem  41.6%  ok
+  → next 1775 hosts: ~93% memory projected at 3426 hosts (25.2 MB/node, peak 41.6% now)
+  … 1775 hosts: waiting for the host to go quiet
+  … 1775 hosts: reference (20.0s, nothing deployed)
+  … 1775 hosts: deploying 1839 nodes
+  … 1775 hosts: checking 2764 paths
+  … 1775 hosts: settling (60.0s)
+  … 1775 hosts: holding idle (30s)
+  … 1775 hosts: destroying
+    1775 hosts  nodes  1839  deploy   825.9s  ready  86.18s  destroy  842.0s    24.9 MB/node  host mem  52.7%  ok
+  → next 2218 hosts: ~93% memory projected at 3370 hosts (24.9 MB/node, peak 52.7% now)
+  … 2218 hosts: waiting for the host to go quiet
+  … 2218 hosts: reference (20.0s, nothing deployed)
+  … 2218 hosts: deploying 2299 nodes
+  … 2218 hosts: checking 3452 paths
+  … 2218 hosts: settling (60.0s)
+  … 2218 hosts: holding idle (30s)
+  … 2218 hosts: destroying
+    2218 hosts  nodes  2299  deploy  1311.5s  ready 117.58s  destroy 1373.8s    25.6 MB/node  host mem  67.5%  ok
+  → next 2770 hosts: ~93% memory projected at 3200 hosts (25.6 MB/node, peak 67.5% now)
+  … 2770 hosts: waiting for the host to go quiet
+  … 2770 hosts: reference (20.0s, nothing deployed)
+  … 2770 hosts: deploying 2869 nodes
+    2770 hosts  nodes  2869  deploy  4226.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2770 hosts failed (deploy_failed): trying 2490 hosts
+  … 2490 hosts: waiting for the host to go quiet
+  … 2490 hosts: reference (20.0s, nothing deployed)
+  … 2490 hosts: deploying 2580 nodes
+    2490 hosts  nodes  2580  deploy  2900.0s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2490 hosts failed (deploy_failed): trying 2350 hosts
+  … 2350 hosts: waiting for the host to go quiet
+  … 2350 hosts: reference (20.0s, nothing deployed)
+  … 2350 hosts: deploying 2435 nodes
+  … 2350 hosts: checking 3650 paths
+  … 2350 hosts: settling (60.0s)
+  … 2350 hosts: holding idle (30s)
+  … 2350 hosts: destroying
+    2350 hosts  nodes  2435  deploy  1506.7s  ready 135.23s  destroy  885.3s    23.1 MB/node  host mem  74.6%  ok
+  → next 2480 hosts: ~93% memory projected at 3120 hosts (23.1 MB/node, peak 74.6% now); below 2490, which failed
+  … 2480 hosts: waiting for the host to go quiet
+  … 2480 hosts: reference (20.0s, nothing deployed)
+  … 2480 hosts: deploying 2570 nodes
+    2480 hosts  nodes  2570  deploy  2761.0s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2480 hosts failed (deploy_failed): trying 2420 hosts
+  … 2420 hosts: waiting for the host to go quiet
+  … 2420 hosts: reference (20.0s, nothing deployed)
+  … 2420 hosts: deploying 2508 nodes
+    2420 hosts  nodes  2508  deploy  2623.7s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2420 hosts failed (deploy_failed): trying 2380 hosts
+  … 2380 hosts: waiting for the host to go quiet
+  … 2380 hosts: reference (20.0s, nothing deployed)
+  … 2380 hosts: deploying 2465 nodes
+  … 2380 hosts: checking 3692 paths
+  … 2380 hosts: settling (60.0s)
+  … 2380 hosts: holding idle (30s)
+  … 2380 hosts: destroying
+    2380 hosts  nodes  2465  deploy  1565.5s  ready 132.26s  destroy  924.2s    21.7 MB/node  host mem  73.3%  ok
+  → next 2410 hosts: ~93% memory projected at 3270 hosts (21.7 MB/node, peak 73.3% now); below 2420, which failed
+  … 2410 hosts: waiting for the host to go quiet
+  … 2410 hosts: reference (20.0s, nothing deployed)
+  … 2410 hosts: deploying 2498 nodes
+    2410 hosts  nodes  2498  deploy  2632.4s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2410 hosts failed (deploy_failed): trying 2400 hosts
+  … 2400 hosts: waiting for the host to go quiet
+  … 2400 hosts: reference (20.0s, nothing deployed)
+  … 2400 hosts: deploying 2486 nodes
+    2400 hosts  nodes  2486  deploy  2617.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2400 hosts failed (deploy_failed): trying 2390 hosts
+  … 2390 hosts: waiting for the host to go quiet
+  … 2390 hosts: reference (20.0s, nothing deployed)
+  … 2390 hosts: deploying 2475 nodes
+    2390 hosts  nodes  2475  deploy  2610.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  random-idle-run7: succeeded: ceiling 2380 hosts · stopped: deploy_failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+=== 2026-10-10 23:41:50 UTC · 09-random-idle-run8 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 64b5914e28cd447690207fa24cdd6b50: m4max-studio-dd12-95g · random-idle run 8 · adaptive from 1660 hosts
+  seed: 8
+  start: 1660
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1660 hosts: waiting for the host to go quiet
+  … 1660 hosts: reference (20.0s, nothing deployed)
+  … 1660 hosts: deploying 1722 nodes
+  … 1660 hosts: checking 2550 paths
+  … 1660 hosts: settling (60.0s)
+  … 1660 hosts: holding idle (30s)
+  … 1660 hosts: destroying
+    1660 hosts  nodes  1722  deploy   680.7s  ready  82.33s  destroy  748.9s    28.2 MB/node  host mem  49.8%  ok
+  → next 2075 hosts: ~93% memory projected at 3171 hosts (28.2 MB/node, peak 49.8% now)
+  … 2075 hosts: waiting for the host to go quiet
+  … 2075 hosts: reference (20.0s, nothing deployed)
+  … 2075 hosts: deploying 2151 nodes
+    2075 hosts  nodes  2151  deploy   793.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response')))
+  → 2075 hosts failed (deploy_failed): trying 1870 hosts
+  … 1870 hosts: waiting for the host to go quiet
+  … 1870 hosts: reference (20.0s, nothing deployed)
+  … 1870 hosts: deploying 1939 nodes
+  … 1870 hosts: checking 2860 paths
+  … 1870 hosts: settling (60.0s)
+  … 1870 hosts: holding idle (30s)
+  … 1870 hosts: destroying
+    1870 hosts  nodes  1939  deploy   934.9s  ready  97.64s  destroy  979.8s    26.3 MB/node  host mem  58.0%  ok
+  → next 2070 hosts: ~93% memory projected at 3183 hosts (26.3 MB/node, peak 58.0% now); below 2075, which failed
+  … 2070 hosts: waiting for the host to go quiet
+  … 2070 hosts: reference (20.0s, nothing deployed)
+  … 2070 hosts: deploying 2146 nodes
+  … 2070 hosts: checking 3162 paths
+  … 2070 hosts: settling (60.0s)
+  … 2070 hosts: holding idle (30s)
+  … 2070 hosts: destroying
+    2070 hosts  nodes  2146  deploy  1187.1s  ready 111.04s  destroy 1180.5s    26.1 MB/node  host mem  65.2%  ok
+  → ceiling between 2070 and 2075 hosts (2075 failed)
+  random-idle-run8: succeeded: ceiling 2070 hosts
+=== 2026-10-11 01:46:44 UTC · 10-random-idle-run9 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark cdd711113d0a4f1e991f1b93189abbf7: m4max-studio-dd12-95g · random-idle run 9 · adaptive from 1440 hosts
+  seed: 9
+  start: 1440
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1440 hosts: waiting for the host to go quiet
+  … 1440 hosts: reference (20.0s, nothing deployed)
+  … 1440 hosts: deploying 1493 nodes
+  … 1440 hosts: checking 2202 paths
+  … 1440 hosts: settling (60.0s)
+  … 1440 hosts: holding idle (30s)
+  … 1440 hosts: destroying
+    1440 hosts  nodes  1493  deploy   505.2s  ready  67.48s  destroy  546.7s    30.9 MB/node  host mem  47.0%  ok
+  → next 1800 hosts: ~93% memory projected at 2903 hosts (30.9 MB/node, peak 47.0% now)
+  … 1800 hosts: waiting for the host to go quiet
+  … 1800 hosts: reference (20.0s, nothing deployed)
+  … 1800 hosts: deploying 1865 nodes
+  … 1800 hosts: checking 2774 paths
+  … 1800 hosts: settling (60.0s)
+  … 1800 hosts: holding idle (30s)
+  … 1800 hosts: destroying
+    1800 hosts  nodes  1865  deploy   848.6s  ready  89.43s  destroy  864.7s    28.0 MB/node  host mem  57.3%  ok
+  → next 2250 hosts: ~93% memory projected at 3060 hosts (28.0 MB/node, peak 57.3% now)
+  … 2250 hosts: waiting for the host to go quiet
+  … 2250 hosts: reference (20.0s, nothing deployed)
+  … 2250 hosts: deploying 2333 nodes
+  … 2250 hosts: checking 3476 paths
+  … 2250 hosts: settling (60.0s)
+  … 2250 hosts: holding idle (30s)
+  … 2250 hosts: destroying
+    2250 hosts  nodes  2333  deploy  1386.3s  ready 118.43s  destroy 1447.4s    28.8 MB/node  host mem  75.2%  ok
+  → next 2620 hosts: ~93% memory projected at 2868 hosts (28.8 MB/node, peak 75.2% now)
+  … 2620 hosts: waiting for the host to go quiet
+  … 2620 hosts: reference (20.0s, nothing deployed)
+  … 2620 hosts: deploying 2715 nodes
+    2620 hosts  nodes  2715  deploy  4003.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2620 hosts failed (deploy_failed): trying 2440 hosts
+  … 2440 hosts: waiting for the host to go quiet
+  … 2440 hosts: reference (20.0s, nothing deployed)
+  … 2440 hosts: deploying 2528 nodes
+    2440 hosts  nodes  2528  deploy  3271.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2440 hosts failed (deploy_failed): trying 2340 hosts
+  … 2340 hosts: waiting for the host to go quiet
+  … 2340 hosts: reference (20.0s, nothing deployed)
+  … 2340 hosts: deploying 2424 nodes
+  … 2340 hosts: checking 3610 paths
+  … 2340 hosts: settling (60.0s)
+  … 2340 hosts: holding idle (30s)
+  … 2340 hosts: destroying
+    2340 hosts  nodes  2424  deploy  1444.3s  ready 122.58s  destroy  880.2s    26.2 MB/node  host mem  77.6%  ok
+  → next 2430 hosts: ~93% memory projected at 2921 hosts (26.2 MB/node, peak 77.6% now); below 2440, which failed
+  … 2430 hosts: waiting for the host to go quiet
+  … 2430 hosts: reference (20.0s, nothing deployed)
+  … 2430 hosts: deploying 2518 nodes
+    2430 hosts  nodes  2518  deploy  2672.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2430 hosts failed (deploy_failed): trying 2380 hosts
+  … 2380 hosts: waiting for the host to go quiet
+  … 2380 hosts: reference (20.0s, nothing deployed)
+  … 2380 hosts: deploying 2465 nodes
+    2380 hosts  nodes  2465  deploy  2590.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2380 hosts failed (deploy_failed): trying 2360 hosts
+  … 2360 hosts: waiting for the host to go quiet
+  … 2360 hosts: reference (20.0s, nothing deployed)
+  … 2360 hosts: deploying 2445 nodes
+    2360 hosts  nodes  2445  deploy  2559.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2360 hosts failed (deploy_failed): trying 2350 hosts
+  … 2350 hosts: waiting for the host to go quiet
+  … 2350 hosts: reference (20.0s, nothing deployed)
+  … 2350 hosts: deploying 2435 nodes
+  … 2350 hosts: checking 3624 paths
+  … 2350 hosts: settling (60.0s)
+  … 2350 hosts: holding idle (30s)
+  … 2350 hosts: destroying
+    2350 hosts  nodes  2435  deploy  1479.0s  ready 127.01s  destroy  922.6s    23.2 MB/node  host mem  80.1%  ok
+  → ceiling between 2350 and 2360 hosts (2360 failed)
+  random-idle-run9: succeeded: ceiling 2350 hosts
+=== 2026-10-11 09:37:10 UTC · 11-random-idle-run10 (pending)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark bd95394987ca468fbdbb2a421b28cb0b: m4max-studio-dd12-95g · random-idle run 10 · adaptive from 1640 hosts
+  seed: 10
+  start: 1640
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1640 hosts: waiting for the host to go quiet
+  … 1640 hosts: reference (20.0s, nothing deployed)
+  … 1640 hosts: deploying 1700 nodes
+  … 1640 hosts: checking 2554 paths
+  … 1640 hosts: settling (60.0s)
+  … 1640 hosts: holding idle (30s)
+  … 1640 hosts: destroying
+    1640 hosts  nodes  1700  deploy   665.4s  ready  81.63s  destroy  730.0s    28.4 MB/node  host mem  49.4%  ok
+  → next 2050 hosts: ~93% memory projected at 3156 hosts (28.4 MB/node, peak 49.4% now)
+  … 2050 hosts: waiting for the host to go quiet
+  … 2050 hosts: reference (20.0s, nothing deployed)
+  … 2050 hosts: deploying 2126 nodes
+  … 2050 hosts: checking 3198 paths
+  … 2050 hosts: settling (60.0s)
+  … 2050 hosts: holding idle (30s)
+  … 2050 hosts: destroying
+    2050 hosts  nodes  2126  deploy  1129.2s  ready 103.16s  destroy 1161.1s       – MB/node  host mem     –%  ok
+  → next 2560 hosts: no memory per node measured: ×1.5
+  … 2560 hosts: waiting for the host to go quiet
+  … 2560 hosts: reference (20.0s, nothing deployed)
+  … 2560 hosts: deploying 2652 nodes
+    2560 hosts  nodes  2652  deploy  3583.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2560 hosts failed (deploy_failed): trying 2300 hosts
+  … 2300 hosts: waiting for the host to go quiet
+  … 2300 hosts: reference (20.0s, nothing deployed)
+  … 2300 hosts: deploying 2384 nodes
+    2300 hosts  nodes  2384  deploy  3059.1s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2300 hosts failed (deploy_failed): trying 2180 hosts
+  … 2180 hosts: waiting for the host to go quiet
+  … 2180 hosts: reference (20.0s, nothing deployed)
+  … 2180 hosts: deploying 2258 nodes
+  … 2180 hosts: checking 3412 paths
+  … 2180 hosts: settling (60.0s)
+  … 2180 hosts: holding idle (30s)
+  … 2180 hosts: destroying
+    2180 hosts  nodes  2258  deploy  1343.4s  ready 107.90s  destroy 1255.9s    26.3 MB/node  host mem  74.1%  ok
+  → next 2290 hosts: ~93% memory projected at 2890 hosts (26.3 MB/node, peak 74.1% now); below 2300, which failed
+  … 2290 hosts: waiting for the host to go quiet
+  … 2290 hosts: reference (20.0s, nothing deployed)
+  … 2290 hosts: deploying 2373 nodes
+  … 2290 hosts: checking 3574 paths
+  … 2290 hosts: settling (60.0s)
+  … 2290 hosts: holding idle (30s)
+  … 2290 hosts: destroying
+    2290 hosts  nodes  2373  deploy  1338.5s  ready 120.45s  destroy  843.4s    25.7 MB/node  host mem  76.9%  ok
+  → ceiling between 2290 and 2300 hosts (2300 failed)
+  random-idle-run10: succeeded: ceiling 2290 hosts
+=== 2026-10-11 14:08:52 UTC · suite finished: /Users/tberhanu@uidaho.edu/workspace/AE3GISv3/backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random/summary.md

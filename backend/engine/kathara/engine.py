@@ -471,10 +471,10 @@ class KatharaEngine:
                 return {}
 
             def pid(item: tuple[str, str]) -> tuple[str, int]:
-                try:
-                    return item[0], int(api.inspect_container(item[1])["State"]["Pid"] or 0)
-                except Exception:
-                    return item[0], 0
+                for _ in range(2):  # a busy daemon can fail one inspect
+                    with contextlib.suppress(Exception):
+                        return item[0], int(api.inspect_container(item[1])["State"]["Pid"] or 0)
+                return item[0], 0
 
             with ThreadPoolExecutor(max_workers=min(16, len(running))) as pool:
                 return {nid: p for nid, p in pool.map(pid, running) if p > 0}

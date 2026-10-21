@@ -10,7 +10,8 @@ method behind them is in [README.md](README.md); this page is the checklist.
 | `traffic` | **Capacity under traffic.** For 100 traffic cells (5 rates × 5 burst intervals × TCP/UDP × clients → servers / mesh), the most hosts each comfortably supports and where it starts to fail, 50 hosts apart | ~2 days (rough: the first full run on the fixed traffic driver is still going) |
 
 Both are started by one command each and keep going on their own; the
-results land in `backend/benchmark-results/<host>/` (kept out of git).
+results land in `backend/benchmark-results/<host>/` (ignored by git; the
+reports are committed by hand, see [Results](#4-results)).
 
 ## 1. Prepare the machine
 
@@ -92,8 +93,19 @@ benchmark, and writes a manifest after every step.
 `backend/benchmark-results/<host>/<date>-random/` and `<date>-traffic/`:
 `summary.md` (the 10 climbs' mean ± std, and the traffic grids of
 *comfortable / fails* per scenario), `manifest.json`, `run.log`, and a folder
-per benchmark with its report and full export. Zip the host folder to share
-it; results never go into git.
+per benchmark with its report and full export.
+
+Commit the reports, not the exports: everything but the `export.zip` files
+(the raw samples, tens of MB each) is a few MB of text, so force-add it past
+`.gitignore` on a `benchmarking/<host>` branch, leaving out aborted suite
+folders:
+
+```bash
+cd backend/benchmark-results/$H
+git add -f $(find . -type f ! -name export.zip)
+```
+
+Keep the exports on the machine, or zip the host folder to share them.
 
 ## What has bitten earlier runs
 

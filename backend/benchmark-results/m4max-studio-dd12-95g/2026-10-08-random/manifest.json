@@ -1,0 +1,414 @@
+{
+  "suite": "random",
+  "description": "The image census, then 10 random-mix idle climbs (every type with equal odds), each to its own ceiling, from the images the census found usable on this host.",
+  "suite_sha": "f52ecbd59d1296c034181ef84698e654a9992f0211ad929a865057698ab42137",
+  "host": "m4max-studio-dd12-95g",
+  "platform": "Darwin",
+  "base_url": "http://localhost:8000/api/v1",
+  "restart": "docker desktop restart",
+  "started_at": "2026-10-08T18:10:47.235889+00:00",
+  "ended_at": "2026-10-11T14:08:52.908066+00:00",
+  "runs": [
+    {
+      "key": "census",
+      "item": "census",
+      "run": 1,
+      "runs": 1,
+      "seed": null,
+      "dir": "01-census",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-08T18:23:09.065294+00:00",
+        "mem_total": 101853388800,
+        "mem_available": 99913875456,
+        "loadavg": [
+          0.18,
+          0.05,
+          0.01
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "47f64fe1b07340b9a7ec5fd4ad0b981a",
+      "started_at": "2026-10-08T18:23:09.087029+00:00",
+      "notes": {},
+      "error": null,
+      "ended_at": "2026-10-08T19:07:12.800915+00:00",
+      "outcome": "27 of 29 cases usable",
+      "ceiling": null,
+      "stopped_by": "completed",
+      "limit": null
+    },
+    {
+      "key": "random-idle-run1",
+      "item": "random-idle",
+      "run": 1,
+      "runs": 10,
+      "seed": 1,
+      "dir": "02-random-idle-run1",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-08T19:08:27.531674+00:00",
+        "mem_total": 101853388800,
+        "mem_available": 99949416448,
+        "loadavg": [
+          0.35,
+          0.08,
+          0.03
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "11980395c09244f9a48e13a576b47b87",
+      "started_at": "2026-10-08T19:08:27.564804+00:00",
+      "notes": {
+        "seed": 1,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T01:03:49.456976+00:00",
+      "outcome": "ceiling 1140 hosts (1150 hosts failed (memory))",
+      "ceiling": 1140,
+      "stopped_by": "criterion:memory",
+      "limit": "1150 hosts failed (memory)"
+    },
+    {
+      "key": "random-idle-run2",
+      "item": "random-idle",
+      "run": 2,
+      "runs": 10,
+      "seed": 2,
+      "dir": "03-random-idle-run2",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T01:05:15.849578+00:00",
+        "mem_total": 101853388800,
+        "mem_available": 100169256960,
+        "loadavg": [
+          0.13,
+          0.03,
+          0.01
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "a3c889d675554be48f66a09acfa94253",
+      "started_at": "2026-10-09T01:05:15.905556+00:00",
+      "notes": {
+        "seed": 2,
+        "start": 790,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T05:17:30.258647+00:00",
+      "outcome": "ceiling 1200 hosts (ceiling between 1200 and 1210 hosts (1210 failed))",
+      "ceiling": 1200,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 1200 and 1210 hosts (1210 failed)"
+    },
+    {
+      "key": "random-idle-run3",
+      "item": "random-idle",
+      "run": 3,
+      "runs": 10,
+      "seed": 3,
+      "dir": "04-random-idle-run3",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T05:18:55.299972+00:00",
+        "mem_total": 101853388800,
+        "mem_available": 99917402112,
+        "loadavg": [
+          0.72,
+          0.21,
+          0.07
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "c6c1b905d6924647899b5212b05a9100",
+      "started_at": "2026-10-09T05:18:55.350487+00:00",
+      "notes": {
+        "seed": 3,
+        "start": 840,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T09:38:55.710087+00:00",
+      "outcome": "ceiling 1140 hosts (ceiling between 1140 and 1150 hosts (1150 failed))",
+      "ceiling": 1140,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 1140 and 1150 hosts (1150 failed)"
+    },
+    {
+      "key": "random-idle-run4",
+      "item": "random-idle",
+      "run": 4,
+      "runs": 10,
+      "seed": 4,
+      "dir": "05-random-idle-run4",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T21:38:56.684215+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100248006656,
+        "loadavg": [
+          0.03,
+          0.01,
+          0.0
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "40c0bab2465e42d4ada7375c318a8e98",
+      "started_at": "2026-10-09T21:38:56.731399+00:00",
+      "notes": {
+        "seed": 4,
+        "start": 790,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-10T05:21:23.354903+00:00",
+      "outcome": "ceiling 2280 hosts (2290 hosts failed (deploy_failed))",
+      "ceiling": 2280,
+      "stopped_by": "criterion:deploy_failed",
+      "limit": "2290 hosts failed (deploy_failed)"
+    },
+    {
+      "key": "random-idle-run5",
+      "item": "random-idle",
+      "run": 5,
+      "runs": 10,
+      "seed": 5,
+      "dir": "06-random-idle-run5",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-10T05:22:49.230290+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100080218112,
+        "loadavg": [
+          0.03,
+          0.01,
+          0.0
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "b328a83681b8430d878951be6178d9a3",
+      "started_at": "2026-10-10T05:22:49.360551+00:00",
+      "notes": {
+        "seed": 5,
+        "start": 1590,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-10T12:39:58.560757+00:00",
+      "outcome": "ceiling 2350 hosts (2360 hosts failed (deploy_failed))",
+      "ceiling": 2350,
+      "stopped_by": "criterion:deploy_failed",
+      "limit": "2360 hosts failed (deploy_failed)"
+    },
+    {
+      "key": "random-idle-run6",
+      "item": "random-idle",
+      "run": 6,
+      "runs": 10,
+      "seed": 6,
+      "dir": "07-random-idle-run6",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-10T12:43:13.947341+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100057792512,
+        "loadavg": [
+          0.06,
+          0.03,
+          0.01
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "d379bab877704921bb3368ece7800bb4",
+      "started_at": "2026-10-10T12:43:14.041112+00:00",
+      "notes": {
+        "seed": 6,
+        "start": 1640,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-10T13:59:17.998785+00:00",
+      "outcome": "ceiling 1640 hosts (2050 hosts failed (destroy_failed))",
+      "ceiling": 1640,
+      "stopped_by": "criterion:destroy_failed",
+      "limit": "2050 hosts failed (destroy_failed)"
+    },
+    {
+      "key": "random-idle-run7",
+      "item": "random-idle",
+      "run": 7,
+      "runs": 10,
+      "seed": 7,
+      "dir": "08-random-idle-run7",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-10T14:00:33.454733+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 99997872128,
+        "loadavg": [
+          0.45,
+          0.17,
+          0.06
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "32649101bbd046b691bd4294137961ac",
+      "started_at": "2026-10-10T14:00:33.524392+00:00",
+      "notes": {
+        "seed": 7,
+        "start": 1140,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-10T23:41:50.481683+00:00",
+      "outcome": "ceiling 2380 hosts (2390 hosts failed (deploy_failed))",
+      "ceiling": 2380,
+      "stopped_by": "criterion:deploy_failed",
+      "limit": "2390 hosts failed (deploy_failed)"
+    },
+    {
+      "key": "random-idle-run8",
+      "item": "random-idle",
+      "run": 8,
+      "runs": 10,
+      "seed": 8,
+      "dir": "09-random-idle-run8",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-10T23:45:08.026463+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 99927846912,
+        "loadavg": [
+          0.27,
+          0.1,
+          0.03
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "64b5914e28cd447690207fa24cdd6b50",
+      "started_at": "2026-10-10T23:45:08.118780+00:00",
+      "notes": {
+        "seed": 8,
+        "start": 1660,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-11T01:46:44.346608+00:00",
+      "outcome": "ceiling 2070 hosts (ceiling between 2070 and 2075 hosts (2075 failed))",
+      "ceiling": 2070,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 2070 and 2075 hosts (2075 failed)"
+    },
+    {
+      "key": "random-idle-run9",
+      "item": "random-idle",
+      "run": 9,
+      "runs": 10,
+      "seed": 9,
+      "dir": "10-random-idle-run9",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-11T01:48:00.290003+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100005564416,
+        "loadavg": [
+          0.33,
+          0.12,
+          0.04
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "cdd711113d0a4f1e991f1b93189abbf7",
+      "started_at": "2026-10-11T01:48:00.388031+00:00",
+      "notes": {
+        "seed": 9,
+        "start": 1440,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-11T09:37:10.915195+00:00",
+      "outcome": "ceiling 2350 hosts (ceiling between 2350 and 2360 hosts (2360 failed))",
+      "ceiling": 2350,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 2350 and 2360 hosts (2360 failed)"
+    },
+    {
+      "key": "random-idle-run10",
+      "item": "random-idle",
+      "run": 10,
+      "runs": 10,
+      "seed": 10,
+      "dir": "11-random-idle-run10",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-11T09:38:38.543783+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100001964032,
+        "loadavg": [
+          0.51,
+          0.16,
+          0.06
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "bd95394987ca468fbdbb2a421b28cb0b",
+      "started_at": "2026-10-11T09:38:38.652879+00:00",
+      "notes": {
+        "seed": 10,
+        "start": 1640,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek",
+          "attacker \u00b7 ae3gis.local/malicious-client"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-11T14:08:52.901289+00:00",
+      "outcome": "ceiling 2290 hosts (ceiling between 2290 and 2300 hosts (2300 failed))",
+      "ceiling": 2290,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 2290 and 2300 hosts (2300 failed)"
+    }
+  ],
+  "git": {
+    "commit": "ce3d1d4d687630490299cb18de6664b59efe3db7",
+    "dirty": false
+  },
+  "prebuild": {
+    "built": [],
+    "failed": {
+      "ae3gis.local/zeek": "BuildError: E: Couldn't find any package by regex 'zeekctl-6.0'"
+    },
+    "unavailable": {
+      "ae3gis.local/malicious-client": "Builds only for linux/amd64; this host is linux/arm64"
+    }
+  }
+}

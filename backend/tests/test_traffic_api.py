@@ -8,6 +8,8 @@ import zipfile
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
+from services import traffic
+
 FLOW = {"id": "f1", "client": "hA", "server": "hB"}
 
 
@@ -252,6 +254,44 @@ def test_some_servers_failing_leaves_the_rest_running(client, topology, wait_job
     assert done["result"]["totals"]["flows_with_errors"] == 1
     kinds = {e["type"] for e in client.get(f"/api/v1/topologies/{topology['id']}/events").json()}
     assert "traffic.servers_failed" in kinds
+
+
+def _missing_pids(monkeypatch, fake_engine, node, times):
+    """Leave ``node`` out of the engine's first ``times`` pid lookups."""
+    monkeypatch.setattr(traffic, "NODE_RETRY_S", (0.0, 0.0, 0.0))
+    real, calls = fake_engine.node_pids, []
+
+    async def node_pids(state):
+        pids = await real(state)
+        calls.append(1)
+        return {n: p for n, p in pids.items() if n != node or len(calls) > times}
+
+    monkeypatch.setattr(fake_engine, "node_pids", node_pids)
+    return calls
+
+
+def test_a_node_missing_from_one_lookup_is_looked_up_again(
+    client, topology, wait_jobs, fake_engine, monkeypatch
+):
+    _deploy(client, wait_jobs, topology)
+    calls = _missing_pids(monkeypatch, fake_engine, "hB", times=1)
+    run = _run(client, topology["id"], duration_s=1).json()
+    wait_jobs()
+    done = client.get(f"/api/v1/traffic/runs/{run['id']}").json()
+    assert done["status"] == "succeeded", done["job"]["error"]
+    assert len(calls) == 2
+
+
+def test_a_node_missing_from_every_lookup_fails_the_run(
+    client, topology, wait_jobs, fake_engine, monkeypatch
+):
+    _deploy(client, wait_jobs, topology)
+    calls = _missing_pids(monkeypatch, fake_engine, "hB", times=99)
+    run = _run(client, topology["id"], duration_s=1).json()
+    wait_jobs()
+    done = client.get(f"/api/v1/traffic/runs/{run['id']}").json()
+    assert done["status"] == "failed" and "Not running: hB" in done["job"]["error"]
+    assert len(calls) == 1 + len(traffic.NODE_RETRY_S)
 
 
 def test_destroy_stops_a_run(client, topology, wait_jobs, fake_engine):
