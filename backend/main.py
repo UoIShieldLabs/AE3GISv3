@@ -28,6 +28,7 @@ from api import (
     system,
     topologies,
     traffic,
+    webui,
 )
 from api.errors import install_error_handlers
 from config import API_VERSION, Settings, get_settings
@@ -153,6 +154,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         captures.router,
         traffic.router,
         scenario.router,
+        webui.router,
         monitors.router,
         benchmarks.router,
         images.router,
