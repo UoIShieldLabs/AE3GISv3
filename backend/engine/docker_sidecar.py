@@ -253,29 +253,51 @@ class DockerExec:
 
     Mirrors ``DockerSidecar``'s ``pump``/``signal``/``remove`` surface so the
     scenario job loop drives either. It runs in the node's own filesystem and
-    process space and adds no container, namespaces or mounts; ``remove`` only
-    closes the stream (the exec'd process is not forcibly killed — the scenario
-    runner stops between steps, and the lab is the containment boundary).
+    process space and adds no container, namespaces or mounts. ``remove`` closes
+    the stream *and* kills the exec'd process tree from inside the node: Docker
+    can't signal an exec and the backend holds only the Docker socket (no host
+    PID namespace), so a wrapper records the group leader's PID and ``remove``
+    walks ``/proc`` for its descendants and kills them (see ``_kill_tree``).
     """
 
-    def __init__(self, client: Any, exec_id: str, stream: Any, node_id: str, name: str) -> None:
+    def __init__(
+        self,
+        client: Any,
+        exec_id: str,
+        stream: Any,
+        node_id: str,
+        name: str,
+        container_id: str,
+        pidfile: str,
+    ) -> None:
         self._client = client
         self._exec_id = exec_id
         self._stream = stream
         self.node_id = node_id
         self.name = name
+        self._container_id = container_id
+        self._pidfile = pidfile
         self._removed = False
 
     @classmethod
     def start(cls, client: Any, node_container: Any, argv: list[str], node_id: str) -> DockerExec:
         """Create the exec and attach its output *before* reading (blocking; call
-        from a worker thread). ``demux=True`` keeps stderr out of stdout."""
+        from a worker thread). ``demux=True`` keeps stderr out of stdout.
+
+        ``argv`` runs under a tiny ``sh`` shim that records its own PID — the
+        process-group leader, since a ``docker exec`` is a session leader — to a
+        pidfile, then ``exec``s ``argv`` in place (same PID). That lets ``remove``
+        find and kill the whole tree without any extra tools in the image."""
         api = client.api
-        exec_id = api.exec_create(node_container.id, argv, stdout=True, stderr=True, tty=False)[
+        pidfile = f"/tmp/.ae3gis-exec-{uuid.uuid4().hex}"
+        wrapped = ["sh", "-c", f'echo $$ >{pidfile} 2>/dev/null; exec "$@"', "sh", *argv]
+        exec_id = api.exec_create(node_container.id, wrapped, stdout=True, stderr=True, tty=False)[
             "Id"
         ]
         stream = api.exec_start(exec_id, stream=True, demux=True)
-        return cls(client, exec_id, stream, node_id, node_container.name)
+        return cls(
+            client, exec_id, stream, node_id, node_container.name, node_container.id, pidfile
+        )
 
     def _pump_sync(
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
@@ -309,8 +331,8 @@ class DockerExec:
             raise
 
     async def signal(self, sig: str = "SIGINT") -> None:
-        # A docker exec cannot be signalled through the SDK; closing the stream
-        # ends our read. The step loop stops between steps (best-effort).
+        # A docker exec can't be signalled through the SDK, so stopping == killing
+        # the process tree from inside the node and closing our read stream.
         await self.remove()
 
     async def remove(self) -> None:
@@ -318,4 +340,39 @@ class DockerExec:
             return
         self._removed = True
         with contextlib.suppress(Exception):
+            await asyncio.to_thread(self._kill_tree)
+        with contextlib.suppress(Exception):
             await asyncio.to_thread(self._stream.close)
+
+    def _kill_tree(self) -> None:
+        """Kill the exec'd process tree from inside the node (TERM, then KILL).
+
+        The shim wrote the group leader's PID to ``self._pidfile``; walk ``/proc``
+        for its descendants by PPID (``comm`` can hold spaces, so strip past the
+        last ``)``) and signal each with a plain positive ``kill`` — works on
+        BusyBox as well as coreutils, and touches nothing outside the tree. Fired
+        detached and best-effort: a short command has usually exited already."""
+        pf = self._pidfile
+        script = (
+            f"P=$(cat {pf} 2>/dev/null) || exit 0\n"
+            '[ -n "$P" ] || exit 0\n'
+            'pids="$P"\n'
+            "while :; do\n"
+            '  new="$pids"\n'
+            "  for s in /proc/[0-9]*/stat; do\n"
+            "    pid=${s#/proc/}; pid=${pid%%/*}\n"
+            '    pp=$(sed -e "s/^.*) //" "$s" 2>/dev/null | cut -d" " -f2) || continue\n'
+            "    for t in $pids; do\n"
+            '      [ "$pp" = "$t" ] && case " $new " in *" $pid "*) ;; *) new="$new $pid";; esac\n'
+            "    done\n"
+            "  done\n"
+            '  [ "$new" = "$pids" ] && break\n'
+            '  pids="$new"\n'
+            "done\n"
+            "kill -TERM $pids 2>/dev/null; sleep 0.3; kill -KILL $pids 2>/dev/null\n"
+            f"rm -f {pf}\n"
+        )
+        kid = self._client.api.exec_create(
+            self._container_id, ["sh", "-c", script], stdout=False, stderr=False, tty=False
+        )["Id"]
+        self._client.api.exec_start(kid, detach=True)
