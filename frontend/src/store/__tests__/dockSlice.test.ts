@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '@/store';
-import { monitorTabId, scenarioTabId } from '@/store/slices/dockSlice';
+import { monitorTabId, scenarioTabId, webuiTabId } from '@/store/slices/dockSlice';
 
 const st = () => useAppStore.getState();
 
@@ -53,5 +53,16 @@ describe('dock slice — scenario tabs', () => {
     S().openDockTab({ kind: 'scenario', id: scenarioTabId('j9'), jobId: 'j9', title: 'Phase run' });
     expect(S().dockTabs.map((t) => t.id)).toEqual(['scenario:new', 'scenario:j9']);
     expect(S().activeDockTabId).toBe('scenario:j9');
+  });
+});
+
+describe('dock slice — web UI tabs', () => {
+  const S = () => useAppStore.getState();
+  beforeEach(() => useAppStore.setState({ dockTabs: [], activeDockTabId: null, dockMinimized: false }));
+  it('opens one web-UI tab per node and focuses it', () => {
+    S().openDockTab({ kind: 'webui', id: webuiTabId('process-sim'), nodeId: 'process-sim', title: 'process-sim · web' });
+    S().openDockTab({ kind: 'webui', id: webuiTabId('process-sim'), nodeId: 'process-sim', title: 'process-sim · web' });
+    expect(S().dockTabs.map((t) => t.id)).toEqual(['webui:process-sim']);
+    expect(S().activeDockTabId).toBe('webui:process-sim');
   });
 });

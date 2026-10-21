@@ -395,6 +395,11 @@ export function trafficWsPath(topologyId: string, jobId: string): string {
 export function monitorWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/monitors/${encodeURIComponent(jobId)}`;
 }
+/** Relay URL for a node's own web UI (an iframe src). Served through the same
+ *  /api proxy, so it works in dev and prod without a host port. */
+export function webUiUrl(topologyId: string, nodeId: string): string {
+  return `${V1}/topologies/${encodeURIComponent(topologyId)}/webui/${encodeURIComponent(nodeId)}/`;
+}
 export function scenarioWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/scenario/${encodeURIComponent(jobId)}`;
 }

@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Activity as ActivityIcon, ChevronDown, ChevronUp, Gauge, ListChecks, Radio, SquareTerminal, X } from 'lucide-react';
+import { Activity as ActivityIcon, ChevronDown, ChevronUp, Gauge, Globe, ListChecks, Radio, SquareTerminal, X } from 'lucide-react';
 import { useAppStore, type DockTab } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { cn } from '@/lib/cn';
@@ -11,8 +11,9 @@ const CaptureView = lazy(() => import('@/features/capture/CaptureView').then((m)
 const TrafficPanel = lazy(() => import('@/features/traffic/TrafficPanel').then((m) => ({ default: m.TrafficPanel })));
 const MonitorPanel = lazy(() => import('@/features/monitor/MonitorPanel').then((m) => ({ default: m.MonitorPanel })));
 const ScenarioPanel = lazy(() => import('@/features/scenario/ScenarioPanel').then((m) => ({ default: m.ScenarioPanel })));
+const WebUiPanel = lazy(() => import('@/features/webui/WebUiPanel').then((m) => ({ default: m.WebUiPanel })));
 
-const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon, monitor: Gauge, scenario: ListChecks } as const;
+const ICONS = { terminal: SquareTerminal, capture: Radio, traffic: ActivityIcon, monitor: Gauge, scenario: ListChecks, webui: Globe } as const;
 
 function title(tab: DockTab): string {
   return tab.kind === 'terminal' ? tab.name : tab.title;
@@ -32,6 +33,8 @@ function Body({ tab, active }: { tab: DockTab; active: boolean }) {
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><MonitorPanel tabId={tab.id} jobId={tab.jobId} /></div>;
     case 'scenario':
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><ScenarioPanel tabId={tab.id} jobId={tab.jobId} /></div>;
+    case 'webui':
+      return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><WebUiPanel nodeId={tab.nodeId} /></div>;
   }
 }
 
@@ -53,7 +56,7 @@ export function Dock() {
           {tabs.map((t) => {
             const active = t.id === activeId && !minimized;
             const Icon = ICONS[t.kind];
-            const running = t.kind !== 'terminal' && !!t.jobId && live.includes(t.jobId);
+            const running = t.kind !== 'terminal' && 'jobId' in t && !!t.jobId && live.includes(t.jobId);
             return (
               <div
                 key={t.id}

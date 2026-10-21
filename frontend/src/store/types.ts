@@ -176,7 +176,8 @@ export type DockTab =
   | { kind: 'capture'; id: string; jobId: string; title: string }
   | { kind: 'traffic'; id: string; jobId: string | null; title: string; seed?: { client?: string; nonce: number } }
   | { kind: 'monitor'; id: string; jobId: string | null; title: string; seed?: { nodes?: string[]; nonce: number } }
-  | { kind: 'scenario'; id: string; jobId: string | null; title: string; seed?: { phaseId?: string; nonce: number } };
+  | { kind: 'scenario'; id: string; jobId: string | null; title: string; seed?: { phaseId?: string; nonce: number } }
+  | { kind: 'webui'; id: string; nodeId: string; title: string };
 
 export interface DockSlice {
   dockTabs: DockTab[];

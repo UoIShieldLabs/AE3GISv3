@@ -38,6 +38,10 @@ export interface Container {
   /** Extra interface legs beyond the home subnet. The home-subnet IP stays in
    *  `ip` (eth0); each leg becomes another addressed interface at deploy time. */
   interfaces?: NetworkInterface[];
+  /** HTTP port this node serves a web UI on (process-sim, an HMI console).
+   *  Relayed to the browser via GET /topologies/{id}/webui/{node}/. Falls back
+   *  to the catalog type's webUiPort when unset. */
+  webUiPort?: number;
   /** Open vSwitch switches only: mirror all bridge traffic to this node's port
    *  (SPAN), so a passive IDS on that link sees unicast it would otherwise miss. */
   mirrorTo?: string;
