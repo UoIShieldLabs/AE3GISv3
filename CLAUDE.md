@@ -238,7 +238,7 @@ tables record every long operation.
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
   `expanded`, theme, tool, panels, zoom, collapsed palette categories),
-  `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario;
+  `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario | webui;
   `openTerminal` wraps it), `activity` (running captures/traffic runs/monitors
   from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
@@ -312,6 +312,7 @@ tables record every long operation.
   `topologies/{id}/monitors`, `monitors/{id}[/samples|/export]`;
   `topologies/{id}/scenario/steps/run` and `…/scenario/phases/{phaseId}/run` (202 + a
   run job), `scenario/runs/{id}[/samples|/export]`;
+  `topologies/{id}/webui/{node}/{path}` (GET/POST: relay a node's own web UI, §ARCHITECTURE 5.9);
   WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`,
   `…/monitors/{job}` and `…/scenario/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
   race every wait against client disconnect, see `api/live_ws.py`).
@@ -341,6 +342,8 @@ reads the token from `app.state.settings`, so a test app carries its own.
 Student/classroom auth is still deferred.
 
 ## Deferred (rebuild on the engine abstraction later)
-Firewall editor, classroom mode, web-UI proxy, AI assistant,
+Firewall editor, classroom mode, a full web-UI proxy (node web UIs are
+viewable via an exec relay, see ARCHITECTURE §5.9; a port-publishing proxy for
+complex apps is still deferred), AI assistant,
 more traffic generators (Locust, Modbus, pcap replay), comparison views over
 benchmark exports, a shared-LAN deploy mode and per-node resource limits. Keep the `DeploymentEngine` seam and the catalog when adding them back.
