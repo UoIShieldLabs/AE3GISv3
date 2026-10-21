@@ -425,6 +425,19 @@ class KatharaEngine:
 
         return await asyncio.to_thread(_start)
 
+    async def exec_output(
+        self, state: EngineState, node_id: str, argv: list[str], *, timeout: float = 10.0
+    ) -> tuple[int, bytes, bytes]:
+        def _run() -> tuple[int, bytes, bytes]:
+            node = self._node_container(state, node_id)
+            if node.status != "running":
+                raise LookupError(f"Device '{node.labels.get('name')}' is not running")
+            res = node.exec_run(argv, demux=True)
+            out, err = res.output if isinstance(res.output, tuple) else (res.output, None)
+            return int(res.exit_code or 0), out or b"", err or b""
+
+        return await asyncio.wait_for(asyncio.to_thread(_run), timeout + 2.0)
+
     async def list_sidecars(
         self, *, lab_hash: str | None = None, owner: str | None = None
     ) -> list[SidecarInfo]:

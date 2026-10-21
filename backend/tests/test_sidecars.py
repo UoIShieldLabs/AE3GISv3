@@ -254,3 +254,27 @@ def test_exec_stream_refuses_a_node_that_is_not_running(client, wait_jobs, topol
 
     with pytest.raises(LookupError):
         client.portal.call(run)
+
+
+def test_exec_output_buffers_a_commands_output(client, wait_jobs, topology, fake_engine):
+    state = _deployed(client, wait_jobs, topology)
+    fake_engine.web_ui_pages["hA"] = "<html>ok</html>"
+
+    async def run():
+        return await fake_engine.exec_output(state, "hA", ["curl", "-s", "http://127.0.0.1:8000/"])
+
+    code, out, err = client.portal.call(run)
+    assert code == 0 and b"<html>ok</html>" in out and err == b""
+    assert ("exec_output", "curl -s http://127.0.0.1:8000/") in fake_engine.calls
+
+
+def test_exec_output_refuses_a_stopped_node(client, wait_jobs, topology, fake_engine):
+    import pytest
+
+    state = _deployed(client, wait_jobs, topology)
+
+    async def run():
+        await fake_engine.exec_output(state, "ghost", ["echo", "hi"])
+
+    with pytest.raises(LookupError):
+        client.portal.call(run)

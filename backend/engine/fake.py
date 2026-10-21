@@ -288,6 +288,8 @@ class FakeEngine:
         # ``exec_stream`` output: command line -> (exit code, stdout). A ``None``
         # exit code models a command that runs until the step is stopped.
         self.exec_results: dict[str, tuple[int | None, str | bytes]] = {}
+        # ``exec_output`` web-UI relay: node id -> the HTML its view returns.
+        self.web_ui_pages: dict[str, str] = {}
         self.capture_packets: list[bytes] | None = None
         self.capture_pps = 20.0
         self.traffic_interval = 0.0
@@ -498,6 +500,28 @@ class FakeEngine:
         ex = FakeExec(self, node_id, argv, lab)
         ex.start()
         return ex
+
+    async def exec_output(
+        self, state: EngineState, node_id: str, argv: list[str], *, timeout: float = 10.0
+    ) -> tuple[int, bytes, bytes]:
+        lab = self._lab_for(state)
+        if node_id not in lab.running:
+            raise LookupError(f"Device '{node_id}' is not running")
+        self.calls.append(("exec_output", " ".join(argv)))
+        # A canned HTTP response so the web-UI relay is exercisable without Docker:
+        # any argv that looks like a curl to the node answers with a tiny page.
+        if any("curl" in a for a in argv) or any("http" in a for a in argv):
+            body = self.web_ui_pages.get(
+                node_id, f"<html><body>fake web ui: {node_id}</body></html>"
+            )
+            raw = (
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
+                f"Content-Length: {len(body.encode())}\r\n\r\n{body}"
+            )
+            return 0, raw.encode(), b""
+        result = self.exec_results.get(" ".join(argv), (0, ""))
+        code, out = result[0] or 0, result[1]
+        return code, out if isinstance(out, bytes) else str(out).encode(), b""
 
     async def list_sidecars(
         self, *, lab_hash: str | None = None, owner: str | None = None
