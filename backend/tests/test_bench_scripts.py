@@ -61,6 +61,7 @@ def test_follow_and_save(client, fake_engine, tmp_path):
 # ── the suite runner ──────────────────────────────────────────────────
 
 import json  # noqa: E402
+import subprocess  # noqa: E402
 
 import pytest  # noqa: E402
 
@@ -189,6 +190,27 @@ def test_restart_and_keep_awake_commands():
         ["sudo", "-n", "systemctl", "restart", "docker"]
     ]
     assert suites.keep_awake_cmd("Darwin", 42) == ["caffeinate", "-dimsu", "-w", "42"]
+
+
+def test_a_failed_restart_is_tried_again_then_given_up(monkeypatch):
+    calls = []
+
+    def run(argv, **kw):
+        calls.append(argv)
+        if len(calls) == 1:
+            raise subprocess.CalledProcessError(1, argv)
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(suites, "_run", run)
+    monkeypatch.setattr(suites, "docker_ok", lambda: True)
+    lines = []
+    suites.restart_docker([["docker", "desktop", "restart"]], lines.append, pause=0)
+    assert len(calls) == 2 and any("trying again" in line for line in lines)
+
+    monkeypatch.setattr(suites, "_run", lambda argv, **kw: subprocess.CompletedProcess(argv, 1))
+    monkeypatch.setattr(suites, "docker_ok", lambda: False)
+    with pytest.raises(suites.SuiteError, match="failed 2 times"):
+        suites.restart_docker([["true"]], lines.append, timeout=0, attempts=2, pause=0)
 
 
 def test_aggregate_random():
@@ -620,6 +642,15 @@ def test_sysctl_command_and_parse():
     assert "sysctl -q -w net.ipv4.neigh.default.gc_thresh3=16384" in argv[-1]
     out = "net.ipv4.neigh.default.gc_thresh3 = 16384\nnoise\n"
     assert suites.parse_sysctls(out) == {"net.ipv4.neigh.default.gc_thresh3": "16384"}
+
+
+def test_sysctl_command_on_windows_writes_from_the_wsl_distro():
+    argv = suites.sysctl_argv({"net.ipv4.neigh.default.gc_thresh3": 16384}, "Windows")
+    assert argv[:7] == ["wsl", "-d", suites.WSL_DISTRO, "-u", "root", "-e", "sh"]
+    script = argv[-1]
+    assert "echo 16384 > /proc/sys/net/ipv4/neigh/default/gc_thresh3" in script
+    # prints back in sysctl's own format, for parse_sysctls
+    assert 'printf "%s = %s\\n" net.ipv4.neigh.default.gc_thresh3' in script
 
 
 def test_suite_sysctls_are_set_after_every_restart(client, fake_engine, tmp_path):

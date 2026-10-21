@@ -1,0 +1,1046 @@
+{
+  "id": "0cbe13a36aad4500a4aeb2c2bb908dd8",
+  "label": "microsoft-surface-7 \u00b7 burst-limits \u00b7 100 hosts \u00b7 round 8",
+  "kind": "matrix",
+  "status": "succeeded",
+  "live": false,
+  "topology_id": "89741792df8941159931e8a959a93af9",
+  "spec": {
+    "label": "microsoft-surface-7 \u00b7 burst-limits \u00b7 100 hosts \u00b7 round 8",
+    "notes": "Traffic limit search, one cell at a time: each of the 100 cells (5 rates x 5 burst intervals x TCP/UDP x clients -> servers / mesh) finds the most hosts at which its traffic still gets through (delivered >= 95%, UDP loss <= 1%) and the fewest at which it doesn't, 50 hosts apart (bench_suite.py runs one size per benchmark with the cells that want it). Clients -> servers: north-south through the routers and the core, one server per 50 clients. Mesh: each host sends to its next two neighbours, east-west inside a LAN. Paced bursts: each flow sends rate x interval bytes at once, every interval. Rested cells: before each cell the host must be quiet (CPU under 10% for three sweeps, up to 20 minutes: a fresh deployment keeps Docker busy for minutes) and then idles a minute, so a fanless laptop starts every cell from a cooled chip instead of heating up through a run of heavy cells.",
+    "kind": "matrix",
+    "topology": {
+      "generate": {
+        "servers": 1,
+        "hosts_per_subnet": 200,
+        "hosts_per_switch": 48,
+        "host_type": "workstation",
+        "server_type": "workstation",
+        "router_type": "router",
+        "switch_type": "switch",
+        "host_mix": null,
+        "server_mix": [
+          {
+            "type": "workstation",
+            "image": null,
+            "count": null,
+            "per_hosts": 50
+          }
+        ],
+        "switch_mix": null,
+        "core_type": null,
+        "core_image": null,
+        "seed": 0,
+        "random": null
+      },
+      "topology_id": null
+    },
+    "scale": [
+      100
+    ],
+    "adaptive": null,
+    "census": null,
+    "matrix": {
+      "patterns": [
+        {
+          "id": "cs",
+          "kind": "clients_to_servers",
+          "clients": null,
+          "servers": {
+            "ids": null,
+            "types": null,
+            "subnets": [
+              "sub-srv"
+            ],
+            "roles": [
+              "host"
+            ],
+            "exclude": null
+          },
+          "each": "one",
+          "nodes": null,
+          "fanout": 1,
+          "protocol": "tcp",
+          "bitrate": null,
+          "parallel": 1,
+          "length": null,
+          "direction": "forward",
+          "omit_s": 0,
+          "burst_interval_ms": null
+        },
+        {
+          "id": "mesh",
+          "kind": "mesh",
+          "clients": null,
+          "servers": null,
+          "each": "one",
+          "nodes": {
+            "ids": null,
+            "types": null,
+            "subnets": [
+              "sub-0",
+              "sub-1",
+              "sub-2",
+              "sub-3",
+              "sub-4",
+              "sub-5",
+              "sub-6",
+              "sub-7",
+              "sub-8",
+              "sub-9",
+              "sub-10",
+              "sub-11",
+              "sub-12",
+              "sub-13",
+              "sub-14",
+              "sub-15"
+            ],
+            "roles": [
+              "host"
+            ],
+            "exclude": null
+          },
+          "fanout": 2,
+          "protocol": "tcp",
+          "bitrate": null,
+          "parallel": 1,
+          "length": null,
+          "direction": "forward",
+          "omit_s": 0,
+          "burst_interval_ms": null
+        }
+      ],
+      "axes": {
+        "pattern": [
+          "cs",
+          "mesh"
+        ],
+        "protocol": [
+          "tcp",
+          "udp"
+        ],
+        "bitrate": [
+          "50K",
+          "100K",
+          "250K",
+          "500K",
+          "1M"
+        ],
+        "burst_interval_ms": [
+          100,
+          250,
+          500,
+          1000,
+          2000
+        ]
+      },
+      "grid": [
+        "bitrate",
+        "burst_interval_ms"
+      ],
+      "interval_s": 10.0,
+      "ramp_s": 5.0,
+      "gap_s": 60.0,
+      "shuffle": true,
+      "seed": 1,
+      "cells": [
+        "cs\u00b7udp\u00b7250K\u00b7100ms",
+        "cs\u00b7udp\u00b7250K\u00b72000ms"
+      ]
+    },
+    "repetitions": 1,
+    "cooldown_s": 15.0,
+    "quiet_cpu_pct": 10.0,
+    "quiet_timeout_s": 180.0,
+    "settle_s": 15.0,
+    "hold_s": 50.0,
+    "rest_s": 10.0,
+    "monitor": {
+      "interval_s": 5.0
+    },
+    "traffic": null,
+    "stop": {
+      "deploy_timeout_s": 1800.0,
+      "ready_timeout_s": 300.0,
+      "max_mem_pct": 90.0,
+      "max_psi_mem_full": 10.0,
+      "max_disk_pct": 90.0,
+      "min_delivered_ratio": 0.95,
+      "max_loss_pct": 1.0,
+      "stop_on_degraded": true,
+      "project_memory": false
+    },
+    "allow_busy_host": false,
+    "keep_last": false,
+    "keep_samples": false,
+    "topology_id": "89741792df8941159931e8a959a93af9",
+    "generated": true
+  },
+  "result": {
+    "label": "microsoft-surface-7 \u00b7 burst-limits \u00b7 100 hosts \u00b7 round 8",
+    "kind": "matrix",
+    "started_at": "2026-10-13T22:44:49.500042+00:00",
+    "ended_at": "2026-10-13T22:55:46.142311+00:00",
+    "topology_id": "89741792df8941159931e8a959a93af9",
+    "rows": [
+      {
+        "step": "deploy",
+        "scale": 100,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "nodes": 109,
+        "links": 108,
+        "composition": {
+          "workstation \u00b7 kathara/base": 102,
+          "switch \u00b7 kathara/base": 5,
+          "router \u00b7 kathara/frr": 2
+        },
+        "quiet_wait_s": 13.3,
+        "deploy_job": "725ebcf5fe2a4e95a7ae4076dc550115",
+        "deploy_s": 241.914,
+        "deploy_phases": {
+          "validate": 0.006,
+          "images": 1.919,
+          "plan": 0.011,
+          "deploy": 230.041,
+          "verify": 9.882
+        },
+        "ready_s": 4.528,
+        "probes": 204,
+        "probes_failed": 0,
+        "mem_pre": 1130875563.0,
+        "mem_settle": 3893515605.0,
+        "marginal_mem_per_node": 25345321.0,
+        "docker_mem_per_node": 33594190.0,
+        "disk_pre": 146225729536.0,
+        "disk_settle": 146247501141.0,
+        "disk_per_node": 199739.0,
+        "node_mem_mean": 1197573.0,
+        "node_mem_p95": 1126400.0,
+        "nodes_seen": 109,
+        "hold_cpu_mean": null,
+        "hold_cpu_p95": null,
+        "hold_cores_mean": null,
+        "hold_mem_max": null,
+        "hold_mem_pct_max": null,
+        "hold_disk_pct_max": null,
+        "hold_load1_mean": null,
+        "hold_psi_cpu_mean": null,
+        "hold_psi_mem_max": null,
+        "hold_psi_mem_full_max": null,
+        "hold_node_cpu_mean": null,
+        "hold_node_cpu_p95": null,
+        "hold_node_rx_bps": null,
+        "hold_tool_cpu_mean": null,
+        "hold_docker_cpu_mean": null,
+        "hold_tool_mem_mean": null,
+        "sweep_ms_p95": 119.3,
+        "by_image": {
+          "kathara/base": {
+            "count": 107,
+            "mem_mean": 1127434.0,
+            "cpu_mean": null
+          },
+          "kathara/frr": {
+            "count": 2,
+            "mem_mean": 4950016.0,
+            "cpu_mean": null
+          }
+        },
+        "destroy_job": "a04b6bb2704849d4aef4f022fed90f66",
+        "destroy_s": 76.526
+      },
+      {
+        "step": "cell 001/2 cs\u00b7udp\u00b7250K\u00b7100ms",
+        "scale": 100,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "case": "cs\u00b7udp\u00b7250K\u00b7100ms",
+        "order": 1,
+        "cell": {
+          "pattern": "cs",
+          "protocol": "udp",
+          "bitrate": "250K",
+          "burst_interval_ms": 100
+        },
+        "nodes": 109,
+        "links": 108,
+        "quiet_wait_s": 14.5,
+        "traffic_job": "9df85f2ef4094f77b5d4840178c5efa5",
+        "flows": 100,
+        "offered_bps": 25000000.0,
+        "delivered_bps": 23944747.4,
+        "delivered_ratio": 0.9578,
+        "bytes_received": 152474818,
+        "lost_percent": 0.206,
+        "retransmits": 0,
+        "flows_with_errors": 4,
+        "rtt_ms_p50": null,
+        "rtt_ms_p95": null,
+        "rtt_ms_max": null,
+        "jitter_ms_p50": 1.733,
+        "jitter_ms_p95": 2.422,
+        "jitter_ms_max": 5.41,
+        "flow_loss_pct_max": 0.6667,
+        "flow_ratio_min": 0.0,
+        "flow_ratio_p05": 0.9921,
+        "slowest_flow": "cs.37",
+        "slowest_flow_bps": 0,
+        "mem_pre": null,
+        "mem_settle": 3139126272.0,
+        "marginal_mem_per_node": null,
+        "docker_mem_per_node": null,
+        "disk_pre": null,
+        "disk_settle": 146247874901.0,
+        "disk_per_node": null,
+        "node_mem_mean": 1197573.0,
+        "node_mem_p95": 1126400.0,
+        "nodes_seen": 109,
+        "hold_cpu_mean": 61.05,
+        "hold_cpu_p95": 80.19,
+        "hold_cores_mean": 4.517,
+        "hold_mem_max": 2496806912,
+        "hold_mem_pct_max": 15.04,
+        "hold_disk_pct_max": 13.53,
+        "hold_load1_mean": 8.08,
+        "hold_psi_cpu_mean": 32.6,
+        "hold_psi_mem_max": 0.0,
+        "hold_psi_mem_full_max": 0.0,
+        "hold_node_cpu_mean": 0.0,
+        "hold_node_cpu_p95": 0.0,
+        "hold_node_rx_bps": 135919775.0,
+        "hold_tool_cpu_mean": 14.32,
+        "hold_docker_cpu_mean": 412.6,
+        "hold_tool_mem_mean": 241011507.0,
+        "sweep_ms_p95": 111.8,
+        "by_image": {
+          "kathara/base": {
+            "count": 107,
+            "mem_mean": 1127434.0,
+            "cpu_mean": 0.0
+          },
+          "kathara/frr": {
+            "count": 2,
+            "mem_mean": 4950016.0,
+            "cpu_mean": 0.0
+          }
+        },
+        "idle_cpu_mean": 9.07,
+        "cpu_delta": 51.98
+      },
+      {
+        "step": "cell 002/2 cs\u00b7udp\u00b7250K\u00b72000ms",
+        "scale": 100,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "case": "cs\u00b7udp\u00b7250K\u00b72000ms",
+        "order": 2,
+        "cell": {
+          "pattern": "cs",
+          "protocol": "udp",
+          "bitrate": "250K",
+          "burst_interval_ms": 2000
+        },
+        "nodes": 109,
+        "links": 108,
+        "quiet_wait_s": 24.4,
+        "traffic_job": "e164448e33c447c0a2599ff35493f9b7",
+        "flows": 100,
+        "offered_bps": 25000000.0,
+        "delivered_bps": 24998696.0,
+        "delivered_ratio": 0.9999,
+        "bytes_received": 156579192,
+        "lost_percent": 0.008,
+        "retransmits": 0,
+        "flows_with_errors": 0,
+        "rtt_ms_p50": null,
+        "rtt_ms_p95": null,
+        "rtt_ms_max": null,
+        "jitter_ms_p50": 0.474,
+        "jitter_ms_p95": 0.993,
+        "jitter_ms_max": 5.932,
+        "flow_loss_pct_max": 0.4444,
+        "flow_ratio_min": 0.9954,
+        "flow_ratio_p05": 0.9991,
+        "slowest_flow": "cs.25",
+        "slowest_flow_bps": 248854.9,
+        "mem_pre": null,
+        "mem_settle": 2701794304.0,
+        "marginal_mem_per_node": null,
+        "docker_mem_per_node": null,
+        "disk_pre": null,
+        "disk_settle": 146251784192.0,
+        "disk_per_node": null,
+        "node_mem_mean": 1197573.0,
+        "node_mem_p95": 1126400.0,
+        "nodes_seen": 109,
+        "hold_cpu_mean": 45.45,
+        "hold_cpu_p95": 66.86,
+        "hold_cores_mean": 3.39,
+        "hold_mem_max": 3722342400,
+        "hold_mem_pct_max": 22.42,
+        "hold_disk_pct_max": 13.53,
+        "hold_load1_mean": 5.95,
+        "hold_psi_cpu_mean": 21.72,
+        "hold_psi_mem_max": 0.0,
+        "hold_psi_mem_full_max": 0.0,
+        "hold_node_cpu_mean": 0.0,
+        "hold_node_cpu_p95": 0.0,
+        "hold_node_rx_bps": 146812675.0,
+        "hold_tool_cpu_mean": 7.22,
+        "hold_docker_cpu_mean": 331.1,
+        "hold_tool_mem_mean": 246115123.0,
+        "sweep_ms_p95": 39.7,
+        "by_image": {
+          "kathara/base": {
+            "count": 107,
+            "mem_mean": 1127434.0,
+            "cpu_mean": 0.0
+          },
+          "kathara/frr": {
+            "count": 2,
+            "mem_mean": 4950016.0,
+            "cpu_mean": 0.0
+          }
+        },
+        "idle_cpu_mean": 7.12,
+        "cpu_delta": 38.33
+      }
+    ],
+    "by_scale": null,
+    "ceiling": null,
+    "reason": null,
+    "detail": null,
+    "stopped_by": "completed",
+    "limit": null,
+    "rest": {
+      "samples": 2,
+      "mem_used": 1500479488.0,
+      "mem_total": 16605474816,
+      "mem_used_pct": 9.04,
+      "vm_cpu_pct": 16.87,
+      "docker_rss": 800419840.0,
+      "disk_used_pct": 13.53
+    },
+    "phase": null,
+    "environment_fingerprint": "35ffbf9e79e8826491c22ff6c473b23bcd00e104d4b9f8bb6fd617afa3d87d28",
+    "matrix": [
+      {
+        "id": "cs\u00b7udp\u00b7250K\u00b7100ms",
+        "cell": {
+          "pattern": "cs",
+          "protocol": "udp",
+          "bitrate": "250K",
+          "burst_interval_ms": 100
+        },
+        "runs": 1,
+        "ok": 1,
+        "outcome": "ok",
+        "reason": null,
+        "flows": 100,
+        "offered_bps": 25000000.0,
+        "delivered_ratio": 0.9578,
+        "flow_ratio_min": 0.0,
+        "lost_percent": 0.206,
+        "retransmits": 0.0,
+        "rtt_ms_p50": null,
+        "rtt_ms_p95": null,
+        "jitter_ms_p50": 1.733,
+        "jitter_ms_p95": 2.422,
+        "hold_cpu_mean": 61.05,
+        "idle_cpu_mean": 9.07,
+        "cpu_delta": 51.98,
+        "hold_docker_cpu_mean": 412.6,
+        "hold_mem_pct_max": 15.04
+      },
+      {
+        "id": "cs\u00b7udp\u00b7250K\u00b72000ms",
+        "cell": {
+          "pattern": "cs",
+          "protocol": "udp",
+          "bitrate": "250K",
+          "burst_interval_ms": 2000
+        },
+        "runs": 1,
+        "ok": 1,
+        "outcome": "ok",
+        "reason": null,
+        "flows": 100,
+        "offered_bps": 25000000.0,
+        "delivered_ratio": 0.9999,
+        "flow_ratio_min": 0.9954,
+        "lost_percent": 0.008,
+        "retransmits": 0.0,
+        "rtt_ms_p50": null,
+        "rtt_ms_p95": null,
+        "jitter_ms_p50": 0.474,
+        "jitter_ms_p95": 0.993,
+        "hold_cpu_mean": 45.45,
+        "idle_cpu_mean": 7.12,
+        "cpu_delta": 38.33,
+        "hold_docker_cpu_mean": 331.1,
+        "hold_mem_pct_max": 22.42
+      }
+    ]
+  },
+  "current": null,
+  "job": {
+    "id": "0cbe13a36aad4500a4aeb2c2bb908dd8",
+    "topology_id": null,
+    "subject": "benchmark",
+    "kind": "benchmark",
+    "status": "succeeded",
+    "steps": [
+      {
+        "name": "preflight",
+        "status": "succeeded",
+        "message": "host is quiet",
+        "started_at": "2026-10-13T22:44:49.500053+00:00",
+        "ended_at": "2026-10-13T22:44:49.542852+00:00",
+        "jobs": []
+      },
+      {
+        "name": "images",
+        "status": "succeeded",
+        "message": "1 image(s) ready",
+        "started_at": "2026-10-13T22:44:49.549004+00:00",
+        "ended_at": "2026-10-13T22:44:53.531226+00:00",
+        "jobs": []
+      },
+      {
+        "name": "baseline",
+        "status": "succeeded",
+        "message": "the host at rest (10s)",
+        "started_at": "2026-10-13T22:44:53.536843+00:00",
+        "ended_at": "2026-10-13T22:45:05.631926+00:00",
+        "jobs": []
+      },
+      {
+        "name": "deploy",
+        "status": "succeeded",
+        "message": "settling (15.0s)",
+        "started_at": "2026-10-13T22:45:05.642310+00:00",
+        "ended_at": "2026-10-13T22:49:58.862744+00:00",
+        "jobs": []
+      },
+      {
+        "name": "cell 001/2 cs\u00b7udp\u00b7250K\u00b7100ms",
+        "status": "succeeded",
+        "message": "ok",
+        "started_at": "2026-10-13T22:49:58.869507+00:00",
+        "ended_at": "2026-10-13T22:52:09.038683+00:00",
+        "jobs": []
+      },
+      {
+        "name": "cell 002/2 cs\u00b7udp\u00b7250K\u00b72000ms",
+        "status": "succeeded",
+        "message": "ok",
+        "started_at": "2026-10-13T22:52:09.045892+00:00",
+        "ended_at": "2026-10-13T22:54:29.071232+00:00",
+        "jobs": []
+      },
+      {
+        "name": "teardown",
+        "status": "succeeded",
+        "message": "destroying",
+        "started_at": "2026-10-13T22:54:29.081681+00:00",
+        "ended_at": "2026-10-13T22:55:45.649960+00:00",
+        "jobs": []
+      }
+    ],
+    "error": null,
+    "params": {
+      "label": "microsoft-surface-7 \u00b7 burst-limits \u00b7 100 hosts \u00b7 round 8",
+      "notes": "Traffic limit search, one cell at a time: each of the 100 cells (5 rates x 5 burst intervals x TCP/UDP x clients -> servers / mesh) finds the most hosts at which its traffic still gets through (delivered >= 95%, UDP loss <= 1%) and the fewest at which it doesn't, 50 hosts apart (bench_suite.py runs one size per benchmark with the cells that want it). Clients -> servers: north-south through the routers and the core, one server per 50 clients. Mesh: each host sends to its next two neighbours, east-west inside a LAN. Paced bursts: each flow sends rate x interval bytes at once, every interval. Rested cells: before each cell the host must be quiet (CPU under 10% for three sweeps, up to 20 minutes: a fresh deployment keeps Docker busy for minutes) and then idles a minute, so a fanless laptop starts every cell from a cooled chip instead of heating up through a run of heavy cells.",
+      "kind": "matrix",
+      "topology": {
+        "generate": {
+          "servers": 1,
+          "hosts_per_subnet": 200,
+          "hosts_per_switch": 48,
+          "host_type": "workstation",
+          "server_type": "workstation",
+          "router_type": "router",
+          "switch_type": "switch",
+          "host_mix": null,
+          "server_mix": [
+            {
+              "type": "workstation",
+              "image": null,
+              "count": null,
+              "per_hosts": 50
+            }
+          ],
+          "switch_mix": null,
+          "core_type": null,
+          "core_image": null,
+          "seed": 0,
+          "random": null
+        },
+        "topology_id": null
+      },
+      "scale": [
+        100
+      ],
+      "adaptive": null,
+      "census": null,
+      "matrix": {
+        "patterns": [
+          {
+            "id": "cs",
+            "kind": "clients_to_servers",
+            "clients": null,
+            "servers": {
+              "ids": null,
+              "types": null,
+              "subnets": [
+                "sub-srv"
+              ],
+              "roles": [
+                "host"
+              ],
+              "exclude": null
+            },
+            "each": "one",
+            "nodes": null,
+            "fanout": 1,
+            "protocol": "tcp",
+            "bitrate": null,
+            "parallel": 1,
+            "length": null,
+            "direction": "forward",
+            "omit_s": 0,
+            "burst_interval_ms": null
+          },
+          {
+            "id": "mesh",
+            "kind": "mesh",
+            "clients": null,
+            "servers": null,
+            "each": "one",
+            "nodes": {
+              "ids": null,
+              "types": null,
+              "subnets": [
+                "sub-0",
+                "sub-1",
+                "sub-2",
+                "sub-3",
+                "sub-4",
+                "sub-5",
+                "sub-6",
+                "sub-7",
+                "sub-8",
+                "sub-9",
+                "sub-10",
+                "sub-11",
+                "sub-12",
+                "sub-13",
+                "sub-14",
+                "sub-15"
+              ],
+              "roles": [
+                "host"
+              ],
+              "exclude": null
+            },
+            "fanout": 2,
+            "protocol": "tcp",
+            "bitrate": null,
+            "parallel": 1,
+            "length": null,
+            "direction": "forward",
+            "omit_s": 0,
+            "burst_interval_ms": null
+          }
+        ],
+        "axes": {
+          "pattern": [
+            "cs",
+            "mesh"
+          ],
+          "protocol": [
+            "tcp",
+            "udp"
+          ],
+          "bitrate": [
+            "50K",
+            "100K",
+            "250K",
+            "500K",
+            "1M"
+          ],
+          "burst_interval_ms": [
+            100,
+            250,
+            500,
+            1000,
+            2000
+          ]
+        },
+        "grid": [
+          "bitrate",
+          "burst_interval_ms"
+        ],
+        "interval_s": 10.0,
+        "ramp_s": 5.0,
+        "gap_s": 60.0,
+        "shuffle": true,
+        "seed": 1,
+        "cells": [
+          "cs\u00b7udp\u00b7250K\u00b7100ms",
+          "cs\u00b7udp\u00b7250K\u00b72000ms"
+        ]
+      },
+      "repetitions": 1,
+      "cooldown_s": 15.0,
+      "quiet_cpu_pct": 10.0,
+      "quiet_timeout_s": 180.0,
+      "settle_s": 15.0,
+      "hold_s": 50.0,
+      "rest_s": 10.0,
+      "monitor": {
+        "interval_s": 5.0
+      },
+      "traffic": null,
+      "stop": {
+        "deploy_timeout_s": 1800.0,
+        "ready_timeout_s": 300.0,
+        "max_mem_pct": 90.0,
+        "max_psi_mem_full": 10.0,
+        "max_disk_pct": 90.0,
+        "min_delivered_ratio": 0.95,
+        "max_loss_pct": 1.0,
+        "stop_on_degraded": true,
+        "project_memory": false
+      },
+      "allow_busy_host": false,
+      "keep_last": false,
+      "keep_samples": false,
+      "topology_id": "89741792df8941159931e8a959a93af9",
+      "generated": true
+    },
+    "result": {
+      "label": "microsoft-surface-7 \u00b7 burst-limits \u00b7 100 hosts \u00b7 round 8",
+      "kind": "matrix",
+      "started_at": "2026-10-13T22:44:49.500042+00:00",
+      "ended_at": "2026-10-13T22:55:46.142311+00:00",
+      "topology_id": "89741792df8941159931e8a959a93af9",
+      "rows": [
+        {
+          "step": "deploy",
+          "scale": 100,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "nodes": 109,
+          "links": 108,
+          "composition": {
+            "workstation \u00b7 kathara/base": 102,
+            "switch \u00b7 kathara/base": 5,
+            "router \u00b7 kathara/frr": 2
+          },
+          "quiet_wait_s": 13.3,
+          "deploy_job": "725ebcf5fe2a4e95a7ae4076dc550115",
+          "deploy_s": 241.914,
+          "deploy_phases": {
+            "validate": 0.006,
+            "images": 1.919,
+            "plan": 0.011,
+            "deploy": 230.041,
+            "verify": 9.882
+          },
+          "ready_s": 4.528,
+          "probes": 204,
+          "probes_failed": 0,
+          "mem_pre": 1130875563.0,
+          "mem_settle": 3893515605.0,
+          "marginal_mem_per_node": 25345321.0,
+          "docker_mem_per_node": 33594190.0,
+          "disk_pre": 146225729536.0,
+          "disk_settle": 146247501141.0,
+          "disk_per_node": 199739.0,
+          "node_mem_mean": 1197573.0,
+          "node_mem_p95": 1126400.0,
+          "nodes_seen": 109,
+          "hold_cpu_mean": null,
+          "hold_cpu_p95": null,
+          "hold_cores_mean": null,
+          "hold_mem_max": null,
+          "hold_mem_pct_max": null,
+          "hold_disk_pct_max": null,
+          "hold_load1_mean": null,
+          "hold_psi_cpu_mean": null,
+          "hold_psi_mem_max": null,
+          "hold_psi_mem_full_max": null,
+          "hold_node_cpu_mean": null,
+          "hold_node_cpu_p95": null,
+          "hold_node_rx_bps": null,
+          "hold_tool_cpu_mean": null,
+          "hold_docker_cpu_mean": null,
+          "hold_tool_mem_mean": null,
+          "sweep_ms_p95": 119.3,
+          "by_image": {
+            "kathara/base": {
+              "count": 107,
+              "mem_mean": 1127434.0,
+              "cpu_mean": null
+            },
+            "kathara/frr": {
+              "count": 2,
+              "mem_mean": 4950016.0,
+              "cpu_mean": null
+            }
+          },
+          "destroy_job": "a04b6bb2704849d4aef4f022fed90f66",
+          "destroy_s": 76.526
+        },
+        {
+          "step": "cell 001/2 cs\u00b7udp\u00b7250K\u00b7100ms",
+          "scale": 100,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "case": "cs\u00b7udp\u00b7250K\u00b7100ms",
+          "order": 1,
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "nodes": 109,
+          "links": 108,
+          "quiet_wait_s": 14.5,
+          "traffic_job": "9df85f2ef4094f77b5d4840178c5efa5",
+          "flows": 100,
+          "offered_bps": 25000000.0,
+          "delivered_bps": 23944747.4,
+          "delivered_ratio": 0.9578,
+          "bytes_received": 152474818,
+          "lost_percent": 0.206,
+          "retransmits": 0,
+          "flows_with_errors": 4,
+          "rtt_ms_p50": null,
+          "rtt_ms_p95": null,
+          "rtt_ms_max": null,
+          "jitter_ms_p50": 1.733,
+          "jitter_ms_p95": 2.422,
+          "jitter_ms_max": 5.41,
+          "flow_loss_pct_max": 0.6667,
+          "flow_ratio_min": 0.0,
+          "flow_ratio_p05": 0.9921,
+          "slowest_flow": "cs.37",
+          "slowest_flow_bps": 0,
+          "mem_pre": null,
+          "mem_settle": 3139126272.0,
+          "marginal_mem_per_node": null,
+          "docker_mem_per_node": null,
+          "disk_pre": null,
+          "disk_settle": 146247874901.0,
+          "disk_per_node": null,
+          "node_mem_mean": 1197573.0,
+          "node_mem_p95": 1126400.0,
+          "nodes_seen": 109,
+          "hold_cpu_mean": 61.05,
+          "hold_cpu_p95": 80.19,
+          "hold_cores_mean": 4.517,
+          "hold_mem_max": 2496806912,
+          "hold_mem_pct_max": 15.04,
+          "hold_disk_pct_max": 13.53,
+          "hold_load1_mean": 8.08,
+          "hold_psi_cpu_mean": 32.6,
+          "hold_psi_mem_max": 0.0,
+          "hold_psi_mem_full_max": 0.0,
+          "hold_node_cpu_mean": 0.0,
+          "hold_node_cpu_p95": 0.0,
+          "hold_node_rx_bps": 135919775.0,
+          "hold_tool_cpu_mean": 14.32,
+          "hold_docker_cpu_mean": 412.6,
+          "hold_tool_mem_mean": 241011507.0,
+          "sweep_ms_p95": 111.8,
+          "by_image": {
+            "kathara/base": {
+              "count": 107,
+              "mem_mean": 1127434.0,
+              "cpu_mean": 0.0
+            },
+            "kathara/frr": {
+              "count": 2,
+              "mem_mean": 4950016.0,
+              "cpu_mean": 0.0
+            }
+          },
+          "idle_cpu_mean": 9.07,
+          "cpu_delta": 51.98
+        },
+        {
+          "step": "cell 002/2 cs\u00b7udp\u00b7250K\u00b72000ms",
+          "scale": 100,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "case": "cs\u00b7udp\u00b7250K\u00b72000ms",
+          "order": 2,
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "nodes": 109,
+          "links": 108,
+          "quiet_wait_s": 24.4,
+          "traffic_job": "e164448e33c447c0a2599ff35493f9b7",
+          "flows": 100,
+          "offered_bps": 25000000.0,
+          "delivered_bps": 24998696.0,
+          "delivered_ratio": 0.9999,
+          "bytes_received": 156579192,
+          "lost_percent": 0.008,
+          "retransmits": 0,
+          "flows_with_errors": 0,
+          "rtt_ms_p50": null,
+          "rtt_ms_p95": null,
+          "rtt_ms_max": null,
+          "jitter_ms_p50": 0.474,
+          "jitter_ms_p95": 0.993,
+          "jitter_ms_max": 5.932,
+          "flow_loss_pct_max": 0.4444,
+          "flow_ratio_min": 0.9954,
+          "flow_ratio_p05": 0.9991,
+          "slowest_flow": "cs.25",
+          "slowest_flow_bps": 248854.9,
+          "mem_pre": null,
+          "mem_settle": 2701794304.0,
+          "marginal_mem_per_node": null,
+          "docker_mem_per_node": null,
+          "disk_pre": null,
+          "disk_settle": 146251784192.0,
+          "disk_per_node": null,
+          "node_mem_mean": 1197573.0,
+          "node_mem_p95": 1126400.0,
+          "nodes_seen": 109,
+          "hold_cpu_mean": 45.45,
+          "hold_cpu_p95": 66.86,
+          "hold_cores_mean": 3.39,
+          "hold_mem_max": 3722342400,
+          "hold_mem_pct_max": 22.42,
+          "hold_disk_pct_max": 13.53,
+          "hold_load1_mean": 5.95,
+          "hold_psi_cpu_mean": 21.72,
+          "hold_psi_mem_max": 0.0,
+          "hold_psi_mem_full_max": 0.0,
+          "hold_node_cpu_mean": 0.0,
+          "hold_node_cpu_p95": 0.0,
+          "hold_node_rx_bps": 146812675.0,
+          "hold_tool_cpu_mean": 7.22,
+          "hold_docker_cpu_mean": 331.1,
+          "hold_tool_mem_mean": 246115123.0,
+          "sweep_ms_p95": 39.7,
+          "by_image": {
+            "kathara/base": {
+              "count": 107,
+              "mem_mean": 1127434.0,
+              "cpu_mean": 0.0
+            },
+            "kathara/frr": {
+              "count": 2,
+              "mem_mean": 4950016.0,
+              "cpu_mean": 0.0
+            }
+          },
+          "idle_cpu_mean": 7.12,
+          "cpu_delta": 38.33
+        }
+      ],
+      "by_scale": null,
+      "ceiling": null,
+      "reason": null,
+      "detail": null,
+      "stopped_by": "completed",
+      "limit": null,
+      "rest": {
+        "samples": 2,
+        "mem_used": 1500479488.0,
+        "mem_total": 16605474816,
+        "mem_used_pct": 9.04,
+        "vm_cpu_pct": 16.87,
+        "docker_rss": 800419840.0,
+        "disk_used_pct": 13.53
+      },
+      "phase": null,
+      "environment_fingerprint": "35ffbf9e79e8826491c22ff6c473b23bcd00e104d4b9f8bb6fd617afa3d87d28",
+      "matrix": [
+        {
+          "id": "cs\u00b7udp\u00b7250K\u00b7100ms",
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 100
+          },
+          "runs": 1,
+          "ok": 1,
+          "outcome": "ok",
+          "reason": null,
+          "flows": 100,
+          "offered_bps": 25000000.0,
+          "delivered_ratio": 0.9578,
+          "flow_ratio_min": 0.0,
+          "lost_percent": 0.206,
+          "retransmits": 0.0,
+          "rtt_ms_p50": null,
+          "rtt_ms_p95": null,
+          "jitter_ms_p50": 1.733,
+          "jitter_ms_p95": 2.422,
+          "hold_cpu_mean": 61.05,
+          "idle_cpu_mean": 9.07,
+          "cpu_delta": 51.98,
+          "hold_docker_cpu_mean": 412.6,
+          "hold_mem_pct_max": 15.04
+        },
+        {
+          "id": "cs\u00b7udp\u00b7250K\u00b72000ms",
+          "cell": {
+            "pattern": "cs",
+            "protocol": "udp",
+            "bitrate": "250K",
+            "burst_interval_ms": 2000
+          },
+          "runs": 1,
+          "ok": 1,
+          "outcome": "ok",
+          "reason": null,
+          "flows": 100,
+          "offered_bps": 25000000.0,
+          "delivered_ratio": 0.9999,
+          "flow_ratio_min": 0.9954,
+          "lost_percent": 0.008,
+          "retransmits": 0.0,
+          "rtt_ms_p50": null,
+          "rtt_ms_p95": null,
+          "jitter_ms_p50": 0.474,
+          "jitter_ms_p95": 0.993,
+          "hold_cpu_mean": 45.45,
+          "idle_cpu_mean": 7.12,
+          "cpu_delta": 38.33,
+          "hold_docker_cpu_mean": 331.1,
+          "hold_mem_pct_max": 22.42
+        }
+      ]
+    },
+    "created_at": "2026-10-13T22:44:49.488959",
+    "started_at": "2026-10-13T22:44:49.495573",
+    "finished_at": "2026-10-13T22:55:46.148013"
+  }
+}

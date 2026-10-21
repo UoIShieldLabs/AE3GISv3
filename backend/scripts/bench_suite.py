@@ -85,7 +85,7 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
     path = suite_file(name)
     if not path.is_file():
         raise SuiteError(f"No suite {name!r} ({path})")
-    raw = path.read_text()
+    raw = path.read_text(encoding="utf-8")
     try:
         suite = json.loads(raw)
     except ValueError as exc:
@@ -107,7 +107,7 @@ def load_suite(name: str, specs_root: Path = BENCHMARKS / "specs") -> dict[str, 
         spec_path = specs_root / str(item.get("spec") or "")
         if not spec_path.is_file():
             raise SuiteError(f"Item {iid!r}: no spec {spec_path}")
-        text = spec_path.read_text()
+        text = spec_path.read_text(encoding="utf-8")
         digest.update(text.encode())
         item["_spec"] = json.loads(text)
         runs = int(item.get("runs") or 1)
@@ -860,7 +860,7 @@ class Log:
     def __call__(self, text: str = "") -> None:
         print(text, flush=True)
         if self.path is not None:
-            with self.path.open("a") as f:
+            with self.path.open("a", encoding="utf-8") as f:
                 f.write(text + "\n")
 
     def stamp(self, text: str) -> None:
@@ -868,6 +868,9 @@ class Log:
 
 
 def _run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess:
+    if kw.get("text"):  # Docker and git print UTF-8, not Windows' code page
+        kw.setdefault("encoding", "utf-8")
+        kw.setdefault("errors", "replace")
     return subprocess.run(argv, cwd=kw.pop("cwd", ROOT), **kw)
 
 
@@ -915,20 +918,33 @@ def restart_plan(system: str, cmd: str | None, desktop_cli: bool) -> list[list[s
     return None
 
 
-def restart_docker(plan: list[list[str]], log: Log, timeout: float = 900) -> None:
+def restart_docker(
+    plan: list[list[str]], log: Log, timeout: float = 900, attempts: int = 3, pause: float = 30
+) -> None:
+    """Run ``plan`` until Docker answers again, up to ``attempts`` times: a
+    restart can fail on its own (Docker Desktop for Windows times out
+    stopping while a ``wsl.exe`` of its hangs) and work when tried again."""
     log("  restarting Docker: " + " → ".join(" ".join(s) for s in plan))
-    for step in plan:
-        if step == WAIT_DOWN:
-            deadline = time.monotonic() + 120
-            while docker_ok() and time.monotonic() < deadline:
-                time.sleep(3)
-            continue
-        _run(step, check=True, timeout=timeout)
-    deadline = time.monotonic() + timeout
-    while not docker_ok():
-        if time.monotonic() > deadline:
-            raise SuiteError("Docker did not come back after the restart")
-        time.sleep(5)
+    for attempt in range(1, attempts + 1):
+        try:
+            for step in plan:
+                if step == WAIT_DOWN:
+                    deadline = time.monotonic() + 120
+                    while docker_ok() and time.monotonic() < deadline:
+                        time.sleep(3)
+                    continue
+                _run(step, check=True, timeout=timeout)
+            deadline = time.monotonic() + timeout
+            while not docker_ok():
+                if time.monotonic() > deadline:
+                    raise SuiteError("Docker did not come back after the restart")
+                time.sleep(5)
+            return
+        except (SuiteError, OSError, subprocess.SubprocessError) as exc:
+            if attempt == attempts:
+                raise SuiteError(f"restarting Docker failed {attempts} times: {exc}") from exc
+            log(f"  restart failed ({exc}); trying again in {pause:g}s")
+            time.sleep(pause)
 
 
 # A suite's ``sysctls`` are set in Docker's kernel (on Docker Desktop: the VM's,
@@ -936,12 +952,23 @@ def restart_docker(plan: list[list[str]], log: Log, timeout: float = 900) -> Non
 # on Linux: the host's own, until it reboots) from a one-shot privileged
 # container on the host network. E.g. the neighbour (ARP) table: 1024 entries
 # for all nodes together by default, which under traffic cuts off every host
-# past ~250 (mesh) or ~500 (clients -> servers).
+# past ~250 (mesh) or ~500 (clients -> servers). Docker Desktop on Windows
+# runs dockerd in a network namespace of its own inside the WSL2 VM, where
+# the global ones (neigh/default) don't exist: there they are written from the
+# docker-desktop distro, which shares the VM's root namespace.
 SYSCTL_IMAGE = "alpine:3.22"
+WSL_DISTRO = "docker-desktop"
 
 
-def sysctl_argv(sysctls: dict[str, Any]) -> list[str]:
-    """The docker command that sets ``sysctls`` and prints them back."""
+def sysctl_argv(sysctls: dict[str, Any], system: str | None = None) -> list[str]:
+    """The command that sets ``sysctls`` and prints them back (``k = v``)."""
+    if system == "Windows":
+        paths = {k: shlex.quote("/proc/sys/" + k.replace(".", "/")) for k in sysctls}
+        sets = " && ".join(f"echo {shlex.quote(str(v))} > {paths[k]}" for k, v in sysctls.items())
+        reads = " && ".join(
+            f'printf "%s = %s\\n" {shlex.quote(k)} "$(cat {paths[k]})"' for k in sysctls
+        )
+        return ["wsl", "-d", WSL_DISTRO, "-u", "root", "-e", "sh", "-c", f"{sets} && {reads}"]
     names = " ".join(shlex.quote(k) for k in sysctls)
     sets = " ".join(shlex.quote(f"{k}={v}") for k, v in sysctls.items())
     return [
@@ -968,7 +995,9 @@ def parse_sysctls(text: str) -> dict[str, str]:
 
 def set_sysctls(sysctls: dict[str, Any]) -> dict[str, str]:
     """Set them in Docker's kernel; what the kernel now reports."""
-    done = _run(sysctl_argv(sysctls), capture_output=True, text=True, timeout=300)
+    done = _run(
+        sysctl_argv(sysctls, platform.system()), capture_output=True, text=True, timeout=300
+    )
     if done.returncode != 0:
         raise SuiteError(f"Could not set {', '.join(sysctls)}: {done.stderr.strip()[:300]}")
     got = parse_sysctls(done.stdout)
@@ -1013,7 +1042,9 @@ def keep_awake_cmd(system: str, pid: int) -> list[str] | None:
 
 @contextlib.contextmanager
 def keep_awake(log: Log):
-    """No idle or system sleep while the suite runs (a closed lid still sleeps)."""
+    """No idle or system sleep while the suite runs (a closed lid still sleeps).
+    Windows keeps the display on too: on Modern Standby laptops a display that
+    turns off puts the whole machine in standby, whatever the sleep settings."""
     system = platform.system()
     proc = None
     cmd = keep_awake_cmd(system, os.getpid())
@@ -1023,7 +1054,8 @@ def keep_awake(log: Log):
     elif system == "Windows":
         import ctypes
 
-        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)  # type: ignore[attr-defined]
+        # ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000003)  # type: ignore[attr-defined]
     if system == "Darwin":
         with contextlib.suppress(OSError):
             batt = _run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
@@ -1129,7 +1161,7 @@ class Runner:
         self.stopping = False
         path = out_dir / "manifest.json"
         if path.is_file():
-            self.manifest = json.loads(path.read_text())
+            self.manifest = json.loads(path.read_text(encoding="utf-8"))
             if self.manifest.get("suite") != suite["name"] or self.manifest.get("host") != host:
                 raise SuiteError(f"{out_dir} holds another suite or host")
             known = {r["key"] for r in self.manifest["runs"]}
@@ -1155,13 +1187,13 @@ class Runner:
     def save(self) -> None:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         tmp = self.out_dir / "manifest.json.tmp"
-        tmp.write_text(json.dumps(self.manifest, indent=2, default=str))
+        tmp.write_text(json.dumps(self.manifest, indent=2, default=str), encoding="utf-8")
         tmp.replace(self.out_dir / "manifest.json")
 
     def result_of(self, run: dict[str, Any]) -> dict[str, Any] | None:
         path = self.out_dir / run["dir"] / "benchmark.json"
         if path.is_file():
-            return json.loads(path.read_text()).get("result")
+            return json.loads(path.read_text(encoding="utf-8")).get("result")
         return None
 
     def latest(self, item_id: str, before: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -1188,7 +1220,7 @@ class Runner:
                 if runs:
                     aggregates[item_id] = aggregate_random(runs)
                     (self.out_dir / f"random-{item_id}.json").write_text(
-                        json.dumps(aggregates[item_id], indent=2)
+                        json.dumps(aggregates[item_id], indent=2), encoding="utf-8"
                     )
         limits = {}
         for r in self.manifest["runs"]:
@@ -1197,10 +1229,10 @@ class Runner:
                 results = [limit_result(cid, st, cfg) for cid, st in r["cells"].items()]
                 limits[r["item"]] = (results, cfg)
                 (self.out_dir / f"limits-{r['item']}.json").write_text(
-                    json.dumps(results, indent=2)
+                    json.dumps(results, indent=2), encoding="utf-8"
                 )
         path = self.out_dir / "summary.md"
-        path.write_text(summary_markdown(self.manifest, aggregates, limits))
+        path.write_text(summary_markdown(self.manifest, aggregates, limits), encoding="utf-8")
         return path
 
     def limit_config(self, item_id: str) -> dict[str, Any]:
@@ -1347,7 +1379,9 @@ class Runner:
     def finish(self, run: dict[str, Any], b: dict[str, Any]) -> None:
         folder = self.out_dir / run["dir"]
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / "benchmark.json").write_text(json.dumps(b, indent=2, default=str))
+        (folder / "benchmark.json").write_text(
+            json.dumps(b, indent=2, default=str), encoding="utf-8"
+        )
         try:
             bench.save(self.api, b["id"], folder, "report")
             (folder / "report.zip").replace(folder / "export.zip")
@@ -1415,7 +1449,7 @@ class Runner:
         spec, notes = build_spec(item, run, self.host, previous_ceiling=previous, census=census)
         folder = self.out_dir / run["dir"]
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / "spec.json").write_text(json.dumps(spec, indent=2))
+        (folder / "spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
         b = self.api.call("POST", "/benchmarks", spec)
         run.update(
             status="running",
@@ -1566,7 +1600,7 @@ class Runner:
             )
             folder = self.out_dir / probe["dir"]
             folder.mkdir(parents=True, exist_ok=True)
-            (folder / "spec.json").write_text(json.dumps(spec, indent=2))
+            (folder / "spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
             b = self.api.call("POST", "/benchmarks", spec)
             probe.update(status="running", benchmark_id=b["id"], attempts=attempt, error=None)
             self.save()
@@ -1601,10 +1635,20 @@ class Runner:
                 continue
             try:
                 self.run_one(run)
-            except (SuiteError, bench.ApiError) as exc:
+            # OSError: the backend stayed unreachable past the API's retries
+            # (Docker down); the next run restarts Docker first
+            except (SuiteError, bench.ApiError, OSError) as exc:
                 run.update(status="failed", error=str(exc))
                 self.save()
                 self.log(f"  {run['key']} failed: {exc}")
+                # a Docker that can't be brought back would fail every run
+                # left in turn (the next run restarts it again anyway)
+                if self.restart is not None and not docker_ok():
+                    try:
+                        self.restart()
+                    except SuiteError as down:
+                        self.log(f"  {down}: stopping the suite")
+                        self.stopping = True
             if run["status"] == "cancelled":
                 self.stopping = True
             if run["status"] == "failed" and self.stop_on_failure:
@@ -1833,9 +1877,10 @@ def run_checks(restart_cmd: str | None, env: dict[str, str]) -> list[tuple[str, 
     pmset = _out(["pmset", "-g", "batt"])[1] if system == "Darwin" else None
     mains = (
         [
-            (p / "online").read_text().strip() == "1"
+            (p / "online").read_text(encoding="utf-8").strip() == "1"
             for p in Path("/sys/class/power_supply").glob("*")
-            if (p / "type").is_file() and (p / "type").read_text().strip() == "Mains"
+            if (p / "type").is_file()
+            and (p / "type").read_text(encoding="utf-8").strip() == "Mains"
         ]
         if system == "Linux"
         else []
@@ -1909,7 +1954,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def cmd_summarize(args: argparse.Namespace) -> int:
     out_dir = Path(args.dir)
-    manifest = json.loads((out_dir / "manifest.json").read_text())
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     suite = load_suite(manifest["suite"])
     runner = Runner(
         suite,
@@ -1923,6 +1968,7 @@ def cmd_summarize(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    bench.utf8_stdio()
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

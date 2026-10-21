@@ -1,0 +1,403 @@
+{
+  "suite": "random",
+  "description": "The image census, then 10 random-mix idle climbs (every type with equal odds), each to its own ceiling, from the images the census found usable on this host.",
+  "suite_sha": "f52ecbd59d1296c034181ef84698e654a9992f0211ad929a865057698ab42137",
+  "host": "microsoft-surface-7",
+  "platform": "Windows",
+  "base_url": "http://localhost:8000/api/v1",
+  "restart": "docker desktop restart",
+  "started_at": "2026-10-08T17:19:58.355337+00:00",
+  "runs": [
+    {
+      "key": "census",
+      "item": "census",
+      "run": 1,
+      "runs": 1,
+      "seed": null,
+      "dir": "01-census",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-08T17:22:36.443671+00:00",
+        "mem_total": 16605474816,
+        "mem_available": 15700217856,
+        "loadavg": [
+          0.21,
+          0.3,
+          0.46
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "73359137164445fe9b5289c15594b3e3",
+      "started_at": "2026-10-08T17:22:36.490444+00:00",
+      "notes": {},
+      "error": null,
+      "ended_at": "2026-10-08T18:13:40.344185+00:00",
+      "outcome": "28 of 29 cases usable",
+      "ceiling": null,
+      "stopped_by": "completed",
+      "limit": null
+    },
+    {
+      "key": "random-idle-run1",
+      "item": "random-idle",
+      "run": 1,
+      "runs": 10,
+      "seed": 1,
+      "dir": "02-random-idle-run1",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-08T18:16:01.995475+00:00",
+        "mem_total": 16605466624,
+        "mem_available": 15705579520,
+        "loadavg": [
+          0.13,
+          0.06,
+          0.02
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "4bcb2daeed63483cae932d6f959800d7",
+      "started_at": "2026-10-08T18:16:02.116382+00:00",
+      "notes": {
+        "seed": 1,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-08T23:00:23.661159+00:00",
+      "outcome": "ceiling 460 hosts (470 hosts failed (deploy_slow))",
+      "ceiling": 460,
+      "stopped_by": "criterion:deploy_slow",
+      "limit": "470 hosts failed (deploy_slow)"
+    },
+    {
+      "key": "random-idle-run2",
+      "item": "random-idle",
+      "run": 2,
+      "runs": 10,
+      "seed": 2,
+      "dir": "03-random-idle-run2",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-08T23:03:11.986937+00:00",
+        "mem_total": 16605474816,
+        "mem_available": 15706640384,
+        "loadavg": [
+          0.18,
+          0.09,
+          0.03
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "7d8672b07b304918ae0a7cb91837705f",
+      "started_at": "2026-10-08T23:03:12.082352+00:00",
+      "notes": {
+        "seed": 2,
+        "start": 320,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T01:37:06.255475+00:00",
+      "outcome": "ceiling 410 hosts (memory peaked at 90.7% at 410 hosts)",
+      "ceiling": 410,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 90.7% at 410 hosts"
+    },
+    {
+      "key": "random-idle-run3",
+      "item": "random-idle",
+      "run": 3,
+      "runs": 10,
+      "seed": 3,
+      "dir": "04-random-idle-run3",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T01:39:38.235270+00:00",
+        "mem_total": 16605474816,
+        "mem_available": 15657275392,
+        "loadavg": [
+          0.16,
+          0.08,
+          0.03
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "93163c10f120482e8fea9084f6ba9670",
+      "started_at": "2026-10-09T01:39:38.363455+00:00",
+      "notes": {
+        "seed": 3,
+        "start": 280,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T02:29:46.491143+00:00",
+      "outcome": "ceiling 350 hosts (memory peaked at 93.3% at 350 hosts)",
+      "ceiling": 350,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 93.3% at 350 hosts"
+    },
+    {
+      "key": "random-idle-run4",
+      "item": "random-idle",
+      "run": 4,
+      "runs": 10,
+      "seed": 4,
+      "dir": "05-random-idle-run4",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T02:32:15.596582+00:00",
+        "mem_total": 16605478912,
+        "mem_available": 15662190592,
+        "loadavg": [
+          0.11,
+          0.05,
+          0.02
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "dad6e20aa29c4163a79d971c9260bacb",
+      "started_at": "2026-10-09T02:32:15.698932+00:00",
+      "notes": {
+        "seed": 4,
+        "start": 240,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T04:07:18.801184+00:00",
+      "outcome": "ceiling 360 hosts (ceiling between 360 and 370 hosts (370 failed))",
+      "ceiling": 360,
+      "stopped_by": "bracketed",
+      "limit": "ceiling between 360 and 370 hosts (370 failed)"
+    },
+    {
+      "key": "random-idle-run5",
+      "item": "random-idle",
+      "run": 5,
+      "runs": 10,
+      "seed": 5,
+      "dir": "06-random-idle-run5",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T04:10:11.270664+00:00",
+        "mem_total": 16605470720,
+        "mem_available": 15620489216,
+        "loadavg": [
+          0.7,
+          0.33,
+          0.12
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "a7fbcbd772134b419b8804b78ec711e8",
+      "started_at": "2026-10-09T04:10:11.402232+00:00",
+      "notes": {
+        "seed": 5,
+        "start": 250,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T05:08:39.762208+00:00",
+      "outcome": "ceiling 400 hosts (memory peaked at 91.0% at 400 hosts)",
+      "ceiling": 400,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 91.0% at 400 hosts"
+    },
+    {
+      "key": "random-idle-run6",
+      "item": "random-idle",
+      "run": 6,
+      "runs": 10,
+      "seed": 6,
+      "dir": "07-random-idle-run6",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T05:11:06.435604+00:00",
+        "mem_total": 16605474816,
+        "mem_available": 15616634880,
+        "loadavg": [
+          0.59,
+          0.3,
+          0.11
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "a2961e79671246a8b4f85352de2d7ef8",
+      "started_at": "2026-10-09T05:11:06.561189+00:00",
+      "notes": {
+        "seed": 6,
+        "start": 280,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T06:17:31.609668+00:00",
+      "outcome": "ceiling 390 hosts (memory peaked at 91.9% at 390 hosts)",
+      "ceiling": 390,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 91.9% at 390 hosts"
+    },
+    {
+      "key": "random-idle-run7",
+      "item": "random-idle",
+      "run": 7,
+      "runs": 10,
+      "seed": 7,
+      "dir": "08-random-idle-run7",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T06:20:08.534655+00:00",
+        "mem_total": 16605478912,
+        "mem_available": 15568568320,
+        "loadavg": [
+          0.21,
+          0.1,
+          0.04
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "24ab94d5b0f94f35a2c03c529d87fb28",
+      "started_at": "2026-10-09T06:20:08.682781+00:00",
+      "notes": {
+        "seed": 7,
+        "start": 270,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T08:57:09.124705+00:00",
+      "outcome": "ceiling 460 hosts (memory peaked at 91.2% at 460 hosts)",
+      "ceiling": 460,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 91.2% at 460 hosts"
+    },
+    {
+      "key": "random-idle-run8",
+      "item": "random-idle",
+      "run": 8,
+      "runs": 10,
+      "seed": 8,
+      "dir": "09-random-idle-run8",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T08:59:44.675970+00:00",
+        "mem_total": 16605478912,
+        "mem_available": 15443124224,
+        "loadavg": [
+          0.1,
+          0.05,
+          0.02
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "d6ae5c67b3f545c194579d6089420bce",
+      "started_at": "2026-10-09T08:59:44.835729+00:00",
+      "notes": {
+        "seed": 8,
+        "start": 320,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T09:48:09.172968+00:00",
+      "outcome": "ceiling 350 hosts (memory peaked at 90.0% at 350 hosts)",
+      "ceiling": 350,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 90.0% at 350 hosts"
+    },
+    {
+      "key": "random-idle-run9",
+      "item": "random-idle",
+      "run": 9,
+      "runs": 10,
+      "seed": 9,
+      "dir": "10-random-idle-run9",
+      "status": "done",
+      "rest": {
+        "at": "2026-10-09T09:50:31.365782+00:00",
+        "mem_total": 16605478912,
+        "mem_available": 15577325568,
+        "loadavg": [
+          1.36,
+          14.44,
+          18.92
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "f9270fd589334ed6bc7cde948ac2bc29",
+      "started_at": "2026-10-09T09:50:31.442414+00:00",
+      "notes": {
+        "seed": 9,
+        "start": 240,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null,
+      "ended_at": "2026-10-09T12:22:54.424616+00:00",
+      "outcome": "ceiling 410 hosts (memory peaked at 91.5% at 410 hosts)",
+      "ceiling": 410,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 91.5% at 410 hosts"
+    },
+    {
+      "key": "random-idle-run10",
+      "item": "random-idle",
+      "run": 10,
+      "runs": 10,
+      "seed": 10,
+      "dir": "11-random-idle-run10",
+      "status": "running",
+      "invalidated": {
+        "benchmark_id": "74f5296f61f6487cbfc2537cae8af328",
+        "ceiling": 140,
+        "outcome": "ceiling 140 hosts (ceiling between 140 and 150 hosts (150 failed))",
+        "attempts": 2,
+        "why": "started 3.27 GB used at rest after a dockerd crash (others 0.9-1.2 GB); folder kept as 11-random-idle-run10-invalid"
+      },
+      "rest": {
+        "at": "2026-10-10T19:15:27.020259+00:00",
+        "mem_total": 16605474816,
+        "mem_available": 13968228352,
+        "loadavg": [
+          8.06,
+          2.88,
+          1.05
+        ]
+      },
+      "attempts": 1,
+      "benchmark_id": "5353911910bf4055878c35132794049d",
+      "started_at": "2026-10-10T19:15:27.321104+00:00",
+      "notes": {
+        "seed": 10,
+        "start": 280,
+        "excluded": [
+          "ids \u00b7 ae3gis.local/zeek"
+        ]
+      },
+      "error": null
+    }
+  ],
+  "git": {
+    "commit": "5e9fe2232bfedbff72954ea46b59a7558a010430",
+    "dirty": false
+  },
+  "prebuild": {
+    "built": [],
+    "failed": {
+      "ae3gis.local/zeek": "BuildError: E: Couldn't find any package by regex 'zeekctl-6.0'"
+    },
+    "unavailable": {}
+  }
+}

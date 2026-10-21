@@ -1,0 +1,2178 @@
+{
+  "id": "a7fbcbd772134b419b8804b78ec711e8",
+  "label": "microsoft-surface-7 \u00b7 random-idle run 5",
+  "kind": "adaptive",
+  "status": "succeeded",
+  "live": false,
+  "topology_id": "333d123958c8457f9ade621c7c74e1fd",
+  "spec": {
+    "label": "microsoft-surface-7 \u00b7 random-idle run 5",
+    "notes": "Every node is one of the catalog's types with equal odds (networking types too), then one of that type's images with equal odds; the SIEM (Wazuh manager) is left out: each one downloads and unpacks Wazuh's CVE feed (~2-3 GB of disk), which made Docker's disk, not memory, the limit; switches and routers draw from their own pools (routers must forward, so no default-drop firewalls there). Idle, no traffic. Adaptive: climbs to this mix's ceiling. Run several times with different seeds: some mixes come out heavier than others, on purpose.",
+    "kind": "adaptive",
+    "topology": {
+      "generate": {
+        "servers": 0,
+        "hosts_per_subnet": 200,
+        "hosts_per_switch": 48,
+        "host_type": "workstation",
+        "server_type": "workstation",
+        "router_type": "router",
+        "switch_type": "switch",
+        "host_mix": null,
+        "server_mix": null,
+        "switch_mix": null,
+        "core_type": null,
+        "core_image": null,
+        "seed": 5,
+        "random": {
+          "hosts": [
+            {
+              "type": "router",
+              "images": [
+                "kathara/frr"
+              ]
+            },
+            {
+              "type": "switch",
+              "images": [
+                "kathara/base",
+                "ae3gis.local/open-vswitch"
+              ]
+            },
+            {
+              "type": "firewall",
+              "images": [
+                "kathara/frr",
+                "ae3gis.local/iptables",
+                "ae3gis.local/nftables",
+                "ae3gis.local/firehol"
+              ]
+            },
+            {
+              "type": "ids",
+              "images": [
+                "ae3gis.local/suricata",
+                "ae3gis.local/snort3",
+                "ae3gis.local/snort2"
+              ]
+            },
+            {
+              "type": "web-server",
+              "images": [
+                "httpd:alpine",
+                "ae3gis.local/apache",
+                "ae3gis.local/nginx"
+              ]
+            },
+            {
+              "type": "file-server",
+              "images": [
+                "kathara/base",
+                "ae3gis.local/samba"
+              ]
+            },
+            {
+              "type": "ftp-server",
+              "images": [
+                "ae3gis.local/vsftpd"
+              ]
+            },
+            {
+              "type": "database-server",
+              "images": [
+                "postgres:alpine"
+              ]
+            },
+            {
+              "type": "dns-server",
+              "images": [
+                "kathara/base"
+              ]
+            },
+            {
+              "type": "dhcp-server",
+              "images": [
+                "ae3gis.local/isc-dhcp"
+              ]
+            },
+            {
+              "type": "workstation",
+              "images": [
+                "kathara/base",
+                "ae3gis.local/benign-client",
+                "ae3gis.local/wazuh-agent",
+                "ae3gis.local/firefox"
+              ]
+            },
+            {
+              "type": "attacker",
+              "images": [
+                "ae3gis.local/malicious-client"
+              ]
+            },
+            {
+              "type": "plc",
+              "images": [
+                "kathara/base",
+                "ae3gis.local/openplc"
+              ]
+            },
+            {
+              "type": "hmi",
+              "images": [
+                "kathara/base"
+              ]
+            }
+          ],
+          "switches": [
+            {
+              "type": "switch",
+              "images": [
+                "kathara/base",
+                "ae3gis.local/open-vswitch"
+              ]
+            }
+          ],
+          "routers": [
+            {
+              "type": "router",
+              "images": [
+                "kathara/frr"
+              ]
+            },
+            {
+              "type": "firewall",
+              "images": [
+                "kathara/frr",
+                "ae3gis.local/iptables"
+              ]
+            }
+          ]
+        }
+      },
+      "topology_id": null
+    },
+    "scale": [],
+    "adaptive": {
+      "start": 250,
+      "target_mem_pct": 93.0,
+      "reach_mem_pct": 90.0,
+      "approach": 0.6,
+      "max_factor": 2.0,
+      "min_step": 10,
+      "max_steps": 20,
+      "confirm": 0,
+      "descend": 0.7
+    },
+    "census": null,
+    "matrix": null,
+    "repetitions": 1,
+    "cooldown_s": 20.0,
+    "quiet_cpu_pct": 10,
+    "quiet_timeout_s": 300,
+    "settle_s": 60.0,
+    "hold_s": 30.0,
+    "rest_s": 30.0,
+    "monitor": {
+      "interval_s": 5.0
+    },
+    "traffic": null,
+    "stop": {
+      "deploy_timeout_s": 1800.0,
+      "ready_timeout_s": 300.0,
+      "max_mem_pct": 95.0,
+      "max_psi_mem_full": 10.0,
+      "max_disk_pct": 90,
+      "min_delivered_ratio": 0.8,
+      "max_loss_pct": 5,
+      "stop_on_degraded": true,
+      "project_memory": false
+    },
+    "allow_busy_host": false,
+    "keep_last": false,
+    "keep_samples": false,
+    "max_scale": 12800,
+    "topology_id": "333d123958c8457f9ade621c7c74e1fd",
+    "generated": true
+  },
+  "result": {
+    "label": "microsoft-surface-7 \u00b7 random-idle run 5",
+    "kind": "adaptive",
+    "started_at": "2026-10-09T04:10:11.362815+00:00",
+    "ended_at": "2026-10-09T05:08:35.810872+00:00",
+    "topology_id": "333d123958c8457f9ade621c7c74e1fd",
+    "rows": [
+      {
+        "step": "250 hosts",
+        "scale": 250,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "nodes": 263,
+        "links": 262,
+        "composition": {
+          "dns-server \u00b7 kathara/base": 20,
+          "ftp-server \u00b7 ae3gis.local/vsftpd": 20,
+          "database-server \u00b7 postgres:alpine": 19,
+          "attacker \u00b7 ae3gis.local/malicious-client": 18,
+          "router \u00b7 kathara/frr": 18,
+          "switch \u00b7 kathara/base": 17,
+          "hmi \u00b7 kathara/base": 16,
+          "plc \u00b7 ae3gis.local/openplc": 15,
+          "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 14,
+          "ids \u00b7 ae3gis.local/snort2": 13,
+          "switch \u00b7 ae3gis.local/open-vswitch": 13,
+          "plc \u00b7 kathara/base": 12,
+          "file-server \u00b7 ae3gis.local/samba": 6,
+          "ids \u00b7 ae3gis.local/suricata": 6,
+          "web-server \u00b7 httpd:alpine": 6,
+          "workstation \u00b7 ae3gis.local/benign-client": 6,
+          "firewall \u00b7 ae3gis.local/iptables": 5,
+          "firewall \u00b7 kathara/frr": 5,
+          "ids \u00b7 ae3gis.local/snort3": 5,
+          "workstation \u00b7 ae3gis.local/wazuh-agent": 5,
+          "file-server \u00b7 kathara/base": 4,
+          "firewall \u00b7 ae3gis.local/firehol": 4,
+          "web-server \u00b7 ae3gis.local/apache": 4,
+          "web-server \u00b7 ae3gis.local/nginx": 4,
+          "workstation \u00b7 ae3gis.local/firefox": 4,
+          "workstation \u00b7 kathara/base": 3,
+          "firewall \u00b7 ae3gis.local/nftables": 1
+        },
+        "quiet_wait_s": 14.8,
+        "deploy_job": "f4e6e0638b894d2c8086421938f1ef59",
+        "deploy_s": 389.84,
+        "deploy_phases": {
+          "validate": 0.009,
+          "images": 2.149,
+          "plan": 0.015,
+          "deploy": 356.693,
+          "verify": 30.907
+        },
+        "ready_s": 5.197,
+        "probes": 400,
+        "probes_failed": 0,
+        "mem_pre": 1016395776.0,
+        "mem_settle": 10428552192.0,
+        "marginal_mem_per_node": 35787667.0,
+        "docker_mem_per_node": 30009574.0,
+        "disk_pre": 143716704256.0,
+        "disk_settle": 144729176064.0,
+        "disk_per_node": 3849703.0,
+        "node_mem_mean": 16867283.0,
+        "node_mem_p95": 52069990.0,
+        "nodes_seen": 263,
+        "hold_cpu_mean": 14.2,
+        "hold_cpu_p95": 27.41,
+        "hold_cores_mean": 1.12,
+        "hold_mem_max": 10703253504,
+        "hold_mem_pct_max": 64.46,
+        "hold_disk_pct_max": 13.39,
+        "hold_load1_mean": 11.63,
+        "hold_psi_cpu_mean": 4.01,
+        "hold_psi_mem_max": 0.0,
+        "hold_psi_mem_full_max": 0.0,
+        "hold_node_cpu_mean": 0.05,
+        "hold_node_cpu_p95": 0.392,
+        "hold_node_rx_bps": 0.0,
+        "hold_tool_cpu_mean": 1.52,
+        "hold_docker_cpu_mean": 83.0,
+        "hold_tool_mem_mean": 17009323.0,
+        "sweep_ms_p95": 246.0,
+        "by_image": {
+          "kathara/base": {
+            "count": 72,
+            "mem_mean": 1164572.0,
+            "cpu_mean": 0.0
+          },
+          "httpd:alpine": {
+            "count": 6,
+            "mem_mean": 5455189.0,
+            "cpu_mean": 0.004
+          },
+          "kathara/frr": {
+            "count": 23,
+            "mem_mean": 1410805.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/vsftpd": {
+            "count": 20,
+            "mem_mean": 4344798.0,
+            "cpu_mean": 0.064
+          },
+          "ae3gis.local/snort3": {
+            "count": 5,
+            "mem_mean": 3564339.0,
+            "cpu_mean": 0.0
+          },
+          "postgres:alpine": {
+            "count": 19,
+            "mem_mean": 40477193.0,
+            "cpu_mean": 0.023
+          },
+          "ae3gis.local/snort2": {
+            "count": 13,
+            "mem_mean": 3171249.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/suricata": {
+            "count": 6,
+            "mem_mean": 60366222.0,
+            "cpu_mean": 0.613
+          },
+          "ae3gis.local/malicious-client": {
+            "count": 18,
+            "mem_mean": 3074503.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/openplc": {
+            "count": 15,
+            "mem_mean": 53648589.0,
+            "cpu_mean": 0.024
+          },
+          "ae3gis.local/isc-dhcp": {
+            "count": 14,
+            "mem_mean": 1155365.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/open-vswitch": {
+            "count": 13,
+            "mem_mean": 13474448.0,
+            "cpu_mean": 0.427
+          },
+          "ae3gis.local/firehol": {
+            "count": 4,
+            "mem_mean": 4935680.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/iptables": {
+            "count": 5,
+            "mem_mean": 3488154.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/apache": {
+            "count": 4,
+            "mem_mean": 10923349.0,
+            "cpu_mean": 0.077
+          },
+          "ae3gis.local/nginx": {
+            "count": 4,
+            "mem_mean": 11038976.0,
+            "cpu_mean": 0.072
+          },
+          "ae3gis.local/firefox": {
+            "count": 4,
+            "mem_mean": 428786944.0,
+            "cpu_mean": 0.282
+          },
+          "ae3gis.local/samba": {
+            "count": 6,
+            "mem_mean": 12761088.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/wazuh-agent": {
+            "count": 5,
+            "mem_mean": 3504811.0,
+            "cpu_mean": 0.007
+          },
+          "ae3gis.local/benign-client": {
+            "count": 6,
+            "mem_mean": 3282261.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/nftables": {
+            "count": 1,
+            "mem_mean": 4481024.0,
+            "cpu_mean": 0.0
+          }
+        },
+        "destroy_job": "c4a8210797f54b738ee55f3edc984311",
+        "destroy_s": 208.876,
+        "next": "next 330 hosts: ~93% memory projected at 388 hosts (35.8 MB/node, peak 64.5% now)"
+      },
+      {
+        "step": "330 hosts",
+        "scale": 330,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "nodes": 344,
+        "links": 343,
+        "composition": {
+          "database-server \u00b7 postgres:alpine": 28,
+          "dns-server \u00b7 kathara/base": 27,
+          "router \u00b7 kathara/frr": 26,
+          "ftp-server \u00b7 ae3gis.local/vsftpd": 25,
+          "attacker \u00b7 ae3gis.local/malicious-client": 23,
+          "hmi \u00b7 kathara/base": 21,
+          "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 20,
+          "switch \u00b7 kathara/base": 19,
+          "switch \u00b7 ae3gis.local/open-vswitch": 16,
+          "plc \u00b7 ae3gis.local/openplc": 15,
+          "ids \u00b7 ae3gis.local/snort2": 14,
+          "plc \u00b7 kathara/base": 13,
+          "web-server \u00b7 httpd:alpine": 9,
+          "workstation \u00b7 ae3gis.local/wazuh-agent": 9,
+          "file-server \u00b7 ae3gis.local/samba": 7,
+          "firewall \u00b7 ae3gis.local/firehol": 7,
+          "firewall \u00b7 kathara/frr": 7,
+          "web-server \u00b7 ae3gis.local/apache": 7,
+          "web-server \u00b7 ae3gis.local/nginx": 7,
+          "workstation \u00b7 ae3gis.local/benign-client": 7,
+          "workstation \u00b7 ae3gis.local/firefox": 7,
+          "file-server \u00b7 kathara/base": 6,
+          "firewall \u00b7 ae3gis.local/iptables": 6,
+          "ids \u00b7 ae3gis.local/snort3": 6,
+          "ids \u00b7 ae3gis.local/suricata": 6,
+          "firewall \u00b7 ae3gis.local/nftables": 3,
+          "workstation \u00b7 kathara/base": 3
+        },
+        "quiet_wait_s": 16.3,
+        "deploy_job": "42ac984e4a2649fd8b3137c773fa9adb",
+        "deploy_s": 631.295,
+        "deploy_phases": {
+          "validate": 0.009,
+          "images": 2.418,
+          "plan": 0.018,
+          "deploy": 575.158,
+          "verify": 53.555
+        },
+        "ready_s": 17.057,
+        "probes": 520,
+        "probes_failed": 0,
+        "mem_pre": 5656151040.0,
+        "mem_settle": 12843260928.0,
+        "marginal_mem_per_node": 20892761.0,
+        "docker_mem_per_node": 14755085.0,
+        "disk_pre": 143720566784.0,
+        "disk_settle": 145242942805.0,
+        "disk_per_node": 4425512.0,
+        "node_mem_mean": 17046772.0,
+        "node_mem_p95": 51818701.0,
+        "nodes_seen": 344,
+        "hold_cpu_mean": 23.57,
+        "hold_cpu_p95": 60.84,
+        "hold_cores_mean": 1.741,
+        "hold_mem_max": 12726841344,
+        "hold_mem_pct_max": 76.64,
+        "hold_disk_pct_max": 13.43,
+        "hold_load1_mean": 23.83,
+        "hold_psi_cpu_mean": 9.65,
+        "hold_psi_mem_max": 0.02,
+        "hold_psi_mem_full_max": 0.01,
+        "hold_node_cpu_mean": 0.056,
+        "hold_node_cpu_p95": 0.423,
+        "hold_node_rx_bps": 0.0,
+        "hold_tool_cpu_mean": 1.99,
+        "hold_docker_cpu_mean": 132.2,
+        "hold_tool_mem_mean": 19963221.0,
+        "sweep_ms_p95": 444.9,
+        "by_image": {
+          "ae3gis.local/isc-dhcp": {
+            "count": 20,
+            "mem_mean": 1145446.0,
+            "cpu_mean": 0.0
+          },
+          "kathara/frr": {
+            "count": 33,
+            "mem_mean": 1169222.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/firehol": {
+            "count": 7,
+            "mem_mean": 3522560.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/nftables": {
+            "count": 3,
+            "mem_mean": 3153920.0,
+            "cpu_mean": 0.0
+          },
+          "kathara/base": {
+            "count": 89,
+            "mem_mean": 1089720.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/wazuh-agent": {
+            "count": 9,
+            "mem_mean": 2202889.0,
+            "cpu_mean": 0.008
+          },
+          "ae3gis.local/malicious-client": {
+            "count": 23,
+            "mem_mean": 2910119.0,
+            "cpu_mean": 0.0
+          },
+          "httpd:alpine": {
+            "count": 9,
+            "mem_mean": 5611520.0,
+            "cpu_mean": 0.016
+          },
+          "ae3gis.local/vsftpd": {
+            "count": 25,
+            "mem_mean": 3685854.0,
+            "cpu_mean": 0.066
+          },
+          "ae3gis.local/apache": {
+            "count": 7,
+            "mem_mean": 10632094.0,
+            "cpu_mean": 0.079
+          },
+          "postgres:alpine": {
+            "count": 28,
+            "mem_mean": 35689204.0,
+            "cpu_mean": 0.023
+          },
+          "ae3gis.local/samba": {
+            "count": 7,
+            "mem_mean": 10674761.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/open-vswitch": {
+            "count": 16,
+            "mem_mean": 12317035.0,
+            "cpu_mean": 0.564
+          },
+          "ae3gis.local/snort3": {
+            "count": 6,
+            "mem_mean": 3106816.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/benign-client": {
+            "count": 7,
+            "mem_mean": 3079607.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/iptables": {
+            "count": 6,
+            "mem_mean": 2920448.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/snort2": {
+            "count": 14,
+            "mem_mean": 2922789.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/nginx": {
+            "count": 7,
+            "mem_mean": 9640375.0,
+            "cpu_mean": 0.075
+          },
+          "ae3gis.local/openplc": {
+            "count": 15,
+            "mem_mean": 51777536.0,
+            "cpu_mean": 0.027
+          },
+          "ae3gis.local/firefox": {
+            "count": 7,
+            "mem_mean": 403750083.0,
+            "cpu_mean": 0.263
+          },
+          "ae3gis.local/suricata": {
+            "count": 6,
+            "mem_mean": 54588075.0,
+            "cpu_mean": 0.713
+          }
+        },
+        "destroy_job": "f26d7c6b2fb0420ebdefc0d652c548f2",
+        "destroy_s": 346.446,
+        "next": "next 400 hosts: ~93% memory projected at 448 hosts (20.9 MB/node, peak 76.6% now)"
+      },
+      {
+        "step": "400 hosts",
+        "scale": 400,
+        "rep": 1,
+        "outcome": "ok",
+        "reason": null,
+        "detail": null,
+        "nodes": 416,
+        "links": 415,
+        "composition": {
+          "database-server \u00b7 postgres:alpine": 35,
+          "router \u00b7 kathara/frr": 33,
+          "dns-server \u00b7 kathara/base": 32,
+          "ftp-server \u00b7 ae3gis.local/vsftpd": 29,
+          "attacker \u00b7 ae3gis.local/malicious-client": 26,
+          "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 25,
+          "hmi \u00b7 kathara/base": 25,
+          "switch \u00b7 ae3gis.local/open-vswitch": 19,
+          "switch \u00b7 kathara/base": 19,
+          "ids \u00b7 ae3gis.local/snort2": 16,
+          "plc \u00b7 ae3gis.local/openplc": 15,
+          "plc \u00b7 kathara/base": 13,
+          "web-server \u00b7 httpd:alpine": 12,
+          "file-server \u00b7 ae3gis.local/samba": 10,
+          "web-server \u00b7 ae3gis.local/apache": 10,
+          "workstation \u00b7 ae3gis.local/wazuh-agent": 10,
+          "file-server \u00b7 kathara/base": 9,
+          "firewall \u00b7 ae3gis.local/iptables": 9,
+          "firewall \u00b7 kathara/frr": 9,
+          "ids \u00b7 ae3gis.local/snort3": 9,
+          "ids \u00b7 ae3gis.local/suricata": 9,
+          "firewall \u00b7 ae3gis.local/firehol": 8,
+          "web-server \u00b7 ae3gis.local/nginx": 8,
+          "workstation \u00b7 ae3gis.local/benign-client": 8,
+          "workstation \u00b7 ae3gis.local/firefox": 8,
+          "workstation \u00b7 kathara/base": 6,
+          "firewall \u00b7 ae3gis.local/nftables": 4
+        },
+        "quiet_wait_s": 17.3,
+        "deploy_job": "d135de4fa24947a2ad237438319b823e",
+        "deploy_s": 886.538,
+        "deploy_phases": {
+          "validate": 0.005,
+          "images": 2.339,
+          "plan": 0.019,
+          "deploy": 819.827,
+          "verify": 64.276
+        },
+        "ready_s": 11.244,
+        "probes": 630,
+        "probes_failed": 0,
+        "mem_pre": 5728781312.0,
+        "mem_settle": 14604171605.0,
+        "marginal_mem_per_node": 21335073.0,
+        "docker_mem_per_node": 17539191.0,
+        "disk_pre": 143726211072.0,
+        "disk_settle": 145600367616.0,
+        "disk_per_node": 4505184.0,
+        "node_mem_mean": 14307081.0,
+        "node_mem_p95": 43609429.0,
+        "nodes_seen": 416,
+        "hold_cpu_mean": 49.73,
+        "hold_cpu_p95": 81.22,
+        "hold_cores_mean": 3.568,
+        "hold_mem_max": 15111163904,
+        "hold_mem_pct_max": 91.0,
+        "hold_disk_pct_max": 13.47,
+        "hold_load1_mean": 19.41,
+        "hold_psi_cpu_mean": 30.16,
+        "hold_psi_mem_max": 0.09,
+        "hold_psi_mem_full_max": 0.02,
+        "hold_node_cpu_mean": 0.077,
+        "hold_node_cpu_p95": 0.614,
+        "hold_node_rx_bps": 0.0,
+        "hold_tool_cpu_mean": 4.44,
+        "hold_docker_cpu_mean": 295.4,
+        "hold_tool_mem_mean": 16214699.0,
+        "sweep_ms_p95": 534.2,
+        "by_image": {
+          "kathara/base": {
+            "count": 104,
+            "mem_mean": 1088276.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/nginx": {
+            "count": 8,
+            "mem_mean": 9560619.0,
+            "cpu_mean": 0.152
+          },
+          "ae3gis.local/openplc": {
+            "count": 15,
+            "mem_mean": 43513242.0,
+            "cpu_mean": 0.03
+          },
+          "ae3gis.local/malicious-client": {
+            "count": 26,
+            "mem_mean": 2800259.0,
+            "cpu_mean": 0.0
+          },
+          "postgres:alpine": {
+            "count": 35,
+            "mem_mean": 29082253.0,
+            "cpu_mean": 0.078
+          },
+          "ae3gis.local/snort3": {
+            "count": 9,
+            "mem_mean": 2939601.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/samba": {
+            "count": 10,
+            "mem_mean": 11293525.0,
+            "cpu_mean": 0.046
+          },
+          "kathara/frr": {
+            "count": 42,
+            "mem_mean": 1084172.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/open-vswitch": {
+            "count": 19,
+            "mem_mean": 11736585.0,
+            "cpu_mean": 0.674
+          },
+          "ae3gis.local/isc-dhcp": {
+            "count": 25,
+            "mem_mean": 1109688.0,
+            "cpu_mean": 0.0
+          },
+          "httpd:alpine": {
+            "count": 12,
+            "mem_mean": 5447680.0,
+            "cpu_mean": 0.019
+          },
+          "ae3gis.local/vsftpd": {
+            "count": 29,
+            "mem_mean": 3539839.0,
+            "cpu_mean": 0.106
+          },
+          "ae3gis.local/benign-client": {
+            "count": 8,
+            "mem_mean": 2765824.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/apache": {
+            "count": 10,
+            "mem_mean": 9923618.0,
+            "cpu_mean": 0.175
+          },
+          "ae3gis.local/snort2": {
+            "count": 16,
+            "mem_mean": 2837269.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/iptables": {
+            "count": 9,
+            "mem_mean": 2905316.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/firefox": {
+            "count": 8,
+            "mem_mean": 338511829.0,
+            "cpu_mean": 0.288
+          },
+          "ae3gis.local/firehol": {
+            "count": 8,
+            "mem_mean": 3417643.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/suricata": {
+            "count": 9,
+            "mem_mean": 50618861.0,
+            "cpu_mean": 0.794
+          },
+          "ae3gis.local/nftables": {
+            "count": 4,
+            "mem_mean": 3395669.0,
+            "cpu_mean": 0.0
+          },
+          "ae3gis.local/wazuh-agent": {
+            "count": 10,
+            "mem_mean": 1750903.0,
+            "cpu_mean": 0.011
+          }
+        },
+        "destroy_job": "54b6d294245a4ad4ba298ff35676dba0",
+        "destroy_s": 565.942,
+        "next": "memory peaked at 91.0% at 400 hosts"
+      }
+    ],
+    "by_scale": [
+      {
+        "scale": 250,
+        "runs": 1,
+        "ok": 1,
+        "nodes": 263,
+        "deploy_s": {
+          "mean": 389.84,
+          "std": 0.0,
+          "min": 389.84,
+          "max": 389.84
+        },
+        "ready_s": {
+          "mean": 5.197,
+          "std": 0.0,
+          "min": 5.197,
+          "max": 5.197
+        },
+        "destroy_s": {
+          "mean": 208.876,
+          "std": 0.0,
+          "min": 208.876,
+          "max": 208.876
+        },
+        "marginal_mem_per_node": {
+          "mean": 35787667.0,
+          "std": 0.0,
+          "min": 35787667.0,
+          "max": 35787667.0
+        },
+        "docker_mem_per_node": {
+          "mean": 30009574.0,
+          "std": 0.0,
+          "min": 30009574.0,
+          "max": 30009574.0
+        },
+        "node_mem_mean": {
+          "mean": 16867283.0,
+          "std": 0.0,
+          "min": 16867283.0,
+          "max": 16867283.0
+        },
+        "hold_cpu_mean": {
+          "mean": 14.2,
+          "std": 0.0,
+          "min": 14.2,
+          "max": 14.2
+        },
+        "hold_docker_cpu_mean": {
+          "mean": 83.0,
+          "std": 0.0,
+          "min": 83.0,
+          "max": 83.0
+        },
+        "hold_mem_pct_max": {
+          "mean": 64.46,
+          "std": 0.0,
+          "min": 64.46,
+          "max": 64.46
+        },
+        "hold_psi_mem_full_max": {
+          "mean": 0.0,
+          "std": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "disk_per_node": {
+          "mean": 3849703.0,
+          "std": 0.0,
+          "min": 3849703.0,
+          "max": 3849703.0
+        },
+        "delivered_ratio": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "rtt_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "jitter_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        }
+      },
+      {
+        "scale": 330,
+        "runs": 1,
+        "ok": 1,
+        "nodes": 344,
+        "deploy_s": {
+          "mean": 631.295,
+          "std": 0.0,
+          "min": 631.295,
+          "max": 631.295
+        },
+        "ready_s": {
+          "mean": 17.057,
+          "std": 0.0,
+          "min": 17.057,
+          "max": 17.057
+        },
+        "destroy_s": {
+          "mean": 346.446,
+          "std": 0.0,
+          "min": 346.446,
+          "max": 346.446
+        },
+        "marginal_mem_per_node": {
+          "mean": 20892761.0,
+          "std": 0.0,
+          "min": 20892761.0,
+          "max": 20892761.0
+        },
+        "docker_mem_per_node": {
+          "mean": 14755085.0,
+          "std": 0.0,
+          "min": 14755085.0,
+          "max": 14755085.0
+        },
+        "node_mem_mean": {
+          "mean": 17046772.0,
+          "std": 0.0,
+          "min": 17046772.0,
+          "max": 17046772.0
+        },
+        "hold_cpu_mean": {
+          "mean": 23.57,
+          "std": 0.0,
+          "min": 23.57,
+          "max": 23.57
+        },
+        "hold_docker_cpu_mean": {
+          "mean": 132.2,
+          "std": 0.0,
+          "min": 132.2,
+          "max": 132.2
+        },
+        "hold_mem_pct_max": {
+          "mean": 76.64,
+          "std": 0.0,
+          "min": 76.64,
+          "max": 76.64
+        },
+        "hold_psi_mem_full_max": {
+          "mean": 0.01,
+          "std": 0.0,
+          "min": 0.01,
+          "max": 0.01
+        },
+        "disk_per_node": {
+          "mean": 4425512.0,
+          "std": 0.0,
+          "min": 4425512.0,
+          "max": 4425512.0
+        },
+        "delivered_ratio": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "rtt_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "jitter_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        }
+      },
+      {
+        "scale": 400,
+        "runs": 1,
+        "ok": 1,
+        "nodes": 416,
+        "deploy_s": {
+          "mean": 886.538,
+          "std": 0.0,
+          "min": 886.538,
+          "max": 886.538
+        },
+        "ready_s": {
+          "mean": 11.244,
+          "std": 0.0,
+          "min": 11.244,
+          "max": 11.244
+        },
+        "destroy_s": {
+          "mean": 565.942,
+          "std": 0.0,
+          "min": 565.942,
+          "max": 565.942
+        },
+        "marginal_mem_per_node": {
+          "mean": 21335073.0,
+          "std": 0.0,
+          "min": 21335073.0,
+          "max": 21335073.0
+        },
+        "docker_mem_per_node": {
+          "mean": 17539191.0,
+          "std": 0.0,
+          "min": 17539191.0,
+          "max": 17539191.0
+        },
+        "node_mem_mean": {
+          "mean": 14307081.0,
+          "std": 0.0,
+          "min": 14307081.0,
+          "max": 14307081.0
+        },
+        "hold_cpu_mean": {
+          "mean": 49.73,
+          "std": 0.0,
+          "min": 49.73,
+          "max": 49.73
+        },
+        "hold_docker_cpu_mean": {
+          "mean": 295.4,
+          "std": 0.0,
+          "min": 295.4,
+          "max": 295.4
+        },
+        "hold_mem_pct_max": {
+          "mean": 91.0,
+          "std": 0.0,
+          "min": 91.0,
+          "max": 91.0
+        },
+        "hold_psi_mem_full_max": {
+          "mean": 0.02,
+          "std": 0.0,
+          "min": 0.02,
+          "max": 0.02
+        },
+        "disk_per_node": {
+          "mean": 4505184.0,
+          "std": 0.0,
+          "min": 4505184.0,
+          "max": 4505184.0
+        },
+        "delivered_ratio": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "rtt_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        },
+        "jitter_ms_p95": {
+          "mean": null,
+          "std": null,
+          "min": null,
+          "max": null
+        }
+      }
+    ],
+    "ceiling": 400,
+    "reason": null,
+    "detail": null,
+    "stopped_by": "limit_reached",
+    "limit": "memory peaked at 91.0% at 400 hosts",
+    "rest": {
+      "samples": 6,
+      "mem_used": 1013090987.0,
+      "mem_total": 16605470720,
+      "mem_used_pct": 6.1,
+      "vm_cpu_pct": 1.69,
+      "docker_rss": 364703744.0,
+      "disk_used_pct": 13.29
+    },
+    "phase": null,
+    "environment_fingerprint": "a3fb37a56895634ac8915147b0d14ff988bcd622cf412d89b18c746622ea9efa"
+  },
+  "current": null,
+  "job": {
+    "id": "a7fbcbd772134b419b8804b78ec711e8",
+    "topology_id": null,
+    "subject": "benchmark",
+    "kind": "benchmark",
+    "status": "succeeded",
+    "steps": [
+      {
+        "name": "preflight",
+        "status": "succeeded",
+        "message": "host is quiet",
+        "started_at": "2026-10-09T04:10:11.362827+00:00",
+        "ended_at": "2026-10-09T04:10:11.414055+00:00",
+        "jobs": []
+      },
+      {
+        "name": "images",
+        "status": "succeeded",
+        "message": "1 image(s) ready",
+        "started_at": "2026-10-09T04:10:11.420181+00:00",
+        "ended_at": "2026-10-09T04:10:15.726860+00:00",
+        "jobs": []
+      },
+      {
+        "name": "baseline",
+        "status": "succeeded",
+        "message": "the host at rest (30s)",
+        "started_at": "2026-10-09T04:10:15.732975+00:00",
+        "ended_at": "2026-10-09T04:10:46.642890+00:00",
+        "jobs": []
+      },
+      {
+        "name": "250 hosts",
+        "status": "succeeded",
+        "message": "ok",
+        "started_at": "2026-10-09T04:10:46.649531+00:00",
+        "ended_at": "2026-10-09T04:23:00.077692+00:00",
+        "jobs": []
+      },
+      {
+        "name": "330 hosts",
+        "status": "succeeded",
+        "message": "ok",
+        "started_at": "2026-10-09T04:23:00.089714+00:00",
+        "ended_at": "2026-10-09T04:41:53.934900+00:00",
+        "jobs": []
+      },
+      {
+        "name": "400 hosts",
+        "status": "succeeded",
+        "message": "ok",
+        "started_at": "2026-10-09T04:41:53.941485+00:00",
+        "ended_at": "2026-10-09T05:08:34.176621+00:00",
+        "jobs": []
+      }
+    ],
+    "error": null,
+    "params": {
+      "label": "microsoft-surface-7 \u00b7 random-idle run 5",
+      "notes": "Every node is one of the catalog's types with equal odds (networking types too), then one of that type's images with equal odds; the SIEM (Wazuh manager) is left out: each one downloads and unpacks Wazuh's CVE feed (~2-3 GB of disk), which made Docker's disk, not memory, the limit; switches and routers draw from their own pools (routers must forward, so no default-drop firewalls there). Idle, no traffic. Adaptive: climbs to this mix's ceiling. Run several times with different seeds: some mixes come out heavier than others, on purpose.",
+      "kind": "adaptive",
+      "topology": {
+        "generate": {
+          "servers": 0,
+          "hosts_per_subnet": 200,
+          "hosts_per_switch": 48,
+          "host_type": "workstation",
+          "server_type": "workstation",
+          "router_type": "router",
+          "switch_type": "switch",
+          "host_mix": null,
+          "server_mix": null,
+          "switch_mix": null,
+          "core_type": null,
+          "core_image": null,
+          "seed": 5,
+          "random": {
+            "hosts": [
+              {
+                "type": "router",
+                "images": [
+                  "kathara/frr"
+                ]
+              },
+              {
+                "type": "switch",
+                "images": [
+                  "kathara/base",
+                  "ae3gis.local/open-vswitch"
+                ]
+              },
+              {
+                "type": "firewall",
+                "images": [
+                  "kathara/frr",
+                  "ae3gis.local/iptables",
+                  "ae3gis.local/nftables",
+                  "ae3gis.local/firehol"
+                ]
+              },
+              {
+                "type": "ids",
+                "images": [
+                  "ae3gis.local/suricata",
+                  "ae3gis.local/snort3",
+                  "ae3gis.local/snort2"
+                ]
+              },
+              {
+                "type": "web-server",
+                "images": [
+                  "httpd:alpine",
+                  "ae3gis.local/apache",
+                  "ae3gis.local/nginx"
+                ]
+              },
+              {
+                "type": "file-server",
+                "images": [
+                  "kathara/base",
+                  "ae3gis.local/samba"
+                ]
+              },
+              {
+                "type": "ftp-server",
+                "images": [
+                  "ae3gis.local/vsftpd"
+                ]
+              },
+              {
+                "type": "database-server",
+                "images": [
+                  "postgres:alpine"
+                ]
+              },
+              {
+                "type": "dns-server",
+                "images": [
+                  "kathara/base"
+                ]
+              },
+              {
+                "type": "dhcp-server",
+                "images": [
+                  "ae3gis.local/isc-dhcp"
+                ]
+              },
+              {
+                "type": "workstation",
+                "images": [
+                  "kathara/base",
+                  "ae3gis.local/benign-client",
+                  "ae3gis.local/wazuh-agent",
+                  "ae3gis.local/firefox"
+                ]
+              },
+              {
+                "type": "attacker",
+                "images": [
+                  "ae3gis.local/malicious-client"
+                ]
+              },
+              {
+                "type": "plc",
+                "images": [
+                  "kathara/base",
+                  "ae3gis.local/openplc"
+                ]
+              },
+              {
+                "type": "hmi",
+                "images": [
+                  "kathara/base"
+                ]
+              }
+            ],
+            "switches": [
+              {
+                "type": "switch",
+                "images": [
+                  "kathara/base",
+                  "ae3gis.local/open-vswitch"
+                ]
+              }
+            ],
+            "routers": [
+              {
+                "type": "router",
+                "images": [
+                  "kathara/frr"
+                ]
+              },
+              {
+                "type": "firewall",
+                "images": [
+                  "kathara/frr",
+                  "ae3gis.local/iptables"
+                ]
+              }
+            ]
+          }
+        },
+        "topology_id": null
+      },
+      "scale": [],
+      "adaptive": {
+        "start": 250,
+        "target_mem_pct": 93.0,
+        "reach_mem_pct": 90.0,
+        "approach": 0.6,
+        "max_factor": 2.0,
+        "min_step": 10,
+        "max_steps": 20,
+        "confirm": 0,
+        "descend": 0.7
+      },
+      "census": null,
+      "matrix": null,
+      "repetitions": 1,
+      "cooldown_s": 20.0,
+      "quiet_cpu_pct": 10,
+      "quiet_timeout_s": 300,
+      "settle_s": 60.0,
+      "hold_s": 30.0,
+      "rest_s": 30.0,
+      "monitor": {
+        "interval_s": 5.0
+      },
+      "traffic": null,
+      "stop": {
+        "deploy_timeout_s": 1800.0,
+        "ready_timeout_s": 300.0,
+        "max_mem_pct": 95.0,
+        "max_psi_mem_full": 10.0,
+        "max_disk_pct": 90,
+        "min_delivered_ratio": 0.8,
+        "max_loss_pct": 5,
+        "stop_on_degraded": true,
+        "project_memory": false
+      },
+      "allow_busy_host": false,
+      "keep_last": false,
+      "keep_samples": false,
+      "max_scale": 12800,
+      "topology_id": "333d123958c8457f9ade621c7c74e1fd",
+      "generated": true
+    },
+    "result": {
+      "label": "microsoft-surface-7 \u00b7 random-idle run 5",
+      "kind": "adaptive",
+      "started_at": "2026-10-09T04:10:11.362815+00:00",
+      "ended_at": "2026-10-09T05:08:35.810872+00:00",
+      "topology_id": "333d123958c8457f9ade621c7c74e1fd",
+      "rows": [
+        {
+          "step": "250 hosts",
+          "scale": 250,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "nodes": 263,
+          "links": 262,
+          "composition": {
+            "dns-server \u00b7 kathara/base": 20,
+            "ftp-server \u00b7 ae3gis.local/vsftpd": 20,
+            "database-server \u00b7 postgres:alpine": 19,
+            "attacker \u00b7 ae3gis.local/malicious-client": 18,
+            "router \u00b7 kathara/frr": 18,
+            "switch \u00b7 kathara/base": 17,
+            "hmi \u00b7 kathara/base": 16,
+            "plc \u00b7 ae3gis.local/openplc": 15,
+            "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 14,
+            "ids \u00b7 ae3gis.local/snort2": 13,
+            "switch \u00b7 ae3gis.local/open-vswitch": 13,
+            "plc \u00b7 kathara/base": 12,
+            "file-server \u00b7 ae3gis.local/samba": 6,
+            "ids \u00b7 ae3gis.local/suricata": 6,
+            "web-server \u00b7 httpd:alpine": 6,
+            "workstation \u00b7 ae3gis.local/benign-client": 6,
+            "firewall \u00b7 ae3gis.local/iptables": 5,
+            "firewall \u00b7 kathara/frr": 5,
+            "ids \u00b7 ae3gis.local/snort3": 5,
+            "workstation \u00b7 ae3gis.local/wazuh-agent": 5,
+            "file-server \u00b7 kathara/base": 4,
+            "firewall \u00b7 ae3gis.local/firehol": 4,
+            "web-server \u00b7 ae3gis.local/apache": 4,
+            "web-server \u00b7 ae3gis.local/nginx": 4,
+            "workstation \u00b7 ae3gis.local/firefox": 4,
+            "workstation \u00b7 kathara/base": 3,
+            "firewall \u00b7 ae3gis.local/nftables": 1
+          },
+          "quiet_wait_s": 14.8,
+          "deploy_job": "f4e6e0638b894d2c8086421938f1ef59",
+          "deploy_s": 389.84,
+          "deploy_phases": {
+            "validate": 0.009,
+            "images": 2.149,
+            "plan": 0.015,
+            "deploy": 356.693,
+            "verify": 30.907
+          },
+          "ready_s": 5.197,
+          "probes": 400,
+          "probes_failed": 0,
+          "mem_pre": 1016395776.0,
+          "mem_settle": 10428552192.0,
+          "marginal_mem_per_node": 35787667.0,
+          "docker_mem_per_node": 30009574.0,
+          "disk_pre": 143716704256.0,
+          "disk_settle": 144729176064.0,
+          "disk_per_node": 3849703.0,
+          "node_mem_mean": 16867283.0,
+          "node_mem_p95": 52069990.0,
+          "nodes_seen": 263,
+          "hold_cpu_mean": 14.2,
+          "hold_cpu_p95": 27.41,
+          "hold_cores_mean": 1.12,
+          "hold_mem_max": 10703253504,
+          "hold_mem_pct_max": 64.46,
+          "hold_disk_pct_max": 13.39,
+          "hold_load1_mean": 11.63,
+          "hold_psi_cpu_mean": 4.01,
+          "hold_psi_mem_max": 0.0,
+          "hold_psi_mem_full_max": 0.0,
+          "hold_node_cpu_mean": 0.05,
+          "hold_node_cpu_p95": 0.392,
+          "hold_node_rx_bps": 0.0,
+          "hold_tool_cpu_mean": 1.52,
+          "hold_docker_cpu_mean": 83.0,
+          "hold_tool_mem_mean": 17009323.0,
+          "sweep_ms_p95": 246.0,
+          "by_image": {
+            "kathara/base": {
+              "count": 72,
+              "mem_mean": 1164572.0,
+              "cpu_mean": 0.0
+            },
+            "httpd:alpine": {
+              "count": 6,
+              "mem_mean": 5455189.0,
+              "cpu_mean": 0.004
+            },
+            "kathara/frr": {
+              "count": 23,
+              "mem_mean": 1410805.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/vsftpd": {
+              "count": 20,
+              "mem_mean": 4344798.0,
+              "cpu_mean": 0.064
+            },
+            "ae3gis.local/snort3": {
+              "count": 5,
+              "mem_mean": 3564339.0,
+              "cpu_mean": 0.0
+            },
+            "postgres:alpine": {
+              "count": 19,
+              "mem_mean": 40477193.0,
+              "cpu_mean": 0.023
+            },
+            "ae3gis.local/snort2": {
+              "count": 13,
+              "mem_mean": 3171249.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/suricata": {
+              "count": 6,
+              "mem_mean": 60366222.0,
+              "cpu_mean": 0.613
+            },
+            "ae3gis.local/malicious-client": {
+              "count": 18,
+              "mem_mean": 3074503.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/openplc": {
+              "count": 15,
+              "mem_mean": 53648589.0,
+              "cpu_mean": 0.024
+            },
+            "ae3gis.local/isc-dhcp": {
+              "count": 14,
+              "mem_mean": 1155365.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/open-vswitch": {
+              "count": 13,
+              "mem_mean": 13474448.0,
+              "cpu_mean": 0.427
+            },
+            "ae3gis.local/firehol": {
+              "count": 4,
+              "mem_mean": 4935680.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/iptables": {
+              "count": 5,
+              "mem_mean": 3488154.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/apache": {
+              "count": 4,
+              "mem_mean": 10923349.0,
+              "cpu_mean": 0.077
+            },
+            "ae3gis.local/nginx": {
+              "count": 4,
+              "mem_mean": 11038976.0,
+              "cpu_mean": 0.072
+            },
+            "ae3gis.local/firefox": {
+              "count": 4,
+              "mem_mean": 428786944.0,
+              "cpu_mean": 0.282
+            },
+            "ae3gis.local/samba": {
+              "count": 6,
+              "mem_mean": 12761088.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/wazuh-agent": {
+              "count": 5,
+              "mem_mean": 3504811.0,
+              "cpu_mean": 0.007
+            },
+            "ae3gis.local/benign-client": {
+              "count": 6,
+              "mem_mean": 3282261.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/nftables": {
+              "count": 1,
+              "mem_mean": 4481024.0,
+              "cpu_mean": 0.0
+            }
+          },
+          "destroy_job": "c4a8210797f54b738ee55f3edc984311",
+          "destroy_s": 208.876,
+          "next": "next 330 hosts: ~93% memory projected at 388 hosts (35.8 MB/node, peak 64.5% now)"
+        },
+        {
+          "step": "330 hosts",
+          "scale": 330,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "nodes": 344,
+          "links": 343,
+          "composition": {
+            "database-server \u00b7 postgres:alpine": 28,
+            "dns-server \u00b7 kathara/base": 27,
+            "router \u00b7 kathara/frr": 26,
+            "ftp-server \u00b7 ae3gis.local/vsftpd": 25,
+            "attacker \u00b7 ae3gis.local/malicious-client": 23,
+            "hmi \u00b7 kathara/base": 21,
+            "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 20,
+            "switch \u00b7 kathara/base": 19,
+            "switch \u00b7 ae3gis.local/open-vswitch": 16,
+            "plc \u00b7 ae3gis.local/openplc": 15,
+            "ids \u00b7 ae3gis.local/snort2": 14,
+            "plc \u00b7 kathara/base": 13,
+            "web-server \u00b7 httpd:alpine": 9,
+            "workstation \u00b7 ae3gis.local/wazuh-agent": 9,
+            "file-server \u00b7 ae3gis.local/samba": 7,
+            "firewall \u00b7 ae3gis.local/firehol": 7,
+            "firewall \u00b7 kathara/frr": 7,
+            "web-server \u00b7 ae3gis.local/apache": 7,
+            "web-server \u00b7 ae3gis.local/nginx": 7,
+            "workstation \u00b7 ae3gis.local/benign-client": 7,
+            "workstation \u00b7 ae3gis.local/firefox": 7,
+            "file-server \u00b7 kathara/base": 6,
+            "firewall \u00b7 ae3gis.local/iptables": 6,
+            "ids \u00b7 ae3gis.local/snort3": 6,
+            "ids \u00b7 ae3gis.local/suricata": 6,
+            "firewall \u00b7 ae3gis.local/nftables": 3,
+            "workstation \u00b7 kathara/base": 3
+          },
+          "quiet_wait_s": 16.3,
+          "deploy_job": "42ac984e4a2649fd8b3137c773fa9adb",
+          "deploy_s": 631.295,
+          "deploy_phases": {
+            "validate": 0.009,
+            "images": 2.418,
+            "plan": 0.018,
+            "deploy": 575.158,
+            "verify": 53.555
+          },
+          "ready_s": 17.057,
+          "probes": 520,
+          "probes_failed": 0,
+          "mem_pre": 5656151040.0,
+          "mem_settle": 12843260928.0,
+          "marginal_mem_per_node": 20892761.0,
+          "docker_mem_per_node": 14755085.0,
+          "disk_pre": 143720566784.0,
+          "disk_settle": 145242942805.0,
+          "disk_per_node": 4425512.0,
+          "node_mem_mean": 17046772.0,
+          "node_mem_p95": 51818701.0,
+          "nodes_seen": 344,
+          "hold_cpu_mean": 23.57,
+          "hold_cpu_p95": 60.84,
+          "hold_cores_mean": 1.741,
+          "hold_mem_max": 12726841344,
+          "hold_mem_pct_max": 76.64,
+          "hold_disk_pct_max": 13.43,
+          "hold_load1_mean": 23.83,
+          "hold_psi_cpu_mean": 9.65,
+          "hold_psi_mem_max": 0.02,
+          "hold_psi_mem_full_max": 0.01,
+          "hold_node_cpu_mean": 0.056,
+          "hold_node_cpu_p95": 0.423,
+          "hold_node_rx_bps": 0.0,
+          "hold_tool_cpu_mean": 1.99,
+          "hold_docker_cpu_mean": 132.2,
+          "hold_tool_mem_mean": 19963221.0,
+          "sweep_ms_p95": 444.9,
+          "by_image": {
+            "ae3gis.local/isc-dhcp": {
+              "count": 20,
+              "mem_mean": 1145446.0,
+              "cpu_mean": 0.0
+            },
+            "kathara/frr": {
+              "count": 33,
+              "mem_mean": 1169222.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/firehol": {
+              "count": 7,
+              "mem_mean": 3522560.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/nftables": {
+              "count": 3,
+              "mem_mean": 3153920.0,
+              "cpu_mean": 0.0
+            },
+            "kathara/base": {
+              "count": 89,
+              "mem_mean": 1089720.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/wazuh-agent": {
+              "count": 9,
+              "mem_mean": 2202889.0,
+              "cpu_mean": 0.008
+            },
+            "ae3gis.local/malicious-client": {
+              "count": 23,
+              "mem_mean": 2910119.0,
+              "cpu_mean": 0.0
+            },
+            "httpd:alpine": {
+              "count": 9,
+              "mem_mean": 5611520.0,
+              "cpu_mean": 0.016
+            },
+            "ae3gis.local/vsftpd": {
+              "count": 25,
+              "mem_mean": 3685854.0,
+              "cpu_mean": 0.066
+            },
+            "ae3gis.local/apache": {
+              "count": 7,
+              "mem_mean": 10632094.0,
+              "cpu_mean": 0.079
+            },
+            "postgres:alpine": {
+              "count": 28,
+              "mem_mean": 35689204.0,
+              "cpu_mean": 0.023
+            },
+            "ae3gis.local/samba": {
+              "count": 7,
+              "mem_mean": 10674761.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/open-vswitch": {
+              "count": 16,
+              "mem_mean": 12317035.0,
+              "cpu_mean": 0.564
+            },
+            "ae3gis.local/snort3": {
+              "count": 6,
+              "mem_mean": 3106816.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/benign-client": {
+              "count": 7,
+              "mem_mean": 3079607.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/iptables": {
+              "count": 6,
+              "mem_mean": 2920448.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/snort2": {
+              "count": 14,
+              "mem_mean": 2922789.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/nginx": {
+              "count": 7,
+              "mem_mean": 9640375.0,
+              "cpu_mean": 0.075
+            },
+            "ae3gis.local/openplc": {
+              "count": 15,
+              "mem_mean": 51777536.0,
+              "cpu_mean": 0.027
+            },
+            "ae3gis.local/firefox": {
+              "count": 7,
+              "mem_mean": 403750083.0,
+              "cpu_mean": 0.263
+            },
+            "ae3gis.local/suricata": {
+              "count": 6,
+              "mem_mean": 54588075.0,
+              "cpu_mean": 0.713
+            }
+          },
+          "destroy_job": "f26d7c6b2fb0420ebdefc0d652c548f2",
+          "destroy_s": 346.446,
+          "next": "next 400 hosts: ~93% memory projected at 448 hosts (20.9 MB/node, peak 76.6% now)"
+        },
+        {
+          "step": "400 hosts",
+          "scale": 400,
+          "rep": 1,
+          "outcome": "ok",
+          "reason": null,
+          "detail": null,
+          "nodes": 416,
+          "links": 415,
+          "composition": {
+            "database-server \u00b7 postgres:alpine": 35,
+            "router \u00b7 kathara/frr": 33,
+            "dns-server \u00b7 kathara/base": 32,
+            "ftp-server \u00b7 ae3gis.local/vsftpd": 29,
+            "attacker \u00b7 ae3gis.local/malicious-client": 26,
+            "dhcp-server \u00b7 ae3gis.local/isc-dhcp": 25,
+            "hmi \u00b7 kathara/base": 25,
+            "switch \u00b7 ae3gis.local/open-vswitch": 19,
+            "switch \u00b7 kathara/base": 19,
+            "ids \u00b7 ae3gis.local/snort2": 16,
+            "plc \u00b7 ae3gis.local/openplc": 15,
+            "plc \u00b7 kathara/base": 13,
+            "web-server \u00b7 httpd:alpine": 12,
+            "file-server \u00b7 ae3gis.local/samba": 10,
+            "web-server \u00b7 ae3gis.local/apache": 10,
+            "workstation \u00b7 ae3gis.local/wazuh-agent": 10,
+            "file-server \u00b7 kathara/base": 9,
+            "firewall \u00b7 ae3gis.local/iptables": 9,
+            "firewall \u00b7 kathara/frr": 9,
+            "ids \u00b7 ae3gis.local/snort3": 9,
+            "ids \u00b7 ae3gis.local/suricata": 9,
+            "firewall \u00b7 ae3gis.local/firehol": 8,
+            "web-server \u00b7 ae3gis.local/nginx": 8,
+            "workstation \u00b7 ae3gis.local/benign-client": 8,
+            "workstation \u00b7 ae3gis.local/firefox": 8,
+            "workstation \u00b7 kathara/base": 6,
+            "firewall \u00b7 ae3gis.local/nftables": 4
+          },
+          "quiet_wait_s": 17.3,
+          "deploy_job": "d135de4fa24947a2ad237438319b823e",
+          "deploy_s": 886.538,
+          "deploy_phases": {
+            "validate": 0.005,
+            "images": 2.339,
+            "plan": 0.019,
+            "deploy": 819.827,
+            "verify": 64.276
+          },
+          "ready_s": 11.244,
+          "probes": 630,
+          "probes_failed": 0,
+          "mem_pre": 5728781312.0,
+          "mem_settle": 14604171605.0,
+          "marginal_mem_per_node": 21335073.0,
+          "docker_mem_per_node": 17539191.0,
+          "disk_pre": 143726211072.0,
+          "disk_settle": 145600367616.0,
+          "disk_per_node": 4505184.0,
+          "node_mem_mean": 14307081.0,
+          "node_mem_p95": 43609429.0,
+          "nodes_seen": 416,
+          "hold_cpu_mean": 49.73,
+          "hold_cpu_p95": 81.22,
+          "hold_cores_mean": 3.568,
+          "hold_mem_max": 15111163904,
+          "hold_mem_pct_max": 91.0,
+          "hold_disk_pct_max": 13.47,
+          "hold_load1_mean": 19.41,
+          "hold_psi_cpu_mean": 30.16,
+          "hold_psi_mem_max": 0.09,
+          "hold_psi_mem_full_max": 0.02,
+          "hold_node_cpu_mean": 0.077,
+          "hold_node_cpu_p95": 0.614,
+          "hold_node_rx_bps": 0.0,
+          "hold_tool_cpu_mean": 4.44,
+          "hold_docker_cpu_mean": 295.4,
+          "hold_tool_mem_mean": 16214699.0,
+          "sweep_ms_p95": 534.2,
+          "by_image": {
+            "kathara/base": {
+              "count": 104,
+              "mem_mean": 1088276.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/nginx": {
+              "count": 8,
+              "mem_mean": 9560619.0,
+              "cpu_mean": 0.152
+            },
+            "ae3gis.local/openplc": {
+              "count": 15,
+              "mem_mean": 43513242.0,
+              "cpu_mean": 0.03
+            },
+            "ae3gis.local/malicious-client": {
+              "count": 26,
+              "mem_mean": 2800259.0,
+              "cpu_mean": 0.0
+            },
+            "postgres:alpine": {
+              "count": 35,
+              "mem_mean": 29082253.0,
+              "cpu_mean": 0.078
+            },
+            "ae3gis.local/snort3": {
+              "count": 9,
+              "mem_mean": 2939601.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/samba": {
+              "count": 10,
+              "mem_mean": 11293525.0,
+              "cpu_mean": 0.046
+            },
+            "kathara/frr": {
+              "count": 42,
+              "mem_mean": 1084172.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/open-vswitch": {
+              "count": 19,
+              "mem_mean": 11736585.0,
+              "cpu_mean": 0.674
+            },
+            "ae3gis.local/isc-dhcp": {
+              "count": 25,
+              "mem_mean": 1109688.0,
+              "cpu_mean": 0.0
+            },
+            "httpd:alpine": {
+              "count": 12,
+              "mem_mean": 5447680.0,
+              "cpu_mean": 0.019
+            },
+            "ae3gis.local/vsftpd": {
+              "count": 29,
+              "mem_mean": 3539839.0,
+              "cpu_mean": 0.106
+            },
+            "ae3gis.local/benign-client": {
+              "count": 8,
+              "mem_mean": 2765824.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/apache": {
+              "count": 10,
+              "mem_mean": 9923618.0,
+              "cpu_mean": 0.175
+            },
+            "ae3gis.local/snort2": {
+              "count": 16,
+              "mem_mean": 2837269.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/iptables": {
+              "count": 9,
+              "mem_mean": 2905316.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/firefox": {
+              "count": 8,
+              "mem_mean": 338511829.0,
+              "cpu_mean": 0.288
+            },
+            "ae3gis.local/firehol": {
+              "count": 8,
+              "mem_mean": 3417643.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/suricata": {
+              "count": 9,
+              "mem_mean": 50618861.0,
+              "cpu_mean": 0.794
+            },
+            "ae3gis.local/nftables": {
+              "count": 4,
+              "mem_mean": 3395669.0,
+              "cpu_mean": 0.0
+            },
+            "ae3gis.local/wazuh-agent": {
+              "count": 10,
+              "mem_mean": 1750903.0,
+              "cpu_mean": 0.011
+            }
+          },
+          "destroy_job": "54b6d294245a4ad4ba298ff35676dba0",
+          "destroy_s": 565.942,
+          "next": "memory peaked at 91.0% at 400 hosts"
+        }
+      ],
+      "by_scale": [
+        {
+          "scale": 250,
+          "runs": 1,
+          "ok": 1,
+          "nodes": 263,
+          "deploy_s": {
+            "mean": 389.84,
+            "std": 0.0,
+            "min": 389.84,
+            "max": 389.84
+          },
+          "ready_s": {
+            "mean": 5.197,
+            "std": 0.0,
+            "min": 5.197,
+            "max": 5.197
+          },
+          "destroy_s": {
+            "mean": 208.876,
+            "std": 0.0,
+            "min": 208.876,
+            "max": 208.876
+          },
+          "marginal_mem_per_node": {
+            "mean": 35787667.0,
+            "std": 0.0,
+            "min": 35787667.0,
+            "max": 35787667.0
+          },
+          "docker_mem_per_node": {
+            "mean": 30009574.0,
+            "std": 0.0,
+            "min": 30009574.0,
+            "max": 30009574.0
+          },
+          "node_mem_mean": {
+            "mean": 16867283.0,
+            "std": 0.0,
+            "min": 16867283.0,
+            "max": 16867283.0
+          },
+          "hold_cpu_mean": {
+            "mean": 14.2,
+            "std": 0.0,
+            "min": 14.2,
+            "max": 14.2
+          },
+          "hold_docker_cpu_mean": {
+            "mean": 83.0,
+            "std": 0.0,
+            "min": 83.0,
+            "max": 83.0
+          },
+          "hold_mem_pct_max": {
+            "mean": 64.46,
+            "std": 0.0,
+            "min": 64.46,
+            "max": 64.46
+          },
+          "hold_psi_mem_full_max": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "disk_per_node": {
+            "mean": 3849703.0,
+            "std": 0.0,
+            "min": 3849703.0,
+            "max": 3849703.0
+          },
+          "delivered_ratio": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "rtt_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "jitter_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          }
+        },
+        {
+          "scale": 330,
+          "runs": 1,
+          "ok": 1,
+          "nodes": 344,
+          "deploy_s": {
+            "mean": 631.295,
+            "std": 0.0,
+            "min": 631.295,
+            "max": 631.295
+          },
+          "ready_s": {
+            "mean": 17.057,
+            "std": 0.0,
+            "min": 17.057,
+            "max": 17.057
+          },
+          "destroy_s": {
+            "mean": 346.446,
+            "std": 0.0,
+            "min": 346.446,
+            "max": 346.446
+          },
+          "marginal_mem_per_node": {
+            "mean": 20892761.0,
+            "std": 0.0,
+            "min": 20892761.0,
+            "max": 20892761.0
+          },
+          "docker_mem_per_node": {
+            "mean": 14755085.0,
+            "std": 0.0,
+            "min": 14755085.0,
+            "max": 14755085.0
+          },
+          "node_mem_mean": {
+            "mean": 17046772.0,
+            "std": 0.0,
+            "min": 17046772.0,
+            "max": 17046772.0
+          },
+          "hold_cpu_mean": {
+            "mean": 23.57,
+            "std": 0.0,
+            "min": 23.57,
+            "max": 23.57
+          },
+          "hold_docker_cpu_mean": {
+            "mean": 132.2,
+            "std": 0.0,
+            "min": 132.2,
+            "max": 132.2
+          },
+          "hold_mem_pct_max": {
+            "mean": 76.64,
+            "std": 0.0,
+            "min": 76.64,
+            "max": 76.64
+          },
+          "hold_psi_mem_full_max": {
+            "mean": 0.01,
+            "std": 0.0,
+            "min": 0.01,
+            "max": 0.01
+          },
+          "disk_per_node": {
+            "mean": 4425512.0,
+            "std": 0.0,
+            "min": 4425512.0,
+            "max": 4425512.0
+          },
+          "delivered_ratio": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "rtt_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "jitter_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          }
+        },
+        {
+          "scale": 400,
+          "runs": 1,
+          "ok": 1,
+          "nodes": 416,
+          "deploy_s": {
+            "mean": 886.538,
+            "std": 0.0,
+            "min": 886.538,
+            "max": 886.538
+          },
+          "ready_s": {
+            "mean": 11.244,
+            "std": 0.0,
+            "min": 11.244,
+            "max": 11.244
+          },
+          "destroy_s": {
+            "mean": 565.942,
+            "std": 0.0,
+            "min": 565.942,
+            "max": 565.942
+          },
+          "marginal_mem_per_node": {
+            "mean": 21335073.0,
+            "std": 0.0,
+            "min": 21335073.0,
+            "max": 21335073.0
+          },
+          "docker_mem_per_node": {
+            "mean": 17539191.0,
+            "std": 0.0,
+            "min": 17539191.0,
+            "max": 17539191.0
+          },
+          "node_mem_mean": {
+            "mean": 14307081.0,
+            "std": 0.0,
+            "min": 14307081.0,
+            "max": 14307081.0
+          },
+          "hold_cpu_mean": {
+            "mean": 49.73,
+            "std": 0.0,
+            "min": 49.73,
+            "max": 49.73
+          },
+          "hold_docker_cpu_mean": {
+            "mean": 295.4,
+            "std": 0.0,
+            "min": 295.4,
+            "max": 295.4
+          },
+          "hold_mem_pct_max": {
+            "mean": 91.0,
+            "std": 0.0,
+            "min": 91.0,
+            "max": 91.0
+          },
+          "hold_psi_mem_full_max": {
+            "mean": 0.02,
+            "std": 0.0,
+            "min": 0.02,
+            "max": 0.02
+          },
+          "disk_per_node": {
+            "mean": 4505184.0,
+            "std": 0.0,
+            "min": 4505184.0,
+            "max": 4505184.0
+          },
+          "delivered_ratio": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "rtt_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          },
+          "jitter_ms_p95": {
+            "mean": null,
+            "std": null,
+            "min": null,
+            "max": null
+          }
+        }
+      ],
+      "ceiling": 400,
+      "reason": null,
+      "detail": null,
+      "stopped_by": "limit_reached",
+      "limit": "memory peaked at 91.0% at 400 hosts",
+      "rest": {
+        "samples": 6,
+        "mem_used": 1013090987.0,
+        "mem_total": 16605470720,
+        "mem_used_pct": 6.1,
+        "vm_cpu_pct": 1.69,
+        "docker_rss": 364703744.0,
+        "disk_used_pct": 13.29
+      },
+      "phase": null,
+      "environment_fingerprint": "a3fb37a56895634ac8915147b0d14ff988bcd622cf412d89b18c746622ea9efa"
+    },
+    "created_at": "2026-10-09T04:10:11.353557",
+    "started_at": "2026-10-09T04:10:11.359539",
+    "finished_at": "2026-10-09T05:08:35.822488"
+  }
+}
