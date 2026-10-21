@@ -107,6 +107,9 @@ git add -f $(find . -type f ! -name export.zip)
 
 Keep the exports on the machine, or zip the host folder to share them.
 
+Then merge that branch into `benchmarking/results` and rebuild the reports
+there (`analysis/README.md`): one notebook per host, and one comparing them.
+
 ## What has bitten earlier runs
 
 - **The traffic tool itself**, until 2026-10-12: the driver started about 40
