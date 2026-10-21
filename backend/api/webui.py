@@ -69,6 +69,20 @@ def _rewrite_html(body: bytes, prefix: str) -> bytes:
     return text.encode("utf-8")
 
 
+def _rewrite_location(loc: str, prefix: str, port: int) -> str:
+    """Re-root a redirect's ``Location`` through the relay, mirroring
+    ``_rewrite_html``: a root-absolute ``Location: /`` would otherwise send the
+    browser to the backend origin, not back into the node's web UI. Relative
+    targets already resolve against the relayed request URL, so leave them be."""
+    for host in (f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
+        if loc.startswith(host):  # an internal absolute URL -> keep only its path
+            loc = loc[len(host) :] or "/"
+            break
+    if loc.startswith("/") and not loc.startswith("//"):
+        return prefix + loc[1:]  # prefix ends in "/", so "/" -> prefix, "/x" -> prefix+"x"
+    return loc
+
+
 def _parse_response(raw: bytes) -> tuple[int, dict[str, str], bytes]:
     sep = raw.find(b"\r\n\r\n")
     nl = b"\r\n"
@@ -128,6 +142,10 @@ async def _relay(
     ctype = headers.get("content-type", "application/octet-stream")
     if "text/html" in ctype:
         resp_body = _rewrite_html(resp_body, _prefix(topology_id, node_id))
+    if 300 <= status < 400 and "location" in headers:
+        headers["location"] = _rewrite_location(
+            headers["location"], _prefix(topology_id, node_id), port
+        )
     headers.pop("content-type", None)
     return Response(content=resp_body, status_code=status, media_type=ctype, headers=headers)
 
