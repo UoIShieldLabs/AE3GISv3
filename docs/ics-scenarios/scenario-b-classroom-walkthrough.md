@@ -7,29 +7,31 @@ script for running it live in front of a class.
 
 **What you demonstrate:** an IT foothold pivots through a dual‑homed host into the OT
 network and sends one *unauthenticated, perfectly legal* IEC‑104 command that opens a
-breaker — no exploit, no malware. The lab runs **fully offline inside Kathará**; every
-step is standard admin tooling (`nmap`, `ssh`) or an ordinary protocol client. The one
-"destructive" step writes only to a scratch path **inside a single container** — the
-runner adds no host mounts, so containment holds.
+breaker — no exploit, no malware — then **denies the operator recovery** (every attempt to
+re‑close the breaker from the HMI is instantly overridden). The lab runs **fully offline
+inside Kathará**; every step is standard admin tooling (`nmap`, `ssh`) or an ordinary
+IEC‑104 client, and nothing is written outside the lab's own containers.
 
-> **Read "Confirm before class" (last section) first.** Two things depend on your
-> `tollan/*` images (the exact IEC‑104 client call, and how you show the process view),
-> and you should pre‑warm images well before students arrive.
+> **The topology ships two ready‑made scenarios** (switch with the runner's scenario
+> selector). Skim "Confirm before class" (last section) and **pre‑warm the `tollan/*`
+> images** well before students arrive — the first sync and deploy are slow.
 
 ---
 
 ## Part 0 — Before class (do this ahead of time)
 
 Image sync and the first deploy are slow (Docker Hub anonymous pulls are rate‑limited,
-and the OVS/tools images build locally). Run Parts 1–3 **once the day before**, leave the
-scenario authored and saved, then `Destroy` and re‑`Deploy` just before presenting.
+and the OVS/tools images build locally). Run Parts 1–3 **once the day before**, pick your
+scenario and leave it saved, then `Destroy` and re‑`Deploy` just before presenting.
 
 ---
 
 ## Part 1 — Start AE3GIS and open the UI
 
-1. In the project root: `./start.sh` (brings up frontend **:3000**, backend **:8000**).
-2. Open **http://localhost:3000** → the **Topology library**.
+1. In the project root: `./start.sh` (compose: frontend **:3000**, backend **:8000**), or
+   `cd frontend && npm run dev` for the Vite dev server on **:5173**.
+2. Open the UI (**http://localhost:3000**, or **:5173** for the dev server) → the
+   **Topology library**.
 
 The title bar's **Deploy / status** area is your at‑a‑glance "is it running" indicator all
 session; click the status badge any time to see job steps and logs.
@@ -63,54 +65,46 @@ session; click the status badge any time to see job steps and logs.
 
 ---
 
-## Part 4 — Author the scenario in the runner
+## Part 4 — Pick a scenario in the runner
 
-The **Scenario runner** turns the attack chain into click‑through steps, each showing its
-command and live output. Open it: **More → Scenario runner…** (or ⌘K → "Scenario runner").
+Open the runner: **More → Scenario runner…** (or ⌘K → "Scenario runner"). The topology
+ships **two ready‑made scenarios**; switch between them with the **scenario selector** (the
+dropdown at the top of the panel, shown whenever there's more than one). It renders **one
+scenario at a time** as phases of steps; **Run phase** / **Run step** stream each command's
+live output into a tab.
 
-> **How the runner executes:** each step runs **one command directly inside the node you
-> pick** (`docker exec`), streaming its output. It does *not* carry a shell session
-> between steps. So the SSH pivot below is run from `attacker` to *demonstrate* that reuse
-> works; the OT actions are then authored to run **on the `historian` node directly**,
-> which is exactly where the real attacker would be running them.
+> **How the runner executes:** each step is **one command run inside the node you pick**
+> (`docker exec`), output streamed; it does *not* carry a shell session between steps. That
+> is exactly what separates the two scenarios below.
 
-Click **New scenario**, name it *Industroyer walkthrough*, then **+ Phase** and **Add
-step** to build the phases below. For each step pick the **node** and type the **command**.
+### Scenario 1 — "Industroyer walkthrough" (simplest to narrate)
+The OT actions run **directly on the `historian`** — a deliberate teaching shortcut (the
+dual‑homed historian is where the real attacker would launch them from).
 
-> Steps marked **«image»** depend on the client your `tollan/c104-*` images ship — put the
-> real invocation in (see "Confirm before class"). Everything else is standard tooling.
+| Phase | Node | What runs / teaches |
+|---|---|---|
+| 0 Prepare | `ids`, `hmi` | start Zeek over the OT SPAN mirror; point the HMI at the RTU |
+| 1 Recon & boundary | `attacker` | `nmap -sn` finds the historian; `nmap -Pn -p 2404 10.0.3.50` is **filtered** (firewall holds); `sshpass … ssh root@10.0.5.20 …` pivots in and shows the host is **dual‑homed** |
+| 2 Reach & command | `historian` | from here the RTU is **open**; one `c104` `C_SC_NA_1` command (CA 47, IOA 12) **opens the breaker** — the thesis |
+| 3 Deny recovery (loss of control) | `historian` | a `c104` loop **re‑opens the breaker on every operator Close** — the operator can't restore the process. Contained; **Stop** ends it |
+| 4 Detection & debrief | `ids` | the control shows in Zeek's `conn.log` only as **bare TCP to :2404** — IEC‑104 has no open analyzer; the detectability gap is itself the finding |
 
-**Phase 1 — Recon & boundary (S1–S2)**
-| # | Node | Command | Teaches |
-|---|------|---------|---------|
-| 1 | `attacker` | `nmap -sn 10.0.5.0/24` | finds the historian at `10.0.5.20` on IT‑LAN |
-| 2 | `attacker` | `nmap -Pn -p 2404 10.0.3.50` | **blocked at the firewall** — segmentation holds from IT |
-| 3 | `attacker` | `sshpass -p pass ssh -o StrictHostKeyChecking=no root@10.0.5.20 'hostname; ip -o addr show'` | reused creds → lands on the historian; shows it is dual‑homed (**«image»**: needs `sshpass`+creds in the attacker image, else narrate and skip to Phase 2) |
+### Scenario 2 — "Lateral movement — from the attacker box" (the faithful version)
+Every attacker step runs **on the `attacker` node**; OT actions are tunnelled over SSH to
+the historian, so the lateral movement is explicit and each command is copy‑paste‑able into
+an `attacker` terminal. Same arc, cleaner: P1 recon → **P2 pivot** (`ssh root@10.0.5.20`
+lands on the dual‑homed historian) → **P3 command** (the c104 open‑breaker, shipped
+base64‑over‑SSH) → **P4 deny recovery** (the re‑trip loop over `ssh -tt`, so **Stop** tears
+down the *remote* process too) → P5 detection.
 
-**Phase 2 — Reach & command the process (S3–S4)**
-| # | Node | Command | Teaches |
-|---|------|---------|---------|
-| 1 | `historian` | `nmap -Pn -p 2404 10.0.3.50` | from the historian the RTU **is** reachable — no firewall in the path |
-| 2 | `historian` | **«image»** IEC‑104 control: send a single/double command (C_SC_NA_1 / C_DC_NA_1) to the breaker IOA on `10.0.3.50:2404`, state → **open** | *one legal command* trips the breaker — the thesis |
+> **A note on "loss of view."** The original design called for *severing the HMI's view*; in
+> practice this `tollan/c104-server` happily serves many concurrent IEC‑104 sessions, so
+> flooding it does not blind the HMI. Both scenarios instead demonstrate **loss of control /
+> recovery denial** — reliable, HMI‑visible, and just as true to Industroyer.
 
-**Phase 3 — Loss of View (S5)**
-| # | Node | Command | Teaches |
-|---|------|---------|---------|
-| 1 | `historian` | **«image»** sever/monopolize the HMI's `2404` session to the RTU | the HMI freezes on its last reading while the process stays tripped |
-
-**Phase 4 — Recovery denial, contained (S6)**
-| # | Node | Command | Teaches |
-|---|------|---------|---------|
-| 1 | `historian` | `mkdir -p /scratch && dd if=/dev/zero of=/scratch/eng_backup.img bs=1M count=20 && rm -f /scratch/eng_backup.img` | models wiping recovery tooling — **writes only inside this container's own layer**, never a host or shared path |
-
-**Phase 5 — Detection & debrief (S7)**
-| # | Node | Command | Teaches |
-|---|------|---------|---------|
-| 1 | `ids` | **«image»** read the Zeek logs (e.g. `cat /usr/local/zeek/logs/current/conn.log \| tail`) | the recon is visible; **IEC‑104 parsing is thin** in open tooling — the detectability gap is itself a finding |
-
-**Then click Save** (top bar). The scenario is stored with the topology. The **Run
-phase** / **Run step** buttons enable only when the lab is **deployed** and there are **no
-unsaved edits** — the runner executes what was deployed.
+**To build your own** instead, click **New scenario** (the selector jumps to it) and add
+phases/steps. Running needs a **deployed** lab with **no unsaved edits** (the runner runs
+what was deployed) — click **Save** first.
 
 ---
 
@@ -120,22 +114,28 @@ Baseline first. **SHOW** the process view: select `process-sim` → inspector �
 **Web UI → Open web UI** (its page loads in the dock; fullscreen the dock for the
 projector). Do the same for `hmi`. Breaker closed, city powered, HMI green.
 
-Walk the phases in order. For each, click **Run phase** (or **Run step** per row): a tab
-opens with the command, its **streamed output** and an **exit** badge.
+Pick a scenario in the selector, then walk its phases in order. For each, click **Run
+phase** (or **Run step** per row): a tab opens with the command, its **streamed output**
+and an **exit** badge. Narrating the "Industroyer walkthrough":
 
-- **Phase 1** — SAY: "Our foothold is on IT." Step 2 times out/filtered → **"segmentation
-  is doing its job from here."** Step 3 lands on the historian and prints two IPs →
-  **"…but this host has a foot in both networks."**
-- **Phase 2** — the same scan from the historian succeeds. Then the control command. SHOW
-  the **process view flip** to breaker‑open / city dark. SAY: **"No exploit. A legitimate
-  protocol command. The protocol has no authentication, so reachability *is* control."**
-- **Phase 3** — run the session‑sever step; SHOW the HMI **still green** beside the dark
-  process view: *loss of view.*
-- **Phase 4** — the contained wiper; note the write stays inside the container.
-- **Phase 5** — open the IDS output; contrast IEC‑104's thin coverage with Modbus (A).
+- **Phase 1 (Recon & boundary)** — SAY: "Our foothold is on IT." The RTU scan is
+  **filtered** → **"segmentation is doing its job from here."** The SSH pivot lands on the
+  historian and prints two IPs → **"…but this host has a foot in both networks."**
+- **Phase 2 (Reach & command)** — the same scan from the historian **succeeds**, then the
+  one control command. SHOW the **HMI flip to breaker‑OPEN** (and the process view go dark).
+  SAY: **"No exploit. A legitimate protocol command. The protocol has no authentication, so
+  reachability *is* control."**
+- **Phase 3 (Deny recovery)** — run it, then **try to Close the breaker on the HMI**: it
+  snaps straight back to OPEN. SAY: **"The operator has lost control — they can't
+  re‑energize."** Click **Stop** on the tab; Close then holds again.
+- **Phase 4 (Detection & debrief)** — open the IDS output: the control shows only as a bare
+  TCP connection to `:2404`. Contrast IEC‑104's thin coverage with Modbus (Scenario A).
 
-If a long step (Phase 3) needs to keep running while you talk, leave its tab open — it
-streams until it exits or hits the per‑step cap; use **Stop** on the tab when done.
+(The **"Lateral movement"** scenario narrates the same beats, but every step runs from the
+`attacker` node and the pivot is an explicit `ssh` into the historian.)
+
+A long step (Phase 3) keeps running while you talk — leave its tab open and click **Stop**
+when done; Stop now also kills the command *inside* the container.
 
 ## Part 6 — Reset
 
@@ -144,22 +144,23 @@ streams until it exits or hits the per‑step cap; use **Stop** on the tab when 
 
 ---
 
-## Confirm before class (the two image‑dependent pieces + gotchas)
+## Confirm before class (pre‑checks + gotchas)
 
-1. **The IEC‑104 client calls (Phase 2 step 2, Phase 3, and the Zeek read).** These are
-   the **«image»** rows. Open a terminal on `plc` / `historian` / `ids` and confirm the
-   actual client binary and syntax your `tollan/c104-server`, `c104-hmi` and `zeek` images
-   ship, then paste the real command into those steps. The guide's §7/§9 is the reference.
-2. **Showing the process / HMI view.** Now one‑click: inspector → **Open web UI**
-   (the preset sets `process-sim`'s port to 8000 and `hmi`'s to 8080). The backend
-   relays the node's page to the dock iframe. For a node whose port differs or isn't
-   set, fill **Web UI → Port** in the inspector first. (The relay suits the simple
-   Flask pages here; a complex app would still want an out‑of‑band port‑forward.)
-3. **Tooling presence.** `nmap` must be in the `attacker` image; `sshpass` + reused creds
-   are needed for Phase 1 step 3 (else narrate the pivot and run Phase 2 on `historian`
-   directly — the demo still lands). Confirm the Zeek log path.
+1. **The IEC‑104 client calls are already filled in.** Both scenarios ship the real `c104`
+   commands (open‑breaker and the re‑trip loop), derived from the HMI's own client. If you
+   rebuild the `tollan/c104-*` images, re‑confirm **CA 47 / IOA 12** and that the `c104` API
+   still matches, then re‑paste if needed. The guide's §7/§9 is the reference.
+2. **Showing the process / HMI view.** One‑click: inspector → **Open web UI** (the preset
+   sets `process-sim`'s port to 8000 and `hmi`'s to 8080); the backend relays the node's
+   page to the dock iframe. Fullscreen the dock for the projector. For a node whose port
+   differs, fill **Web UI → Port** in the inspector first.
+3. **Tooling presence.** `nmap` is in the `attacker` image; `sshpass` + reused creds
+   (`root:pass`) drive the pivot; the `historian` carries the `c104` client in `/opt/venv`.
+   The **"Lateral movement"** scenario also needs `ssh` on the attacker (it is present).
 4. **Pre‑warm.** First registry sync + first deploy are slow; do Parts 1–3 ahead of time.
 5. **Run gating.** If a **Run** button is greyed out: the lab isn't deployed, or you have
    unsaved edits — click **Save**. The runner always runs the *deployed* topology.
-6. **Fragility.** Per the guide, the IEC‑104 session‑sever (Phase 3) is the most delicate
-   step to run live — rehearse it and keep a recorded fallback.
+6. **"Loss of view" vs "loss of control."** This RTU serves concurrent IEC‑104 sessions, so
+   you cannot blind the HMI by flooding it — the scenarios demonstrate **recovery denial /
+   loss of control** instead (reliable and HMI‑visible). A true loss‑of‑view would need an
+   L2 MITM (ARP‑spoof the HMI↔RTU path), which is out of scope here.
