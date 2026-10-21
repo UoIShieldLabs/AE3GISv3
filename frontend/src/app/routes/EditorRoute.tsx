@@ -12,6 +12,7 @@ import { ImagesSheet } from '@/features/images/ImagesSheet';
 import { StartCaptureDialog } from '@/features/capture/StartCaptureDialog';
 import { RunsSheet } from '@/features/runs/RunsSheet';
 import { RequiredImagesBanner } from '@/features/images/RequiredImagesBanner';
+import { RequiredRegistriesBanner } from '@/features/images/RequiredRegistriesBanner';
 import { TopologyCanvas } from '@/canvas/TopologyCanvas';
 import { EditorShell } from '@/shell/EditorShell';
 import { TopBar } from '@/shell/TopBar';
@@ -99,7 +100,7 @@ export function EditorRoute() {
           />
         }
         breadcrumb={<Breadcrumb scope={scope} onNavigate={onNavigate} />}
-        notice={<RequiredImagesBanner />}
+        notice={<><RequiredRegistriesBanner /><RequiredImagesBanner /></>}
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
         canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
