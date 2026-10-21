@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, ListChecks, Play, Plus, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
@@ -29,6 +29,12 @@ export function ScenarioForm() {
     [topology],
   );
 
+  // One scenario is shown at a time, chosen in the header. Scenarios can be
+  // added/removed, so resolve the active id against the live list and fall back
+  // to the first rather than trusting a stale id.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = scenarios.find((s) => s.id === activeId) ?? scenarios[0] ?? null;
+
   const canRun = deployStatus === 'deployed' && !dirty && !!backendId;
   const runHint = !backendId
     ? 'Save the topology first'
@@ -39,17 +45,18 @@ export function ScenarioForm() {
         : undefined;
 
   const a = () => useAppStore.getState();
+  const addScenario = () => setActiveId(a().addScenario()); // jump to the new one
 
   if (scenarios.length === 0) {
     return (
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-        <Header onAdd={() => a().addScenario()} />
+        <Header scenarios={scenarios} activeId={null} onSelect={setActiveId} onAdd={addScenario} />
         <EmptyState
           className="flex-1"
           icon={<ListChecks />}
           title="No scenarios yet"
           description="A scenario is phases of steps — each step an ordinary command run on a node. Add one, then step through it on a deployed lab."
-          action={<Button size="sm" onClick={() => a().addScenario()}><Plus /> New scenario</Button>}
+          action={<Button size="sm" onClick={addScenario}><Plus /> New scenario</Button>}
         />
       </div>
     );
@@ -57,28 +64,45 @@ export function ScenarioForm() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      <Header onAdd={() => a().addScenario()} />
+      <Header scenarios={scenarios} activeId={active?.id ?? null} onSelect={setActiveId} onAdd={addScenario} />
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-3">
         {runHint ? <p className="text-2xs text-fg-subtle">{runHint} to run steps.</p> : null}
-        {scenarios.map((scenario) => (
+        {active ? (
           <ScenarioBlock
-            key={scenario.id}
-            scenario={scenario}
+            key={active.id}
+            scenario={active}
             nodeOptions={nodeOptions}
             canRun={canRun}
             runHint={runHint}
           />
-        ))}
+        ) : null}
       </div>
     </div>
   );
 }
 
-function Header({ onAdd }: { onAdd: () => void }) {
+function Header({
+  scenarios, activeId, onSelect, onAdd,
+}: {
+  scenarios: Scenario[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onAdd: () => void;
+}) {
   return (
     <div className="flex items-center gap-2 border-b border-border px-3 py-2">
       <ListChecks className="size-4 text-fg-muted" aria-hidden />
       <span className="text-xs font-medium text-fg">Scenarios</span>
+      {scenarios.length > 1 && activeId ? (
+        <Select
+          size="sm"
+          className="ml-1 w-56"
+          value={activeId}
+          onValueChange={onSelect}
+          options={scenarios.map((s) => ({ value: s.id, label: s.name }))}
+          aria-label="Active scenario"
+        />
+      ) : null}
       <Button size="sm" variant="ghost" className="ml-auto" onClick={onAdd}><Plus /> New scenario</Button>
     </div>
   );
