@@ -44,32 +44,16 @@
       "runs": 10,
       "seed": 1,
       "dir": "02-random-idle-run1",
-      "status": "done",
-      "rest": {
-        "at": "2026-10-08T18:16:01.995475+00:00",
-        "mem_total": 16605466624,
-        "mem_available": 15705579520,
-        "loadavg": [
-          0.13,
-          0.06,
-          0.02
-        ]
-      },
-      "attempts": 1,
-      "benchmark_id": "4bcb2daeed63483cae932d6f959800d7",
-      "started_at": "2026-10-08T18:16:02.116382+00:00",
-      "notes": {
-        "seed": 1,
-        "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
-        ]
-      },
-      "error": null,
-      "ended_at": "2026-10-08T23:00:23.661159+00:00",
-      "outcome": "ceiling 460 hosts (470 hosts failed (deploy_slow))",
-      "ceiling": 460,
-      "stopped_by": "criterion:deploy_slow",
-      "limit": "470 hosts failed (deploy_slow)"
+      "status": "pending",
+      "standby": {
+        "benchmark_id": "4bcb2daeed63483cae932d6f959800d7",
+        "started_at": "2026-10-08T18:16:02.116382+00:00",
+        "ended_at": "2026-10-08T23:00:23.661159+00:00",
+        "ceiling": 460,
+        "outcome": "ceiling 460 hosts (470 hosts failed (deploy_slow))",
+        "stopped_by": "criterion:deploy_slow",
+        "why": "timings skewed: the laptop sat in Modern Standby on battery 2026-10-08 18:19-00:28 UTC during it; rerun with the same seed; folder kept as 02-random-idle-run1-standby"
+      }
     },
     {
       "key": "random-idle-run2",
@@ -78,33 +62,16 @@
       "runs": 10,
       "seed": 2,
       "dir": "03-random-idle-run2",
-      "status": "done",
-      "rest": {
-        "at": "2026-10-08T23:03:11.986937+00:00",
-        "mem_total": 16605474816,
-        "mem_available": 15706640384,
-        "loadavg": [
-          0.18,
-          0.09,
-          0.03
-        ]
-      },
-      "attempts": 1,
-      "benchmark_id": "7d8672b07b304918ae0a7cb91837705f",
-      "started_at": "2026-10-08T23:03:12.082352+00:00",
-      "notes": {
-        "seed": 2,
-        "start": 320,
-        "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
-        ]
-      },
-      "error": null,
-      "ended_at": "2026-10-09T01:37:06.255475+00:00",
-      "outcome": "ceiling 410 hosts (memory peaked at 90.7% at 410 hosts)",
-      "ceiling": 410,
-      "stopped_by": "limit_reached",
-      "limit": "memory peaked at 90.7% at 410 hosts"
+      "status": "pending",
+      "standby": {
+        "benchmark_id": "7d8672b07b304918ae0a7cb91837705f",
+        "started_at": "2026-10-08T23:03:12.082352+00:00",
+        "ended_at": "2026-10-09T01:37:06.255475+00:00",
+        "ceiling": 410,
+        "outcome": "ceiling 410 hosts (memory peaked at 90.7% at 410 hosts)",
+        "stopped_by": "limit_reached",
+        "why": "timings skewed: the laptop sat in Modern Standby on battery 2026-10-08 18:19-00:28 UTC during it; rerun with the same seed; folder kept as 03-random-idle-run2-standby"
+      }
     },
     {
       "key": "random-idle-run3",
@@ -131,7 +98,7 @@
         "seed": 3,
         "start": 280,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -166,7 +133,7 @@
         "seed": 4,
         "start": 240,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -201,7 +168,7 @@
         "seed": 5,
         "start": 250,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -236,7 +203,7 @@
         "seed": 6,
         "start": 280,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -271,7 +238,7 @@
         "seed": 7,
         "start": 270,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -306,7 +273,7 @@
         "seed": 8,
         "start": 320,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -341,7 +308,7 @@
         "seed": 9,
         "start": 240,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -403,7 +370,7 @@
         "seed": 10,
         "start": 280,
         "excluded": [
-          "ids \u00b7 ae3gis.local/zeek"
+          "ids · ae3gis.local/zeek"
         ]
       },
       "error": null,
@@ -424,6 +391,5 @@
       "ae3gis.local/zeek": "BuildError: E: Couldn't find any package by regex 'zeekctl-6.0'"
     },
     "unavailable": {}
-  },
-  "ended_at": "2026-10-11T10:09:14.705774+00:00"
+  }
 }
