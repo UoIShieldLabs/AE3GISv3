@@ -101,6 +101,13 @@ def role_for(type_name: str) -> str:
     return spec["role"] if spec else "host"
 
 
+def web_ui_port(type_name: str) -> int | None:
+    """The HTTP port a node type serves a web UI on, if the catalog records one."""
+    spec = get_type(type_name)
+    port = spec.get("webUiPort") if spec else None
+    return port if isinstance(port, int) else None
+
+
 def default_image_for(type_name: str) -> str:
     """Return the catalog default image for a type, falling back by role."""
     spec = get_type(type_name)

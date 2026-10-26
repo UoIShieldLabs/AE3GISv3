@@ -56,3 +56,4 @@ export const captureTabId = (jobId: string) => `cap:${jobId}`;
 export const trafficTabId = (jobId?: string | null) => (jobId ? `traffic:${jobId}` : 'traffic:new');
 export const monitorTabId = (jobId?: string | null) => (jobId ? `monitor:${jobId}` : 'monitor:new');
 export const scenarioTabId = (jobId?: string | null) => (jobId ? `scenario:${jobId}` : 'scenario:new');
+export const webuiTabId = (nodeId: string) => `webui:${nodeId}`;

@@ -376,6 +376,14 @@ class DeploymentEngine(Protocol):
         """
         ...
 
+    async def exec_output(
+        self, state: EngineState, node_id: str, argv: list[str], *, timeout: float = 10.0
+    ) -> tuple[int, bytes, bytes]:
+        """Run ``argv`` in the node and return ``(exit_code, stdout, stderr)`` once
+        it finishes. The buffered sibling of ``exec_stream``; used by the web-UI
+        relay to ``curl`` a node's own HTTP view and hand the bytes back."""
+        ...
+
     async def list_sidecars(
         self, *, lab_hash: str | None = None, owner: str | None = None
     ) -> list[SidecarInfo]: ...

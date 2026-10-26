@@ -318,6 +318,7 @@ rather than matching message text.
 | `GET /system/health`, `/system/labs`, `/system/environment`, `POST /system/reconcile`, `/system/labs/{hash}/purge` | Operations |
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
 | `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}`, `…/scenario/{job}` | Live packets / flow samples / monitor sweeps / scenario step output |
+| `GET\|POST /topologies/{id}/webui/{node}/{path}` | Relay a node's own web UI to the browser (§5.9) |
 
 `context` exists for clients that need the whole picture at once — a support
 view, or the planned agent.
@@ -655,6 +656,22 @@ random climbs and a climb's ceiling to the next run, and writes a manifest,
 the reports and a summary per host. `backend/scripts/bench.py` runs one spec.
 `docs/benchmarks/` explains the method.
 
+### 5.9 Node web-UI relay
+
+A lab node's HTTP view (the ICS `process-sim` status page on :8000, an HMI
+console on :8080) lives on an IP inside the Kathará lab, which the backend can't
+reach directly — it has only the Docker socket. `api/webui.py` relays it:
+`GET|POST /topologies/{id}/webui/{node}/{path}` resolves the port (the
+container's own `webUiPort`, else the catalog type's `catalog.web_ui_port`),
+`docker exec`s a buffered `curl` against `127.0.0.1:<port>` *inside the node*
+(`engine.exec_output`, the buffered sibling of `exec_stream`), and relays the
+response — injecting a `<base>` and rewriting root-absolute `src`/`href`/`action`
+so assets load back through the relay. It rides the existing `/api` proxy, needs
+no host ports and adds no container, so the lab stays isolated; the frontend
+shows it in an iframe dock tab (`features/webui`). It suits server-rendered pages
+(what the ICS images serve); a port-publishing proxy for complex apps/websockets
+is the deferred upgrade. Deploy-gated; GET is read, POST is instructor-only.
+
 ## 6. Frontend
 
 ### 6.1 One canvas, projected
@@ -947,7 +964,9 @@ Deferred features, with the seams already in place — see
 - **Live runtime stream** replacing `/runtime` polling, built on `events`.
 - **Agent orchestration** — `GET /topologies/{id}/context` already returns
   everything an agent needs, and `version`/409 makes concurrent edits safe.
-- Classroom mode, firewall editor, and a container web-UI proxy.
+- Classroom mode, firewall editor, and a full container web-UI proxy (a node's
+  HTTP view is already relayable through the backend, see §5.9; a port-publishing
+  proxy for complex apps/websockets is the upgrade).
 - **Prebuilt node images** from CI (GHCR), pulled before falling back to a
   local build (§5.6).
 

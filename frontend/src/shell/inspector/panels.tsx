@@ -1,8 +1,8 @@
-import { Activity, Gauge, ArrowDownRight, Copy, Maximize2, Minimize2, Radio, Terminal, Trash2, X } from 'lucide-react';
+import { Activity, Gauge, ArrowDownRight, Copy, Globe, Maximize2, Minimize2, Radio, Terminal, Trash2, X } from 'lucide-react';
 import type { Container, Site, Subnet } from '@/types/topology';
 import { useAppStore, undo } from '@/store';
 import { useAppShallow } from '@/store/selectors';
-import { colorFor, displayNameFor, effectiveImage, imageSpecFor, labelFor, variantsFor } from '@/catalog/catalog';
+import { colorFor, displayNameFor, effectiveImage, imageSpecFor, labelFor, typeWebUiPorts, variantsFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
 import { canTakeInterfaceLegs, countContainers, countSubnets, gatewayOf, locate, locateConnection, membersOfSubnet, routersForSubnet, usedIpsInSubnet, type Scope } from '@/lib/topology';
 import { planNodeFor, usePlan } from '@/features/deployment/usePlan';
@@ -12,6 +12,7 @@ import { DeviceTypePicker } from '@/features/topology/DeviceTypePicker';
 import { ImagePicker } from '@/features/images/ImagePicker';
 import { ImageStatusLine } from '@/features/images/ImageStatusLine';
 import { CommitInput } from './CommitInput';
+import { openWebUi } from '@/features/webui/actions';
 import { KeyValueEditor } from './KeyValueEditor';
 import { Row, Section, Stat } from './Section';
 import { IssuesSection } from './IssuesSection';
@@ -177,6 +178,9 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
   const candidates = allSubnets.filter((sn) => sn.id !== subnet.id && !attached.has(sn.id));
   const isOwnBridge = !!imageSpecFor(effectiveImage(container))?.ownBridge;
   const mirrorCandidates = membersOfSubnet(topology, subnet.id).filter((c) => c.id !== container.id);
+  // Web UI: a per-node port override, falling back to the catalog type's port.
+  const catalogWebPort = typeWebUiPorts[container.type];
+  const webPort = typeof container.webUiPort === 'number' ? container.webUiPort : catalogWebPort;
   // Interface names come from the saved plan (the engine numbers them by
   // connection order, so a leg is not always eth1); hidden while it's stale.
   const { plan, stale } = usePlan();
@@ -274,6 +278,27 @@ export function DevicePanel({ subnet, container, ctx }: { site: Site; subnet: Su
             />
           </Row>
         ) : null}
+      </Section>
+
+      <Section title="Web UI" defaultOpen={!!webPort}>
+        <Row label="Port" hint={catalogWebPort && container.webUiPort === undefined ? `catalog default ${catalogWebPort}` : 'HTTP port this node serves a view on'}>
+          <CommitInput
+            value={container.webUiPort != null ? String(container.webUiPort) : ''}
+            placeholder={catalogWebPort ? String(catalogWebPort) : 'e.g. 8000'}
+            onCommit={(v) => updateContainer(container.id, { webUiPort: v.trim() ? Number(v) : undefined })}
+            validate={(v) => (!v.trim() ? null : !/^\d+$/.test(v) || +v < 1 || +v > 65535 ? 'Enter a port 1–65535' : null)}
+          />
+        </Row>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-1 w-full"
+          disabled={deployStatus !== 'deployed' || !webPort}
+          title={deployStatus !== 'deployed' ? 'Deploy the topology first' : !webPort ? 'Set a web UI port first' : 'Open this node\u2019s web UI in the dock'}
+          onClick={() => openWebUi(container.id, container.name)}
+        >
+          <Globe /> Open web UI
+        </Button>
       </Section>
 
       <Section title="Metadata" defaultOpen={!!container.metadata && Object.keys(container.metadata).length > 0}>

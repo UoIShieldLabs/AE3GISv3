@@ -110,7 +110,7 @@ def test_plan_export_and_context(client, topology):
 
 def test_presets_list_and_load(client):
     presets = client.get("/api/v1/presets").json()["presets"]
-    assert presets and presets[0]["id"] == "two-subnet-demo"
+    assert {p["id"] for p in presets} >= {"two-subnet-demo", "ics-scenario-b"}
     r = client.post("/api/v1/presets/two-subnet-demo/load")
     assert r.status_code == 201 and r.json()["name"]
     assert client.get("/api/v1/presets/../etc").status_code == 404
@@ -183,3 +183,21 @@ def test_runtime_lists_activity_and_destroy_stops_it_first(client, topology, wai
     steps = client.get(f"/api/v1/jobs/{job['id']}").json()["steps"]
     assert [s["name"] for s in steps] == ["stop", "undeploy", "verify"]
     assert steps[0]["message"] == "Nothing running"
+
+
+def test_ics_scenario_b_preset_loads_and_is_valid(client):
+    # The shipped ICS scenario loads cleanly and carries the web-UI ports.
+    r = client.post("/api/v1/presets/ics-scenario-b/load")
+    assert r.status_code == 201, r.text
+    data = r.json()["data"]
+    procsim = next(
+        c
+        for site in data["sites"]
+        for sn in site["subnets"]
+        for c in sn["containers"]
+        if c["id"] == "process-sim"
+    )
+    assert procsim["webUiPort"] == 8000
+    # It validates with no blocking errors (warnings like mirror-before-sync are fine).
+    v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
+    assert not any(d["severity"] == "error" for d in v["diagnostics"])
