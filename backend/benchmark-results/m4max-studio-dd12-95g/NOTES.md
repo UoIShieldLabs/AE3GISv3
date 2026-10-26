@@ -168,3 +168,17 @@ disk/node; left out of the random mix), everything else 14–76.
   mesh·udp·1M·1000ms 350/400→450/500, mesh·udp·1M·2000ms 450/500→500/550.
 
 The commits were later rewritten without the co-author line: `ab6c037`, named in the traffic results, is the same code as `f7d795d` on `benchmarking/m4-max-mac-studio`.
+
+## Random climbs 1, 2, 3, 6, 8 rerun — 2026-10-24 00:03 → 2026-10-25 01:48 UTC
+
+Rerun because runs 1–3 ran on Docker 28.4 with thousands of leftover containers, run 6 stopped on destroy_failed, and run 8 on one dropped connection. They ran on a copy of the suite folder (the results are tracked, so writing into them would dirty the tree), and were copied back. Each rerun climb's old outcome is in the manifest under `previous`.
+
+| Climb | Before | Rerun |
+|---|---:|---|
+| 1 | 1140 | 2240 |
+| 2 | 1200 | 2320 (deploy timeout) |
+| 3 | 1140 | 1620: destroy_failed at 2020 ("Still running: h4_48"), not capacity |
+| 6 | 1640 (destroy_failed) | 2360 (deploy timeout) |
+| 8 | 2070 (dropped connection) | 2320 |
+
+Ceiling across all 10 is now 2251 ± 226 hosts. Excluding climb 3, it is about 2320 (2240–2380). destroy_failed has now stopped 2 of about 15 climbs: a destroy that leaves a node running ends the climb instead of being retried.

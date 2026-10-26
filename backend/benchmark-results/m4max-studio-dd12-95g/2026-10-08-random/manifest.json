@@ -7,7 +7,7 @@
   "base_url": "http://localhost:8000/api/v1",
   "restart": "docker desktop restart",
   "started_at": "2026-10-08T18:10:47.235889+00:00",
-  "ended_at": "2026-10-11T14:08:52.908066+00:00",
+  "ended_at": "2026-10-25T01:48:30.700323+00:00",
   "runs": [
     {
       "key": "census",
@@ -47,18 +47,18 @@
       "dir": "02-random-idle-run1",
       "status": "done",
       "rest": {
-        "at": "2026-10-08T19:08:27.531674+00:00",
-        "mem_total": 101853388800,
-        "mem_available": 99949416448,
+        "at": "2026-10-24T00:06:38.626301+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100261621760,
         "loadavg": [
-          0.35,
-          0.08,
-          0.03
+          0.0,
+          0.0,
+          0.0
         ]
       },
       "attempts": 1,
-      "benchmark_id": "11980395c09244f9a48e13a576b47b87",
-      "started_at": "2026-10-08T19:08:27.564804+00:00",
+      "benchmark_id": "a263cb5486544ff484d86310a6994b42",
+      "started_at": "2026-10-24T00:06:38.658610+00:00",
       "notes": {
         "seed": 1,
         "excluded": [
@@ -67,11 +67,17 @@
         ]
       },
       "error": null,
-      "ended_at": "2026-10-09T01:03:49.456976+00:00",
-      "outcome": "ceiling 1140 hosts (1150 hosts failed (memory))",
-      "ceiling": 1140,
-      "stopped_by": "criterion:memory",
-      "limit": "1150 hosts failed (memory)"
+      "ended_at": "2026-10-24T05:53:48.249091+00:00",
+      "outcome": "ceiling 2240 hosts",
+      "ceiling": 2240,
+      "stopped_by": "max_steps",
+      "limit": null,
+      "previous": {
+        "outcome": "ceiling 1140 hosts (1150 hosts failed (memory))",
+        "benchmark_id": "11980395c09244f9a48e13a576b47b87",
+        "started_at": "2026-10-08T19:08:27.564804+00:00",
+        "ended_at": "2026-10-09T01:03:49.456976+00:00"
+      }
     },
     {
       "key": "random-idle-run2",
@@ -82,32 +88,38 @@
       "dir": "03-random-idle-run2",
       "status": "done",
       "rest": {
-        "at": "2026-10-09T01:05:15.849578+00:00",
-        "mem_total": 101853388800,
-        "mem_available": 100169256960,
+        "at": "2026-10-24T05:57:04.125840+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 100021018624,
         "loadavg": [
-          0.13,
           0.03,
-          0.01
+          0.01,
+          0.0
         ]
       },
       "attempts": 1,
-      "benchmark_id": "a3c889d675554be48f66a09acfa94253",
-      "started_at": "2026-10-09T01:05:15.905556+00:00",
+      "benchmark_id": "9fbc124e79294122ab1e5ed959c1d6e2",
+      "started_at": "2026-10-24T05:57:04.195280+00:00",
       "notes": {
         "seed": 2,
-        "start": 790,
+        "start": 1560,
         "excluded": [
           "ids \u00b7 ae3gis.local/zeek",
           "attacker \u00b7 ae3gis.local/malicious-client"
         ]
       },
       "error": null,
-      "ended_at": "2026-10-09T05:17:30.258647+00:00",
-      "outcome": "ceiling 1200 hosts (ceiling between 1200 and 1210 hosts (1210 failed))",
-      "ceiling": 1200,
-      "stopped_by": "bracketed",
-      "limit": "ceiling between 1200 and 1210 hosts (1210 failed)"
+      "ended_at": "2026-10-24T13:48:15.273446+00:00",
+      "outcome": "ceiling 2320 hosts (2330 hosts failed (deploy_failed))",
+      "ceiling": 2320,
+      "stopped_by": "criterion:deploy_failed",
+      "limit": "2330 hosts failed (deploy_failed)",
+      "previous": {
+        "outcome": "ceiling 1200 hosts (ceiling between 1200 and 1210 hosts (1210 failed))",
+        "benchmark_id": "a3c889d675554be48f66a09acfa94253",
+        "started_at": "2026-10-09T01:05:15.905556+00:00",
+        "ended_at": "2026-10-09T05:17:30.258647+00:00"
+      }
     },
     {
       "key": "random-idle-run3",
@@ -118,32 +130,38 @@
       "dir": "04-random-idle-run3",
       "status": "done",
       "rest": {
-        "at": "2026-10-09T05:18:55.299972+00:00",
-        "mem_total": 101853388800,
-        "mem_available": 99917402112,
+        "at": "2026-10-24T13:51:32.132505+00:00",
+        "mem_total": 101850222592,
+        "mem_available": 99936899072,
         "loadavg": [
-          0.72,
-          0.21,
-          0.07
+          0.22,
+          0.08,
+          0.03
         ]
       },
       "attempts": 1,
-      "benchmark_id": "c6c1b905d6924647899b5212b05a9100",
-      "started_at": "2026-10-09T05:18:55.350487+00:00",
+      "benchmark_id": "4b046e4627694596b163c3ed6b5e21f3",
+      "started_at": "2026-10-24T13:51:32.212060+00:00",
       "notes": {
         "seed": 3,
-        "start": 840,
+        "start": 1620,
         "excluded": [
           "ids \u00b7 ae3gis.local/zeek",
           "attacker \u00b7 ae3gis.local/malicious-client"
         ]
       },
       "error": null,
-      "ended_at": "2026-10-09T09:38:55.710087+00:00",
-      "outcome": "ceiling 1140 hosts (ceiling between 1140 and 1150 hosts (1150 failed))",
-      "ceiling": 1140,
-      "stopped_by": "bracketed",
-      "limit": "ceiling between 1140 and 1150 hosts (1150 failed)"
+      "ended_at": "2026-10-24T14:57:50.616236+00:00",
+      "outcome": "ceiling 1620 hosts (2020 hosts failed (destroy_failed))",
+      "ceiling": 1620,
+      "stopped_by": "criterion:destroy_failed",
+      "limit": "2020 hosts failed (destroy_failed)",
+      "previous": {
+        "outcome": "ceiling 1140 hosts (ceiling between 1140 and 1150 hosts (1150 failed))",
+        "benchmark_id": "c6c1b905d6924647899b5212b05a9100",
+        "started_at": "2026-10-09T05:18:55.350487+00:00",
+        "ended_at": "2026-10-09T09:38:55.710087+00:00"
+      }
     },
     {
       "key": "random-idle-run4",
@@ -226,18 +244,18 @@
       "dir": "07-random-idle-run6",
       "status": "done",
       "rest": {
-        "at": "2026-10-10T12:43:13.947341+00:00",
+        "at": "2026-10-24T14:59:07.160988+00:00",
         "mem_total": 101850222592,
-        "mem_available": 100057792512,
+        "mem_available": 99758518272,
         "loadavg": [
-          0.06,
-          0.03,
-          0.01
+          0.88,
+          0.29,
+          0.1
         ]
       },
       "attempts": 1,
-      "benchmark_id": "d379bab877704921bb3368ece7800bb4",
-      "started_at": "2026-10-10T12:43:14.041112+00:00",
+      "benchmark_id": "fe730f8743eb4a5ba06cc3acb852902f",
+      "started_at": "2026-10-24T14:59:07.229819+00:00",
       "notes": {
         "seed": 6,
         "start": 1640,
@@ -247,11 +265,17 @@
         ]
       },
       "error": null,
-      "ended_at": "2026-10-10T13:59:17.998785+00:00",
-      "outcome": "ceiling 1640 hosts (2050 hosts failed (destroy_failed))",
-      "ceiling": 1640,
-      "stopped_by": "criterion:destroy_failed",
-      "limit": "2050 hosts failed (destroy_failed)"
+      "ended_at": "2026-10-24T21:33:13.472043+00:00",
+      "outcome": "ceiling 2360 hosts (2370 hosts failed (deploy_failed))",
+      "ceiling": 2360,
+      "stopped_by": "criterion:deploy_failed",
+      "limit": "2370 hosts failed (deploy_failed)",
+      "previous": {
+        "outcome": "ceiling 1640 hosts (2050 hosts failed (destroy_failed))",
+        "benchmark_id": "d379bab877704921bb3368ece7800bb4",
+        "started_at": "2026-10-10T12:43:14.041112+00:00",
+        "ended_at": "2026-10-10T13:59:17.998785+00:00"
+      }
     },
     {
       "key": "random-idle-run7",
@@ -298,18 +322,18 @@
       "dir": "09-random-idle-run8",
       "status": "done",
       "rest": {
-        "at": "2026-10-10T23:45:08.026463+00:00",
+        "at": "2026-10-24T21:34:32.427886+00:00",
         "mem_total": 101850222592,
-        "mem_available": 99927846912,
+        "mem_available": 99714899968,
         "loadavg": [
-          0.27,
-          0.1,
-          0.03
+          0.66,
+          0.2,
+          0.07
         ]
       },
       "attempts": 1,
-      "benchmark_id": "64b5914e28cd447690207fa24cdd6b50",
-      "started_at": "2026-10-10T23:45:08.118780+00:00",
+      "benchmark_id": "fb071df5f31f45538a951cddb72581be",
+      "started_at": "2026-10-24T21:34:32.496047+00:00",
       "notes": {
         "seed": 8,
         "start": 1660,
@@ -319,11 +343,17 @@
         ]
       },
       "error": null,
-      "ended_at": "2026-10-11T01:46:44.346608+00:00",
-      "outcome": "ceiling 2070 hosts (ceiling between 2070 and 2075 hosts (2075 failed))",
-      "ceiling": 2070,
+      "ended_at": "2026-10-25T01:48:30.691951+00:00",
+      "outcome": "ceiling 2320 hosts (ceiling between 2320 and 2330 hosts (2330 failed))",
+      "ceiling": 2320,
       "stopped_by": "bracketed",
-      "limit": "ceiling between 2070 and 2075 hosts (2075 failed)"
+      "limit": "ceiling between 2320 and 2330 hosts (2330 failed)",
+      "previous": {
+        "outcome": "ceiling 2070 hosts (ceiling between 2070 and 2075 hosts (2075 failed))",
+        "benchmark_id": "64b5914e28cd447690207fa24cdd6b50",
+        "started_at": "2026-10-10T23:45:08.118780+00:00",
+        "ended_at": "2026-10-11T01:46:44.346608+00:00"
+      }
     },
     {
       "key": "random-idle-run9",
@@ -399,7 +429,7 @@
     }
   ],
   "git": {
-    "commit": "ce3d1d4d687630490299cb18de6664b59efe3db7",
+    "commit": "dc8470732834bb348a6fbf15ee5212e84ea782e3",
     "dirty": false
   },
   "prebuild": {
