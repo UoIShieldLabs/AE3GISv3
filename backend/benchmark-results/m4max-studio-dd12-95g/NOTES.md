@@ -182,3 +182,11 @@ Rerun because runs 1–3 ran on Docker 28.4 with thousands of leftover container
 | 8 | 2070 (dropped connection) | 2320 |
 
 Ceiling across all 10 is now 2251 ± 226 hosts. Excluding climb 3, it is about 2320 (2240–2380). destroy_failed has now stopped 2 of about 15 climbs: a destroy that leaves a node running ends the climb instead of being retried.
+
+## Climb 3 rerun after the destroy fix — 2026-10-26 17:54 → 2026-10-27 01:32 UTC
+
+The fix: `3af8219`, destroy removes leftovers again before failing. Climb 3 reached **2340 hosts**: 2340 passed, 2350 timed out on deploy, and every teardown went through. Its earlier outcomes are in the manifest under `previous` and `previous_2`.
+
+All 10 climbs are now clean. The ceiling is **2323 ± 42 hosts** (2240–2380), 2407 ± 44 nodes. Peak memory is 77.5 ± 2.3%. Every climb stops on deploys timing out (Docker Desktop's wall), not on memory.
+
+The summary's AE3GIS commit (`3af8219`) is the last one the suite ran on. Climbs 4, 5, 7, 9 and 10 ran on `ce3d1d4` (code since rewritten as `7494467`), climbs 1, 2, 6 and 8 on `dc84707`, and climb 3 on `3af8219`. The differences only touch traffic runs and teardown retries.

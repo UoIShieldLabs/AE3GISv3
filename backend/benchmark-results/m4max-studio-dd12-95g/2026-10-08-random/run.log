@@ -1344,3 +1344,94 @@ hmi · kathara/base  nodes    10  deploy     0.9s  ready   0.01s  destroy    0.6
   → ceiling between 2320 and 2330 hosts (2330 failed)
   random-idle-run8: succeeded: ceiling 2320 hosts
 === 2026-10-25 01:48:30 UTC · suite finished: backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random-rerun/summary.md
+=== rerun of climb 3 after the destroy fix Mon Oct 26 17:54:27 UTC 2026
+=== 2026-10-26 17:54:27 UTC · suite random on m4max-studio-dd12-95g → backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random-rerun
+  bringing the backend up in bench mode (docker compose)
+  building 1 image(s): ae3gis.local/zeek
+  not available here: ae3gis.local/malicious-client (Builds only for linux/amd64; this host is linux/arm64)
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-26 17:54:58 UTC · 04-random-idle-run3 (failed)
+  restarting Docker: docker desktop restart
+  letting the host settle (60s)
+  benchmark 4c3f3750101547c6a22d8a1f4ea4e985: m4max-studio-dd12-95g · random-idle run 3 · adaptive from 1620 hosts
+  seed: 3
+  start: 1620
+  excluded: ids · ae3gis.local/zeek, attacker · ae3gis.local/malicious-client
+  … images
+  … baseline: the host at rest (30s)
+  … 1620 hosts: waiting for the host to go quiet
+  … 1620 hosts: reference (20.0s, nothing deployed)
+  … 1620 hosts: deploying 1680 nodes
+  … 1620 hosts: checking 2488 paths
+  … 1620 hosts: settling (60.0s)
+  … 1620 hosts: holding idle (30s)
+  … 1620 hosts: destroying
+    1620 hosts  nodes  1680  deploy   554.3s  ready  78.89s  destroy  862.5s    29.3 MB/node  host mem  50.5%  ok
+  → next 2020 hosts: ~93% memory projected at 3048 hosts (29.3 MB/node, peak 50.5% now)
+  … 2020 hosts: waiting for the host to go quiet
+  … 2020 hosts: reference (20.0s, nothing deployed)
+  … 2020 hosts: deploying 2094 nodes
+  … 2020 hosts: checking 3116 paths
+  … 2020 hosts: settling (60.0s)
+  … 2020 hosts: holding idle (30s)
+  … 2020 hosts: destroying
+    2020 hosts  nodes  2094  deploy   890.7s  ready  96.91s  destroy  925.5s    27.6 MB/node  host mem  64.3%  ok
+  → next 2520 hosts: ~93% memory projected at 3045 hosts (27.6 MB/node, peak 64.3% now)
+  … 2520 hosts: waiting for the host to go quiet
+  … 2520 hosts: reference (20.0s, nothing deployed)
+  … 2520 hosts: deploying 2611 nodes
+    2520 hosts  nodes  2611  deploy  3072.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2520 hosts failed (deploy_failed): trying 2270 hosts
+  … 2270 hosts: waiting for the host to go quiet
+  … 2270 hosts: reference (20.0s, nothing deployed)
+  … 2270 hosts: deploying 2353 nodes
+  … 2270 hosts: checking 3502 paths
+  … 2270 hosts: settling (60.0s)
+  … 2270 hosts: holding idle (30s)
+  … 2270 hosts: destroying
+    2270 hosts  nodes  2353  deploy  1202.3s  ready 124.15s  destroy 1168.5s    26.4 MB/node  host mem  75.3%  ok
+  → next 2510 hosts: ~93% memory projected at 2931 hosts (26.4 MB/node, peak 75.3% now); below 2520, which failed
+  … 2510 hosts: waiting for the host to go quiet
+  … 2510 hosts: reference (20.0s, nothing deployed)
+  … 2510 hosts: deploying 2601 nodes
+    2510 hosts  nodes  2601  deploy  2727.4s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2510 hosts failed (deploy_failed): trying 2390 hosts
+  … 2390 hosts: waiting for the host to go quiet
+  … 2390 hosts: reference (20.0s, nothing deployed)
+  … 2390 hosts: deploying 2475 nodes
+    2390 hosts  nodes  2475  deploy  2095.5s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2390 hosts failed (deploy_failed): trying 2330 hosts
+  … 2330 hosts: waiting for the host to go quiet
+  … 2330 hosts: reference (20.0s, nothing deployed)
+  … 2330 hosts: deploying 2414 nodes
+  … 2330 hosts: checking 3602 paths
+  … 2330 hosts: settling (60.0s)
+  … 2330 hosts: holding idle (30s)
+  … 2330 hosts: destroying
+    2330 hosts  nodes  2414  deploy  1414.6s  ready 131.32s  destroy  679.2s    19.2 MB/node  host mem  78.4%  ok
+  → next 2380 hosts: ~93% memory projected at 3092 hosts (19.2 MB/node, peak 78.4% now); below 2390, which failed
+  … 2380 hosts: waiting for the host to go quiet
+  … 2380 hosts: reference (20.0s, nothing deployed)
+  … 2380 hosts: deploying 2465 nodes
+    2380 hosts  nodes  2465  deploy  2228.9s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2380 hosts failed (deploy_failed): trying 2360 hosts
+  … 2360 hosts: waiting for the host to go quiet
+  … 2360 hosts: reference (20.0s, nothing deployed)
+  … 2360 hosts: deploying 2445 nodes
+    2360 hosts  nodes  2445  deploy  2209.8s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  → 2360 hosts failed (deploy_failed): trying 2340 hosts
+  … 2340 hosts: waiting for the host to go quiet
+  … 2340 hosts: reference (20.0s, nothing deployed)
+  … 2340 hosts: deploying 2424 nodes
+  … 2340 hosts: checking 3618 paths
+  … 2340 hosts: settling (60.0s)
+  … 2340 hosts: holding idle (30s)
+  … 2340 hosts: destroying
+    2340 hosts  nodes  2424  deploy  1334.1s  ready 125.56s  destroy  685.8s    20.1 MB/node  host mem  79.2%  ok
+  → next 2350 hosts: ~93% memory projected at 3026 hosts (20.1 MB/node, peak 79.2% now); below 2360, which failed
+  … 2350 hosts: waiting for the host to go quiet
+  … 2350 hosts: reference (20.0s, nothing deployed)
+  … 2350 hosts: deploying 2435 nodes
+    2350 hosts  nodes  2435  deploy  2163.3s  ready      –s  destroy      –s       – MB/node  host mem     –%  failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+  random-idle-run3: succeeded: ceiling 2340 hosts · stopped: deploy_failed (ReadTimeout: UnixHTTPConnectionPool(host='localhost', port=None): Read timed out. (read timeout=300.0))
+=== 2026-10-27 01:32:41 UTC · suite finished: backend/benchmark-results/m4max-studio-dd12-95g/2026-10-08-random-rerun/summary.md
