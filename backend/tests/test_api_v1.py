@@ -198,6 +198,13 @@ def test_ics_scenario_b_preset_loads_and_is_valid(client):
         if c["id"] == "process-sim"
     )
     assert procsim["webUiPort"] == 8000
+    # It ships the IEC-104 walkthrough tutorial, and every command targets a real node.
+    node_ids = {c["id"] for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]}
+    tutorial = data["tutorials"][0]
+    assert tutorial["cells"], "tutorial has cells"
+    for cell in tutorial["cells"]:
+        if cell["kind"] == "command":
+            assert cell["containerId"] in node_ids, cell["containerId"]
     # It validates with no blocking errors (warnings like mirror-before-sync are fine).
     v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
     assert not any(d["severity"] == "error" for d in v["diagnostics"])

