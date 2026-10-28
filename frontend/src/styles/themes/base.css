@@ -42,6 +42,11 @@
 .ae-glyph {
   filter: var(--glyph-filter);
 }
+/* xterm sizes its cells from the font it asks for: a theme's inherited
+   font-size-adjust (Hacknet's) would make glyphs overflow and gap. */
+.xterm {
+  font-size-adjust: none;
+}
 /* Zooming re-rasterizes every filtered glyph (a 207-node subnet dropped to
    ~15 fps), so on the canvas only the selected node's glyph takes it. */
 .react-flow__node:not(.selected) .ae-glyph {

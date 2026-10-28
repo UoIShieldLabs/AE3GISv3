@@ -231,7 +231,7 @@ tables record every long operation.
   qualifier so any element can wear a theme; shared non-color tokens — fonts,
   radii, glow — in `base.css`), mapped to utilities via `@theme inline` in
   `styles/index.css`. Themes: Light, Dark, Neon (cyan glow, monospace, square,
-  scanlines), Hacknet (VT323 + Press Start 2P, phosphor green, CRT, shell-prompt
+  scanlines), Hacknet (VT323 + Press Start 2P, Share Tech Mono terminal, phosphor green, CRT, shell-prompt
   chrome, deploy trace, target-locked nodes), named in `app/themes.ts` (id,
   label, light/dark `scheme`, optional `effects` for what CSS can't do, e.g.
   Hacknet's node decrypt; components read `effectsFor()`, never a theme id);

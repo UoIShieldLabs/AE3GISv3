@@ -775,7 +775,9 @@ picked in the top bar's Appearance menu or <kbd>⌘K</kbd>:
   only (a nested preview takes the tokens, not the flourishes).
   **Neon**: cyan-on-black glow, monospace, square, title-bar strips, faint
   scanlines. **Hacknet**: Neon's panels with phosphor-green highlights, VT323
-  text (scaled with `font-size-adjust`) and Press Start 2P titles, a CRT
+  text (scaled with `font-size-adjust`, which `.xterm` resets: xterm sizes its
+  cells from the font it asks for), Press Start 2P titles, Share Tech Mono in
+  the terminal, a CRT
   overlay (scanlines, vignette, rolling band), the breadcrumb as a shell
   prompt, `[ BRACKETED ]` primary buttons, log-line toasts, a red "trace"
   while deploying, glitches on landing and hover, bracketed node cards, a
