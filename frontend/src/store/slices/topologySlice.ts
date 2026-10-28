@@ -1,4 +1,4 @@
-import type { AttackPhase, Connection, Container, Position, ScriptExecution, Site, Subnet, TopologyData, SavedFlow } from '@/types/topology';
+import type { AttackPhase, Connection, Container, Position, ScriptExecution, Site, Subnet, TopologyData, SavedFlow, Tutorial, TutorialCell } from '@/types/topology';
 import { createEmptyTopology } from '@/types/topology';
 import { generateId } from '@/lib/ids';
 import { getNextAvailableIp } from '@/utils/validation';
@@ -9,7 +9,7 @@ import {
 import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
 import { cloneTopology, normalizeTopology, type NormalizeReport } from '../normalize';
-import type { SliceCreator, TopologySlice } from '../types';
+import type { SliceCreator, TopologySlice, TutorialCellPatch } from '../types';
 
 const rects = (items: { position?: Position }[], size: { width: number; height: number }): Rect[] =>
   items.filter((i) => i.position).map((i) => ({ ...i.position!, ...size }));
@@ -134,6 +134,18 @@ function dropNodes(top: TopologyData, ids: string[]) {
     for (const scenario of top.scenarios)
       for (const phase of scenario.phases ?? [])
         phase.executions = (phase.executions ?? []).filter((e) => liveContainers.has(e.containerId));
+}
+
+function findTutorial(top: TopologyData, tutorialId: string): Tutorial | undefined {
+  return top.tutorials?.find((t) => t.id === tutorialId);
+}
+
+/** A new cell of `kind`, taking only the fields that kind has. */
+function makeCell(kind: TutorialCell['kind'], init: TutorialCellPatch = {}): TutorialCell {
+  const id = generateId('cell');
+  return kind === 'markdown'
+    ? { id, kind, source: init.source ?? '' }
+    : { id, kind, containerId: init.containerId ?? '', command: init.command ?? '' };
 }
 
 function findPhase(top: TopologyData, phaseId: string): AttackPhase | undefined {
@@ -496,6 +508,98 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       steps.splice(to, 0, moved);
       s.dirty = true;
     }, false, 'moveStep'),
+
+  // ── Tutorials (part of the saved design, undoable). Cells on a deleted node
+  // are kept, not scrubbed: the panel flags them so their command isn't lost. ──
+  addTutorial: (title) => {
+    const id = generateId('tutorial');
+    set((s) => {
+      const t = s.topology as TopologyData;
+      const tutorials = (t.tutorials ??= []);
+      tutorials.push({ id, title: title?.trim() || `Tutorial ${tutorials.length + 1}`, cells: [] });
+      s.dirty = true;
+    }, false, 'addTutorial');
+    return id;
+  },
+
+  updateTutorial: (tutorialId, updates) =>
+    set((s) => {
+      const tutorial = findTutorial(s.topology as TopologyData, tutorialId);
+      if (!tutorial) return;
+      Object.assign(tutorial, updates);
+      s.dirty = true;
+    }, false, 'updateTutorial'),
+
+  removeTutorial: (tutorialId) =>
+    set((s) => {
+      const t = s.topology as TopologyData;
+      if (!t.tutorials?.some((x) => x.id === tutorialId)) return;
+      t.tutorials = t.tutorials.filter((x) => x.id !== tutorialId);
+      s.dirty = true;
+    }, false, 'removeTutorial'),
+
+  duplicateTutorial: (tutorialId) => {
+    const source = findTutorial(get().topology as TopologyData, tutorialId);
+    if (!source) return null;
+    const id = generateId('tutorial');
+    const copy = JSON.parse(JSON.stringify(source)) as Tutorial;
+    copy.id = id;
+    copy.title = `${source.title} (copy)`;
+    copy.cells = (copy.cells ?? []).map((c) => ({ ...c, id: generateId('cell') }));
+    set((s) => {
+      const tutorials = (s.topology as TopologyData).tutorials ?? [];
+      const at = tutorials.findIndex((x) => x.id === tutorialId);
+      tutorials.splice(at + 1, 0, copy);
+      s.dirty = true;
+    }, false, 'duplicateTutorial');
+    return id;
+  },
+
+  addTutorialCell: (tutorialId, kind, index, init) => {
+    const cell = makeCell(kind, init);
+    let ok = false;
+    set((s) => {
+      const tutorial = findTutorial(s.topology as TopologyData, tutorialId);
+      if (!tutorial) return;
+      const cells = (tutorial.cells ??= []);
+      const at = index === undefined ? cells.length : Math.max(0, Math.min(index, cells.length));
+      cells.splice(at, 0, cell);
+      ok = true;
+      s.dirty = true;
+    }, false, 'addTutorialCell');
+    return ok ? cell.id : null;
+  },
+
+  updateTutorialCell: (tutorialId, cellId, updates) =>
+    set((s) => {
+      const cell = findTutorial(s.topology as TopologyData, tutorialId)?.cells?.find((c) => c.id === cellId);
+      if (!cell) return;
+      if (cell.kind === 'markdown') {
+        if (updates.source !== undefined) cell.source = updates.source;
+      } else {
+        if (updates.containerId !== undefined) cell.containerId = updates.containerId;
+        if (updates.command !== undefined) cell.command = updates.command;
+      }
+      s.dirty = true;
+    }, false, 'updateTutorialCell'),
+
+  removeTutorialCell: (tutorialId, cellId) =>
+    set((s) => {
+      const tutorial = findTutorial(s.topology as TopologyData, tutorialId);
+      const at = tutorial?.cells?.findIndex((c) => c.id === cellId) ?? -1;
+      if (!tutorial || at < 0) return;
+      tutorial.cells.splice(at, 1);
+      s.dirty = true;
+    }, false, 'removeTutorialCell'),
+
+  moveTutorialCell: (tutorialId, from, to) =>
+    set((s) => {
+      const cells = findTutorial(s.topology as TopologyData, tutorialId)?.cells;
+      if (!cells || from < 0 || from >= cells.length || to < 0 || to >= cells.length || from === to) return;
+      const [moved] = cells.splice(from, 1);
+      cells.splice(to, 0, moved);
+      s.dirty = true;
+    }, false, 'moveTutorialCell'),
 
   deleteNodes: (ids) => set((s) => { dropNodes(s.topology as TopologyData, ids); s.dirty = true; }, false, 'deleteNodes'),
 
