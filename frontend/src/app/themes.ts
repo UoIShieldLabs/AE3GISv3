@@ -8,12 +8,19 @@ export interface ThemeDef {
   /** Light or dark family: drives `color-scheme`, React Flow and toasts. */
   scheme: 'light' | 'dark';
   description?: string;
+  /** Opt-in behaviours a theme's CSS can't do alone; components read these,
+   *  never a theme id. */
+  effects?: {
+    /** The selected canvas node's name and IP "decrypt" from random glyphs. */
+    decrypt?: boolean;
+  };
 }
 
 export const THEMES = [
   { id: 'light', label: 'Light', scheme: 'light' },
   { id: 'dark', label: 'Dark', scheme: 'dark' },
-  { id: 'neon', label: 'Neon', scheme: 'dark', description: 'Hacknet-inspired' },
+  { id: 'neon', label: 'Neon', scheme: 'dark' },
+  { id: 'hacknet', label: 'Hacknet', scheme: 'dark', effects: { decrypt: true } },
 ] as const satisfies readonly ThemeDef[];
 
 export type ThemeId = (typeof THEMES)[number]['id'];

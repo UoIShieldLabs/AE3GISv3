@@ -1,0 +1,136 @@
+/* Hacknet: after the game's look. Its theme slots give the base palette
+   (highlight 0,139,199; terminal text 213,245,255; "this computer"
+   95,220,83; shell 222,201,24; red trace) on Neon's cyan panels, then
+   phosphor-green highlights, VT323 text with Press Start 2P titles and a
+   CRT screen. Motion only runs with prefers-reduced-motion: no-preference,
+   and nothing animates on every canvas node (zoom re-rasterizes them). */
+
+[data-theme='hacknet'] {
+  color-scheme: dark;
+
+  --bg-app: #05080c;
+  --bg-canvas: #030507;
+  --bg-surface: #0a1016;
+  --bg-surface-2: #0e161e;
+  --bg-elevated: #0c141b;
+  --bg-hover: rgba(51, 255, 102, 0.07);
+  --bg-active: rgba(51, 255, 102, 0.14);
+
+  --border: #0b3a52;
+  --border-strong: #0e5f86;
+
+  --fg: #d5f5ff;
+  --fg-muted: #7fb3c8;
+  --fg-subtle: #4f7486;
+
+  /* Phosphor green. */
+  --accent: #33ff66;
+  --accent-hover: #7dff9e;
+  --accent-fg: #001a07;
+  --accent-soft: rgba(51, 255, 102, 0.14);
+
+  --success: #5fdc53;
+  --success-soft: rgba(95, 220, 83, 0.14);
+  --warning: #dec918;
+  --warning-soft: rgba(222, 201, 24, 0.14);
+  --danger: #ff3b4e;
+  --danger-soft: rgba(255, 59, 78, 0.16);
+  --info: #69a7bc;
+  --info-soft: rgba(105, 167, 188, 0.16);
+
+  --ring: var(--accent);
+
+  /* Neon's series (validated on this surface). */
+  --chart-1: #0a9be0;
+  --chart-2: #e8602a;
+  --chart-3: #16a878;
+  --chart-4: #c98500;
+  --chart-5: #e04aa8;
+  --chart-6: #8a63f0;
+
+  --shadow-sm: 0 0 6px rgba(0, 139, 199, 0.16);
+  --shadow-md: 0 0 14px rgba(0, 139, 199, 0.22), 0 2px 6px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 28px rgba(0, 139, 199, 0.26), 0 8px 24px rgba(0, 0, 0, 0.7);
+
+  --terminal-bg: #000000;
+  --terminal-fg: #33ff66;
+  --terminal-cursor: #33ff66;
+  --terminal-selection: rgba(51, 255, 102, 0.28);
+
+  --font-mono: 'VT323', 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-sans: var(--font-mono);
+  --font-display: 'Press Start 2P', var(--font-mono);
+  --terminal-font: 'VT323', ui-monospace, monospace;
+  --terminal-font-size: 18px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --glow: 0 0 0 1px var(--accent), 0 0 16px rgba(51, 255, 102, 0.45);
+  --glyph-filter: drop-shadow(0 0 2px currentColor);
+  --edge-stroke: rgba(31, 182, 255, 0.55);
+}
+
+/* VT323's x-height is small: scale it up to the UI's metrics (layouts stay
+   put); it has one weight, so no smeared synthetic bold. */
+[data-theme='hacknet'] body {
+  font-size-adjust: 0.55;
+  font-synthesis: none;
+}
+
+/* Phosphor glow on the terminal (xterm renders DOM text here). */
+[data-theme='hacknet'] .xterm-rows {
+  text-shadow: 0 0 4px rgba(51, 255, 102, 0.55);
+}
+
+/* Title bars, like Neon's, with glowing green titles. */
+[data-theme='hacknet'] .ae-panel-header {
+  background-color: rgba(0, 139, 199, 0.16);
+  border-bottom-color: var(--border-strong);
+}
+
+/* CRT: scanlines and a vignette in one overlay above everything. */
+[data-theme='hacknet'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.4) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.045) 0,
+      rgba(255, 255, 255, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+@keyframes ae-crt-roll {
+  from { transform: translateY(-20vh); }
+  to { transform: translateY(110vh); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A faint refresh band rolling down the screen (transform only: composited). */
+  [data-theme='hacknet'] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18vh;
+    z-index: 100;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, rgba(51, 255, 102, 0.045), transparent);
+    animation: ae-crt-roll 8s linear infinite;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), print {
+  [data-theme='hacknet'] body::before,
+  [data-theme='hacknet'] body::after {
+    display: none;
+  }
+}

@@ -1,6 +1,6 @@
 import { Palette } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { THEMES, type ThemePref } from '@/app/themes';
+import { THEMES, type ThemeDef, type ThemePref } from '@/app/themes';
 import { ICON_STYLES, glyphFor, type IconStyleId } from '@/catalog/icons/registry';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -8,6 +8,7 @@ import {
 } from '@/ui';
 
 const PREVIEW_ICONS = ['router', 'switch', 'server', 'workstation'];
+const THEME_LIST: readonly ThemeDef[] = THEMES;
 
 /** A chip painted by the theme itself: `data-theme` scopes its tokens. */
 export function ThemeSwatch({ id }: { id: string }) {
@@ -41,10 +42,10 @@ export function AppearanceMenu() {
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as ThemePref)}>
           <DropdownMenuRadioItem value="system"><SystemSwatch /> System</DropdownMenuRadioItem>
-          {THEMES.map((t) => (
+          {THEME_LIST.map((t) => (
             <DropdownMenuRadioItem key={t.id} value={t.id}>
               <ThemeSwatch id={t.id} /> {t.label}
-              {'description' in t ? <span className="ml-auto pl-4 text-2xs text-fg-subtle">{t.description}</span> : null}
+              {t.description ? <span className="ml-auto pl-4 text-2xs text-fg-subtle">{t.description}</span> : null}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

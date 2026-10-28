@@ -6,15 +6,19 @@ import { execWsPath, wsUrl } from '@/api/client';
 import { useAppShallow } from '@/store/selectors';
 import { useResolvedTheme } from '@/app/theme';
 
-/** xterm paints a canvas, so it takes the theme's --terminal-* tokens as values. */
-function terminalTheme(): ITheme {
+/** xterm draws its own cells, so it takes the theme's --terminal-* tokens as values. */
+function terminalLook(): { theme: ITheme; fontFamily: string; fontSize: number } {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
   return {
-    background: v('--terminal-bg'),
-    foreground: v('--terminal-fg'),
-    cursor: v('--terminal-cursor'),
-    selectionBackground: v('--terminal-selection'),
+    theme: {
+      background: v('--terminal-bg'),
+      foreground: v('--terminal-fg'),
+      cursor: v('--terminal-cursor'),
+      selectionBackground: v('--terminal-selection'),
+    },
+    fontFamily: v('--terminal-font'),
+    fontSize: parseFloat(v('--terminal-font-size')) || 13,
   };
 }
 
@@ -41,9 +45,7 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
     if (!hostRef.current) return;
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono Variable', ui-monospace, Menlo, Consolas, monospace",
-      theme: terminalTheme(),
+      ...terminalLook(),
       scrollback: 5000,
     });
     const fit = new FitAddon();
@@ -69,8 +71,22 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
 
   useEffect(() => {
     const term = termRef.current;
-    if (term) term.options.theme = terminalTheme();
-  }, [theme]);
+    if (!term) return;
+    const look = terminalLook();
+    term.options.theme = look.theme;
+    if (term.options.fontFamily === look.fontFamily && term.options.fontSize === look.fontSize) return;
+    // A new font changes the cell size: load it first, then re-fit.
+    let stale = false;
+    const apply = () => {
+      if (stale) return;
+      term.options.fontFamily = look.fontFamily;
+      term.options.fontSize = look.fontSize;
+      fitAndSync();
+    };
+    if (document.fonts) document.fonts.load(`${look.fontSize}px ${look.fontFamily}`).then(apply, apply);
+    else apply();
+    return () => { stale = true; };
+  }, [theme, fitAndSync]);
 
   useEffect(() => {
     if (!active) return;
