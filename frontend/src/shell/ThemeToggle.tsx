@@ -1,5 +1,6 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { useAppStore, type Theme } from '@/store';
+import { useAppStore } from '@/store';
+import type { ThemePref } from '@/app/themes';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, IconButton,
 } from '@/ui';
@@ -12,10 +13,10 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <IconButton label="Theme" size="icon-sm">{resolved === 'dark' ? <Moon /> : <Sun />}</IconButton>
+        <IconButton label="Theme" size="icon-sm">{resolved.scheme === 'dark' ? <Moon /> : <Sun />}</IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as ThemePref)}>
           <DropdownMenuRadioItem value="light"><Sun /> Light</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark"><Moon /> Dark</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system"><Monitor /> System</DropdownMenuRadioItem>

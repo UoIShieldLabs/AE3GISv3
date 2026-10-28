@@ -133,7 +133,7 @@ function TypeRow({ node, open, onToggle, hint, disabled, onAdd }: { node: Catalo
                 aria-expanded={open}
                 onClick={(e) => { e.stopPropagation(); onToggle(); }}
                 onKeyDown={(e) => e.stopPropagation()}
-                className="flex items-center gap-0.5 rounded px-1 text-2xs text-fg-subtle hover:bg-active hover:text-fg"
+                className="flex items-center gap-0.5 rounded-sm px-1 text-2xs text-fg-subtle hover:bg-active hover:text-fg"
               >
                 {node.variants.length}
                 {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
@@ -189,7 +189,7 @@ function PaletteRow({ icon, label, hint, disabled, item, onAdd, trailing, compac
         disabled && 'opacity-60',
       )}
     >
-      {icon ? <span className="flex size-6 shrink-0 items-center justify-center rounded bg-surface-2">{icon}</span> : null}
+      {icon ? <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg-surface-2">{icon}</span> : null}
       <span className={cn('flex-1 truncate', compact ? 'text-fg-muted' : 'font-medium')}>{label}</span>
       {trailing}
       <GripVertical className="size-3.5 shrink-0 text-fg-subtle opacity-0 group-hover:opacity-100" />

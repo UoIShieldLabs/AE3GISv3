@@ -1,0 +1,21 @@
+/* ── Shared, non-color tokens ──────────────────────────────────────────
+   Defaults every theme starts from; a theme may override any of them.
+   Declared on every [data-theme] element too, so a themed preview nested
+   in another theme (menu swatches, the gallery) resets to these first.    */
+
+:root,
+[data-theme] {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Extra emphasis on selected cards (`shadow-glow`); none by default. */
+  --glow: 0 0 #0000;
+  /* Filter on device glyphs (the `ae-glyph` hook). */
+  --glyph-filter: none;
+  --edge-stroke: var(--fg-subtle);
+}

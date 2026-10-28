@@ -32,7 +32,7 @@ const fmt = (v: number | null | undefined, unit: string) =>
 export function TimeSeriesChart({ title, unit, data, height = 150, yMin = 0, note, xUnit = 's' }: TimeSeriesChartProps) {
   const host = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
-  const theme = useResolvedTheme();
+  const theme = useResolvedTheme().id;
   // Rebuild only when the set of series (or the theme) changes; data updates are cheap.
   const shape = data.series.map((s) => `${s.key}:${s.slot}:${s.dash ? 1 : 0}:${s.label}`).join('|');
   const aligned = useMemo(() => [data.x, ...data.series.map((s) => s.values)] as uPlot.AlignedData, [data]);

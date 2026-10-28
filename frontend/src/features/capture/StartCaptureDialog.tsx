@@ -117,7 +117,7 @@ function CaptureForm({ target, onDone }: { target: CaptureDialogTarget; onDone: 
             <Input {...ctl} mono value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="e.g. icmp or tcp port 502" />
             <div className="flex flex-wrap gap-1">
               {FILTER_PRESETS.map((f) => (
-                <button key={f} type="button" onClick={() => setFilter(f)} className="rounded border border-border px-1.5 py-px font-mono text-2xs text-fg-muted hover:bg-hover hover:text-fg">
+                <button key={f} type="button" onClick={() => setFilter(f)} className="rounded-sm border border-border px-1.5 py-px font-mono text-2xs text-fg-muted hover:bg-hover hover:text-fg">
                   {f}
                 </button>
               ))}

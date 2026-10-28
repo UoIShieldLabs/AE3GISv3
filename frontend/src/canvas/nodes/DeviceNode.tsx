@@ -59,14 +59,14 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
         {!compact ? (
           <div className="flex items-center gap-1.5">
             <span className={cn('font-mono text-2xs text-fg-muted', guest ? 'shrink-0' : 'truncate')}>{(guest ? guest.ip : container.ip) || 'no ip'}</span>
-            {isGateway ? <span className="shrink-0 rounded bg-surface-2 px-1 text-2xs font-medium text-fg-muted">GW</span> : null}
+            {isGateway ? <span className="shrink-0 rounded-sm bg-surface-2 px-1 text-2xs font-medium text-fg-muted">GW</span> : null}
             {guest ? (
               <Tooltip content={`Lives in ${guest.homeSubnet} (${container.ip}); joins this subnet through an interface leg`} side="bottom">
                 <span className="min-w-0 truncate text-2xs text-fg-subtle">via {guest.homeSubnet}</span>
               </Tooltip>
             ) : legs?.length ? (
               <Tooltip content={legs.map((l) => `${l.subnet}: ${l.ip}`).join(' · ')} side="bottom">
-                <span className="shrink-0 rounded bg-warning-soft px-1 text-2xs font-medium text-warning" aria-label={`${legs.length} more interface${legs.length === 1 ? '' : 's'}`}>
+                <span className="shrink-0 rounded-sm bg-warning-soft px-1 text-2xs font-medium text-warning" aria-label={`${legs.length} more interface${legs.length === 1 ? '' : 's'}`}>
                   +{legs.length}
                 </span>
               </Tooltip>

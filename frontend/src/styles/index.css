@@ -1,10 +1,10 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
-@import './tokens.css';
+@import './themes/index.css';
 @import './reactflow.css';
 
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant dark (&:where([data-scheme='dark'], [data-scheme='dark'] *));
 
 @theme inline {
   --color-app: var(--bg-app);
@@ -41,14 +41,15 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
+  --shadow-glow: var(--glow);
 }
 
 @layer base {

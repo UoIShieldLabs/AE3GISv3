@@ -1,7 +1,8 @@
+import { DEFAULT_THEME_PREF } from '@/app/themes';
 import type { SliceCreator, ViewSlice } from '../types';
 
 export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
-  theme: 'system',
+  theme: DEFAULT_THEME_PREF,
   tool: 'select',
   snapToGrid: true,
   showMinimap: true,

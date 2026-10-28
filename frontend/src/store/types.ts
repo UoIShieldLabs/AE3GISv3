@@ -4,10 +4,10 @@ import type { Catalog } from '@/catalog/catalog';
 import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
+import type { ThemePref } from '@/app/themes';
 
 export type DeployStatus = 'idle' | 'deploying' | 'deployed' | 'destroying' | 'error';
 export type RuntimeStatus = 'running' | 'stopped' | 'paused';
-export type Theme = 'system' | 'light' | 'dark';
 export type Tool = 'select' | 'pan';
 export type SidebarTab = 'palette' | 'explorer';
 
@@ -117,7 +117,7 @@ export interface DocumentSlice {
 }
 
 export interface ViewSlice {
-  theme: Theme;
+  theme: ThemePref;
   tool: Tool;
   snapToGrid: boolean;
   showMinimap: boolean;
@@ -154,7 +154,7 @@ export interface ViewSlice {
   openCaptureDialog: (target: CaptureDialogTarget) => void;
   closeCaptureDialog: () => void;
   setRunsOpen: (open: boolean) => void;
-  setTheme: (theme: Theme) => void;
+  setTheme: (theme: ThemePref) => void;
   setTool: (tool: Tool) => void;
   setSnapToGrid: (on: boolean) => void;
   setShowMinimap: (on: boolean) => void;

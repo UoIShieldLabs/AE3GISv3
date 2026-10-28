@@ -40,7 +40,7 @@ export const SubnetNode = memo(function SubnetNode({ id, data, selected, draggin
           <Tooltip content="Expand in place" shortcut="E" side="top">
             <button
               type="button"
-              className="nodrag -mr-1 rounded p-1 text-fg-subtle opacity-0 transition-opacity hover:bg-hover hover:text-fg group-hover/node:opacity-100"
+              className="nodrag -mr-1 rounded-sm p-1 text-fg-subtle opacity-0 transition-opacity hover:bg-hover hover:text-fg group-hover/node:opacity-100"
               onClick={(e) => { e.stopPropagation(); a.toggleExpand(id); }}
               aria-label="Expand subnet in place"
             >

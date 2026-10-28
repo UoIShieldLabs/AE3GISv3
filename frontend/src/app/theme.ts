@@ -1,5 +1,6 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useSyncExternalStore } from 'react';
 import { useAppStore } from '@/store';
+import { resolveTheme, type ThemeDef } from './themes';
 
 const mql = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
@@ -13,17 +14,20 @@ function useSystemDark(): boolean {
 }
 
 /** The theme actually in effect ('system' resolved against the OS). */
-export function useResolvedTheme(): 'light' | 'dark' {
+export function useResolvedTheme(): ThemeDef {
   const theme = useAppStore((s) => s.theme);
   const systemDark = useSystemDark();
-  return theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+  return resolveTheme(theme, systemDark);
 }
 
-/** Keep <html data-theme> in sync with the store (index.html applies it pre-paint). */
+/** Keep <html data-theme data-scheme> in sync with the store (index.html sets
+ *  data-theme pre-paint). */
 export function useApplyTheme() {
   const resolved = useResolvedTheme();
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', resolved);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', resolved.id);
+    root.setAttribute('data-scheme', resolved.scheme);
   }, [resolved]);
   return resolved;
 }
