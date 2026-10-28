@@ -1,10 +1,5 @@
-import { useEffect } from 'react';
-import { usePanelRef } from 'react-resizable-panels';
 import { useAppShallow } from '@/store/selectors';
 import { ResizableGroup, ResizableHandle, ResizablePanel } from '@/ui';
-
-/** Width the right column grows to (if narrower) when tutorials open. */
-const TUTORIALS_MIN_WIDTH = 380;
 
 export interface EditorShellProps {
   topBar: React.ReactNode;
@@ -31,15 +26,6 @@ export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspe
   const showSidebar = !!sidebar && sidebarOpen;
   const showInspector = !!inspector && inspectorOpen;
   const showTutorials = !!tutorials && tutorialsOpen;
-  const rightRef = usePanelRef();
-
-  // A notebook wants a little more room than the inspector's default.
-  useEffect(() => {
-    if (!showTutorials) return;
-    const panel = rightRef.current;
-    const width = panel?.getSize().inPixels ?? 0;
-    if (panel && width && width < TUTORIALS_MIN_WIDTH) panel.resize(TUTORIALS_MIN_WIDTH);
-  }, [showTutorials, rightRef]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-app text-fg">
@@ -70,7 +56,7 @@ export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspe
         {showInspector || showTutorials ? (
           <>
             <ResizableHandle id="h-inspector" />
-            <ResizablePanel id="inspector" panelRef={rightRef} defaultSize={showTutorials ? TUTORIALS_MIN_WIDTH : 320} minSize={260} maxSize={640}>
+            <ResizablePanel id="inspector" defaultSize={340} minSize={260} maxSize={640}>
               {/* One structure for every combination, so toggling one section never remounts the other. */}
               <ResizableGroup orientation="vertical" className="min-h-0">
                 {showTutorials ? (
