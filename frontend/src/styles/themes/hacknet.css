@@ -313,3 +313,99 @@
     animation: ae-glitch 400ms steps(2, end) 1;
   }
 }
+
+/* ── Canvas ──────────────────────────────────────────────────────────── */
+
+/* Terminal-window cards: corner brackets painted as static gradients. */
+[data-theme='hacknet'] .ae-node {
+  --bracket: rgba(51, 255, 102, 0.5);
+  --b: linear-gradient(var(--bracket), var(--bracket));
+  background-image: var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b);
+  background-repeat: no-repeat;
+  background-size: 8px 2px, 2px 8px, 8px 2px, 2px 8px, 8px 2px, 2px 8px, 8px 2px, 2px 8px;
+  background-position: left top, left top, right top, right top, left bottom, left bottom, right bottom, right bottom;
+}
+[data-theme='hacknet'] .ae-node-tag {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 7px;
+}
+
+/* Under trace: a capture runs on the node. */
+[data-theme='hacknet'] .ae-node[data-capturing] {
+  --bracket: var(--danger);
+}
+
+/* "You are here": attackers are Hacknet's own computer. */
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] {
+  --bracket: var(--success);
+  box-shadow: 0 0 0 1px var(--success), 0 0 14px rgba(95, 220, 83, 0.35);
+}
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] .ae-node-tag {
+  font-size: 0;
+}
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] .ae-node-tag::after {
+  content: 'YOU';
+  font-size: 7px;
+  padding: 2px 3px;
+  color: #001a07;
+  background: var(--success);
+}
+
+/* Target lock on the selected node: bright brackets around it. */
+[data-theme='hacknet'] .react-flow__node.selected .ae-node {
+  --bracket: var(--accent);
+}
+[data-theme='hacknet'] .react-flow__node.selected .ae-node::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+  --b: linear-gradient(var(--accent), var(--accent));
+  background-image: var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b);
+  background-repeat: no-repeat;
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+  background-position: left top, left top, right top, right top, left bottom, left bottom, right bottom, right bottom;
+}
+/* ...and a scan line that sweeps it once. */
+[data-theme='hacknet'] .react-flow__node.selected .ae-node::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to bottom, transparent, rgba(51, 255, 102, 0.25), transparent) no-repeat;
+  background-size: 100% 40%;
+}
+
+/* Live links (both ends running) carry packets: dots flowing along them.
+   The period (10) divides the existing ae-dash offset (20), so it loops clean. */
+[data-theme='hacknet'] .react-flow__edge-path.edge-active {
+  stroke: var(--accent) !important;
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 0.01 9.99 !important;
+  stroke-linecap: round;
+}
+
+@keyframes ae-lock {
+  from { transform: scale(1.25); opacity: 0; }
+}
+@keyframes ae-scan {
+  from { opacity: 1; background-position: 0 -100%; }
+  to { opacity: 1; background-position: 0 220%; }
+}
+@keyframes ae-you {
+  50% { box-shadow: 0 0 0 1px var(--success), 0 0 22px rgba(95, 220, 83, 0.6); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme='hacknet'] .react-flow__node.selected .ae-node::before {
+    animation: ae-lock 260ms cubic-bezier(0.2, 0.8, 0.2, 1) 1;
+  }
+  [data-theme='hacknet'] .react-flow__node.selected .ae-node::after {
+    animation: ae-scan 700ms ease-out 1;
+  }
+  [data-theme='hacknet'] .ae-node[data-node-type='attacker'] {
+    animation: ae-you 2.4s ease-in-out infinite;
+  }
+}

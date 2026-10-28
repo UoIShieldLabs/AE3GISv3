@@ -31,6 +31,12 @@ export const DEFAULT_THEME_PREF: ThemePref = 'system';
 
 const BY_ID: Record<string, ThemeDef> = Object.fromEntries(THEMES.map((t) => [t.id, t]));
 
+/** The opt-in effects of the theme a preference names ('system' follows
+ *  Light/Dark, which have none). */
+export function effectsFor(pref: string): NonNullable<ThemeDef['effects']> {
+  return BY_ID[pref]?.effects ?? {};
+}
+
 /** The theme in effect for a preference; an id no longer offered (a stale
  *  saved preference) follows the OS like 'system'. */
 export function resolveTheme(pref: string, systemDark: boolean): ThemeDef {
