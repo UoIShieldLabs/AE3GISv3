@@ -22,7 +22,7 @@ export function Breadcrumb({ scope, onNavigate, className }: BreadcrumbProps) {
   if (site && subnet) crumbs.push({ label: <>{subnet.name} <span className="ml-1 font-mono text-2xs text-fg-subtle">{subnet.cidr}</span></>, scope: { level: 'subnet', siteId: site.id, subnetId: subnet.id }, current: true });
 
   return (
-    <nav aria-label="Scope" className={cn('flex min-w-0 items-center gap-0.5 text-[13px]', className)}>
+    <nav aria-label="Scope" className={cn('ae-breadcrumb flex min-w-0 items-center gap-0.5 text-[13px]', className)}>
       {crumbs.map((c, i) => (
         <span key={i} className="flex min-w-0 items-center gap-0.5">
           {i > 0 ? <ChevronRight className="size-3.5 shrink-0 text-fg-subtle" /> : null}

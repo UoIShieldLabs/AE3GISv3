@@ -7,7 +7,7 @@ export function Section({ title, children, defaultOpen = true, action, className
   return (
     <section className={cn('border-b border-border', className)}>
       <div className="flex items-center gap-1 px-3 py-2">
-        <button type="button" onClick={() => setOpen((o) => !o)} className="flex flex-1 items-center gap-1 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="ae-label flex flex-1 items-center gap-1 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
           {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
           {title}
         </button>

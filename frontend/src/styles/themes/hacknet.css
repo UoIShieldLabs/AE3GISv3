@@ -134,3 +134,182 @@
     display: none;
   }
 }
+
+/* ── Shell chrome ─────────────────────────────────────────────────────── */
+
+@keyframes ae-blink {
+  50% { opacity: 0; }
+}
+@keyframes ae-glitch {
+  0% { transform: translate(0); text-shadow: 2px 0 rgba(255, 59, 78, 0.8), -2px 0 rgba(31, 182, 255, 0.8); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -1px); text-shadow: -2px 0 rgba(255, 59, 78, 0.8), 2px 0 rgba(31, 182, 255, 0.8); }
+  75% { transform: translate(-1px, -1px); }
+  100% { transform: none; }
+}
+
+/* 8-bit, glowing green titles and labels. */
+[data-theme='hacknet'] :is(.ae-label, .ae-brand, [cmdk-group-heading], [role='dialog'] h2) {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 8px;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(51, 255, 102, 0.45);
+}
+[data-theme='hacknet'] [role='dialog'] h2 {
+  font-size: 10px;
+}
+[data-theme='hacknet'] .ae-brand {
+  font-size: 11px;
+  text-shadow: -1px 0 rgba(255, 59, 78, 0.7), 1px 0 rgba(31, 182, 255, 0.7), 0 0 8px rgba(51, 255, 102, 0.5);
+}
+
+/* The inspector title as a prompt line. */
+[data-theme='hacknet'] .ae-panel-title {
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(51, 255, 102, 0.45);
+}
+[data-theme='hacknet'] .ae-panel-title::after {
+  content: '_';
+}
+
+/* The breadcrumb as a shell prompt: root@ae3gis:~/ICS Lab/OT-LAN$ █ */
+[data-theme='hacknet'] .ae-breadcrumb,
+[data-theme='hacknet'] .ae-breadcrumb > span {
+  gap: 0;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span > svg {
+  display: none;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span + span::before {
+  content: '/';
+  color: var(--fg-subtle);
+}
+[data-theme='hacknet'] .ae-breadcrumb button {
+  padding-inline: 1px;
+}
+/* Home ("Network") reads as the prompt; its label stays for screen readers. */
+[data-theme='hacknet'] .ae-breadcrumb > span:first-child button > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span:first-child button::before {
+  content: 'root@ae3gis:~';
+  color: var(--accent);
+}
+[data-theme='hacknet'] .ae-breadcrumb > span:last-child::after {
+  content: '$';
+  margin-left: 4px;
+  color: var(--fg-muted);
+}
+[data-theme='hacknet'] .ae-breadcrumb::after {
+  content: '█';
+  margin-left: 4px;
+  color: var(--accent);
+}
+
+/* Primary buttons: [ DEPLOY ] */
+[data-theme='hacknet'] :is(button, a)[data-variant='primary'] {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+[data-theme='hacknet'] :is(button, a)[data-variant='primary']::before {
+  content: '[';
+}
+[data-theme='hacknet'] :is(button, a)[data-variant='primary']::after {
+  content: ']';
+}
+
+/* Toasts as log lines. */
+/* (Sonner injects its own styles later, at equal specificity: add a selector.) */
+[data-theme='hacknet'] [data-sonner-toast][data-type] [data-icon] {
+  display: none;
+}
+[data-theme='hacknet'] [data-sonner-toast] [data-title]::before {
+  content: '> ';
+  color: var(--fg-subtle);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='success'] [data-title]::before {
+  content: '[ OK ] ';
+  color: var(--success);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='error'] [data-title]::before {
+  content: '[FAIL] ';
+  color: var(--danger);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='warning'] [data-title]::before {
+  content: '[WARN] ';
+  color: var(--warning);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='info'] [data-title]::before {
+  content: '[INFO] ';
+  color: var(--info);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='loading'] [data-title]::before {
+  content: '[ .. ] ';
+  color: var(--fg-muted);
+}
+
+/* ── Deploy trace ────────────────────────────────────────────────────── */
+
+@keyframes ae-trace-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@keyframes ae-trace-pulse {
+  50% { box-shadow: 0 0 12px rgba(255, 59, 78, 0.6); }
+}
+
+/* While a deploy or destroy runs, the status turns into Hacknet's trace:
+   red, prefixed, with a sweep along the top edge of the screen. */
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span {
+  color: var(--danger);
+  background-color: var(--danger-soft);
+  border-color: var(--danger);
+}
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span::before {
+  content: 'TRACE >';
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 7px;
+}
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying'])::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 101;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--danger) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme='hacknet'] .ae-panel-title::after,
+  [data-theme='hacknet'] .ae-breadcrumb::after {
+    animation: ae-blink 1s steps(1, end) infinite;
+  }
+  [data-theme='hacknet'] :is(button, a)[data-variant='primary']:not(:disabled):hover {
+    animation: ae-glitch 320ms steps(2, end) 1;
+  }
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span {
+    animation: ae-trace-pulse 1s ease-in-out infinite;
+  }
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying'])::after {
+    animation: ae-trace-sweep 1.4s linear infinite;
+  }
+  /* Landing (or failing) glitches once: the animation runs when the rule starts matching. */
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deployed'], [data-deploy-status='error']) > span {
+    animation: ae-glitch 400ms steps(2, end) 1;
+  }
+}

@@ -49,7 +49,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
     <div className="flex w-full items-center gap-2">
       <div className="flex items-center gap-1">
         <IconButton label="Topology library" onClick={onLibrary}><Library /></IconButton>
-        <span className="hidden select-none text-sm font-semibold tracking-tight sm:inline">AE3GIS</span>
+        <span className="ae-brand hidden select-none text-sm font-semibold tracking-tight sm:inline">AE3GIS</span>
       </div>
       <Separator orientation="vertical" className="mx-1 h-5" />
       <IconButton label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} shortcut={`${MOD}B`} size="icon-sm" variant={sidebarOpen ? 'secondary' : 'ghost'} onClick={() => setSidebarOpen(!sidebarOpen)}><PanelLeft /></IconButton>
@@ -104,7 +104,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
         <Separator orientation="vertical" className="mx-1 h-5" />
 
         <JobDetailsPopover>
-          <button type="button" title={lastError ?? `${stepLabel} — click for details`} className="rounded-full focus-visible:outline-2 focus-visible:outline-ring">
+          <button type="button" title={lastError ?? `${stepLabel} — click for details`} data-deploy-status={deployStatus} className="ae-deploy-status rounded-full focus-visible:outline-2 focus-visible:outline-ring">
             <Badge tone={status.tone} dot={status.dot} className="h-6 max-w-64 cursor-pointer px-2 hover:brightness-110"><span className="truncate">{stepLabel}</span></Badge>
           </button>
         </JobDetailsPopover>

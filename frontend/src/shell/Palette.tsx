@@ -96,11 +96,11 @@ function Section({ title, count, collapsed, onToggle, children }: { title: strin
   return (
     <div className="mb-2">
       {onToggle ? (
-        <button type="button" onClick={onToggle} aria-expanded={!collapsed} className="flex w-full items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
+        <button type="button" onClick={onToggle} aria-expanded={!collapsed} className="ae-label flex w-full items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
           {heading}
         </button>
       ) : (
-        <div className="flex items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle">{heading}</div>
+        <div className="ae-label flex items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle">{heading}</div>
       )}
       {collapsed ? null : <div className="flex flex-col gap-0.5">{children}</div>}
     </div>
