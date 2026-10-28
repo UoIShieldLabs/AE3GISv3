@@ -1,12 +1,10 @@
-// Catalog-keyed node glyphs. The catalog's per-type `icon` name selects one of
-// these SVGs; a new node type reuses an existing icon by naming it in
-// node_types.json (or falls back to `default`) — no code change needed here
-// unless a genuinely new glyph is wanted.
-import { colorFor, iconFor } from './catalog';
+// Classic: the original glyph set and every style's fallback, so it covers
+// every catalog icon name. A new node type reuses an icon by naming it in
+// node_types.json (or falls back to `default`); a genuinely new glyph is
+// drawn here first, other styles may add theirs later.
+import type { Glyph, IconStyle } from './types';
 
-type GlyphProps = { color: string; size: number };
-
-const GLYPHS: Record<string, (p: GlyphProps) => React.ReactElement> = {
+export const CLASSIC_GLYPHS: Record<string, Glyph> & { default: Glyph } = {
   router: ({ color, size }) => (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="12" stroke={color} strokeWidth="1.5" fill="rgba(255,0,255,0.08)" />
@@ -100,11 +98,10 @@ const GLYPHS: Record<string, (p: GlyphProps) => React.ReactElement> = {
   ),
 };
 
-/** Render the catalog glyph for a container type. Color and icon both come from
- *  the catalog; unknown types fall back to a neutral default glyph. */
-export function NodeGlyph({ type, size = 32, color }: { type: string; size?: number; color?: string }) {
-  const glyph = GLYPHS[iconFor(type)] ?? GLYPHS.default;
-  const c = color ?? colorFor(type);
-  // `ae-glyph`: the theme hook (a theme may glow it); `color` feeds its currentColor.
-  return <span className="ae-glyph inline-flex shrink-0" style={{ color: c }}>{glyph({ color: c, size })}</span>;
-}
+export const classic = {
+  id: 'classic',
+  label: 'Classic',
+  description: 'Outlined device glyphs',
+  uiStrokeWidth: 2,
+  glyphs: CLASSIC_GLYPHS,
+} as const satisfies IconStyle;

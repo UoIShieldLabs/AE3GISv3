@@ -1,8 +1,10 @@
 import { DEFAULT_THEME_PREF } from '@/app/themes';
+import { DEFAULT_ICON_STYLE } from '@/catalog/icons/registry';
 import type { SliceCreator, ViewSlice } from '../types';
 
 export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
   theme: DEFAULT_THEME_PREF,
+  iconStyle: DEFAULT_ICON_STYLE,
   tool: 'select',
   snapToGrid: true,
   showMinimap: true,
@@ -39,6 +41,7 @@ export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
     }, false, 'toggleCategory'),
 
   setTheme: (theme) => set({ theme }, false, 'setTheme'),
+  setIconStyle: (iconStyle) => set({ iconStyle }, false, 'setIconStyle'),
   setTool: (tool) => set({ tool }, false, 'setTool'),
   setSnapToGrid: (snapToGrid) => set({ snapToGrid }, false, 'setSnapToGrid'),
   setShowMinimap: (showMinimap) => set({ showMinimap }, false, 'setShowMinimap'),

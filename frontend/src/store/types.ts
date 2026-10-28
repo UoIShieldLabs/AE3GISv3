@@ -5,6 +5,7 @@ import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 import type { ThemePref } from '@/app/themes';
+import type { IconStyleId } from '@/catalog/icons/registry';
 
 export type DeployStatus = 'idle' | 'deploying' | 'deployed' | 'destroying' | 'error';
 export type RuntimeStatus = 'running' | 'stopped' | 'paused';
@@ -118,6 +119,8 @@ export interface DocumentSlice {
 
 export interface ViewSlice {
   theme: ThemePref;
+  /** Device glyph set (independent of the theme). */
+  iconStyle: IconStyleId;
   tool: Tool;
   snapToGrid: boolean;
   showMinimap: boolean;
@@ -155,6 +158,7 @@ export interface ViewSlice {
   closeCaptureDialog: () => void;
   setRunsOpen: (open: boolean) => void;
   setTheme: (theme: ThemePref) => void;
+  setIconStyle: (iconStyle: IconStyleId) => void;
   setTool: (tool: Tool) => void;
   setSnapToGrid: (on: boolean) => void;
   setShowMinimap: (on: boolean) => void;
