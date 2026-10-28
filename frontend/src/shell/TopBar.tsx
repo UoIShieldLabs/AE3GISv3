@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, Boxes, ChevronDown, Download, FileJson, Layers3, Library, ListChecks, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, Boxes, ChevronDown, Download, FileJson, Layers3, Library, ListChecks, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
 import type { ExportFormat } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { MOD } from '@/lib/keyboard';
@@ -11,6 +11,7 @@ import {
 } from '@/ui';
 import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
 import { openScenarioPanel } from '@/features/scenario/actions';
+import { openTutorialsPanel } from '@/features/tutorials/actions';
 import { AppearanceMenu } from './AppearanceMenu';
 
 export interface TopBarProps {
@@ -97,6 +98,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openScenarioPanel()}><ListChecks /> Scenario runner…</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openTutorialsPanel()}><BookOpen /> Tutorials…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => useAppStore.getState().setRunsOpen(true)} disabled={!backendId}><Activity /> Monitors, captures & traffic…</DropdownMenuItem>
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>
