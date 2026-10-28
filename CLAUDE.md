@@ -159,7 +159,7 @@ e.g. `httpd:alpine` → `/bin/sh`) and every node type: `role`
 (router|switch|host), `defaultImage`, `images` (its **variants**), `color`,
 `label`, `icon`, `category`, optional `webUiPort`/`purdueLevel`. **Images live
 here as data, never hardcoded in source.** The frontend consumes it via
-`src/catalog/` (colors, labels, icons via `catalog/icons.tsx`, layout rank via
+`src/catalog/` (colors, labels, icons via `catalog/icons/`, layout rank via
 `rankFor`, roles via `roleFor`, Purdue level via `purdueLevelFor`, and the one
 category → type → variant grouping in `catalog/tree.ts`). `role` drives how the
 engine configures a node; unknown types default to `host`. Adding a node type is
@@ -226,18 +226,28 @@ tables record every long operation.
 
 ### Frontend (`frontend/src`, feature-based)
 - **Design system.** Tailwind v4 + Radix primitives in `ui/` (Button, Dialog,
-  Sheet, menus, Select/Combobox, Tabs, Resizable…). Colors are semantic tokens in
-  `styles/tokens.css` (light on `:root`, dark on `[data-theme=dark]`), mapped to
-  utilities via `@theme inline` in `styles/index.css`. Never hardcode colors;
-  catalog colors are only used as device accents. `styles/reactflow.css` themes
-  React Flow through its `--xy-*` variables. A DEV-only `/_gallery` route shows
-  every primitive in both themes.
+  Sheet, menus, Select/Combobox, Tabs, Resizable…). Colors are semantic tokens,
+  one file per theme in `styles/themes/` (`[data-theme='<id>']`, no `:root`
+  qualifier so any element can wear a theme; shared non-color tokens — fonts,
+  radii, glow — in `base.css`), mapped to utilities via `@theme inline` in
+  `styles/index.css`. Themes: Light, Dark, Neon (Hacknet-inspired: monospace,
+  square, glow, scanlines), named in `app/themes.ts` (id, label, light/dark
+  `scheme`); `<html data-theme data-scheme>` (the `dark:` variant follows the
+  scheme). Device **icon styles** (Classic, Netmap, Line) are a separate
+  registry in `catalog/icons/registry.ts`, chosen independently; a style also
+  sets the Lucide stroke width (`LucideProvider`). Both are picked in
+  `shell/AppearanceMenu` and ⌘K. Themes restyle components through hook
+  classes (`ae-glyph`, `ae-panel-header`, see `themes/base.css`). Never
+  hardcode colors; catalog colors are only used as device accents. No CSS
+  filters on canvas nodes/edges (zoom re-rasterizes them). `styles/reactflow.css`
+  themes React Flow through its `--xy-*` variables. A DEV-only `/_gallery` route
+  shows every primitive, and each theme side by side.
 - **State.** One Zustand store (`store/index.ts`) composed of slices
   (`store/slices/`): `topology` (data + `dirty`, all mutations; id-based actions
   like `updateContainer`, `addConnection`, `deleteItems`, `moveNodes`,
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
-  `expanded`, theme, tool, panels, zoom, collapsed palette categories),
+  `expanded`, theme, icon style, tool, panels, zoom, collapsed palette categories),
   `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario | webui;
   `openTerminal` wraps it), `activity` (running captures/traffic runs/monitors
   from `/runtime`), `catalog`,

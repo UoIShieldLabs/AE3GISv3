@@ -235,7 +235,7 @@ it unaddressed).
 **Adding a node type should be a one-line JSON edit.** It appears in the
 palette, add menus, inspector type picker, and Purdue view automatically (they
 all read one grouping, `frontend/src/catalog/tree.ts`). Only a genuinely new
-glyph needs code, in `frontend/src/catalog/icons.tsx`.
+glyph needs code, in `frontend/src/catalog/icons/classic.tsx`.
 
 **The catalog in effect = the file + registries.** Images loaded from Docker
 Hub namespaces (§5.6, "Docker Hub registries") are merged over the built-in
@@ -712,7 +712,7 @@ One Zustand store (`store/index.ts`) built from slices:
 |---|---|
 | `topology` | The document, `dirty`, and every id-based mutation |
 | `document` | Backend id, `version`, deploy status, live `containerStatus`, `activeJob`, `diagnostics` |
-| `view` | Selection, `expanded`, theme, tool, panel layout, zoom, open dialogs/sheets |
+| `view` | Selection, `expanded`, theme, icon style, tool, panel layout, zoom, open dialogs/sheets |
 | `dock` | Dock tabs: terminals, captures, traffic runs, monitors (`openTerminal` wraps it) |
 | `activity` | Captures, traffic runs and monitors in progress (from `/runtime`) |
 | `catalog` | The fetched node catalog |
@@ -749,6 +749,34 @@ nodes from `activity` through `project()`.
 Everything goes through `src/api/client.ts`, typed from the generated
 `schema.d.ts`. Polling is a single `GET /runtime` call, paced by what is
 happening: fast while a job runs, slow while deployed, stopped when idle.
+
+### 6.5 Themes and icon styles
+
+Two independent choices, both persisted with the UI prefs (`ae3gis.ui`) and
+picked in the top bar's Appearance menu or <kbd>⌘K</kbd>:
+
+- **Theme** — how everything looks. Each theme is one CSS file in
+  `styles/themes/` defining every color token under `[data-theme='<id>']`,
+  plus any override of the shared tokens in `base.css` (fonts, radii, `--glow`,
+  `--glyph-filter`, `--edge-stroke`). `app/themes.ts` only names them (id,
+  label, light/dark `scheme`, which drives `color-scheme`, React Flow and
+  toasts). The selectors have no `:root` qualifier, so any element can wear a
+  theme: the menu swatches and the gallery are painted by the theme itself.
+  Things that cannot use the cascade read tokens as values: xterm
+  (`--terminal-*`) and uPlot (`--chart-N`). Neon (Hacknet-inspired) also
+  styles a few **hook classes** components carry and other themes leave
+  alone: `ae-glyph` (device glyphs) and `ae-panel-header` (inspector header,
+  sidebar tabs, dock tab bar), and draws scanlines on `body::after`.
+- **Icon style** — how device glyphs are drawn: `catalog/icons/` holds
+  Classic (the original set and everyone's fallback), Netmap and Line (Lucide),
+  listed in `registry.ts`. `NodeGlyph` draws in the current style, so call
+  sites never change. A style also sets the stroke width of every Lucide icon
+  through `LucideProvider`.
+
+`index.html` applies the stored theme before first paint. A stored id that no
+longer exists falls back (theme → the OS's light/dark, style → Classic).
+`app/__tests__/themes.test.ts` checks every registered theme defines every
+color token of `light.css`.
 
 ---
 
@@ -837,8 +865,12 @@ Things that will bite if you do not know them:
 
 - **Runtime status never goes into `Topology.data`.** It belongs to
   `document.containerStatus` on the frontend and the engine on the backend.
-- **Colours come from tokens, never literals.** `frontend/src/styles/tokens.css`
-  defines light and dark; catalog colours are used only as device accents.
+- **Colours come from tokens, never literals.** `frontend/src/styles/themes/`
+  defines one file per theme; catalog colours are used only as device accents.
+- **No CSS filters on canvas nodes or edges.** Zooming re-rasterizes every
+  filtered element: a `drop-shadow` on each glyph took a 207-node subnet from
+  60 to ~15 fps. On the canvas only the selected node's glyph takes the theme's
+  `--glyph-filter`; shadows (`box-shadow`) are fine.
 - **`persistencePaths` and `config` are stored but not applied** by the Kathará
   engine. Validation says so; do not assume they take effect.
 - **SQLAlchemy JSON columns need a deep copy before mutation**, or the `UPDATE`
@@ -886,7 +918,20 @@ Things that will bite if you do not know them:
 
 ### Add a node type
 Edit `backend/catalog/node_types.json`. Reuse an existing `icon` name, or add a
-glyph in `frontend/src/catalog/icons.tsx`. Nothing else changes.
+glyph in `frontend/src/catalog/icons/classic.tsx` (other icon styles fall back
+to it until they draw their own). Nothing else changes.
+
+### Add a theme
+Copy `frontend/src/styles/themes/dark.css` to `<id>.css`, set every token under
+`[data-theme='<id>']` (override `base.css` tokens or style the hook classes if
+the theme needs it), import it in `themes/index.css`, and add an entry to
+`THEMES` in `src/app/themes.ts`. The menu, ⌘K and the gallery pick it up; the
+token test fails if a color token is missing.
+
+### Add an icon style
+Write `frontend/src/catalog/icons/<id>.tsx` exporting an `IconStyle` (glyphs by
+catalog icon name, a UI stroke width) and add it to `ICON_STYLES` in
+`icons/registry.ts`. Glyphs it doesn't draw fall back to Classic.
 
 ### Add a node image built from a Dockerfile
 Add the Dockerfile to a source repository (e.g. a folder in
@@ -938,7 +983,7 @@ recovery for free.
 | Suite | Command | Covers |
 |---|---|---|
 | Backend | `cd backend && python -m pytest` | Validation matrix, lab plan and link resolution, exporters, job state machine (cancel, stop, logs, recovery), migrations, catalog models, image fingerprints/statuses, builds and deploy-time builds (FakeEngine + a `path` source), git sync against a local repo, reconcile, naming, auth and WebSockets, pcap framing and packet summaries, iperf3 parsing (real fixtures), telemetry, captures and traffic runs end to end on FakeEngine sidecars, API contract |
-| Frontend | `cd frontend && npm run test` | Store slices (topology, dock) and undo, canvas projection (incl. activity badges), layout, IP/CIDR helpers, catalog tree, palette, required images, job log paging, packet buffer, Wireshark commands, chart series, flow helpers |
+| Frontend | `cd frontend && npm run test` | Store slices (topology, dock, view) and undo, themes (every theme defines every token), icon styles, canvas projection (incl. activity badges), layout, IP/CIDR helpers, catalog tree, palette, required images, job log paging, packet buffer, Wireshark commands, chart series, flow helpers |
 
 Backend tests use `FakeEngine` and a temporary SQLite file, so the full suite
 runs in about a second without Docker.
