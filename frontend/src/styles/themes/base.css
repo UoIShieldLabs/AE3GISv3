@@ -29,3 +29,8 @@
 .ae-glyph {
   filter: var(--glyph-filter);
 }
+/* Zooming re-rasterizes every filtered glyph (a 207-node subnet dropped to
+   ~15 fps), so on the canvas only the selected node's glyph takes it. */
+.react-flow__node:not(.selected) .ae-glyph {
+  filter: none;
+}
