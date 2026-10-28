@@ -51,6 +51,10 @@ export interface Container {
   status?: 'running' | 'stopped' | 'paused';
   config?: Record<string, unknown>;
   metadata?: Record<string, string>;
+  /** Environment variables set on this node at deploy time, applied on top of
+   *  the image's catalog env (the node's values win). e.g. point a client at a
+   *  peer's IP where the lab has no cross-node name resolution. */
+  env?: Record<string, string>;
   persistencePaths?: string[];
   /** Canvas position, relative to the enclosing subnet. Filled by normalizeTopology. */
   position?: Position;
