@@ -51,7 +51,7 @@ export function Dock() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="flex h-8 shrink-0 items-stretch border-y border-border bg-surface-2/60">
+      <div className="ae-panel-header flex h-8 shrink-0 items-stretch border-y border-border bg-surface-2/60">
         <div role="tablist" className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
           {tabs.map((t) => {
             const active = t.id === activeId && !minimized;

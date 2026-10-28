@@ -13,9 +13,19 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
 
-  /* Extra emphasis on selected cards (`shadow-glow`); none by default. */
-  --glow: 0 0 #0000;
+  /* Shadow of a selected card (`shadow-glow`); the plain small shadow by default. */
+  --glow: var(--shadow-sm);
   /* Filter on device glyphs (the `ae-glyph` hook). */
   --glyph-filter: none;
   --edge-stroke: var(--fg-subtle);
+}
+
+/* ── Theme hooks ───────────────────────────────────────────────────────
+   Classes components carry so a theme can restyle them without touching
+   the component. They look like nothing unless a theme styles them.
+     ae-glyph         every device glyph (NodeGlyph)
+     ae-panel-header  the inspector header, sidebar tabs, dock tab bar     */
+
+.ae-glyph {
+  filter: var(--glyph-filter);
 }

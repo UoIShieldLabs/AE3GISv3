@@ -104,5 +104,7 @@ const GLYPHS: Record<string, (p: GlyphProps) => React.ReactElement> = {
  *  the catalog; unknown types fall back to a neutral default glyph. */
 export function NodeGlyph({ type, size = 32, color }: { type: string; size?: number; color?: string }) {
   const glyph = GLYPHS[iconFor(type)] ?? GLYPHS.default;
-  return glyph({ color: color ?? colorFor(type), size });
+  const c = color ?? colorFor(type);
+  // `ae-glyph`: the theme hook (a theme may glow it); `color` feeds its currentColor.
+  return <span className="ae-glyph inline-flex shrink-0" style={{ color: c }}>{glyph({ color: c, size })}</span>;
 }

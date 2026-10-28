@@ -13,6 +13,7 @@ export interface ThemeDef {
 export const THEMES = [
   { id: 'light', label: 'Light', scheme: 'light' },
   { id: 'dark', label: 'Dark', scheme: 'dark' },
+  { id: 'neon', label: 'Neon', scheme: 'dark', description: 'Hacknet-inspired' },
 ] as const satisfies readonly ThemeDef[];
 
 export type ThemeId = (typeof THEMES)[number]['id'];

@@ -16,7 +16,7 @@ export function Sidebar({ scope, onNavigate }: SidebarProps) {
   return (
     <aside className="flex h-full min-w-0 flex-col border-r border-border bg-surface">
       <Tabs value={tab} onValueChange={(v) => setTab(v as SidebarTab)} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="px-2">
+        <TabsList className="ae-panel-header px-2">
           <TabsTrigger value="palette"><Shapes /> Palette</TabsTrigger>
           <TabsTrigger value="explorer"><Layers /> Explorer</TabsTrigger>
         </TabsList>
