@@ -43,13 +43,13 @@ describe('NodeGlyph', () => {
     expect(routerSvg(<NodeGlyph type="router" />).querySelector('circle[r="12"]')).not.toBeNull();
     useAppStore.setState({ iconStyle: 'line' });
     expect(routerSvg(<NodeGlyph type="router" />)).toHaveClass('lucide-router');
+    useAppStore.setState({ iconStyle: 'netmap' });
+    expect(routerSvg(<NodeGlyph type="router" />).querySelector('path[d="M16 4l12 12-12 12L4 16z"]')).not.toBeNull();
   });
 
-  it('honours an explicit style (previews) over the store', () => {
-    useAppStore.setState({ iconStyle: 'line' });
-    const svg = routerSvg(<NodeGlyph type="router" iconStyle="netmap" />);
-    expect(svg).not.toHaveClass('lucide');
-    expect(svg.querySelector('path[d="M16 4l12 12-12 12L4 16z"]')).not.toBeNull();
+  it('falls back to Classic for a stale stored style', () => {
+    useAppStore.setState({ iconStyle: 'retired-style' as never });
+    expect(routerSvg(<NodeGlyph type="router" />).querySelector('circle[r="12"]')).not.toBeNull();
   });
 
   it('wraps the glyph in the theme hook, colored by the catalog', () => {

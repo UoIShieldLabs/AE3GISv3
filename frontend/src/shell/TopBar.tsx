@@ -11,7 +11,7 @@ import {
 } from '@/ui';
 import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
 import { openScenarioPanel } from '@/features/scenario/actions';
-import { ThemeToggle } from './ThemeToggle';
+import { AppearanceMenu } from './AppearanceMenu';
 
 export interface TopBarProps {
   onSave: () => void;
@@ -125,7 +125,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
           </Tooltip>
         )}
         <Separator orientation="vertical" className="mx-1 h-5" />
-        <ThemeToggle />
+        <AppearanceMenu />
       </div>
     </div>
   );
