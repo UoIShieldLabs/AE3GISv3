@@ -714,6 +714,7 @@ One Zustand store (`store/index.ts`) built from slices:
 | `document` | Backend id, `version`, deploy status, live `containerStatus`, `activeJob`, `diagnostics` |
 | `view` | Selection, `expanded`, theme, icon style, tool, panel layout, zoom, open dialogs/sheets |
 | `dock` | Dock tabs: terminals, captures, traffic runs, monitors (`openTerminal` wraps it) |
+| `tutorial` | Tutorials UI: section open, open tabs, Edit toggles, steps run this session (not saved, not undoable) |
 | `activity` | Captures, traffic runs and monitors in progress (from `/runtime`) |
 | `catalog` | The fetched node catalog |
 | `images` | The `GET /images` report |
@@ -728,10 +729,12 @@ One Zustand store (`store/index.ts`) built from slices:
 ### 6.3 Shell
 
 `shell/` is the frame: top bar, sidebar (palette + explorer tree), inspector,
-dock, status bar, command palette (<kbd>⌘K</kbd>). The dock
-(`features/dock/Dock.tsx`) holds typed tabs (terminal, capture, traffic,
-monitor) that stay mounted, so live streams keep buffering while another tab
-is shown.
+dock, status bar, command palette (<kbd>⌘K</kbd>). The right column holds the
+inspector and, while open, the Tutorials section stacked above it (each
+closable on its own; one structure for every combination, so toggling one never
+remounts the other). The dock (`features/dock/Dock.tsx`) holds typed tabs
+(terminal, capture, traffic, monitor) that stay mounted, so live streams keep
+buffering while another tab is shown.
 
 `features/` holds the vertical slices: `deployment` (actions, runtime polling,
 validation and plan hooks, deployed interfaces), `topology` (dialogs,
@@ -740,7 +743,8 @@ Wireshark commands), `traffic` (flows or a pattern, live totals and per-flow
 charts via `ui/charts/TimeSeriesChart` on uPlot, run summary), `monitor`
 (node selection, host / group / per-node charts, loaded history then live
 sweeps), `benchmarks` (read-only sweep results on the library page), `runs`
-(history sheet), `dock`, `images`, `purdue`, `system` (labs dialog).
+(history sheet), `dock`, `images`, `purdue`, `system` (labs dialog),
+`tutorials` (§6.6).
 `ui/MultiSelect` picks node sets. The canvas badges captured links and busy
 nodes from `activity` through `project()`.
 
@@ -796,6 +800,37 @@ longer exists falls back (theme → the OS's light/dark, style → Classic).
 color token of `light.css`.
 
 ---
+
+### 6.6 Tutorials
+
+A tutorial is a Jupyter-like notebook an instructor writes and a class steps
+through: Markdown notes and command cells, each command on one node. It lives in
+the topology (`topology.tutorials: Tutorial[]`, cells `{kind: 'markdown', source}`
+or `{kind: 'command', containerId, command}`), so it saves, exports and imports
+with the design and the backend never reads it. Authoring is ordinary undoable
+topology editing (`topologySlice`); a command on a deleted node is kept and
+flagged, not scrubbed, so its text isn't lost.
+
+Running a command **types it into that node's normal terminal** (its dock tab,
+`term:<containerId>`) through the session's `runCommand` — the same path as
+keystrokes — so a later step runs inside whatever an earlier one started: `ssh`
+in one cell, `ls` on the remote host in the next. This is the difference from
+the scenario runner (§5.7a), which runs each step as its own background exec.
+It is step-by-step only (a cell's ▶ or **Next step**, the command after the one
+run last): nothing waits for a command to finish, since an interactive shell
+can't report that. The only wait is for a freshly opened shell to print its
+prompt. Running needs a deployed lab but not a save: the text comes from the
+editor.
+
+- **UI** `features/tutorials` (lazy-loaded with `react-markdown` + `remark-gfm`;
+  raw HTML is never rendered, so an imported tutorial can't inject markup):
+  opened from More → Tutorials… or ⌘K; a tab per open tutorial plus the
+  topology's list; an Edit toggle (off: a clean read/run view); a ● on a tab
+  whose tutorial differs from the last save (identity check against
+  `savedTopology` — immer copies only what an edit touches).
+- **Progress** (which steps ran, when) is per browser session in the `tutorial`
+  slice: terminals don't survive a reload either. It resets when another
+  topology is opened.
 
 ## 7. From topology to running containers
 
@@ -873,6 +908,15 @@ anyway. **Do not remove that line.**
 through a PTY, with window-size messages forwarded as `SIGWINCH`. It is
 engine-agnostic: it takes a resolved container name, which the engine supplies.
 Terminals require a deployed topology — there is otherwise nothing to attach to.
+
+In the browser a terminal **session** (xterm instance + WebSocket) lives in
+`features/terminal/sessions.ts`, not in the component that shows it: the dock
+view only attaches and detaches it. So minimizing the dock, clicking the active
+tab or leaving the editor keeps the shell — and whatever runs in it — alive; a
+session ends when its dock tab closes, and reconnects to a fresh shell when the
+topology or its deploy status changes. Sessions are also what tutorials type
+into (§6.6). PTY output is written to xterm as bytes, so UTF-8 split across
+chunks decodes correctly.
 
 ---
 

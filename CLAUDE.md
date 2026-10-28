@@ -253,8 +253,9 @@ tables record every long operation.
   status lives here, never in the saved data**, `busy`), `view` (selection,
   `expanded`, theme, icon style, tool, panels, zoom, collapsed palette categories),
   `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario | webui;
-  `openTerminal` wraps it), `activity` (running captures/traffic runs/monitors
-  from `/runtime`), `catalog`,
+  `openTerminal` wraps it), `tutorial` (Tutorials section open, open tabs, Edit
+  toggles, steps run this session; not saved, not undoable), `activity` (running
+  captures/traffic runs/monitors from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
   `features/images/imagePolling` singleton).
   Undo/redo via zundo (`undo()`/`redo()` in `store/index.ts`; only `topology` is
@@ -282,7 +283,11 @@ tables record every long operation.
   tree), Inspector (context-sensitive forms that commit on blur), Dock
   (`features/dock`: terminal / capture / traffic / monitor / scenario tabs, bodies
   lazy-loaded and kept mounted), StatusBar, CommandPalette (⌘K),
-  Breadcrumb. `features/topology/AddEntityProvider` owns every "add…" dialog so
+  Breadcrumb. The right column stacks the Tutorials section (when open) over the
+  Inspector. Terminal sessions (xterm + exec WebSocket) live in
+  `features/terminal/sessions.ts`, outside React: the dock view only attaches
+  them, so minimizing the dock or leaving the editor keeps shells alive; closing
+  the tab ends one. `features/topology/AddEntityProvider` owns every "add…" dialog so
   toolbar, palette, menus and drops share one flow. Deployment actions are plain
   functions in `features/deployment/actions.ts`; status polling is a singleton.
   Images: `features/images` (ImagesSheet, variant `ImagePicker`, status line,
@@ -299,7 +304,12 @@ tables record every long operation.
   per-node charts; history from `/samples`, then live sweeps). Scenario runner:
   `features/scenario` (author phases/steps with a node picker + command field,
   undo-tracked; Run step / Run phase buttons, deploy-gated; live per-step output
-  over the scenario WS, mirroring the traffic panel). Benchmarks:
+  over the scenario WS, mirroring the traffic panel). Tutorials:
+  `features/tutorials` (Jupyter-like notebooks in `topology.tutorials`: Markdown
+  notes via `react-markdown` (no raw HTML) + command cells; Run / Next step types
+  the command into the node's normal terminal session, so later steps run inside
+  what earlier ones started, e.g. an ssh; step-by-step only, no completion
+  detection; deploy-gated, no save needed; More → Tutorials… / ⌘K). Benchmarks:
   `features/benchmarks/BenchmarksSheet` (read-only, on the library page).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
