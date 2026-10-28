@@ -34,8 +34,8 @@ export function Inspector({ scope, onNavigate }: InspectorProps) {
 
   return (
     <aside className="flex h-full min-w-0 flex-col border-l border-border bg-surface">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border pl-3 pr-1.5">
-        <span className="text-xs font-semibold">{title}</span>
+      <div className="ae-panel-header flex h-9 shrink-0 items-center justify-between border-b border-border pl-3 pr-1.5">
+        <span className="ae-panel-title text-xs font-semibold">{title}</span>
         <IconButton label="Hide inspector" shortcut="⌘I" size="icon-xs" onClick={() => setOpen(false)}><X /></IconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>

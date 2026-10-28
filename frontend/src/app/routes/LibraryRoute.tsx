@@ -4,7 +4,7 @@ import { Boxes, Clock, FilePlus2, FolderOpen, Gauge, LayoutTemplate, Plus, Refre
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
 import { Badge, Button, Dialog, EmptyState, IconButton, Spinner, toast } from '@/ui';
-import { ThemeToggle } from '@/shell/ThemeToggle';
+import { AppearanceMenu } from '@/shell/AppearanceMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
 import { BenchmarksSheet } from '@/features/benchmarks/BenchmarksSheet';
@@ -88,14 +88,14 @@ export function LibraryRoute() {
   return (
     <div className="flex h-full flex-col bg-app">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-        <span className="text-sm font-semibold tracking-tight">AE3GIS</span>
+        <span className="ae-brand text-sm font-semibold tracking-tight">AE3GIS</span>
         <span className="text-xs text-fg-muted">Topology library</span>
         <div className="ml-auto flex items-center gap-1">
           <Button size="sm" variant="ghost" onClick={() => useAppStore.getState().openImages()}><Boxes /> Images</Button>
           <Button size="sm" variant="ghost" onClick={() => setLabsOpen(true)}><Server /> Labs on this host</Button>
           <Button size="sm" variant="ghost" onClick={() => setBenchOpen(true)}><Gauge /> Benchmarks</Button>
           <IconButton label="Refresh" size="icon-sm" onClick={() => { setTopologies(null); void refresh(); }}><RefreshCw /></IconButton>
-          <ThemeToggle />
+          <AppearanceMenu />
         </div>
       </header>
 

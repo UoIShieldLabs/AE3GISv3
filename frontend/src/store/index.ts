@@ -41,6 +41,7 @@ export const useAppStore = create<AppState>()(
         version: 1,
         partialize: (s) => ({
           theme: s.theme,
+          iconStyle: s.iconStyle,
           snapToGrid: s.snapToGrid,
           showMinimap: s.showMinimap,
           layoutMode: s.layoutMode,

@@ -1,0 +1,16 @@
+/* ── Themes ────────────────────────────────────────────────────────────
+   Semantic variables only. Components never reference raw colors; the
+   catalog's per-type colors are used solely as device accents on the canvas.
+
+   A theme is one file defining every color token of light.css under
+   [data-theme='<id>'] (plus any base.css override), imported here, and one
+   entry in src/app/themes.ts. Selectors carry no :root qualifier, so any
+   element can wear a theme (menu swatches, the gallery). Light is the
+   default; <html data-theme> selects the app's theme. A theme's flourishes
+   on hook classes follow <html>'s theme only; nested previews take tokens. */
+
+@import './base.css';
+@import './light.css';
+@import './dark.css';
+@import './neon.css';
+@import './hacknet.css';

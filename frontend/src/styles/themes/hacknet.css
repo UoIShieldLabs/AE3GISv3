@@ -1,0 +1,413 @@
+/* Hacknet: after the game's look. Its theme slots give the base palette
+   (highlight 0,139,199; terminal text 213,245,255; "this computer"
+   95,220,83; shell 222,201,24; red trace) on Neon's cyan panels, then
+   phosphor-green highlights, VT323 text with Press Start 2P titles and a
+   CRT screen (the terminal uses Share Tech Mono). Motion only runs with prefers-reduced-motion: no-preference,
+   and nothing animates on every canvas node (zoom re-rasterizes them). */
+
+[data-theme='hacknet'] {
+  color-scheme: dark;
+
+  --bg-app: #05080c;
+  --bg-canvas: #030507;
+  --bg-surface: #0a1016;
+  --bg-surface-2: #0e161e;
+  --bg-elevated: #0c141b;
+  --bg-hover: rgba(51, 255, 102, 0.07);
+  --bg-active: rgba(51, 255, 102, 0.14);
+
+  --border: #0b3a52;
+  --border-strong: #0e5f86;
+
+  --fg: #d5f5ff;
+  --fg-muted: #7fb3c8;
+  --fg-subtle: #4f7486;
+
+  /* Phosphor green. */
+  --accent: #33ff66;
+  --accent-hover: #7dff9e;
+  --accent-fg: #001a07;
+  --accent-soft: rgba(51, 255, 102, 0.14);
+
+  --success: #5fdc53;
+  --success-soft: rgba(95, 220, 83, 0.14);
+  --warning: #dec918;
+  --warning-soft: rgba(222, 201, 24, 0.14);
+  --danger: #ff3b4e;
+  --danger-soft: rgba(255, 59, 78, 0.16);
+  --info: #69a7bc;
+  --info-soft: rgba(105, 167, 188, 0.16);
+
+  --ring: var(--accent);
+
+  /* Neon's series (validated on this surface). */
+  --chart-1: #0a9be0;
+  --chart-2: #e8602a;
+  --chart-3: #16a878;
+  --chart-4: #c98500;
+  --chart-5: #e04aa8;
+  --chart-6: #8a63f0;
+
+  --shadow-sm: 0 0 6px rgba(0, 139, 199, 0.16);
+  --shadow-md: 0 0 14px rgba(0, 139, 199, 0.22), 0 2px 6px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 28px rgba(0, 139, 199, 0.26), 0 8px 24px rgba(0, 0, 0, 0.7);
+
+  --terminal-bg: #000000;
+  --terminal-fg: #33ff66;
+  --terminal-cursor: #33ff66;
+  --terminal-selection: rgba(51, 255, 102, 0.28);
+
+  --font-mono: 'VT323', 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-sans: var(--font-mono);
+  --font-display: 'Press Start 2P', var(--font-mono);
+  /* VT323 is too rough for real shell output: a clean sci-fi mono instead. */
+  --terminal-font: 'Share Tech Mono', ui-monospace, monospace;
+  --terminal-font-size: 15px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --glow: 0 0 0 1px var(--accent), 0 0 16px rgba(51, 255, 102, 0.45);
+  --glyph-filter: drop-shadow(0 0 2px currentColor);
+  --edge-stroke: rgba(31, 182, 255, 0.55);
+}
+
+/* VT323's x-height is small: scale it up to the UI's metrics (layouts stay
+   put); it has one weight, so no smeared synthetic bold. */
+[data-theme='hacknet'] body {
+  font-size-adjust: 0.55;
+  font-synthesis: none;
+}
+
+/* A faint phosphor glow on the terminal (xterm renders DOM text here);
+   kept tight so the text stays sharp. */
+[data-theme='hacknet'] .xterm-rows {
+  text-shadow: 0 0 2px rgba(51, 255, 102, 0.4);
+}
+
+/* Title bars, like Neon's, with glowing green titles. */
+[data-theme='hacknet'] .ae-panel-header {
+  background-color: rgba(0, 139, 199, 0.16);
+  border-bottom-color: var(--border-strong);
+}
+
+/* CRT: scanlines and a vignette in one overlay above everything. */
+[data-theme='hacknet'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.4) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.045) 0,
+      rgba(255, 255, 255, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+@keyframes ae-crt-roll {
+  from { transform: translateY(-20vh); }
+  to { transform: translateY(110vh); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A faint refresh band rolling down the screen (transform only: composited). */
+  [data-theme='hacknet'] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18vh;
+    z-index: 100;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, rgba(51, 255, 102, 0.045), transparent);
+    animation: ae-crt-roll 8s linear infinite;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), print {
+  [data-theme='hacknet'] body::before,
+  [data-theme='hacknet'] body::after {
+    display: none;
+  }
+}
+
+/* ── Shell chrome ─────────────────────────────────────────────────────── */
+
+@keyframes ae-blink {
+  50% { opacity: 0; }
+}
+@keyframes ae-glitch {
+  0% { transform: translate(0); text-shadow: 2px 0 rgba(255, 59, 78, 0.8), -2px 0 rgba(31, 182, 255, 0.8); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -1px); text-shadow: -2px 0 rgba(255, 59, 78, 0.8), 2px 0 rgba(31, 182, 255, 0.8); }
+  75% { transform: translate(-1px, -1px); }
+  100% { transform: none; }
+}
+
+/* 8-bit, glowing green titles and labels. */
+[data-theme='hacknet'] :is(.ae-label, .ae-brand, [cmdk-group-heading], [role='dialog'] h2) {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 8px;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(51, 255, 102, 0.45);
+}
+[data-theme='hacknet'] [role='dialog'] h2 {
+  font-size: 10px;
+}
+[data-theme='hacknet'] .ae-brand {
+  font-size: 11px;
+  text-shadow: -1px 0 rgba(255, 59, 78, 0.7), 1px 0 rgba(31, 182, 255, 0.7), 0 0 8px rgba(51, 255, 102, 0.5);
+}
+
+/* The inspector title as a prompt line. */
+[data-theme='hacknet'] .ae-panel-title {
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(51, 255, 102, 0.45);
+}
+[data-theme='hacknet'] .ae-panel-title::after {
+  content: '_';
+}
+
+/* The breadcrumb as a shell prompt: root@ae3gis:~/ICS Lab/OT-LAN$ █ */
+[data-theme='hacknet'] .ae-breadcrumb,
+[data-theme='hacknet'] .ae-breadcrumb > span {
+  gap: 0;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span > svg {
+  display: none;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span + span::before {
+  content: '/';
+  color: var(--fg-subtle);
+}
+[data-theme='hacknet'] .ae-breadcrumb button {
+  padding-inline: 1px;
+}
+/* Home ("Network") reads as the prompt; its label stays for screen readers. */
+[data-theme='hacknet'] .ae-breadcrumb > span:first-child button > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+[data-theme='hacknet'] .ae-breadcrumb > span:first-child button::before {
+  content: 'root@ae3gis:~';
+  color: var(--accent);
+}
+[data-theme='hacknet'] .ae-breadcrumb > span:last-child::after {
+  content: '$';
+  margin-left: 4px;
+  color: var(--fg-muted);
+}
+[data-theme='hacknet'] .ae-breadcrumb::after {
+  content: '█';
+  margin-left: 4px;
+  color: var(--accent);
+}
+
+/* Primary buttons: [ DEPLOY ] */
+[data-theme='hacknet'] :is(button, a)[data-variant='primary'] {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+[data-theme='hacknet'] :is(button, a)[data-variant='primary']::before {
+  content: '[';
+}
+[data-theme='hacknet'] :is(button, a)[data-variant='primary']::after {
+  content: ']';
+}
+
+/* Toasts as log lines. */
+/* (Sonner injects its own styles later, at equal specificity: add a selector.) */
+[data-theme='hacknet'] [data-sonner-toast][data-type] [data-icon] {
+  display: none;
+}
+[data-theme='hacknet'] [data-sonner-toast] [data-title]::before {
+  content: '> ';
+  color: var(--fg-subtle);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='success'] [data-title]::before {
+  content: '[ OK ] ';
+  color: var(--success);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='error'] [data-title]::before {
+  content: '[FAIL] ';
+  color: var(--danger);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='warning'] [data-title]::before {
+  content: '[WARN] ';
+  color: var(--warning);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='info'] [data-title]::before {
+  content: '[INFO] ';
+  color: var(--info);
+}
+[data-theme='hacknet'] [data-sonner-toast][data-type='loading'] [data-title]::before {
+  content: '[ .. ] ';
+  color: var(--fg-muted);
+}
+
+/* ── Deploy trace ────────────────────────────────────────────────────── */
+
+@keyframes ae-trace-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@keyframes ae-trace-pulse {
+  50% { box-shadow: 0 0 12px rgba(255, 59, 78, 0.6); }
+}
+
+/* While a deploy or destroy runs, the status turns into Hacknet's trace:
+   red, prefixed, with a sweep along the top edge of the screen. */
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span {
+  color: var(--danger);
+  background-color: var(--danger-soft);
+  border-color: var(--danger);
+}
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span::before {
+  content: 'TRACE >';
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 7px;
+}
+[data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying'])::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 101;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--danger) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme='hacknet'] .ae-panel-title::after,
+  [data-theme='hacknet'] .ae-breadcrumb::after {
+    animation: ae-blink 1s steps(1, end) infinite;
+  }
+  [data-theme='hacknet'] :is(button, a)[data-variant='primary']:not(:disabled):hover {
+    animation: ae-glitch 320ms steps(2, end) 1;
+  }
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying']) > span {
+    animation: ae-trace-pulse 1s ease-in-out infinite;
+  }
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deploying'], [data-deploy-status='destroying'])::after {
+    animation: ae-trace-sweep 1.4s linear infinite;
+  }
+  /* Landing (or failing) glitches once: the animation runs when the rule starts matching. */
+  [data-theme='hacknet'] .ae-deploy-status:is([data-deploy-status='deployed'], [data-deploy-status='error']) > span {
+    animation: ae-glitch 400ms steps(2, end) 1;
+  }
+}
+
+/* ── Canvas ──────────────────────────────────────────────────────────── */
+
+/* Terminal-window cards: corner brackets painted as static gradients. */
+[data-theme='hacknet'] .ae-node {
+  --bracket: rgba(51, 255, 102, 0.5);
+  --b: linear-gradient(var(--bracket), var(--bracket));
+  background-image: var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b);
+  background-repeat: no-repeat;
+  background-size: 8px 2px, 2px 8px, 8px 2px, 2px 8px, 8px 2px, 2px 8px, 8px 2px, 2px 8px;
+  background-position: left top, left top, right top, right top, left bottom, left bottom, right bottom, right bottom;
+}
+[data-theme='hacknet'] .ae-node-tag {
+  font-family: var(--font-display);
+  font-size-adjust: none;
+  font-size: 7px;
+}
+
+/* Under trace: a capture runs on the node. */
+[data-theme='hacknet'] .ae-node[data-capturing] {
+  --bracket: var(--danger);
+}
+
+/* "You are here": attackers are Hacknet's own computer. */
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] {
+  --bracket: var(--success);
+  box-shadow: 0 0 0 1px var(--success), 0 0 14px rgba(95, 220, 83, 0.35);
+}
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] .ae-node-tag {
+  font-size: 0;
+}
+[data-theme='hacknet'] .ae-node[data-node-type='attacker'] .ae-node-tag::after {
+  content: 'YOU';
+  font-size: 7px;
+  padding: 2px 3px;
+  color: #001a07;
+  background: var(--success);
+}
+
+/* Target lock on the selected node: bright brackets around it. */
+[data-theme='hacknet'] .react-flow__node.selected .ae-node {
+  --bracket: var(--accent);
+}
+[data-theme='hacknet'] .react-flow__node.selected .ae-node::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+  --b: linear-gradient(var(--accent), var(--accent));
+  background-image: var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b), var(--b);
+  background-repeat: no-repeat;
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+  background-position: left top, left top, right top, right top, left bottom, left bottom, right bottom, right bottom;
+}
+/* ...and a scan line that sweeps it once. */
+[data-theme='hacknet'] .react-flow__node.selected .ae-node::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to bottom, transparent, rgba(51, 255, 102, 0.25), transparent) no-repeat;
+  background-size: 100% 40%;
+}
+
+/* Live links (both ends running) carry packets: dots flowing along them.
+   The period (10) divides the existing ae-dash offset (20), so it loops clean. */
+[data-theme='hacknet'] .react-flow__edge-path.edge-active {
+  stroke: var(--accent) !important;
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 0.01 9.99 !important;
+  stroke-linecap: round;
+}
+
+@keyframes ae-lock {
+  from { transform: scale(1.25); opacity: 0; }
+}
+@keyframes ae-scan {
+  from { opacity: 1; background-position: 0 -100%; }
+  to { opacity: 1; background-position: 0 220%; }
+}
+@keyframes ae-you {
+  50% { box-shadow: 0 0 0 1px var(--success), 0 0 22px rgba(95, 220, 83, 0.6); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme='hacknet'] .react-flow__node.selected .ae-node::before {
+    animation: ae-lock 260ms cubic-bezier(0.2, 0.8, 0.2, 1) 1;
+  }
+  [data-theme='hacknet'] .react-flow__node.selected .ae-node::after {
+    animation: ae-scan 700ms ease-out 1;
+  }
+  [data-theme='hacknet'] .ae-node[data-node-type='attacker'] {
+    animation: ae-you 2.4s ease-in-out infinite;
+  }
+}

@@ -1,6 +1,6 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Activity, Gauge, Boxes, Building2, Download, Layers3, Library, ListChecks, Monitor, Moon, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square, Sun } from 'lucide-react';
+import { Activity, Gauge, Boxes, Building2, Download, Layers3, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square } from 'lucide-react';
 import { openTrafficPanel } from '@/features/traffic/actions';
 import { openMonitorPanel } from '@/features/monitor/actions';
 import { openScenarioPanel } from '@/features/scenario/actions';
@@ -8,6 +8,9 @@ import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
+import { ICON_STYLES, glyphFor } from '@/catalog/icons/registry';
+import { THEMES } from '@/app/themes';
+import { ThemeSwatch } from './AppearanceMenu';
 import { MOD } from '@/lib/keyboard';
 import type { Scope } from '@/lib/topology';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/ui';
@@ -95,9 +98,15 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
               <CommandGroup heading="View">
                 <CommandItem onSelect={run(() => st().setSidebarOpen(!sidebarOpen))} shortcut={`${MOD}B`}><PanelLeft /> {sidebarOpen ? 'Hide' : 'Show'} sidebar</CommandItem>
                 <CommandItem onSelect={run(() => st().setInspectorOpen(!inspectorOpen))} shortcut={`${MOD}I`}><PanelRight /> {inspectorOpen ? 'Hide' : 'Show'} inspector</CommandItem>
-                <CommandItem onSelect={run(() => st().setTheme('light'))}><Sun /> Light theme</CommandItem>
-                <CommandItem onSelect={run(() => st().setTheme('dark'))}><Moon /> Dark theme</CommandItem>
+                {THEMES.map((t) => (
+                  <CommandItem key={t.id} onSelect={run(() => st().setTheme(t.id))}><ThemeSwatch id={t.id} /> {t.label} theme</CommandItem>
+                ))}
                 <CommandItem onSelect={run(() => st().setTheme('system'))}><Monitor /> System theme</CommandItem>
+                {ICON_STYLES.map((s) => (
+                  <CommandItem key={s.id} onSelect={run(() => st().setIconStyle(s.id))}>
+                    {glyphFor(s.id, 'router')({ color: 'currentColor', size: 14 })} {s.label} icons
+                  </CommandItem>
+                ))}
               </CommandGroup>
 
               <CommandSeparator />

@@ -2,7 +2,7 @@ import { Toaster as Sonner, toast } from 'sonner';
 
 export { toast };
 
-/** App-wide toast host; theme follows the resolved app theme. */
+/** App-wide toast host; theme follows the resolved app theme's scheme. */
 export function Toaster({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <Sonner

@@ -1,15 +1,26 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { execWsPath, wsUrl } from '@/api/client';
 import { useAppShallow } from '@/store/selectors';
 import { useResolvedTheme } from '@/app/theme';
 
-const THEMES = {
-  dark: { background: '#0b0d11', foreground: '#e6e8ec', cursor: '#5b8def', selectionBackground: 'rgba(91,141,239,0.35)' },
-  light: { background: '#ffffff', foreground: '#171a21', cursor: '#2f6df6', selectionBackground: 'rgba(47,109,246,0.25)' },
-};
+/** xterm draws its own cells, so it takes the theme's --terminal-* tokens as values. */
+function terminalLook(): { theme: ITheme; fontFamily: string; fontSize: number } {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name: string) => css.getPropertyValue(name).trim();
+  return {
+    theme: {
+      background: v('--terminal-bg'),
+      foreground: v('--terminal-fg'),
+      cursor: v('--terminal-cursor'),
+      selectionBackground: v('--terminal-selection'),
+    },
+    fontFamily: v('--terminal-font'),
+    fontSize: parseFloat(v('--terminal-font-size')) || 13,
+  };
+}
 
 /** One xterm.js instance bound to the exec WebSocket of a container. Stays mounted while its tab exists. */
 export function TerminalSession({ containerId, active }: { containerId: string; active: boolean }) {
@@ -17,7 +28,7 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const theme = useResolvedTheme();
+  const theme = useResolvedTheme().id;
   const { backendId, deployStatus } = useAppShallow((s) => ({ backendId: s.backendId, deployStatus: s.deployStatus }));
 
   const fitAndSync = useCallback(() => {
@@ -34,9 +45,7 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
     if (!hostRef.current) return;
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono Variable', ui-monospace, Menlo, Consolas, monospace",
-      theme: THEMES[theme],
+      ...terminalLook(),
       scrollback: 5000,
     });
     const fit = new FitAddon();
@@ -58,13 +67,26 @@ export function TerminalSession({ containerId, active }: { containerId: string; 
       fitRef.current = null;
     };
     // theme handled below without recreating the terminal
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitAndSync]);
 
   useEffect(() => {
     const term = termRef.current;
-    if (term) term.options.theme = THEMES[theme];
-  }, [theme]);
+    if (!term) return;
+    const look = terminalLook();
+    term.options.theme = look.theme;
+    if (term.options.fontFamily === look.fontFamily && term.options.fontSize === look.fontSize) return;
+    // A new font changes the cell size: load it first, then re-fit.
+    let stale = false;
+    const apply = () => {
+      if (stale) return;
+      term.options.fontFamily = look.fontFamily;
+      term.options.fontSize = look.fontSize;
+      fitAndSync();
+    };
+    if (document.fonts) document.fonts.load(`${look.fontSize}px ${look.fontFamily}`).then(apply, apply);
+    else apply();
+    return () => { stale = true; };
+  }, [theme, fitAndSync]);
 
   useEffect(() => {
     if (!active) return;

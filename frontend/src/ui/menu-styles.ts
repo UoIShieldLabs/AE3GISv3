@@ -10,7 +10,7 @@ export const menuItemClass =
   'data-[variant=danger]:text-danger data-[variant=danger]:data-[highlighted]:bg-danger-soft ' +
   '[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-muted data-[variant=danger]:[&_svg]:text-danger';
 
-export const menuLabelClass = 'px-2 py-1 text-2xs font-medium uppercase tracking-wide text-fg-subtle';
+export const menuLabelClass = 'ae-label px-2 py-1 text-2xs font-medium uppercase tracking-wide text-fg-subtle';
 export const menuSeparatorClass = '-mx-1 my-1 h-px bg-border';
 export const menuShortcutClass = 'ml-auto pl-4 font-mono text-2xs text-fg-subtle';
 export const menuIndentClass = 'pl-7';

@@ -1,0 +1,94 @@
+/* Neon: near-black with one cyan-blue highlight (0,139,199), pale-cyan text,
+   monospace, square corners, glowing glyphs and selection, title-bar
+   strips, faint scanlines. */
+
+[data-theme='neon'] {
+  color-scheme: dark;
+
+  --bg-app: #05080c;
+  --bg-canvas: #030507;
+  --bg-surface: #0a1016;
+  --bg-surface-2: #0e161e;
+  --bg-elevated: #0c141b;
+  --bg-hover: rgba(31, 182, 255, 0.07);
+  --bg-active: rgba(31, 182, 255, 0.14);
+
+  /* Hacknet's highlight at 35% / 65% over the surface. */
+  --border: #0b3a52;
+  --border-strong: #0e5f86;
+
+  --fg: #d5f5ff;
+  --fg-muted: #7fb3c8;
+  --fg-subtle: #4f7486;
+
+  --accent: #1fb6ff;
+  --accent-hover: #5ccbff;
+  --accent-fg: #001018;
+  --accent-soft: rgba(31, 182, 255, 0.16);
+
+  --success: #5fdc53;
+  --success-soft: rgba(95, 220, 83, 0.14);
+  --warning: #dec918;
+  --warning-soft: rgba(222, 201, 24, 0.14);
+  --danger: #ff3b4e;
+  --danger-soft: rgba(255, 59, 78, 0.16);
+  --info: #69a7bc;
+  --info-soft: rgba(105, 167, 188, 0.16);
+
+  --ring: var(--accent);
+
+  /* Validated with the dataviz palette checker on --bg-surface (all checks
+     pass, colorblind separation >= 8). */
+  --chart-1: #0a9be0;
+  --chart-2: #e8602a;
+  --chart-3: #16a878;
+  --chart-4: #c98500;
+  --chart-5: #e04aa8;
+  --chart-6: #8a63f0;
+
+  /* Soft cyan halos instead of drop shadows. */
+  --shadow-sm: 0 0 6px rgba(0, 139, 199, 0.16);
+  --shadow-md: 0 0 14px rgba(0, 139, 199, 0.22), 0 2px 6px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 0 28px rgba(0, 139, 199, 0.26), 0 8px 24px rgba(0, 0, 0, 0.7);
+
+  --terminal-bg: #000000;
+  --terminal-fg: #d5f5ff;
+  --terminal-cursor: #1fb6ff;
+  --terminal-selection: rgba(31, 182, 255, 0.3);
+
+  --font-sans: var(--font-mono);
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --glow: 0 0 0 1px var(--accent), 0 0 16px rgba(31, 182, 255, 0.45);
+  --glyph-filter: drop-shadow(0 0 2px currentColor);
+  --edge-stroke: rgba(31, 182, 255, 0.55);
+}
+
+/* Hacknet's module title bars. */
+[data-theme='neon'] .ae-panel-header {
+  background-color: rgba(0, 139, 199, 0.16);
+  border-bottom-color: var(--border-strong);
+}
+
+/* CRT scanlines over everything (above tooltips, z 95); never interactive. */
+[data-theme='neon'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), print {
+  [data-theme='neon'] body::after {
+    display: none;
+  }
+}

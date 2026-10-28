@@ -22,7 +22,7 @@ export function Checkbox({ className, ...props }: React.ComponentProps<typeof RC
   return (
     <RCheckbox.Root
       className={cn(
-        'peer flex size-4 shrink-0 items-center justify-center rounded border border-border-strong bg-surface transition-colors',
+        'peer flex size-4 shrink-0 items-center justify-center rounded-sm border border-border-strong bg-surface transition-colors',
         'data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-fg',
         'data-[state=indeterminate]:border-accent data-[state=indeterminate]:bg-accent data-[state=indeterminate]:text-accent-fg',
         'disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',

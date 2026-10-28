@@ -48,6 +48,7 @@ export function Button({ className, variant, size, asChild, loading, disabled, c
     <Comp
       type={asChild ? undefined : 'button'}
       className={cn(buttonVariants({ variant, size }), className)}
+      data-variant={variant ?? 'secondary'}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}

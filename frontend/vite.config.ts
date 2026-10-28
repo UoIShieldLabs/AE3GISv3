@@ -48,6 +48,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    css: false,
+    // Only the theme files, which tests read as text (themes.test.ts).
+    css: { include: [/src\/styles\/themes\//] },
   },
 });

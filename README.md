@@ -55,14 +55,14 @@ backend/
   openapi.json              # generated API spec (frontend types come from it)
   tests/                    # pytest (fake engine)
 frontend/src/
-  app/                      # routes (login, library, editor), providers, theme
+  app/                      # routes (login, library, editor), providers, theme registry
   canvas/                   # TopologyCanvas, projection.ts (pure), layout/, nodes/, edges/
   shell/                    # top bar, sidebar (palette/explorer), inspector, status bar, ⌘K
   features/                 # topology dialogs, deployment actions, terminal dock, purdue, auth
   store/                    # zustand slices + undo (zundo) + normalize.ts
   ui/                       # design-system primitives (Tailwind + Radix)
-  styles/                   # tokens.css (light/dark), index.css, reactflow.css
-  catalog/  api/  types/    # catalog lookups, REST/WS client, frontend-owned types
+  styles/                   # themes/ (one token file per theme), index.css, reactflow.css
+  catalog/  api/  types/    # catalog lookups + icon styles, REST/WS client, frontend-owned types
 ```
 
 ## Prerequisites

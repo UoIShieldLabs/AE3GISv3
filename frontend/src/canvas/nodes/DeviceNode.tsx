@@ -5,6 +5,7 @@ import { colorFor, labelFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
 import { cn } from '@/lib/cn';
 import { useAppStore } from '@/store';
+import { effectsFor } from '@/app/themes';
 import { Tooltip } from '@/ui';
 import type { DeviceNode as DeviceNodeType } from '../projection';
 import { NODE_SIZE } from '../constants';
@@ -12,6 +13,7 @@ import { useZoomLevel } from '../useZoomLevel';
 import { nodeCardClass } from './nodeStyles';
 import { NodeHandles } from './NodeHandles';
 import { NodeActions } from './NodeActions';
+import { useDecrypt } from './useDecrypt';
 
 const STATUS_CLASS = {
   running: 'bg-success shadow-[0_0_0_2px_var(--success-soft)]',
@@ -27,12 +29,18 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
   const color = colorFor(container.type);
   const zoom = useZoomLevel();
   const compact = zoom !== 'full';
+  // A theme may have the selected node's name and IP decrypt into view.
+  const decrypt = useAppStore((s) => !!effectsFor(s.theme).decrypt) && !!selected && !dragging;
+  const name = useDecrypt(container.name, decrypt);
+  const ip = useDecrypt((guest ? guest.ip : container.ip) || 'no ip', decrypt);
 
   return (
     <div
       className={nodeCardClass(selected, cn('items-center gap-2.5 px-2.5', dragging && 'shadow-lg', guest && 'border-dashed opacity-80'))}
       style={{ width: NODE_SIZE.device.width, height: NODE_SIZE.device.height }}
       data-testid={`node-${id}`}
+      data-node-type={container.type}
+      data-capturing={captureJobId ? '' : undefined}
     >
       {/* A guest is edited (or deleted) in its own subnet, not from here. */}
       <NodeActions id={id} visible={!!selected && !dragging && !guest} container={container} />
@@ -48,25 +56,25 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
         <div className="flex items-center gap-1.5 pr-3">
           <span className={cn('truncate font-medium', compact ? 'text-sm' : 'text-[13px]')} title={container.name}>
-            {container.name}
+            {name}
           </span>
           {!compact ? (
-            <span className="ml-auto shrink-0 text-2xs font-semibold tracking-wide" style={{ color }}>
+            <span className="ae-node-tag ml-auto shrink-0 text-2xs font-semibold tracking-wide" style={{ color }}>
               {labelFor(container.type)}
             </span>
           ) : null}
         </div>
         {!compact ? (
           <div className="flex items-center gap-1.5">
-            <span className={cn('font-mono text-2xs text-fg-muted', guest ? 'shrink-0' : 'truncate')}>{(guest ? guest.ip : container.ip) || 'no ip'}</span>
-            {isGateway ? <span className="shrink-0 rounded bg-surface-2 px-1 text-2xs font-medium text-fg-muted">GW</span> : null}
+            <span className={cn('font-mono text-2xs text-fg-muted', guest ? 'shrink-0' : 'truncate')}>{ip}</span>
+            {isGateway ? <span className="shrink-0 rounded-sm bg-surface-2 px-1 text-2xs font-medium text-fg-muted">GW</span> : null}
             {guest ? (
               <Tooltip content={`Lives in ${guest.homeSubnet} (${container.ip}); joins this subnet through an interface leg`} side="bottom">
                 <span className="min-w-0 truncate text-2xs text-fg-subtle">via {guest.homeSubnet}</span>
               </Tooltip>
             ) : legs?.length ? (
               <Tooltip content={legs.map((l) => `${l.subnet}: ${l.ip}`).join(' · ')} side="bottom">
-                <span className="shrink-0 rounded bg-warning-soft px-1 text-2xs font-medium text-warning" aria-label={`${legs.length} more interface${legs.length === 1 ? '' : 's'}`}>
+                <span className="shrink-0 rounded-sm bg-warning-soft px-1 text-2xs font-medium text-warning" aria-label={`${legs.length} more interface${legs.length === 1 ? '' : 's'}`}>
                   +{legs.length}
                 </span>
               </Tooltip>

@@ -33,7 +33,7 @@ function CopyLine({ label, text }: { label: string; text: string }) {
           <Copy className="size-3" /> Copy
         </button>
       </div>
-      <code className="block max-h-24 overflow-auto rounded border border-border bg-surface-2 p-2 font-mono text-2xs break-all text-fg">{text}</code>
+      <code className="block max-h-24 overflow-auto rounded-sm border border-border bg-surface-2 p-2 font-mono text-2xs break-all text-fg">{text}</code>
     </div>
   );
 }

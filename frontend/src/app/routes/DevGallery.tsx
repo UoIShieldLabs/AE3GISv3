@@ -5,9 +5,13 @@ import {
   DropdownMenuTrigger, EmptyState, Field, IconButton, Input, Kbd, Select, Separator, Switch, Tabs, TabsContent, TabsList,
   TabsTrigger, Textarea, Tooltip, toast,
 } from '@/ui';
-import { ThemeToggle } from '@/shell/ThemeToggle';
+import { AppearanceMenu } from '@/shell/AppearanceMenu';
+import { THEMES } from '@/app/themes';
+import { ICON_STYLES, glyphFor } from '@/catalog/icons/registry';
+import { CLASSIC_GLYPHS } from '@/catalog/icons/classic';
+import { nodeCardClass } from '@/canvas/nodes/nodeStyles';
 
-/** DEV-only page to eyeball every primitive in both themes. */
+/** DEV-only page to eyeball every primitive in every theme. */
 export function DevGallery() {
   const [open, setOpen] = useState(false);
   const [sel, setSel] = useState<string | undefined>('b');
@@ -19,7 +23,7 @@ export function DevGallery() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold">UI gallery</h1>
-          <ThemeToggle />
+          <AppearanceMenu />
         </div>
 
         <Section title="Buttons">
@@ -89,6 +93,33 @@ export function DevGallery() {
           <Tabs defaultValue="a" className="mt-3">
             <TabsList variant="pills"><TabsTrigger value="a">Tree</TabsTrigger><TabsTrigger value="b">Circle</TabsTrigger><TabsTrigger value="c">Grid</TabsTrigger></TabsList>
           </Tabs>
+        </Section>
+
+        <Section title="Themes">
+          {/* data-theme scopes a theme's tokens, so each column wears its own. */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {THEMES.map((t) => (
+              <div key={t.id} data-theme={t.id} className="flex flex-col gap-3 rounded-lg border border-border bg-app p-3 font-sans text-fg">
+                <div className="text-xs font-semibold">{t.label}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button size="xs" variant="primary">Primary</Button><Button size="xs">Secondary</Button>
+                  <Badge tone="success" dot>Running</Badge><Badge tone="danger">Error</Badge>
+                </div>
+                <div className={nodeCardClass(true, 'h-12 items-center gap-2 px-2.5')}>
+                  <span className="truncate text-[13px] font-medium">core-rtr</span>
+                  <span className="font-mono text-2xs text-fg-muted">10.0.0.1</span>
+                </div>
+                {ICON_STYLES.map((s) => (
+                  <div key={s.id} className="flex flex-wrap items-center gap-1 text-fg-muted">
+                    <span className="w-14 text-2xs">{s.label}</span>
+                    {Object.keys(CLASSIC_GLYPHS).map((icon) => (
+                      <span key={icon} className="ae-glyph inline-flex text-accent">{glyphFor(s.id, icon)({ color: 'currentColor', size: 14 })}</span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </Section>
 
         <Section title="Empty state">

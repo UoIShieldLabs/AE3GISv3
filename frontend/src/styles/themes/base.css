@@ -1,0 +1,54 @@
+/* ── Shared, non-color tokens ──────────────────────────────────────────
+   Defaults every theme starts from; a theme may override any of them.
+   Declared on every [data-theme] element too, so a themed preview nested
+   in another theme (menu swatches, the gallery) resets to these first.    */
+
+:root,
+[data-theme] {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Titles, section labels, primary buttons (through the hooks below). */
+  --font-display: var(--font-sans);
+  /* xterm reads these as values, like the --terminal-* colors. */
+  --terminal-font: var(--font-mono);
+  --terminal-font-size: 13px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadow of a selected card (`shadow-glow`); the plain small shadow by default. */
+  --glow: var(--shadow-sm);
+  /* Filter on device glyphs (the `ae-glyph` hook). */
+  --glyph-filter: none;
+  --edge-stroke: var(--fg-subtle);
+}
+
+/* ── Theme hooks ───────────────────────────────────────────────────────
+   Classes components carry so a theme can restyle them without touching
+   the component. They look like nothing unless a theme styles them.
+     ae-glyph            every device glyph (NodeGlyph)
+     ae-panel-header     the inspector header, sidebar tabs, dock tab bar
+     ae-panel-title      the inspector header's title
+     ae-label            small section labels (menus, inspector, palette)
+     ae-brand            the AE3GIS wordmark
+     ae-breadcrumb       the scope breadcrumb
+     ae-deploy-status    the top bar's status, with data-deploy-status
+     ae-node             canvas cards; devices add data-node-type and
+                         data-capturing, and their type label ae-node-tag
+     button[data-variant]  every Button, by variant                      */
+
+.ae-glyph {
+  filter: var(--glyph-filter);
+}
+/* xterm sizes its cells from the font it asks for: a theme's inherited
+   font-size-adjust (Hacknet's) would make glyphs overflow and gap. */
+.xterm {
+  font-size-adjust: none;
+}
+/* Zooming re-rasterizes every filtered glyph (a 207-node subnet dropped to
+   ~15 fps), so on the canvas only the selected node's glyph takes it. */
+.react-flow__node:not(.selected) .ae-glyph {
+  filter: none;
+}

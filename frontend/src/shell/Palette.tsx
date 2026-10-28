@@ -96,11 +96,11 @@ function Section({ title, count, collapsed, onToggle, children }: { title: strin
   return (
     <div className="mb-2">
       {onToggle ? (
-        <button type="button" onClick={onToggle} aria-expanded={!collapsed} className="flex w-full items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
+        <button type="button" onClick={onToggle} aria-expanded={!collapsed} className="ae-label flex w-full items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle hover:text-fg">
           {heading}
         </button>
       ) : (
-        <div className="flex items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle">{heading}</div>
+        <div className="ae-label flex items-center gap-1 px-1 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-fg-subtle">{heading}</div>
       )}
       {collapsed ? null : <div className="flex flex-col gap-0.5">{children}</div>}
     </div>
@@ -133,7 +133,7 @@ function TypeRow({ node, open, onToggle, hint, disabled, onAdd }: { node: Catalo
                 aria-expanded={open}
                 onClick={(e) => { e.stopPropagation(); onToggle(); }}
                 onKeyDown={(e) => e.stopPropagation()}
-                className="flex items-center gap-0.5 rounded px-1 text-2xs text-fg-subtle hover:bg-active hover:text-fg"
+                className="flex items-center gap-0.5 rounded-sm px-1 text-2xs text-fg-subtle hover:bg-active hover:text-fg"
               >
                 {node.variants.length}
                 {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
@@ -189,7 +189,7 @@ function PaletteRow({ icon, label, hint, disabled, item, onAdd, trailing, compac
         disabled && 'opacity-60',
       )}
     >
-      {icon ? <span className="flex size-6 shrink-0 items-center justify-center rounded bg-surface-2">{icon}</span> : null}
+      {icon ? <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg-surface-2">{icon}</span> : null}
       <span className={cn('flex-1 truncate', compact ? 'text-fg-muted' : 'font-medium')}>{label}</span>
       {trailing}
       <GripVertical className="size-3.5 shrink-0 text-fg-subtle opacity-0 group-hover:opacity-100" />
