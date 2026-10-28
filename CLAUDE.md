@@ -230,16 +230,20 @@ tables record every long operation.
   one file per theme in `styles/themes/` (`[data-theme='<id>']`, no `:root`
   qualifier so any element can wear a theme; shared non-color tokens — fonts,
   radii, glow — in `base.css`), mapped to utilities via `@theme inline` in
-  `styles/index.css`. Themes: Light, Dark, Neon (Hacknet-inspired: monospace,
-  square, glow, scanlines), named in `app/themes.ts` (id, label, light/dark
-  `scheme`); `<html data-theme data-scheme>` (the `dark:` variant follows the
-  scheme). Device **icon styles** (Classic, Netmap, Line) are a separate
+  `styles/index.css`. Themes: Light, Dark, Neon (cyan glow, monospace, square,
+  scanlines), Hacknet (VT323 + Press Start 2P, phosphor green, CRT, shell-prompt
+  chrome, deploy trace, target-locked nodes), named in `app/themes.ts` (id,
+  label, light/dark `scheme`, optional `effects` for what CSS can't do, e.g.
+  Hacknet's node decrypt; components read `effectsFor()`, never a theme id);
+  `<html data-theme data-scheme>` (the `dark:` variant follows the scheme). Device **icon styles** (Classic, Netmap, Line) are a separate
   registry in `catalog/icons/registry.ts`, chosen independently; a style also
   sets the Lucide stroke width (`LucideProvider`). Both are picked in
-  `shell/AppearanceMenu` and ⌘K. Themes restyle components through hook
-  classes (`ae-glyph`, `ae-panel-header`, see `themes/base.css`). Never
-  hardcode colors; catalog colors are only used as device accents. No CSS
-  filters on canvas nodes/edges (zoom re-rasterizes them). `styles/reactflow.css`
+  `shell/AppearanceMenu` and ⌘K. Themes restyle components through no-op hook
+  classes and attributes (`ae-*`, `data-variant`, `data-deploy-status`,
+  `data-node-type`…, listed in `themes/base.css`); those flourishes follow
+  `<html>`'s theme only. Never hardcode colors; catalog colors are only used
+  as device accents. No CSS filters or per-node continuous animation on canvas
+  nodes/edges (zoom re-rasterizes them; a few selected/attacker nodes are fine). `styles/reactflow.css`
   themes React Flow through its `--xy-*` variables. A DEV-only `/_gallery` route
   shows every primitive, and each theme side by side.
 - **State.** One Zustand store (`store/index.ts`) composed of slices

@@ -757,16 +757,31 @@ picked in the top bar's Appearance menu or <kbd>⌘K</kbd>:
 
 - **Theme** — how everything looks. Each theme is one CSS file in
   `styles/themes/` defining every color token under `[data-theme='<id>']`,
-  plus any override of the shared tokens in `base.css` (fonts, radii, `--glow`,
-  `--glyph-filter`, `--edge-stroke`). `app/themes.ts` only names them (id,
-  label, light/dark `scheme`, which drives `color-scheme`, React Flow and
-  toasts). The selectors have no `:root` qualifier, so any element can wear a
-  theme: the menu swatches and the gallery are painted by the theme itself.
+  plus any override of the shared tokens in `base.css` (fonts incl.
+  `--font-display`, radii, `--glow`, `--glyph-filter`, `--edge-stroke`).
+  `app/themes.ts` only names them (id, label, light/dark `scheme`, which drives
+  `color-scheme`, React Flow and toasts) and lists opt-in `effects` a theme
+  needs JS for; components ask `effectsFor(pref)`, never a theme id. The
+  selectors have no `:root` qualifier, so any element can wear a theme's
+  tokens: the menu swatches and the gallery are painted by the theme itself.
   Things that cannot use the cascade read tokens as values: xterm
-  (`--terminal-*`) and uPlot (`--chart-N`). Neon (Hacknet-inspired) also
-  styles a few **hook classes** components carry and other themes leave
-  alone: `ae-glyph` (device glyphs) and `ae-panel-header` (inspector header,
-  sidebar tabs, dock tab bar), and draws scanlines on `body::after`.
+  (`--terminal-*` colors, `--terminal-font`, `--terminal-font-size`; it
+  re-fits once a new font loads) and uPlot (`--chart-N`).
+  Components carry no-op **hooks** a theme may style (listed in `base.css`):
+  `ae-glyph`, `ae-panel-header`, `ae-panel-title`, `ae-label`, `ae-brand`,
+  `ae-breadcrumb`, `ae-node` / `ae-node-tag` with `data-node-type` and
+  `data-capturing`, `ae-deploy-status` with `data-deploy-status`, and
+  `data-variant` on every Button. Those flourishes follow `<html>`'s theme
+  only (a nested preview takes the tokens, not the flourishes).
+  **Neon**: cyan-on-black glow, monospace, square, title-bar strips, faint
+  scanlines. **Hacknet**: Neon's panels with phosphor-green highlights, VT323
+  text (scaled with `font-size-adjust`) and Press Start 2P titles, a CRT
+  overlay (scanlines, vignette, rolling band), the breadcrumb as a shell
+  prompt, `[ BRACKETED ]` primary buttons, log-line toasts, a red "trace"
+  while deploying, glitches on landing and hover, bracketed node cards, a
+  target lock plus name/IP decrypt (`useDecrypt`) on the selected node,
+  attackers tagged `YOU`, red brackets on captured nodes, and packet dots on
+  live links. Motion only runs without `prefers-reduced-motion`.
 - **Icon style** — how device glyphs are drawn: `catalog/icons/` holds
   Classic (the original set and everyone's fallback), Netmap and Line (Lucide),
   listed in `registry.ts`. `NodeGlyph` draws in the current style, so call
@@ -870,7 +885,8 @@ Things that will bite if you do not know them:
 - **No CSS filters on canvas nodes or edges.** Zooming re-rasterizes every
   filtered element: a `drop-shadow` on each glyph took a 207-node subnet from
   60 to ~15 fps. On the canvas only the selected node's glyph takes the theme's
-  `--glyph-filter`; shadows (`box-shadow`) are fine.
+  `--glyph-filter`; shadows (`box-shadow`), static background gradients and an
+  animation on a few nodes (Hacknet: the selected one, attackers) are fine.
 - **`persistencePaths` and `config` are stored but not applied** by the Kathará
   engine. Validation says so; do not assume they take effect.
 - **SQLAlchemy JSON columns need a deep copy before mutation**, or the `UPDATE`
@@ -924,9 +940,11 @@ to it until they draw their own). Nothing else changes.
 ### Add a theme
 Copy `frontend/src/styles/themes/dark.css` to `<id>.css`, set every token under
 `[data-theme='<id>']` (override `base.css` tokens or style the hook classes if
-the theme needs it), import it in `themes/index.css`, and add an entry to
-`THEMES` in `src/app/themes.ts`. The menu, ⌘K and the gallery pick it up; the
-token test fails if a color token is missing.
+the theme needs it; `hacknet.css` shows the lot), import it in
+`themes/index.css`, and add an entry to `THEMES` in `src/app/themes.ts` (with
+`effects` for anything CSS can't do). The menu, ⌘K and the gallery pick it up;
+the token test fails if a color token is missing. Keep motion behind
+`prefers-reduced-motion: no-preference` and off per-node on the canvas.
 
 ### Add an icon style
 Write `frontend/src/catalog/icons/<id>.tsx` exporting an `IconStyle` (glyphs by
