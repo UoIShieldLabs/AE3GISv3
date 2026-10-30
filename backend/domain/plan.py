@@ -164,6 +164,24 @@ def _eth_index(iface: str) -> int:
         return 0
 
 
+def _node_env(raw: object) -> dict[str, str]:
+    """A container's ``env`` map from the opaque topology, coerced to str→str.
+
+    Non-dict values, and entries whose key or value is empty, are dropped so a
+    malformed field can never break a deploy.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    env: dict[str, str] = {}
+    for key, value in raw.items():
+        if value is None:
+            continue
+        name = str(key).strip()
+        if name:
+            env[name] = str(value)
+    return env
+
+
 def _gateway_belongs_to_subnet(gateway: str, cidr: str) -> bool:
     if not gateway or not cidr:
         return False
@@ -189,6 +207,9 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
     container_role: dict[str, str] = {}
     container_name: dict[str, str] = {}
     container_image: dict[str, str] = {}
+    # Per-node environment overrides from the topology (opaque data), applied on
+    # top of the image's catalog env. Used e.g. to point a client at a peer's IP.
+    container_env: dict[str, dict[str, str]] = {}
     container_memberships: dict[str, list[dict]] = defaultdict(list)
     subnet_id_containers: dict[str, list] = {}
     site_id_subnets: dict[str, list] = {}
@@ -237,6 +258,7 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 container_role.setdefault(cid, catalog.role_for(ctype))
                 container_name.setdefault(cid, c.get("name") or cid)
                 container_image.setdefault(cid, catalog.resolve_image(ctype, c.get("image")))
+                container_env.setdefault(cid, _node_env(c.get("env")))
                 if isinstance(c.get("mirrorTo"), str) and c["mirrorTo"]:
                     container_mirror.setdefault(cid, c["mirrorTo"])
                 container_memberships[cid].append(
@@ -636,7 +658,8 @@ def build_lab_plan(topology: dict, lab_name: str, *, iface_base: int = 0) -> Lab
                 image=image,
                 interfaces=interfaces,
                 startup=startup,
-                env=catalog.image_env(image),
+                # Image env first, then the node's own overrides win.
+                env={**catalog.image_env(image), **container_env.get(cid, {})},
                 shell=catalog.image_shell(image),
                 sysctls=sysctls,
             )

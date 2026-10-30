@@ -110,6 +110,32 @@ def test_nodes_carry_their_image_env():
     assert _node(plan, "hA").to_dict()["env"] == {"POSTGRES_PASSWORD": "pass"}
 
 
+def test_per_node_env_overrides_and_extends_image_env():
+    topo = _two_subnet_topology()
+    hA = topo["sites"][0]["subnets"][0]["containers"][2]
+    hA.update(
+        type="database-server",
+        image="postgres:alpine",
+        # Override the image's value, add a new one, and include malformed
+        # entries (non-str value is coerced; None and blank key are dropped).
+        env={
+            "POSTGRES_PASSWORD": "secret",
+            "IEC104_SERVER": "10.0.3.50",
+            "PORT": 2404,
+            "SKIP": None,
+            "": "x",
+        },
+    )
+    plan = build_lab_plan(topo, "demo-lab")
+    assert _node(plan, "hA").env == {
+        "POSTGRES_PASSWORD": "secret",
+        "IEC104_SERVER": "10.0.3.50",
+        "PORT": "2404",
+    }
+    # A node with no env override still gets just its image env.
+    assert _node(plan, "hB").env == {}
+
+
 def test_images_without_bash_name_their_shell():
     topo = _two_subnet_topology()
     topo["sites"][0]["subnets"][0]["containers"][2].update(type="web-server", image="httpd:alpine")
