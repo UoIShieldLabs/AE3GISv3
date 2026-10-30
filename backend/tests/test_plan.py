@@ -118,7 +118,13 @@ def test_per_node_env_overrides_and_extends_image_env():
         image="postgres:alpine",
         # Override the image's value, add a new one, and include malformed
         # entries (non-str value is coerced; None and blank key are dropped).
-        env={"POSTGRES_PASSWORD": "secret", "IEC104_SERVER": "10.0.3.50", "PORT": 2404, "SKIP": None, "": "x"},
+        env={
+            "POSTGRES_PASSWORD": "secret",
+            "IEC104_SERVER": "10.0.3.50",
+            "PORT": 2404,
+            "SKIP": None,
+            "": "x",
+        },
     )
     plan = build_lab_plan(topo, "demo-lab")
     assert _node(plan, "hA").env == {

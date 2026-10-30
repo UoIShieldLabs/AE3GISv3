@@ -199,7 +199,9 @@ def test_ics_scenario_b_preset_loads_and_is_valid(client):
     )
     assert procsim["webUiPort"] == 8000
     # It ships the tutorials, and every command cell targets a real node.
-    node_ids = {c["id"] for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]}
+    node_ids = {
+        c["id"] for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]
+    }
     assert "engws" in node_ids  # the authorized workstation for the educational tutorial
     titles = {t["title"] for t in data["tutorials"]}
     assert {"IEC-104 attack walkthrough", "Industroyer, step by step"} <= titles
