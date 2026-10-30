@@ -290,7 +290,7 @@
             "id": "edu-zeek",
             "kind": "command",
             "containerId": "ids",
-            "command": "mkdir -p /root/zeeklogs && cd /root/zeeklogs\nnohup zeek -i eth0 -C >/tmp/zeek.out 2>&1 &\nsleep 1 && echo 'Zeek is now watching the plant network (logs in /root/zeeklogs)'"
+            "command": "mkdir -p /root/zeeklogs\nnohup sh -c 'cd /root/zeeklogs && exec zeek -i eth0 -C' >/tmp/zeek.out 2>&1 &\nsleep 2 && echo 'Zeek is now watching the plant network (logs in /root/zeeklogs)'"
           },
           {
             "id": "edu-normal",
