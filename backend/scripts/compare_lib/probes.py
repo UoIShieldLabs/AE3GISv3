@@ -37,10 +37,23 @@ class Monitor:
     def start(self) -> None:
         self.target.run(self.target.docker("rm", "-f", MONITOR), timeout=60)
         cmd = self.target.docker(
-            "run", "--rm", "-i", "--name", MONITOR, "--network", "none",
-            "--pid", "host", "--cgroupns", "host",
-            "-v", "/sys/fs/cgroup:/host/cgroup:ro",
-            self.image, "ae3gis-collect", "--interval", str(self.interval),
+            "run",
+            "--rm",
+            "-i",
+            "--name",
+            MONITOR,
+            "--network",
+            "none",
+            "--pid",
+            "host",
+            "--cgroupns",
+            "host",
+            "-v",
+            "/sys/fs/cgroup:/host/cgroup:ro",
+            self.image,
+            "ae3gis-collect",
+            "--interval",
+            str(self.interval),
         )
         self._proc = self.target.popen(cmd)
         self._thread = threading.Thread(target=self._read, daemon=True)
@@ -77,17 +90,36 @@ class Monitor:
 
 
 def driver(
-    target: Target, image: str, spec: dict[str, Any], *, security_opt: list[str] | None = None,
+    target: Target,
+    image: str,
+    spec: dict[str, Any],
+    *,
+    security_opt: list[str] | None = None,
     timeout: float = 900,
 ) -> list[dict[str, Any]]:
     """Run the traffic driver to completion; its events, one per line."""
     target.run(target.docker("rm", "-f", DRIVER), timeout=60)
     cmd = target.docker(
-        "run", "--rm", "-i", "--name", DRIVER, "--network", "none", "--pid", "host",
-        "--cap-add", "SYS_ADMIN", "--cap-add", "SYS_PTRACE",
-        "--ulimit", "nofile=65536:65536",
+        "run",
+        "--rm",
+        "-i",
+        "--name",
+        DRIVER,
+        "--network",
+        "none",
+        "--pid",
+        "host",
+        "--cap-add",
+        "SYS_ADMIN",
+        "--cap-add",
+        "SYS_PTRACE",
+        "--ulimit",
+        "nofile=65536:65536",
         *[x for opt in security_opt or [] for x in ("--security-opt", opt)],
-        image, "sh", "-c", "cat > /tmp/spec.json && exec ae3gis-netns --spec /tmp/spec.json",
+        image,
+        "sh",
+        "-c",
+        "cat > /tmp/spec.json && exec ae3gis-netns --spec /tmp/spec.json",
     )
     p = target.run(cmd, input=json.dumps(spec).encode(), timeout=timeout)
     events = []
@@ -97,13 +129,20 @@ def driver(
         except ValueError:
             continue
     if p.returncode != 0 and not events:
-        raise RuntimeError(f"driver failed ({p.returncode}): {p.stderr.decode(errors='replace')[-600:]}")
+        raise RuntimeError(
+            f"driver failed ({p.returncode}): {p.stderr.decode(errors='replace')[-600:]}"
+        )
     return events
 
 
 def readiness(
-    target: Target, image: str, lab_readiness: list[dict[str, Any]], pids: dict[str, int], *,
-    timeout_s: float = 300, security_opt: list[str] | None = None,
+    target: Target,
+    image: str,
+    lab_readiness: list[dict[str, Any]],
+    pids: dict[str, int],
+    *,
+    timeout_s: float = 300,
+    security_opt: list[str] | None = None,
 ) -> dict[str, Any]:
     """Every host pings its targets until they answer (the same check AE3GIS's
     benchmarks use); ``{ok, failed, elapsed, missing}``."""
@@ -113,7 +152,13 @@ def readiness(
         if r["node"] in pids
     ]
     missing = sorted({r["node"] for r in lab_readiness if r["node"] not in pids})
-    spec = {"mode": "probe", "timeout_s": timeout_s, "parallel": 64, "interval_s": 1, "probes": probes}
+    spec = {
+        "mode": "probe",
+        "timeout_s": timeout_s,
+        "parallel": 64,
+        "interval_s": 1,
+        "probes": probes,
+    }
     t0 = time.monotonic()
     events = driver(target, image, spec, security_opt=security_opt, timeout=timeout_s + 120)
     done = next((e for e in events if e.get("k") == "done"), {})

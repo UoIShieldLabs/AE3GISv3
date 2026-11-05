@@ -2,7 +2,7 @@
 """AE3GIS vs GNS3 comparison runner (see docs/benchmarks/COMPARE.md).
 
     python3 backend/scripts/compare.py proto --platform gns3 --lab 25 \\
-        --gns3-url http://<vm>:3080 --ssh gns3@<vm> --image <tools image>
+        --gns3-url http://<vm> --ssh gns3@<vm> --image <tools image>
     python3 backend/scripts/compare.py proto --platform ae3gis --lab 25 --image <tools image>
 
 ``proto`` is the Phase 0 check of one platform. It deploys a lab, then checks
@@ -31,10 +31,19 @@ from compare_lib.target import Target, pids  # noqa: E402
 
 def adapter(args):
     if args.platform == "gns3":
+        if not (args.gns3_url and args.ssh):
+            sys.exit("gns3 needs --gns3-url and --ssh")
         target = Target("gns3-vm", ssh=args.ssh)
         idle = args.idle.split() if args.idle else None
         extra = json.loads(args.gns3_props) if args.gns3_props else None
-        return target, Gns3(args.gns3_url, target, concurrency=args.concurrency, idle=idle, extra_properties=extra)
+        return target, Gns3(
+            args.gns3_url,
+            target,
+            concurrency=args.concurrency,
+            idle=idle,
+            extra_properties=extra,
+            bulk=args.bulk,
+        )
     target = Target("docker-desktop")
     return target, Ae3gis(args.ae3gis_url, target)
 
@@ -60,7 +69,12 @@ def inspect_node(target: Target, cid: str) -> dict:
 def cmd_proto(args) -> int:
     lab = labs_mod.load(args.lab)
     target, plat = adapter(args)
-    report: dict = {"platform": args.platform, "lab": lab.name, "lab_sha256": lab.sha256, "t": time.time()}
+    report: dict = {
+        "platform": args.platform,
+        "lab": lab.name,
+        "lab_sha256": lab.sha256,
+        "t": time.time(),
+    }
     report["version"] = plat.version()
     print(f"{args.platform}: {json.dumps(report['version'])[:160]}")
     t0 = time.monotonic()
@@ -69,7 +83,9 @@ def cmd_proto(args) -> int:
     try:
         containers = plat.containers(deployed)
         report["containers"] = {"expected": len(lab.nodes), "found": len(containers)}
-        node_pids = {nid: p for nid, p in ((n, pids(target, [c]).get(c)) for n, c in containers.items()) if p}
+        node_pids = {
+            nid: p for nid, p in ((n, pids(target, [c]).get(c)) for n, c in containers.items()) if p
+        }
         report["pids"] = len(node_pids)
         by_role = {}
         for node in lab.nodes:
@@ -81,8 +97,12 @@ def cmd_proto(args) -> int:
         }
         t1 = time.monotonic()
         report["ready"] = probes.readiness(
-            target, args.image, lab.doc["readiness"], node_pids,
-            security_opt=args.security_opt, timeout_s=args.ready_timeout,
+            target,
+            args.image,
+            lab.doc["readiness"],
+            node_pids,
+            security_opt=args.security_opt,
+            timeout_s=args.ready_timeout,
         )
         report["ready"]["wall_s"] = round(time.monotonic() - t1, 3)
         print(f"  ready: {report['ready']}")
@@ -110,6 +130,9 @@ def cmd_proto(args) -> int:
             print(f"  kept the lab up: {deployed}")
         else:
             report["destroy_s"] = plat.destroy(deployed)
+            report["destroy"] = {
+                k: v for k, v in deployed.timings.items() if k not in report["deploy"]
+            }
             print(f"  destroyed in {report['destroy_s']}s")
     out = Path(args.out) if args.out else Path(f"proto-{args.platform}-{lab.name}.json")
     out.write_text(json.dumps(report, indent=1, default=str))
@@ -125,9 +148,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--lab", default="25", help="lab size (campus-<n>.json) or a path")
     p.add_argument("--image", required=True, help="the tools image (probes)")
     p.add_argument("--ae3gis-url", default="http://localhost:8000")
-    p.add_argument("--gns3-url", default="http://localhost:3080")
+    p.add_argument(
+        "--gns3-url", help="the GNS3 VM's API, e.g. http://<vm> (port 80 in the GNS3 VM)"
+    )
     p.add_argument("--ssh", help="user@host of the GNS3 VM")
-    p.add_argument("--concurrency", type=int, default=8)
+    p.add_argument("--concurrency", type=int, default=8, help="GNS3's parallel API calls")
+    p.add_argument("--bulk", action="store_true", help="GNS3's own bulk start/stop (3 at a time)")
     p.add_argument("--idle", help="the idle process GNS3 nodes exec into (default: bash)")
     p.add_argument("--gns3-props", help="extra Docker node properties (JSON)")
     p.add_argument("--security-opt", action="append", default=[])

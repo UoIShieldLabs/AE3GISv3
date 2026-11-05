@@ -63,7 +63,9 @@ class Lab:
             if len(eps) != 2:
                 raise ValueError(f"{link['collision_domain']}: {len(eps)} endpoints, not 2")
             a, b = eps
-            out.append(((a["node"], eth_index(a["interface"])), (b["node"], eth_index(b["interface"]))))
+            out.append(
+                ((a["node"], eth_index(a["interface"])), (b["node"], eth_index(b["interface"])))
+            )
         return out
 
 

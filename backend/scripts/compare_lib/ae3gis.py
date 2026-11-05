@@ -77,16 +77,25 @@ class Ae3gis:
             topology_id=tid,
             lab_hash=state.get("lab_hash", ""),
             machines=dict(state.get("nodes") or {}),
-            timings={"deploy_s": round(t_done - t0, 3), **{f"job_{k}_s": v for k, v in steps.items() if v is not None}},
+            timings={
+                "deploy_s": round(t_done - t0, 3),
+                **{f"job_{k}_s": v for k, v in steps.items() if v is not None},
+            },
         )
 
     def containers(self, lab: Ae3gisLab) -> dict[str, str]:
         """Lab node id -> its Docker container id in Docker Desktop's VM."""
         text = self.target.out(
             self.target.docker(
-                "ps", "-a", "--no-trunc",
-                "--filter", "label=app=kathara", "--filter", f"label=lab_hash={lab.lab_hash}",
-                "--format", '{{.ID}}\t{{.Label "name"}}',
+                "ps",
+                "-a",
+                "--no-trunc",
+                "--filter",
+                "label=app=kathara",
+                "--filter",
+                f"label=lab_hash={lab.lab_hash}",
+                "--format",
+                '{{.ID}}\t{{.Label "name"}}',
             )
         )
         by_machine = {}

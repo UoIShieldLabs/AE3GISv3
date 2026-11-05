@@ -1,6 +1,6 @@
 """GNS3 2.2 adapter: a lab file as a GNS3 project of Docker nodes.
 
-Through the server's REST API (``http://<vm>:3080/v2``):
+Through the server's REST API (``http://<vm>/v2``: port 80 in the GNS3 VM, 3080 on a native server):
 
 1. **Project:** create a project.
 2. **Nodes:** one Docker node per lab node, created in parallel:
@@ -11,15 +11,24 @@ Through the server's REST API (``http://<vm>:3080/v2``):
      ``/ae3gis-init.sh``, runs them like Kathara's ``.startup`` does, then
      ``exec``\\ s the same idle process Kathara's machines run.
 3. **Links:** one per point-to-point link, created in parallel.
-4. **Start:** bulk start, then wait until every node reports ``started``.
+4. **Start:** every node started in parallel, then wait until all of them
+   report ``started``.
 
-Teardown stops the nodes, deletes the project, and waits until the containers
-are gone from the VM's Docker.
+Teardown stops every node in parallel, deletes the project, and waits until
+the containers are gone from the VM's Docker.
+
+Parallel per-node calls are GNS3's best reasonable shot: its own bulk
+``nodes/start`` and ``nodes/stop`` run 3 nodes at a time (``Pool(concurrency=3)``
+in the controller), and ``bulk=True`` uses them instead. Each node's stop is
+``docker stop -t 5``; these images idle on ``bash``, which as PID 1 ignores
+SIGTERM, so every stop waits the 5 s before the kill. Deleting a running
+project stops its nodes the same way first.
 """
 
 from __future__ import annotations
 
 import base64
+import errno
 import json
 import shlex
 import time
@@ -35,6 +44,10 @@ from .target import Target
 
 class Gns3Error(RuntimeError):
     pass
+
+
+# Errors raised before a request is sent, so retrying can't repeat one.
+_CONNECT_ERRNOS = {errno.ECONNREFUSED, errno.EHOSTUNREACH, errno.ENETUNREACH}
 
 
 @dataclass
@@ -53,16 +66,20 @@ class Gns3:
         concurrency: int = 8,
         idle: list[str] | None = None,
         extra_properties: dict[str, Any] | None = None,
+        bulk: bool = False,
     ) -> None:
         self.url = url.rstrip("/")
         self.target = target
         self.concurrency = concurrency
+        self.bulk = bulk
         self.idle = idle or ["bash"]  # what Kathara's machines idle on (checked in Phase 0)
         self.extra = dict(extra_properties or {})
 
     # ── HTTP ──
 
-    def call(self, method: str, path: str, body: Any = None, timeout: float = 120) -> Any:
+    def call(
+        self, method: str, path: str, body: Any = None, timeout: float = 120, retries: int = 5
+    ) -> Any:
         data = None if body is None else json.dumps(body).encode()
         req = urllib.request.Request(
             f"{self.url}/v2{path}",
@@ -70,13 +87,19 @@ class Gns3:
             method=method,
             headers={"Content-Type": "application/json"} if data else {},
         )
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                raw = r.read()
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:500]
-            raise Gns3Error(f"{method} {path}: HTTP {e.code}: {detail}") from e
-        return json.loads(raw) if raw else None
+        for attempt in range(retries + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    raw = r.read()
+                return json.loads(raw) if raw else None
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode(errors="replace")[:500]
+                raise Gns3Error(f"{method} {path}: HTTP {e.code}: {detail}") from e
+            except urllib.error.URLError as e:
+                if getattr(e.reason, "errno", None) not in _CONNECT_ERRNOS or attempt == retries:
+                    raise
+                time.sleep(min(2.0**attempt, 10.0))
+        raise AssertionError("unreachable")
 
     def version(self) -> dict[str, Any]:
         return self.call("GET", "/version", timeout=10)
@@ -121,7 +144,9 @@ class Gns3:
 
     def deploy(self, lab: Lab, *, timeout_s: float = 2700, progress=print) -> Gns3Lab:
         t0 = time.monotonic()
-        project = self.call("POST", "/projects", {"name": f"ae3gis-compare-{lab.name}-{int(time.time())}"})
+        project = self.call(
+            "POST", "/projects", {"name": f"ae3gis-compare-{lab.name}-{int(time.time())}"}
+        )
         pid = project["project_id"]
         nodes: dict[str, str] = {}
 
@@ -148,7 +173,7 @@ class Gns3:
             self._parallel(link, lab.point_to_point())
             t_links = time.monotonic()
             progress(f"  gns3: {len(lab.links)} links in {t_links - t_nodes:.1f}s")
-            self.call("POST", f"/projects/{pid}/nodes/start", {}, timeout=timeout_s)
+            self._each_node(pid, "start", list(nodes.values()), timeout_s)
             self.wait_status(pid, "started", len(nodes), t0 + timeout_s)
             t_start = time.monotonic()
             progress(f"  gns3: all nodes started in {t_start - t_links:.1f}s")
@@ -164,6 +189,16 @@ class Gns3:
                 "start_s": round(t_start - t_links, 3),
                 "deploy_s": round(t_start - t0, 3),
             },
+        )
+
+    def _each_node(self, pid: str, action: str, node_ids: list[str], timeout_s: float) -> None:
+        """Start or stop nodes: GNS3's bulk call, or one call per node in parallel."""
+        if self.bulk:
+            self.call("POST", f"/projects/{pid}/nodes/{action}", {}, timeout=timeout_s)
+            return
+        self._parallel(
+            lambda nid: self.call("POST", f"/projects/{pid}/nodes/{nid}/{action}", {}, timeout=600),
+            node_ids,
         )
 
     def wait_status(self, pid: str, status: str, n: int, deadline: float) -> None:
@@ -187,14 +222,18 @@ class Gns3:
         return out
 
     def destroy(self, lab_nodes: Gns3Lab, *, timeout_s: float = 2700, progress=print) -> float:
+        """Seconds until the lab's containers are gone; the parts go in
+        ``lab_nodes.timings`` (``stop_s``, ``delete_s``, ``gone_s``)."""
         t0 = time.monotonic()
         before = set(self.containers(lab_nodes).values()) if lab_nodes.nodes else set()
         pid = lab_nodes.project_id
         try:
-            self.call("POST", f"/projects/{pid}/nodes/stop", {}, timeout=timeout_s)
-        except Gns3Error as e:
+            self._each_node(pid, "stop", list(lab_nodes.nodes.values()), timeout_s)
+        except (Gns3Error, OSError) as e:
             progress(f"  gns3: stop: {e}")
+        t_stop = time.monotonic()
         self.call("DELETE", f"/projects/{pid}", timeout=timeout_s)
+        t_delete = time.monotonic()
         deadline = t0 + timeout_s
         while before:
             alive = set(
@@ -204,4 +243,12 @@ class Gns3:
             if not before or time.monotonic() > deadline:
                 break
             time.sleep(1.0)
-        return round(time.monotonic() - t0, 3)
+        done = time.monotonic()
+        lab_nodes.timings.update(
+            stop_s=round(t_stop - t0, 3),
+            delete_s=round(t_delete - t_stop, 3),
+            gone_s=round(done - t_delete, 3),
+            left=len(before),
+        )
+        progress(f"  gns3: stopped in {t_stop - t0:.1f}s, deleted in {t_delete - t_stop:.1f}s")
+        return round(done - t0, 3)
