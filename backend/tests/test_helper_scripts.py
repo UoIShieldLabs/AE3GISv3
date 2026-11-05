@@ -145,7 +145,7 @@ def test_full_sweep_over_a_fake_host(tmp_path):
 
     line = collect.sweep(str(cg), str(proc))
     json.dumps(line)  # serialisable as printed
-    assert line["v"] == 1 and set(line["c"]) == {"a" * 12, "b" * 12}
+    assert line["v"] == 1 and line["cgroup"] == 2 and set(line["c"]) == {"a" * 12, "b" * 12}
     assert line["c"]["a" * 12][:6] == [5000, 2_000_000, 4096, None, 2, 1]
     assert set(line["c"]["a" * 12][6]) == {"eth0", "eth1"}
     assert line["host"]["cpu"][3] == 205565 and line["host"]["load"] == [0.5, 0.25, 0.1]
@@ -158,6 +158,33 @@ def test_full_sweep_over_a_fake_host(tmp_path):
         "ubridge": [1, 1000 * page, 150],
         "gns3server": [1, 1000 * page, 150],
     }
+
+
+def test_a_sweep_over_cgroup_v1(tmp_path):
+    """The GNS3 VM's layout: one hierarchy per controller, Docker's cgroupfs
+    driver, mapped to the same fields as v2."""
+    proc, cg = tmp_path / "proc", tmp_path / "cgroup"
+    (proc / "40" / "net").mkdir(parents=True)
+    (proc / "40" / "net" / "dev").write_text(NET_DEV)
+    cid = "c" * 64
+    mem, acct, pids = (cg / ctl / "docker" / cid for ctl in ("memory", "cpuacct", "pids"))
+    for d in (mem, acct, pids):
+        d.mkdir(parents=True)
+    (mem / "memory.usage_in_bytes").write_text("3000000\n")
+    (mem / "memory.stat").write_text("cache 8192\nrss 10\ntotal_inactive_file 4096\n")
+    (mem / "memory.limit_in_bytes").write_text("9223372036854771712\n")
+    (mem / "memory.oom_control").write_text("oom_kill_disable 0\nunder_oom 0\noom_kill 2\n")
+    (mem / "cgroup.procs").write_text("40\n41\n")
+    (acct / "cpuacct.usage").write_text("7000123\n")
+    (pids / "pids.current").write_text("3\n")
+    (cg / "memory" / "docker" / "buildkit").mkdir()
+
+    line = collect.sweep(str(cg), str(proc), infra=False)
+    assert line["cgroup"] == 1 and set(line["c"]) == {"c" * 12}
+    assert line["c"]["c" * 12][:6] == [7000, 3_000_000, 4096, None, 3, 2]
+    assert set(line["c"]["c" * 12][6]) == {"eth0", "eth1"}
+    (mem / "memory.limit_in_bytes").write_text("536870912\n")
+    assert collect.sweep(str(cg), str(proc), infra=False)["c"]["c" * 12][3] == 536870912
 
 
 @pytest.mark.parametrize("missing", ["docker", "system.slice"])

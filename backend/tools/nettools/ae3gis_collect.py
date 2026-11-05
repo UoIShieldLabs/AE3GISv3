@@ -9,8 +9,8 @@ for the host (on Docker Desktop: its Linux VM) and every Docker container:
   Docker's disk (statvfs of this container's root: [total, available]),
   process count; per-name totals for the platform's own processes (``infra``:
   Docker's, Kathara's ``vde_switch``, GNS3's ``ubridge`` and ``gns3server``)
-- containers: cgroup v2 CPU usage, memory, pids and OOM kills, and the
-  interface counters of the container's network namespace (read through
+- containers: cgroup CPU usage, memory, pids and OOM kills (cgroup v2, or v1
+  as in the GNS3 VM, mapped to the same fields), and the interface counters of the container's network namespace (read through
   ``/proc/<pid>/net/dev`` of any process in it, no ``setns`` needed)
 
 One process reads files; nothing asks the Docker daemon, so the cost stays
@@ -20,7 +20,7 @@ so the backend's tests import this file.
 
 Line format (compact on purpose, ~120 bytes per container)::
 
-    {"v": 1, "t": <unix s>, "sweep_ms": .., "ncpu": .., "clk_tck": .., "page": ..,
+    {"v": 1, "t": <unix s>, "sweep_ms": .., "ncpu": .., "clk_tck": .., "page": .., "cgroup": 2|1,
      "host": {"cpu": [user, nice, system, idle, iowait, irq, softirq, steal],
               "mem": {"MemTotal": bytes, ...}, "load": [1, 5, 15], "procs": n,
               "psi": {"cpu": {"some": [avg10, total_us], "full": [...]}, ...}},
@@ -28,6 +28,12 @@ Line format (compact on purpose, ~120 bytes per container)::
      "c": {"<id12>": [usage_usec, mem_current, inactive_file, mem_max|null,
                       pids|null, oom_kills|null, {"eth0": [rx_bytes, rx_packets,
                       rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop]}]}}
+
+On cgroup v1 a container's fields come from its ``cpuacct``, ``memory`` and
+``pids`` cgroups: ``cpuacct.usage`` (ns, reported in µs),
+``memory.usage_in_bytes``, ``total_inactive_file``, ``memory.limit_in_bytes``
+(unlimited → null), ``pids.current`` and ``oom_kill``. Memory used minus
+inactive file is what ``docker stats`` reports on either version.
 """
 
 from __future__ import annotations
@@ -57,6 +63,7 @@ INFRA = {
 MEM_KEYS = ("MemTotal", "MemFree", "MemAvailable", "Cached", "Slab", "SwapTotal", "SwapFree")
 _ID = re.compile(r"^[0-9a-f]{64}$")
 _SCOPE = re.compile(r"^docker-([0-9a-f]{64})\.scope$")
+_V1_UNLIMITED = 1 << 62  # memory.limit_in_bytes without a limit is ~2**63
 
 
 # ── pure parsers ──────────────────────────────────────────────────────
@@ -234,16 +241,43 @@ def read_infra(proc: str) -> tuple[dict[str, list[int]], int]:
     return out, procs
 
 
+def cgroup_version(root: str) -> int:
+    """2 for a unified tree, 1 for per-controller hierarchies (``memory/``,
+    ``cpuacct/``, … under ``root``)."""
+    if not os.path.exists(os.path.join(root, "cgroup.controllers")) and os.path.isdir(
+        os.path.join(root, "memory")
+    ):
+        return 1
+    return 2
+
+
+def _ifaces(procs: str | None, proc: str) -> dict[str, list[int]]:
+    first = (procs or "").split("\n", 1)[0].strip()
+    return parse_net_dev(_read(f"{proc}/{first}/net/dev") or "") if first else {}
+
+
+def read_container_v1(root: str, rel: str, proc: str) -> list:
+    """A container on cgroup v1: ``rel`` is its path under each controller."""
+    mem = f"{root}/memory/{rel}"
+    usage_ns = _int(_read(f"{root}/cpuacct/{rel}/cpuacct.usage"))
+    limit = _int(_read(f"{mem}/memory.limit_in_bytes"))
+    mstat = parse_flat_keyed(_read(f"{mem}/memory.stat") or "")
+    oom = parse_flat_keyed(_read(f"{mem}/memory.oom_control") or "")
+    return [
+        (usage_ns or 0) // 1000,
+        _int(_read(f"{mem}/memory.usage_in_bytes")) or 0,
+        mstat.get("total_inactive_file"),
+        limit if limit is not None and limit < _V1_UNLIMITED else None,
+        _int(_read(f"{root}/pids/{rel}/pids.current")),
+        oom.get("oom_kill"),
+        _ifaces(_read(f"{mem}/cgroup.procs"), proc),
+    ]
+
+
 def read_container(path: str, proc: str) -> list:
     cpu = parse_flat_keyed(_read(f"{path}/cpu.stat") or "")
     mstat = parse_flat_keyed(_read(f"{path}/memory.stat") or "")
     events = parse_flat_keyed(_read(f"{path}/memory.events") or "")
-    ifaces: dict[str, list[int]] = {}
-    procs = _read(f"{path}/cgroup.procs")
-    if procs:
-        first = procs.split("\n", 1)[0].strip()
-        if first:
-            ifaces = parse_net_dev(_read(f"{proc}/{first}/net/dev") or "")
     return [
         cpu.get("usage_usec", 0),
         _int(_read(f"{path}/memory.current")) or 0,
@@ -251,7 +285,7 @@ def read_container(path: str, proc: str) -> list:
         _int(_read(f"{path}/memory.max")),
         _int(_read(f"{path}/pids.current")),
         events.get("oom_kill"),
-        ifaces,
+        _ifaces(_read(f"{path}/cgroup.procs"), proc),
     ]
 
 
@@ -263,12 +297,18 @@ def sweep(root: str, proc: str, *, infra: bool = True) -> dict:
         "ncpu": os.cpu_count(),
         "clk_tck": os.sysconf("SC_CLK_TCK"),
         "page": os.sysconf("SC_PAGE_SIZE"),
+        "cgroup": cgroup_version(root),
         "host": read_host(proc),
         "infra": {},
         "c": {},
     }
-    for cid, path in container_dirs(root).items():
-        line["c"][cid[:12]] = read_container(path, proc)
+    if line["cgroup"] == 1:
+        mem = os.path.join(root, "memory")
+        for cid, path in container_dirs(mem).items():
+            line["c"][cid[:12]] = read_container_v1(root, os.path.relpath(path, mem), proc)
+    else:
+        for cid, path in container_dirs(root).items():
+            line["c"][cid[:12]] = read_container(path, proc)
     if infra:
         line["infra"], line["host"]["procs"] = read_infra(proc)
     line["sweep_ms"] = round((time.monotonic() - started) * 1000, 1)
@@ -278,7 +318,9 @@ def sweep(root: str, proc: str, *, infra: bool = True) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--interval", type=float, default=1.0)
-    ap.add_argument("--root", default="/host/cgroup", help="the host's cgroup v2 tree")
+    ap.add_argument(
+        "--root", default="/host/cgroup", help="the host's cgroup tree (v2, or v1's controllers)"
+    )
     ap.add_argument("--proc", default="/proc")
     args = ap.parse_args(argv)
     stop = False
