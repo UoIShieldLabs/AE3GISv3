@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """AE3GIS vs GNS3 comparison runner (see docs/benchmarks/COMPARE.md).
 
-    python3 backend/scripts/compare.py proto --platform gns3 --lab 25 \\
-        --gns3-url http://<vm> --ssh gns3@<vm> --image <tools image>
+    python3 backend/scripts/compare.py check              # is this machine ready?
+    python3 backend/scripts/compare.py run                # E0, E1, E2 on both; resumes
+    python3 backend/scripts/compare.py run --quick --sizes 25,50 --reps 1   # a dry run
+    python3 backend/scripts/compare.py smoke --platform gns3   # E2's traffic on 25 hosts
     python3 backend/scripts/compare.py proto --platform ae3gis --lab 25 --image <tools image>
+
+The machine's settings come from ``backend/benchmarks/compare/compare.local.json``
+(see ``host.example.json``), the experiments' from ``plan.json``; results go
+to ``backend/benchmark-results/<host>/<date>-compare/<platform>/``.
 
 ``proto`` is the Phase 0 check of one platform. It deploys a lab, then checks
 that every node has a container, that addresses, routes and bridges are set,
@@ -15,7 +21,11 @@ then tears the lab down, and writes a JSON report.
 from __future__ import annotations
 
 import argparse
+import copy
+import datetime
 import json
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -26,7 +36,24 @@ from compare_lib import labs as labs_mod  # noqa: E402
 from compare_lib import probes  # noqa: E402
 from compare_lib.ae3gis import Ae3gis  # noqa: E402
 from compare_lib.gns3 import Gns3  # noqa: E402
+from compare_lib.steps import Platform, Runner, write_json  # noqa: E402
 from compare_lib.target import Target, pids  # noqa: E402
+from compare_lib.vm import DockerDesktopVm, FusionVm  # noqa: E402
+
+BACKEND = Path(__file__).resolve().parents[1]
+ROOT = BACKEND.parent
+COMPARE = BACKEND / "benchmarks" / "compare"
+RESULTS = BACKEND / "benchmark-results"
+# --quick: every wait shortened, one ladder rate; for dry runs, never for results.
+QUICK = {
+    "step": {"quiet_max_s": 30, "reference_s": 5, "settle_s": 5, "hold_s": 10, "after_s": 5},
+    "e0": {"idle_s": 30},
+    "e2": {
+        "ping": {"count": 5},
+        "flatout": {"trials": 1, "duration_s": 5, "between_s": 2},
+        "ladder": {"rates": ["1M"], "window_s": 10, "between_s": 3},
+    },
+}
 
 
 def adapter(args):
@@ -142,6 +169,170 @@ def cmd_proto(args) -> int:
     return 0
 
 
+# ── the comparison ──
+
+
+def merged(base: dict, over: dict) -> dict:
+    out = copy.deepcopy(base)
+    for k, v in over.items():
+        out[k] = merged(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def load_config(args) -> tuple[dict, dict]:
+    host = json.loads(Path(args.config).read_text())
+    plan = json.loads(Path(args.plan).read_text())
+    if getattr(args, "quick", False):
+        plan = merged(plan, QUICK)
+    if getattr(args, "sizes", None):
+        plan["e1"]["sizes"] = [int(x) for x in args.sizes.split(",")]
+        plan["e1"]["extra_size"] = None
+    if getattr(args, "reps", None):
+        plan["e1"]["reps"] = args.reps
+    return host, plan
+
+
+def platforms(host: dict) -> dict[str, Platform]:
+    a, g = host["ae3gis"], host["gns3"]
+    dd = DockerDesktopVm(ROOT, a.get("compose_project", "ae3gis-compare"), a["url"])
+    # The VM's address can change on every start: FusionVm.resolve() sets it.
+    gt = Target("gns3-vm", ssh=None)
+    gt.ssh_opts = (*gt.ssh_opts, "-o", "StrictHostKeyChecking=accept-new")
+    gns3 = Gns3("http://unresolved", gt, concurrency=int(g.get("concurrency", 16)))
+    fusion = FusionVm(g["vmx"], gt, user=g.get("user", "gns3"), adapter=gns3)
+    return {
+        "ae3gis": Platform("ae3gis", dd, Ae3gis(a["url"], dd.target), dd.target, []),
+        "gns3": Platform("gns3", fusion, gns3, gt, list(g.get("security_opt") or [])),
+    }
+
+
+def log(msg: str) -> None:
+    print(f"{datetime.datetime.now():%H:%M:%S} {msg}", flush=True)
+
+
+def checks(host: dict, plan: dict) -> list[tuple[str, bool, str]]:
+    """(what, ok, detail) for this machine, before a run."""
+    out = []
+    pm = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
+    out.append(("on AC power", "AC Power" in pm, pm.splitlines()[0] if pm else "?"))
+    plats = platforms(host)
+    dd, fv = plats["ae3gis"].vm, plats["gns3"].vm
+    st = dd.settings()
+    out.append(
+        (
+            "Docker Desktop: Resource Saver off",
+            st.get("UseResourceSaver") is False,
+            f"UseResourceSaver={st.get('UseResourceSaver')}",
+        )
+    )
+    out.append(("Docker Desktop: Kubernetes off", not st.get("KubernetesEnabled"), ""))
+    vmx = fv.config()
+    out.append(
+        (
+            "same CPUs",
+            str(st.get("Cpus")) == vmx.get("numvcpus"),
+            f"Docker {st.get('Cpus')}, GNS3 VM {vmx.get('numvcpus')}",
+        )
+    )
+    out.append(
+        (
+            "same memory",
+            str(st.get("MemoryMiB")) == vmx.get("memsize"),
+            f"Docker {st.get('MemoryMiB')} MiB, GNS3 VM {vmx.get('memsize')} MiB",
+        )
+    )
+    sizes = [*plan["e1"]["sizes"], plan["e1"].get("extra_size"), plan["e2"]["lab"]]
+    missing = [n for n in sizes if n and not (COMPARE / "labs" / f"campus-{n}.json").exists()]
+    out.append(("lab files", not missing, f"missing {missing}" if missing else ""))
+    free = os.statvfs(BACKEND)
+    gb = free.f_bavail * free.f_frsize / 2**30
+    out.append(("host disk free > 50 GB", gb > 50, f"{gb:.0f} GB"))
+    running = [p.name for p in plats.values() if p.vm.running()]
+    out.append(("at most one VM running", len(running) <= 1, f"running: {running}"))
+    return out
+
+
+def cmd_check(args) -> int:
+    host, plan = load_config(args)
+    bad = 0
+    for what, ok, detail in checks(host, plan):
+        bad += not ok
+        print(f"  [{'ok' if ok else '!!'}] {what}" + (f": {detail}" if detail else ""))
+    print("ready" if not bad else f"{bad} check(s) to fix")
+    return 1 if bad else 0
+
+
+def git_commit() -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def cmd_run(args) -> int:
+    host, plan = load_config(args)
+    if not args.skip_checks:
+        bad = [
+            (w, d) for w, ok, d in checks(host, plan) if not ok and w != "at most one VM running"
+        ]
+        if bad and not args.quick:
+            for w, d in bad:
+                print(f"  [!!] {w}: {d}")
+            print("fix these first (or --skip-checks)")
+            return 1
+    if args.out:
+        out = Path(args.out)
+    else:
+        base = RESULTS / host["host"]
+        prior = sorted(base.glob("*-compare" + ("-quick" if args.quick else "")))
+        name = f"{datetime.date.today():%Y-%m-%d}-compare" + ("-quick" if args.quick else "")
+        out = prior[-1] if (args.resume and prior) else base / name
+    out.mkdir(parents=True, exist_ok=True)
+    manifest = out / "manifest.json"
+    if not manifest.exists():
+        write_json(
+            manifest,
+            {
+                "host": host,
+                "plan": plan,
+                "commit": git_commit(),
+                "started": time.time(),
+                "labs": {
+                    p.name: labs_mod.load(p).sha256
+                    for p in sorted((COMPARE / "labs").glob("*.json"))
+                },
+                "quick": bool(args.quick),
+            },
+        )
+    awake = subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
+    plats = platforms(host)
+    order = [host.get("first", "ae3gis"), *[n for n in plats if n != host.get("first", "ae3gis")]]
+    log(f"results: {out}")
+    try:
+        Runner(plan, plats, host["probe_image"], out, log=log).run(
+            order, only=set(args.only.split(",")) if args.only else None
+        )
+    finally:
+        awake.terminate()
+    log("run finished")
+    return 0
+
+
+def cmd_smoke(args) -> int:
+    """E2's code path on a 25-host lab with short timings: latency, one
+    flat-out flow, and every pattern and protocol at 1M for 10 s."""
+    host, plan = load_config(args)
+    plan = merged(merged(plan, QUICK), {"e2": {"lab": 25}})
+    plats = platforms(host)
+    out = Path(args.out or f"smoke-{args.platform}")
+    runner = Runner(plan, plats, host["probe_image"], out, log=log)
+    p = plats[args.platform]
+    runner.use(p)
+    rec = runner.e2(p)
+    write_json(out / f"{p.name}-e2.json", rec)
+    log(f"smoke: {rec.get('status')} {rec.get('error', '')}")
+    return 0 if rec.get("status") == "ok" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -165,8 +356,30 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ready-timeout", type=float, default=300)
     p.add_argument("--keep", action="store_true", help="leave the lab up to look at it")
     p.add_argument("--out")
+
+    def common(q):
+        q.add_argument("--config", default=str(COMPARE / "compare.local.json"))
+        q.add_argument("--plan", default=str(COMPARE / "plan.json"))
+
+    q = sub.add_parser("check", help="is this machine ready for a run?")
+    common(q)
+    q = sub.add_parser("run", help="E0, E1 and E2 on both platforms (resumable)")
+    common(q)
+    q.add_argument("--quick", action="store_true", help="short waits: a dry run, not results")
+    q.add_argument("--sizes", help="E1 sizes, comma-separated (no extra size)")
+    q.add_argument("--reps", type=int)
+    q.add_argument("--only", help="e0,e1,e2")
+    q.add_argument("--resume", action="store_true", help="continue the latest run of this host")
+    q.add_argument("--out")
+    q.add_argument("--skip-checks", action="store_true")
+    q = sub.add_parser("smoke", help="E2's traffic on a 25-host lab, short timings")
+    common(q)
+    q.add_argument("--platform", choices=["ae3gis", "gns3"], required=True)
+    q.add_argument("--out")
     args = ap.parse_args(argv)
-    return {"proto": cmd_proto}[args.cmd](args)
+    return {"proto": cmd_proto, "check": cmd_check, "run": cmd_run, "smoke": cmd_smoke}[args.cmd](
+        args
+    )
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import IO
 
 
-@dataclass(frozen=True)
+@dataclass  # mutable: the GNS3 VM's address is resolved at each start
 class Target:
     name: str
     ssh: str | None = None  # "user@host" for the GNS3 VM; None: this machine
