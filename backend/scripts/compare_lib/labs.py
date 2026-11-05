@@ -51,6 +51,12 @@ class Lab:
         """Interfaces a node needs: ethN for the highest N, plus one."""
         return max((eth_index(i["name"]) for i in node["interfaces"]), default=-1) + 1
 
+    def run(self, node: dict[str, Any]) -> list[str]:
+        """The node image's own start command (entrypoint + cmd), which Kathara
+        runs as the machine's main process (recorded in the lab file)."""
+        info = (self.doc.get("images") or {}).get(node["image"]) or {}
+        return list(info.get("run") or ["bash"])
+
     def init_script(self, node: dict[str, Any]) -> str:
         """The node's boot commands, as AE3GIS writes them to ``INIT_PATH``."""
         return "#!/bin/sh\n" + "\n".join(node["startup"]) + "\n" if node["startup"] else ""

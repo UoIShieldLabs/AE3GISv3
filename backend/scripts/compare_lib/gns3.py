@@ -9,7 +9,8 @@ Through the server's REST API (``http://<vm>/v2``: port 80 in the GNS3 VM, 3080 
    - console off;
    - a start command that sets the node's interfaces up, writes its boot
      commands to ``/ae3gis-init.sh``, runs them like Kathara's ``.startup``
-     does, then ``exec``\\ s the same idle process Kathara's machines run.
+     does, then ``exec``\\ s the image's own start command, the process
+     Kathara runs as the machine's main process (from the lab file).
 3. **Links:** one per point-to-point link, created in parallel.
 4. **Start:** every node started in parallel, then wait until all of them
    report ``started``.
@@ -20,9 +21,9 @@ the containers are gone from the VM's Docker.
 Parallel per-node calls are GNS3's best reasonable shot: its own bulk
 ``nodes/start`` and ``nodes/stop`` run 3 nodes at a time (``Pool(concurrency=3)``
 in the controller), and ``bulk=True`` uses them instead. Each node's stop is
-``docker stop -t 5``; these images idle on ``bash``, which as PID 1 ignores
-SIGTERM, so every stop waits the 5 s before the kill. Deleting a running
-project stops its nodes the same way first.
+``docker stop -t 5``: a node whose main process ignores SIGTERM as PID 1
+(``bash``, as on ``kathara/base``) waits the 5 s before the kill; ``sshd``
+exits at once. Deleting a running project stops its nodes the same way first.
 
 Interfaces: Docker brings a Kathara machine's interfaces up; in GNS3 its init
 wrapper (``/gns3/init.sh``) is meant to, once the last ``eth`` appears. With
@@ -79,7 +80,7 @@ class Gns3:
         self.target = target
         self.concurrency = concurrency
         self.bulk = bulk
-        self.idle = idle or ["bash"]  # what Kathara's machines idle on (checked in Phase 0)
+        self.idle = idle  # None: each image's own start command, as Kathara runs it
         self.extra = dict(extra_properties or {})
         self.retried: list[str] = []  # connection errors retried, for the report
 
@@ -116,10 +117,11 @@ class Gns3:
 
     # ── a node's start command ──
 
-    def start_command(self, adapters: int, init: bool = True) -> str:
+    def start_command(self, adapters: int, run: list[str], init: bool = True) -> str:
         """Set ``eth0``..``eth<adapters-1>`` up (waiting for each), write
-        ``$AE3GIS_INIT`` (base64) to INIT_PATH and run it, then idle. GNS3
-        splits this with shlex and runs it after its init wrapper."""
+        ``$AE3GIS_INIT`` (base64) to INIT_PATH and run it, then ``exec`` the
+        node's main process ``run``. GNS3 splits this with shlex and runs it
+        after its init wrapper."""
         links = (
             f"i=0; while [ $i -lt {adapters} ]; do d=eth$i;"
             " while [ ! -e /sys/class/net/$d ]; do sleep 0.1; done;"
@@ -131,7 +133,7 @@ class Gns3:
             if init
             else ""
         )
-        return shlex.join(["sh", "-c", f"{links}{boot}exec {shlex.join(self.idle)}"])
+        return shlex.join(["sh", "-c", f"{links}{boot}exec {shlex.join(run)}"])
 
     def node_body(self, lab: Lab, node: dict[str, Any]) -> dict[str, Any]:
         init = lab.init_script(node)
@@ -143,7 +145,9 @@ class Gns3:
             "image": node["image"],
             "adapters": adapters,
             "console_type": "none",
-            "start_command": self.start_command(adapters, init=bool(init)),
+            "start_command": self.start_command(
+                adapters, self.idle or lab.run(node), init=bool(init)
+            ),
             "environment": "\n".join(env),
             **self.extra,
         }

@@ -156,7 +156,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ssh", help="user@host of the GNS3 VM")
     p.add_argument("--concurrency", type=int, default=8, help="GNS3's parallel API calls")
     p.add_argument("--bulk", action="store_true", help="GNS3's own bulk start/stop (3 at a time)")
-    p.add_argument("--idle", help="the idle process GNS3 nodes exec into (default: bash)")
+    p.add_argument(
+        "--idle",
+        help="override the process GNS3 nodes exec into (default: the image's own start command)",
+    )
     p.add_argument("--gns3-props", help="extra Docker node properties (JSON)")
     p.add_argument("--security-opt", action="append", default=[])
     p.add_argument("--ready-timeout", type=float, default=300)

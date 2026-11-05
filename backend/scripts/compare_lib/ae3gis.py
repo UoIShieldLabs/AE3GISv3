@@ -42,7 +42,7 @@ class Ae3gisLab:
 
 class Ae3gis:
     def __init__(self, base: str, target: Target, token: str | None = None) -> None:
-        self.api = bench.Api(base.rstrip("/") + "/api/v1", token)
+        self.api = bench.Api(base, token)  # it adds /api/v1
         self.target = target
 
     def version(self) -> dict[str, Any]:
