@@ -5,8 +5,9 @@
 One JSON file per size under ``benchmarks/compare/labs/``, the single source
 both platforms deploy from:
 
-- ``topology``: the generated plain campus (workstation hosts, one server per
-  50 hosts, FRR routers, switches), which AE3GIS imports;
+- ``topology``: the generated plain campus (workstation hosts, one web server
+  per 50 hosts, routers, switches) with our own images pinned per node type
+  (``IMAGES``), which AE3GIS imports;
 - ``labspec``: AE3GIS's own plan of it (nodes, images, interfaces with
   addresses, point-to-point links, boot commands), which the GNS3 adapter
   turns into Docker nodes and links;
@@ -14,7 +15,14 @@ both platforms deploy from:
   ready (every host: its gateway and a host of another subnet);
 - ``flows``: per traffic pattern, every flow's client, server, address and port;
 - ``pairs``: host pairs for the latency and flat-out tests, in the same LAN and
-  across the core.
+  across the core;
+- ``images``: each image's pinned digest and its own start command
+  (entrypoint + cmd), which Kathara runs as the machine's main process and
+  the GNS3 adapter ``exec``\\ s after the boot commands, so both platforms
+  run the same processes.
+
+The images must be pulled locally first (``docker pull`` each ``IMAGES``
+ref); the script checks their digests and reads their start commands.
 
 Deterministic: the same code writes the same bytes, so a run's recorded sha256
 names the lab exactly.
@@ -23,6 +31,7 @@ names the lab exactly.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +41,7 @@ BACKEND = HERE.parent
 sys.path.insert(0, str(BACKEND))
 
 from domain import selectors  # noqa: E402
+from domain import topology as topo  # noqa: E402
 from domain.export.labspec import to_labspec  # noqa: E402
 from domain.generator import GeneratorParams, generate  # noqa: E402
 from domain.plan import build_lab_plan  # noqa: E402
@@ -42,10 +52,37 @@ SIZES = [25, 50, 100, 200, 400, 800]
 OUT = BACKEND / "benchmarks" / "compare" / "labs"
 STAMP = datetime(2026, 11, 5, tzinfo=UTC)  # fixed, so files are byte-stable
 PAIRS = 10
+# Our own images per node type (AE3GIS's catalog defaults are Kathara's), each
+# Ubuntu 24.04 idling on rsyslogd + sshd and published for arm64 + amd64;
+# switches stay on kathara/base (a Linux bridge, the same on both platforms;
+# our Open vSwitch image would switch in userspace on Docker Desktop, which has
+# no OVS kernel module). Pinned by digest (the multi-platform index).
+IMAGES = {
+    "workstation": (
+        "tollan/benign-client:v0.10",
+        "sha256:093086b4be4fb82bcbee36261bf86b8e570b5dea86bedb9e1629faa1d9b82427",
+    ),
+    "web-server": (
+        "tollan/nginx-server:v0.3",
+        "sha256:e376923977e95ae524f0299a30a4789b3c673bf6f9621af86eab334cf0c9d68a",
+    ),
+    "router": (
+        "tollan/iptables:v0.6",
+        "sha256:3decf063c67ee7177ff78be03752e0c306ac8be5afcb76ec52fdd95c47d6acbe",
+    ),
+    "switch": (
+        "kathara/base:latest",
+        "sha256:8a2e70ac8f51bb283b8549fd686f65f9a1ef4487fe2c81849cb74d301e61970b",
+    ),
+}
 # The traffic suite's two patterns: clients -> servers (north-south through the
 # routers and the core) and mesh (each host to its next two neighbours, east-west).
 PATTERNS = [
-    {"id": "cs", "kind": "clients_to_servers", "servers": {"subnets": ["sub-srv"], "roles": ["host"]}},
+    {
+        "id": "cs",
+        "kind": "clients_to_servers",
+        "servers": {"subnets": ["sub-srv"], "roles": ["host"]},
+    },
     {
         "id": "mesh",
         "kind": "mesh",
@@ -61,14 +98,38 @@ def params(hosts: int) -> GeneratorParams:
         hosts_per_subnet=200,
         hosts_per_switch=48,
         host_type="workstation",
-        server_mix=[{"type": "workstation", "per_hosts": 50}],
+        server_mix=[{"type": "web-server", "per_hosts": 50}],
         name=f"campus-{hosts}",
     )
 
 
-def lab(hosts: int) -> dict:
+def image_info(ref: str, digest: str) -> dict:
+    """The local image's start command, after checking it is the pinned one."""
+    out = subprocess.run(
+        ["docker", "image", "inspect", "-f", "{{json .RepoDigests}} {{json .Config}}", ref],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    digests, _, config = out.partition(" ")
+    if not any(d.endswith("@" + digest) for d in json.loads(digests)):
+        sys.exit(f"{ref} is not {digest} locally (docker pull {ref})")
+    config = json.loads(config)
+    entrypoint, cmd = config.get("Entrypoint") or [], config.get("Cmd") or []
+    if entrypoint:  # GNS3 keeps an image's entrypoint after its own wrapper
+        sys.exit(f"{ref} has an entrypoint; the GNS3 adapter expects none")
+    return {"digest": digest, "run": entrypoint + cmd}
+
+
+def pin_images(topology: dict) -> None:
+    for _site, _subnet, node in topo.iter_containers(topology):
+        node["image"] = IMAGES[node["type"]][0]
+
+
+def lab(hosts: int, images: dict) -> dict:
     p = params(hosts)
     topology = generate(p)
+    pin_images(topology)
     plan = build_lab_plan(topology, f"campus{hosts}")
     index = selectors.node_index(topology)
     node_ids = [n.id for n in plan.nodes]
@@ -105,17 +166,16 @@ def lab(hosts: int) -> dict:
     cross = [[lan[-(i + 1)], servers[i % len(servers)]] for i in range(min(PAIRS, len(lan)))]
     pair = lambda a, b: {"client": a, "server": b, "server_address": index[b]["ip"]}  # noqa: E731
     return {
-        "version": 1,
+        "version": 2,
         "name": p.name,
         "hosts": hosts,
         "nodes": len(plan.nodes),
         "links": len(plan.links()),
         "generator": {k: v for k, v in vars(p).items() if v is not None},
         "topology": topology,
-        "labspec": to_labspec(
-            plan, topology_id=p.name, topology_name=p.name, generated_at=STAMP
-        ),
+        "labspec": to_labspec(plan, topology_id=p.name, topology_name=p.name, generated_at=STAMP),
         "readiness": readiness,
+        "images": {ref: images[ref] for ref in sorted(topo.images_in(topology))},
         "flows": flows,
         "pairs": {
             "same_lan": [pair(a, b) for a, b in same_lan],
@@ -126,8 +186,9 @@ def lab(hosts: int) -> dict:
 
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
+    images = {ref: image_info(ref, digest) for ref, digest in IMAGES.values()}
     for n in SIZES:
-        doc = lab(n)
+        doc = lab(n, images)
         path = OUT / f"campus-{n}.json"
         path.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n")
         print(

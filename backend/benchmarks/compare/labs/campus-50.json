@@ -1066,7 +1066,7 @@
   "server_mix": [
    {
     "per_hosts": 50,
-    "type": "workstation"
+    "type": "web-server"
    }
   ],
   "server_type": "workstation",
@@ -1074,12 +1074,46 @@
   "switch_type": "switch"
  },
  "hosts": 50,
+ "images": {
+  "kathara/base:latest": {
+   "digest": "sha256:8a2e70ac8f51bb283b8549fd686f65f9a1ef4487fe2c81849cb74d301e61970b",
+   "run": [
+    "bash"
+   ]
+  },
+  "tollan/benign-client:v0.10": {
+   "digest": "sha256:093086b4be4fb82bcbee36261bf86b8e570b5dea86bedb9e1629faa1d9b82427",
+   "run": [
+    "sh",
+    "-c",
+    "rsyslogd && exec /usr/sbin/sshd -D"
+   ]
+  },
+  "tollan/iptables:v0.6": {
+   "digest": "sha256:3decf063c67ee7177ff78be03752e0c306ac8be5afcb76ec52fdd95c47d6acbe",
+   "run": [
+    "sh",
+    "-c",
+    "sysctl -p && rsyslogd && exec /usr/sbin/sshd -D"
+   ]
+  },
+  "tollan/nginx-server:v0.3": {
+   "digest": "sha256:e376923977e95ae524f0299a30a4789b3c673bf6f9621af86eab334cf0c9d68a",
+   "run": [
+    "sh",
+    "-c",
+    "rsyslogd && /usr/sbin/sshd -D & exec nginx -g 'daemon off;' "
+   ]
+  }
+ },
  "labspec": {
   "generated_at": "2026-11-05T00:00:00+00:00",
   "generator": "ae3gis",
   "images": [
-   "kathara/frr",
-   "kathara/base"
+   "tollan/iptables:v0.6",
+   "kathara/base:latest",
+   "tollan/nginx-server:v0.3",
+   "tollan/benign-client:v0.10"
   ],
   "lab": "campus50",
   "labspec_version": 1,
@@ -2377,7 +2411,7 @@
    {
     "env": {},
     "id": "core",
-    "image": "kathara/frr",
+    "image": "tollan/iptables:v0.6",
     "interfaces": [
      {
       "collision_domain": "cd0",
@@ -2409,7 +2443,7 @@
    {
     "env": {},
     "id": "swsrv",
-    "image": "kathara/base",
+    "image": "kathara/base:latest",
     "interfaces": [
      {
       "collision_domain": "cd0",
@@ -2440,7 +2474,7 @@
    {
     "env": {},
     "id": "srv-1",
-    "image": "kathara/base",
+    "image": "tollan/nginx-server:v0.3",
     "interfaces": [
      {
       "collision_domain": "cd1",
@@ -2458,12 +2492,12 @@
      "ip addr add 10.0.0.10/24 dev eth0",
      "ip route replace default via 10.0.0.1"
     ],
-    "type": "workstation"
+    "type": "web-server"
    },
    {
     "env": {},
     "id": "r0",
-    "image": "kathara/frr",
+    "image": "tollan/iptables:v0.6",
     "interfaces": [
      {
       "collision_domain": "cd2",
@@ -2495,7 +2529,7 @@
    {
     "env": {},
     "id": "sw0",
-    "image": "kathara/base",
+    "image": "kathara/base:latest",
     "interfaces": [
      {
       "collision_domain": "cd2",
@@ -2533,7 +2567,7 @@
    {
     "env": {},
     "id": "sw0-1",
-    "image": "kathara/base",
+    "image": "kathara/base:latest",
     "interfaces": [
      {
       "collision_domain": "cd3",
@@ -2893,7 +2927,7 @@
    {
     "env": {},
     "id": "h0-1",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd4",
@@ -2916,7 +2950,7 @@
    {
     "env": {},
     "id": "h0-2",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd5",
@@ -2939,7 +2973,7 @@
    {
     "env": {},
     "id": "h0-3",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd6",
@@ -2962,7 +2996,7 @@
    {
     "env": {},
     "id": "h0-4",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd7",
@@ -2985,7 +3019,7 @@
    {
     "env": {},
     "id": "h0-5",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd8",
@@ -3008,7 +3042,7 @@
    {
     "env": {},
     "id": "h0-6",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd9",
@@ -3031,7 +3065,7 @@
    {
     "env": {},
     "id": "h0-7",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd10",
@@ -3054,7 +3088,7 @@
    {
     "env": {},
     "id": "h0-8",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd11",
@@ -3077,7 +3111,7 @@
    {
     "env": {},
     "id": "h0-9",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd12",
@@ -3100,7 +3134,7 @@
    {
     "env": {},
     "id": "h0-10",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd13",
@@ -3123,7 +3157,7 @@
    {
     "env": {},
     "id": "h0-11",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd14",
@@ -3146,7 +3180,7 @@
    {
     "env": {},
     "id": "h0-12",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd15",
@@ -3169,7 +3203,7 @@
    {
     "env": {},
     "id": "h0-13",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd16",
@@ -3192,7 +3226,7 @@
    {
     "env": {},
     "id": "h0-14",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd17",
@@ -3215,7 +3249,7 @@
    {
     "env": {},
     "id": "h0-15",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd18",
@@ -3238,7 +3272,7 @@
    {
     "env": {},
     "id": "h0-16",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd19",
@@ -3261,7 +3295,7 @@
    {
     "env": {},
     "id": "h0-17",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd20",
@@ -3284,7 +3318,7 @@
    {
     "env": {},
     "id": "h0-18",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd21",
@@ -3307,7 +3341,7 @@
    {
     "env": {},
     "id": "h0-19",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd22",
@@ -3330,7 +3364,7 @@
    {
     "env": {},
     "id": "h0-20",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd23",
@@ -3353,7 +3387,7 @@
    {
     "env": {},
     "id": "h0-21",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd24",
@@ -3376,7 +3410,7 @@
    {
     "env": {},
     "id": "h0-22",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd25",
@@ -3399,7 +3433,7 @@
    {
     "env": {},
     "id": "h0-23",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd26",
@@ -3422,7 +3456,7 @@
    {
     "env": {},
     "id": "h0-24",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd27",
@@ -3445,7 +3479,7 @@
    {
     "env": {},
     "id": "h0-25",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd28",
@@ -3468,7 +3502,7 @@
    {
     "env": {},
     "id": "h0-26",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd29",
@@ -3491,7 +3525,7 @@
    {
     "env": {},
     "id": "h0-27",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd30",
@@ -3514,7 +3548,7 @@
    {
     "env": {},
     "id": "h0-28",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd31",
@@ -3537,7 +3571,7 @@
    {
     "env": {},
     "id": "h0-29",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd32",
@@ -3560,7 +3594,7 @@
    {
     "env": {},
     "id": "h0-30",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd33",
@@ -3583,7 +3617,7 @@
    {
     "env": {},
     "id": "h0-31",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd34",
@@ -3606,7 +3640,7 @@
    {
     "env": {},
     "id": "h0-32",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd35",
@@ -3629,7 +3663,7 @@
    {
     "env": {},
     "id": "h0-33",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd36",
@@ -3652,7 +3686,7 @@
    {
     "env": {},
     "id": "h0-34",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd37",
@@ -3675,7 +3709,7 @@
    {
     "env": {},
     "id": "h0-35",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd38",
@@ -3698,7 +3732,7 @@
    {
     "env": {},
     "id": "h0-36",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd39",
@@ -3721,7 +3755,7 @@
    {
     "env": {},
     "id": "h0-37",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd40",
@@ -3744,7 +3778,7 @@
    {
     "env": {},
     "id": "h0-38",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd41",
@@ -3767,7 +3801,7 @@
    {
     "env": {},
     "id": "h0-39",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd42",
@@ -3790,7 +3824,7 @@
    {
     "env": {},
     "id": "h0-40",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd43",
@@ -3813,7 +3847,7 @@
    {
     "env": {},
     "id": "h0-41",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd44",
@@ -3836,7 +3870,7 @@
    {
     "env": {},
     "id": "h0-42",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd45",
@@ -3859,7 +3893,7 @@
    {
     "env": {},
     "id": "h0-43",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd46",
@@ -3882,7 +3916,7 @@
    {
     "env": {},
     "id": "h0-44",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd47",
@@ -3905,7 +3939,7 @@
    {
     "env": {},
     "id": "h0-45",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd48",
@@ -3928,7 +3962,7 @@
    {
     "env": {},
     "id": "h0-46",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd49",
@@ -3951,7 +3985,7 @@
    {
     "env": {},
     "id": "h0-47",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd50",
@@ -3974,7 +4008,7 @@
    {
     "env": {},
     "id": "h0-48",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd51",
@@ -3997,7 +4031,7 @@
    {
     "env": {},
     "id": "sw0-2",
-    "image": "kathara/base",
+    "image": "kathara/base:latest",
     "interfaces": [
      {
       "collision_domain": "cd52",
@@ -4035,7 +4069,7 @@
    {
     "env": {},
     "id": "h0-49",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd53",
@@ -4058,7 +4092,7 @@
    {
     "env": {},
     "id": "h0-50",
-    "image": "kathara/base",
+    "image": "tollan/benign-client:v0.10",
     "interfaces": [
      {
       "collision_domain": "cd54",
@@ -4619,7 +4653,7 @@
    "server_mix": [
     {
      "per_hosts": 50,
-     "type": "workstation"
+     "type": "web-server"
     }
    ],
    "server_type": "workstation",
@@ -4663,6 +4697,7 @@
       "containers": [
        {
         "id": "core",
+        "image": "tollan/iptables:v0.6",
         "ip": "10.0.0.1",
         "name": "Core router",
         "position": {
@@ -4673,6 +4708,7 @@
        },
        {
         "id": "swsrv",
+        "image": "kathara/base:latest",
         "ip": "10.0.0.2",
         "name": "Switch swsrv",
         "position": {
@@ -4683,13 +4719,14 @@
        },
        {
         "id": "srv-1",
+        "image": "tollan/nginx-server:v0.3",
         "ip": "10.0.0.10",
         "name": "Server 1",
         "position": {
          "x": 0,
          "y": 360
         },
-        "type": "workstation"
+        "type": "web-server"
        }
       ],
       "gateway": "10.0.0.1",
@@ -4972,6 +5009,7 @@
       "containers": [
        {
         "id": "r0",
+        "image": "tollan/iptables:v0.6",
         "ip": "10.1.0.1",
         "name": "Router 0",
         "position": {
@@ -4982,6 +5020,7 @@
        },
        {
         "id": "sw0",
+        "image": "kathara/base:latest",
         "ip": "10.1.0.2",
         "name": "Switch sw0",
         "position": {
@@ -4992,6 +5031,7 @@
        },
        {
         "id": "sw0-1",
+        "image": "kathara/base:latest",
         "ip": "10.1.0.240",
         "name": "Switch sw0-1",
         "position": {
@@ -5002,6 +5042,7 @@
        },
        {
         "id": "h0-1",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.10",
         "name": "Host 0-1",
         "position": {
@@ -5012,6 +5053,7 @@
        },
        {
         "id": "h0-2",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.11",
         "name": "Host 0-2",
         "position": {
@@ -5022,6 +5064,7 @@
        },
        {
         "id": "h0-3",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.12",
         "name": "Host 0-3",
         "position": {
@@ -5032,6 +5075,7 @@
        },
        {
         "id": "h0-4",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.13",
         "name": "Host 0-4",
         "position": {
@@ -5042,6 +5086,7 @@
        },
        {
         "id": "h0-5",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.14",
         "name": "Host 0-5",
         "position": {
@@ -5052,6 +5097,7 @@
        },
        {
         "id": "h0-6",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.15",
         "name": "Host 0-6",
         "position": {
@@ -5062,6 +5108,7 @@
        },
        {
         "id": "h0-7",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.16",
         "name": "Host 0-7",
         "position": {
@@ -5072,6 +5119,7 @@
        },
        {
         "id": "h0-8",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.17",
         "name": "Host 0-8",
         "position": {
@@ -5082,6 +5130,7 @@
        },
        {
         "id": "h0-9",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.18",
         "name": "Host 0-9",
         "position": {
@@ -5092,6 +5141,7 @@
        },
        {
         "id": "h0-10",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.19",
         "name": "Host 0-10",
         "position": {
@@ -5102,6 +5152,7 @@
        },
        {
         "id": "h0-11",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.20",
         "name": "Host 0-11",
         "position": {
@@ -5112,6 +5163,7 @@
        },
        {
         "id": "h0-12",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.21",
         "name": "Host 0-12",
         "position": {
@@ -5122,6 +5174,7 @@
        },
        {
         "id": "h0-13",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.22",
         "name": "Host 0-13",
         "position": {
@@ -5132,6 +5185,7 @@
        },
        {
         "id": "h0-14",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.23",
         "name": "Host 0-14",
         "position": {
@@ -5142,6 +5196,7 @@
        },
        {
         "id": "h0-15",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.24",
         "name": "Host 0-15",
         "position": {
@@ -5152,6 +5207,7 @@
        },
        {
         "id": "h0-16",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.25",
         "name": "Host 0-16",
         "position": {
@@ -5162,6 +5218,7 @@
        },
        {
         "id": "h0-17",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.26",
         "name": "Host 0-17",
         "position": {
@@ -5172,6 +5229,7 @@
        },
        {
         "id": "h0-18",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.27",
         "name": "Host 0-18",
         "position": {
@@ -5182,6 +5240,7 @@
        },
        {
         "id": "h0-19",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.28",
         "name": "Host 0-19",
         "position": {
@@ -5192,6 +5251,7 @@
        },
        {
         "id": "h0-20",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.29",
         "name": "Host 0-20",
         "position": {
@@ -5202,6 +5262,7 @@
        },
        {
         "id": "h0-21",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.30",
         "name": "Host 0-21",
         "position": {
@@ -5212,6 +5273,7 @@
        },
        {
         "id": "h0-22",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.31",
         "name": "Host 0-22",
         "position": {
@@ -5222,6 +5284,7 @@
        },
        {
         "id": "h0-23",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.32",
         "name": "Host 0-23",
         "position": {
@@ -5232,6 +5295,7 @@
        },
        {
         "id": "h0-24",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.33",
         "name": "Host 0-24",
         "position": {
@@ -5242,6 +5306,7 @@
        },
        {
         "id": "h0-25",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.34",
         "name": "Host 0-25",
         "position": {
@@ -5252,6 +5317,7 @@
        },
        {
         "id": "h0-26",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.35",
         "name": "Host 0-26",
         "position": {
@@ -5262,6 +5328,7 @@
        },
        {
         "id": "h0-27",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.36",
         "name": "Host 0-27",
         "position": {
@@ -5272,6 +5339,7 @@
        },
        {
         "id": "h0-28",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.37",
         "name": "Host 0-28",
         "position": {
@@ -5282,6 +5350,7 @@
        },
        {
         "id": "h0-29",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.38",
         "name": "Host 0-29",
         "position": {
@@ -5292,6 +5361,7 @@
        },
        {
         "id": "h0-30",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.39",
         "name": "Host 0-30",
         "position": {
@@ -5302,6 +5372,7 @@
        },
        {
         "id": "h0-31",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.40",
         "name": "Host 0-31",
         "position": {
@@ -5312,6 +5383,7 @@
        },
        {
         "id": "h0-32",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.41",
         "name": "Host 0-32",
         "position": {
@@ -5322,6 +5394,7 @@
        },
        {
         "id": "h0-33",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.42",
         "name": "Host 0-33",
         "position": {
@@ -5332,6 +5405,7 @@
        },
        {
         "id": "h0-34",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.43",
         "name": "Host 0-34",
         "position": {
@@ -5342,6 +5416,7 @@
        },
        {
         "id": "h0-35",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.44",
         "name": "Host 0-35",
         "position": {
@@ -5352,6 +5427,7 @@
        },
        {
         "id": "h0-36",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.45",
         "name": "Host 0-36",
         "position": {
@@ -5362,6 +5438,7 @@
        },
        {
         "id": "h0-37",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.46",
         "name": "Host 0-37",
         "position": {
@@ -5372,6 +5449,7 @@
        },
        {
         "id": "h0-38",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.47",
         "name": "Host 0-38",
         "position": {
@@ -5382,6 +5460,7 @@
        },
        {
         "id": "h0-39",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.48",
         "name": "Host 0-39",
         "position": {
@@ -5392,6 +5471,7 @@
        },
        {
         "id": "h0-40",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.49",
         "name": "Host 0-40",
         "position": {
@@ -5402,6 +5482,7 @@
        },
        {
         "id": "h0-41",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.50",
         "name": "Host 0-41",
         "position": {
@@ -5412,6 +5493,7 @@
        },
        {
         "id": "h0-42",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.51",
         "name": "Host 0-42",
         "position": {
@@ -5422,6 +5504,7 @@
        },
        {
         "id": "h0-43",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.52",
         "name": "Host 0-43",
         "position": {
@@ -5432,6 +5515,7 @@
        },
        {
         "id": "h0-44",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.53",
         "name": "Host 0-44",
         "position": {
@@ -5442,6 +5526,7 @@
        },
        {
         "id": "h0-45",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.54",
         "name": "Host 0-45",
         "position": {
@@ -5452,6 +5537,7 @@
        },
        {
         "id": "h0-46",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.55",
         "name": "Host 0-46",
         "position": {
@@ -5462,6 +5548,7 @@
        },
        {
         "id": "h0-47",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.56",
         "name": "Host 0-47",
         "position": {
@@ -5472,6 +5559,7 @@
        },
        {
         "id": "h0-48",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.57",
         "name": "Host 0-48",
         "position": {
@@ -5482,6 +5570,7 @@
        },
        {
         "id": "sw0-2",
+        "image": "kathara/base:latest",
         "ip": "10.1.0.241",
         "name": "Switch sw0-2",
         "position": {
@@ -5492,6 +5581,7 @@
        },
        {
         "id": "h0-49",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.58",
         "name": "Host 0-49",
         "position": {
@@ -5502,6 +5592,7 @@
        },
        {
         "id": "h0-50",
+        "image": "tollan/benign-client:v0.10",
         "ip": "10.1.0.59",
         "name": "Host 0-50",
         "position": {
@@ -5523,5 +5614,5 @@
    }
   ]
  },
- "version": 1
+ "version": 2
 }
