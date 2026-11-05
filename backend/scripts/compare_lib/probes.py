@@ -163,10 +163,14 @@ def readiness(
     events = driver(target, image, spec, security_opt=security_opt, timeout=timeout_s + 120)
     done = next((e for e in events if e.get("k") == "done"), {})
     errors = [e for e in events if e.get("k") == "error"]
+    bad = [
+        f"{e['node']}->{e['target']}" for e in events if e.get("k") == "probe" and not e.get("ok")
+    ]
     return {
         "ok": done.get("ok", 0),
         "failed": done.get("failed", len(probes)),
         "elapsed": done.get("elapsed", round(time.monotonic() - t0, 3)),
         "missing": missing,
         "error": errors[0].get("message") if errors else None,
+        "failed_probes": bad,
     }

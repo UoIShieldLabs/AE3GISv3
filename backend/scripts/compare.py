@@ -80,6 +80,7 @@ def cmd_proto(args) -> int:
     t0 = time.monotonic()
     deployed = plat.deploy(lab)
     report["deploy"] = {**deployed.timings, "wall_s": round(time.monotonic() - t0, 3)}
+    report["retried"] = list(getattr(plat, "retried", []))
     try:
         containers = plat.containers(deployed)
         report["containers"] = {"expected": len(lab.nodes), "found": len(containers)}
@@ -134,6 +135,7 @@ def cmd_proto(args) -> int:
                 k: v for k, v in deployed.timings.items() if k not in report["deploy"]
             }
             print(f"  destroyed in {report['destroy_s']}s")
+    report["retried"] = list(getattr(plat, "retried", []))
     out = Path(args.out) if args.out else Path(f"proto-{args.platform}-{lab.name}.json")
     out.write_text(json.dumps(report, indent=1, default=str))
     print(f"report: {out}")

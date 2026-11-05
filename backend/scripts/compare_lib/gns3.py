@@ -7,9 +7,9 @@ Through the server's REST API (``http://<vm>/v2``: port 80 in the GNS3 VM, 3080 
    - the same image;
    - one adapter per interface (adapter *i* is ``eth``\\ *i*);
    - console off;
-   - a start command that writes the node's boot commands to
-     ``/ae3gis-init.sh``, runs them like Kathara's ``.startup`` does, then
-     ``exec``\\ s the same idle process Kathara's machines run.
+   - a start command that sets the node's interfaces up, writes its boot
+     commands to ``/ae3gis-init.sh``, runs them like Kathara's ``.startup``
+     does, then ``exec``\\ s the same idle process Kathara's machines run.
 3. **Links:** one per point-to-point link, created in parallel.
 4. **Start:** every node started in parallel, then wait until all of them
    report ``started``.
@@ -23,6 +23,13 @@ in the controller), and ``bulk=True`` uses them instead. Each node's stop is
 ``docker stop -t 5``; these images idle on ``bash``, which as PID 1 ignores
 SIGTERM, so every stop waits the 5 s before the kill. Deleting a running
 project stops its nodes the same way first.
+
+Interfaces: Docker brings a Kathara machine's interfaces up; in GNS3 its init
+wrapper (``/gns3/init.sh``) is meant to, once the last ``eth`` appears. With
+nodes started in parallel it sometimes leaves one admin-down (seen on 1 in 10
+single-interface hosts at 16 parallel starts; the switches and routers set
+their own links up). So the start command, which runs after the wrapper,
+waits for each of the node's interfaces and sets it up first.
 """
 
 from __future__ import annotations
@@ -74,6 +81,7 @@ class Gns3:
         self.bulk = bulk
         self.idle = idle or ["bash"]  # what Kathara's machines idle on (checked in Phase 0)
         self.extra = dict(extra_properties or {})
+        self.retried: list[str] = []  # connection errors retried, for the report
 
     # ── HTTP ──
 
@@ -96,9 +104,11 @@ class Gns3:
                 detail = e.read().decode(errors="replace")[:500]
                 raise Gns3Error(f"{method} {path}: HTTP {e.code}: {detail}") from e
             except urllib.error.URLError as e:
-                if getattr(e.reason, "errno", None) not in _CONNECT_ERRNOS or attempt == retries:
+                code = getattr(e.reason, "errno", None)
+                if code not in _CONNECT_ERRNOS or attempt == retries:
                     raise
-                time.sleep(min(2.0**attempt, 10.0))
+                self.retried.append(f"{method} {path.split('/')[-1]}: {errno.errorcode[code]}")
+                time.sleep(min(0.5 * 2.0**attempt, 5.0))
         raise AssertionError("unreachable")
 
     def version(self) -> dict[str, Any]:
@@ -106,26 +116,34 @@ class Gns3:
 
     # ── a node's start command ──
 
-    def start_command(self) -> str:
-        """Write ``$AE3GIS_INIT`` (base64) to INIT_PATH, run it, then idle.
-        GNS3 splits this with shlex and runs it once the node's interfaces
-        exist (its init wrapper waits for them)."""
-        script = (
-            f'printf %s "$AE3GIS_INIT" | base64 -d > {INIT_PATH}'
-            f" && sh {INIT_PATH} > {INIT_LOG} 2>&1; exec {shlex.join(self.idle)}"
+    def start_command(self, adapters: int, init: bool = True) -> str:
+        """Set ``eth0``..``eth<adapters-1>`` up (waiting for each), write
+        ``$AE3GIS_INIT`` (base64) to INIT_PATH and run it, then idle. GNS3
+        splits this with shlex and runs it after its init wrapper."""
+        links = (
+            f"i=0; while [ $i -lt {adapters} ]; do d=eth$i;"
+            " while [ ! -e /sys/class/net/$d ]; do sleep 0.1; done;"
+            " ip link set dev $d up; i=$((i+1)); done; "
         )
-        return shlex.join(["sh", "-c", script])
+        boot = (
+            f'printf %s "$AE3GIS_INIT" | base64 -d > {INIT_PATH}'
+            f" && sh {INIT_PATH} > {INIT_LOG} 2>&1; "
+            if init
+            else ""
+        )
+        return shlex.join(["sh", "-c", f"{links}{boot}exec {shlex.join(self.idle)}"])
 
     def node_body(self, lab: Lab, node: dict[str, Any]) -> dict[str, Any]:
         init = lab.init_script(node)
         env = [f"{k}={v}" for k, v in (node.get("env") or {}).items()]
         if init:
             env.append("AE3GIS_INIT=" + base64.b64encode(init.encode()).decode())
+        adapters = max(1, lab.adapters(node))
         props = {
             "image": node["image"],
-            "adapters": max(1, lab.adapters(node)),
+            "adapters": adapters,
             "console_type": "none",
-            "start_command": self.start_command() if init else shlex.join(self.idle),
+            "start_command": self.start_command(adapters, init=bool(init)),
             "environment": "\n".join(env),
             **self.extra,
         }
