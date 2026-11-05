@@ -132,6 +132,8 @@ def test_full_sweep_over_a_fake_host(tmp_path):
         (11, "containerd-shim"),
         (12, "containerd-shim"),
         (13, "bash"),
+        (14, "ubridge"),
+        (15, "gns3server"),
     ):
         (proc / str(pid) / "net").mkdir(parents=True)
         (proc / str(pid) / "stat").write_text(f"{pid} ({comm}) " + " ".join(stat_fields))
@@ -148,11 +150,13 @@ def test_full_sweep_over_a_fake_host(tmp_path):
     assert set(line["c"]["a" * 12][6]) == {"eth0", "eth1"}
     assert line["host"]["cpu"][3] == 205565 and line["host"]["load"] == [0.5, 0.25, 0.1]
     assert line["host"]["psi"]["memory"]["some"] == [1.23, 1077691]
-    assert line["host"]["procs"] == 4
+    assert line["host"]["procs"] == 6
     page = line["page"]
     assert line["infra"] == {
         "dockerd": [1, 1000 * page, 150],
         "containerd-shim": [2, 2000 * page, 300],
+        "ubridge": [1, 1000 * page, 150],
+        "gns3server": [1, 1000 * page, 150],
     }
 
 

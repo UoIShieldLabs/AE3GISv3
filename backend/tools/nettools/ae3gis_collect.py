@@ -7,7 +7,8 @@ for the host (on Docker Desktop: its Linux VM) and every Docker container:
 
 - host: ``/proc/stat`` CPU ticks, ``/proc/meminfo``, load, PSI stall totals,
   Docker's disk (statvfs of this container's root: [total, available]),
-  process count; per-name totals for Docker's own processes (``infra``)
+  process count; per-name totals for the platform's own processes (``infra``:
+  Docker's, Kathara's ``vde_switch``, GNS3's ``ubridge`` and ``gns3server``)
 - containers: cgroup v2 CPU usage, memory, pids and OOM kills, and the
   interface counters of the container's network namespace (read through
   ``/proc/<pid>/net/dev`` of any process in it, no ``setns`` needed)
@@ -49,7 +50,9 @@ INFRA = {
     "dockerd": "dockerd",
     "containerd": "containerd",
     "containerd-shim": "containerd-shim",
-    "vde_switch": "vde_switch",
+    "vde_switch": "vde_switch",  # Kathara's links on Docker Desktop
+    "ubridge": "ubridge",  # GNS3's links (one per node)
+    "gns3server": "gns3server",  # the GNS3 server (in the GNS3 VM)
 }
 MEM_KEYS = ("MemTotal", "MemFree", "MemAvailable", "Cached", "Slab", "SwapTotal", "SwapFree")
 _ID = re.compile(r"^[0-9a-f]{64}$")
