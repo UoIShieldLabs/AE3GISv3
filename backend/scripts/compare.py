@@ -52,6 +52,7 @@ RESULTS = BACKEND / "benchmark-results"
 QUICK = {
     "step": {"quiet_max_s": 30, "reference_s": 5, "settle_s": 5, "hold_s": 10, "after_s": 5},
     "e0": {"idle_s": 30},
+    "e3": {"sizes": [25], "quiet_for_s": 6, "max_wait_s": 30, "hold_s": 10},
     "e2": {
         "ping": {"count": 5},
         "flatout": {"trials": 1, "duration_s": 5, "between_s": 2},
@@ -347,6 +348,14 @@ def cmd_run(args) -> int:
                 "quick": bool(args.quick),
             },
         )
+    else:
+        # A resume can run newer code than the manifest's commit (e.g. a step
+        # added later): record what ran when.
+        doc = json.loads(manifest.read_text())
+        doc.setdefault("resumes", []).append(
+            {"commit": git_commit(), "at": time.time(), "only": args.only, "plan": plan}
+        )
+        write_json(manifest, doc)
     awake = keep_awake()
     plats = platforms(host)
     order = [host.get("first", "ae3gis"), *[n for n in plats if n != host.get("first", "ae3gis")]]
@@ -534,12 +543,12 @@ def main(argv: list[str] | None = None) -> int:
 
     q = sub.add_parser("check", help="is this machine ready for a run?")
     common(q)
-    q = sub.add_parser("run", help="E0, E1 and E2 on both platforms (resumable)")
+    q = sub.add_parser("run", help="E0, E1, E2 and E3 on both platforms (resumable)")
     common(q)
     q.add_argument("--quick", action="store_true", help="short waits: a dry run, not results")
     q.add_argument("--sizes", help="E1 sizes, comma-separated (no extra size)")
     q.add_argument("--reps", type=int)
-    q.add_argument("--only", help="e0,e1,e2")
+    q.add_argument("--only", help="e0,e1,e2,e3")
     q.add_argument("--resume", action="store_true", help="continue the latest run of this host")
     q.add_argument("--out")
     q.add_argument("--skip-checks", action="store_true")

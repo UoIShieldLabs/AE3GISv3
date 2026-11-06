@@ -13,6 +13,8 @@ used by ``compare.py summarize`` and by the analysis notebook
   passed (a repeat that fails turns its rate into a failure; a failure that
   passes on its repeat stays a failure), with CPU per 100 Mb/s over the
   reference before the lab's traffic.
+- **E3**: E1's metrics for a step whose hold waited until the VM went quiet
+  after the deploy, plus how long that took.
 
 On the host a platform is its VM process plus its helpers (Docker Desktop's
 backend and services, VMware Fusion's): footprint and cores add up.
@@ -172,6 +174,9 @@ def e1_row(rec: dict) -> dict[str, Any]:
         "docker_disk_growth": _diff(_get(hold, "vm", "disk_used"), _get(ref, "vm", "disk_used")),
         "retried": len(rec.get("retried") or []),
         "error": rec.get("error") or rec.get("reason"),
+        # E3 only: from the deploy's end until the VM's CPU went quiet.
+        "quiet_after_deploy_s": rec.get("quiet_after_deploy_s"),
+        "quiet_capped": rec.get("quiet_capped"),
     }
 
 
@@ -197,15 +202,19 @@ E1_METRICS = (
     "vm_disk_growth",
     "docker_disk_growth",
 )
+E3_METRICS = (*E1_METRICS, "quiet_after_deploy_s")
 
 
-def e1_table(recs: dict[str, dict[str, dict]]) -> dict[str, dict[int, dict[str, Any]]]:
-    """{platform: {size: {"reps", "ok", "statuses", metric: stats}}}."""
+def e1_table(
+    recs: dict[str, dict[str, dict]], exp: str = "e1", metrics: tuple[str, ...] = E1_METRICS
+) -> dict[str, dict[int, dict[str, Any]]]:
+    """{platform: {size: {"reps", "ok", "statuses", metric: stats}}}, for
+    E1's steps or (``exp="e3"``) E3's."""
     out: dict[str, dict[int, dict[str, Any]]] = {}
     for p, steps in recs.items():
         rows: dict[int, list[dict]] = {}
         for name, rec in steps.items():
-            if name.startswith("e1-") and rec.get("size") is not None:
+            if name.startswith(f"{exp}-") and rec.get("size") is not None:
                 rows.setdefault(rec["size"], []).append(e1_row(rec))
         for size, rs in sorted(rows.items()):
             ok = [r for r in rs if r["status"] == "ok"]
@@ -215,8 +224,9 @@ def e1_table(recs: dict[str, dict[str, dict]]) -> dict[str, dict[int, dict[str, 
                 "nodes": next((r["nodes"] for r in rs if r["nodes"]), None),
                 "statuses": sorted({r["status"] for r in rs}),
                 "errors": [r["error"] for r in rs if r["error"]][:3],
+                "capped": sum(1 for r in ok if r["quiet_capped"]),
             }
-            for m in E1_METRICS:
+            for m in metrics:
                 cell[m] = stats([r[m] for r in ok])
             out.setdefault(p, {})[size] = cell
     return out
@@ -364,6 +374,7 @@ def summarize(out: Path) -> dict[str, Any]:
         "e0": {"reps": e0, "mean": e0_mean},
         "e1": e1_table(recs),
         "e2": e2,
+        "e3": e1_table(recs, "e3", E3_METRICS),
         "e2_common": e2_common(e2),
     }
 
@@ -564,6 +575,33 @@ def markdown(s: dict[str, Any]) -> str:
                 ]
                 lines.append(f"| {k} | {row['rate']} | " + " | ".join(cols) + " |")
             lines.append("")
+    # E3
+    e3, e1 = s.get("e3") or {}, s.get("e1") or {}
+    if e3:
+        lines += [
+            "## E3: a lab at rest once the deploy's aftermath is over",
+            "",
+            "The hold starts once the VM's CPU has stayed quiet for a while after the "
+            "deploy (E1's hold starts 30 s after the network is ready).",
+            "",
+            "| hosts | quiet after the deploy, s | host cores | VM cores | "
+            "dockerd, containerd & co | lab's containers | E1 hold: host cores |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for size in sorted({n for c in e3.values() for n in c}):
+            cells = {p: e3.get(p, {}).get(size) for p in PLATFORMS}
+            quiet = _pair(cells, "", 0, "quiet_after_deploy_s")
+            if any((c or {}).get("capped") for c in cells.values()):
+                quiet += " (capped)"
+            e1c = {p: e1.get(p, {}).get(size) for p in PLATFORMS}
+            lines.append(
+                f"| {size} | {quiet} | {_pair(cells, '', 2, 'host_cores_hold')} | "
+                f"{_pair(cells, '', 2, 'vm_cores_hold')} | "
+                f"{_pair(cells, '', 2, 'infra_cores_hold')} | "
+                f"{_pair(cells, '', 3, 'lab_cores_hold')} | "
+                f"{_pair(e1c, '', 2, 'host_cores_hold') if any(e1c.values()) else '–'} |"
+            )
+        lines.append("")
     bad = {
         p: {n: st for n, st in steps.items() if st not in ("ok", None)}
         for p, steps in s["steps"].items()

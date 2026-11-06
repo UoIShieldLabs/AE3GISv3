@@ -14,6 +14,12 @@ flow, then the load ladder: per pattern and protocol, every flow at a constant
 rate, stepping up until delivery falls under ``min_delivered`` or UDP loss
 passes ``max_loss``; the last pass and the first failure run again.
 
+**E3:** an E1 step whose hold waits first until the VM's CPU stays quiet
+(``quiet_cpu_share`` for ``quiet_for_s``, at most ``max_wait_s``), so the
+hold shows a lab at rest once the deploy's aftermath is over (on Docker
+Desktop, its UI re-listing the containers can keep the daemon busy for
+minutes after a big deploy).
+
 Every result is one JSON file; a file that exists is a step already done, so
 a run resumes where it stopped.
 """
@@ -146,12 +152,12 @@ class Runner:
         mon.wait_first(timeout=120)
         return mon, hs
 
-    def quiet(self, mon: probes.Monitor, share: float, max_s: float) -> float:
-        """Wait until the VM's CPU stays under ``share`` for three sweeps."""
+    def quiet(self, mon: probes.Monitor, share: float, max_s: float, sweeps: int = 3) -> float:
+        """Wait until the VM's CPU stays under ``share`` for ``sweeps`` sweeps."""
         t0 = time.monotonic()
         while time.monotonic() - t0 < max_s:
-            cpu = metrics.vm_cpu(mon.lines[-4:])
-            if len(cpu) >= 3 and all(c[1] < share for c in cpu):
+            cpu = metrics.vm_cpu(mon.lines[-(sweeps + 1) :])
+            if len(cpu) >= sweeps and all(c[1] < share for c in cpu):
                 break
             time.sleep(1)
         return round(time.monotonic() - t0, 1)
@@ -217,11 +223,12 @@ class Runner:
 
     # ── E1 ──
 
-    def e1(self, p: Platform, size: int, rep: int) -> dict:
+    def e1(self, p: Platform, size: int, rep: int, long_hold: dict | None = None) -> dict:
+        """One E1 step, or with ``long_hold`` (the plan's ``e3``) an E3 step."""
         cfg = self.plan["step"]
         lab = labs_mod.load(size)
         rec: dict[str, Any] = {
-            "exp": "e1",
+            "exp": "e3" if long_hold else "e1",
             "platform": p.name,
             "size": size,
             "rep": rep,
@@ -230,6 +237,8 @@ class Runner:
             "nodes": len(lab.nodes),
             "started": time.time(),
         }
+        if long_hold:
+            rec["long_hold"] = dict(long_hold)
         rec["restart"] = restart_vm(p)
         rec["sysctls"] = self.sysctls(p)
         rec["vm"] = self.vm_info(p, lab)
@@ -289,8 +298,25 @@ class Runner:
             t = time.time()
             time.sleep(cfg["settle_s"])
             phases["settle"] = (t, time.time())
+            if long_hold:
+                t = time.time()
+                waited = self.quiet(
+                    mon,
+                    long_hold["quiet_cpu_share"],
+                    long_hold["max_wait_s"],
+                    sweeps=max(
+                        3, round(long_hold["quiet_for_s"] / self.plan["monitor_interval_s"])
+                    ),
+                )
+                phases["wait"] = (t, time.time())
+                rec["quiet_capped"] = waited >= long_hold["max_wait_s"]
+                rec["quiet_after_deploy_s"] = round(time.time() - phases["deploy"][1], 1)
+                self.log(
+                    f"  e3: quiet {rec['quiet_after_deploy_s']:.0f}s after the deploy"
+                    + (" (capped)" if rec["quiet_capped"] else "")
+                )
             t = time.time()
-            time.sleep(cfg["hold_s"])
+            time.sleep(long_hold["hold_s"] if long_hold else cfg["hold_s"])
             phases["hold"] = (t, time.time())
             rec["disk_hold"] = p.vm.disk_bytes()
             rec["roles"] = self.roles_at(mon, *phases["hold"], lab, containers)
@@ -500,7 +526,7 @@ class Runner:
 
     def run(self, order: list[str], only: set[str] | None = None) -> None:
         e1 = self.plan["e1"]
-        want = only or {"e0", "e1", "e2"}
+        want = only or {"e0", "e1", "e2", "e3"}
         for rep in range(1, e1["reps"] + 1):
             names = order if rep % 2 == 1 else list(reversed(order))
             for name in names:
@@ -536,6 +562,11 @@ class Runner:
         if "e2" in want:
             for name in order:
                 self.step(self.platforms[name], "e2", self.e2)
+        e3 = self.plan.get("e3")
+        if "e3" in want and e3:
+            for size in e3["sizes"]:
+                for name in order:
+                    self.step(self.platforms[name], f"e3-h{size}-r1", self.e1, size, 1, e3)
 
     def extra_fits(self, p: Platform, rep: int) -> bool:
         """The extra size runs if doubling the biggest regular size's growth in

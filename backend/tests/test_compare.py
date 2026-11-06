@@ -318,6 +318,40 @@ def test_the_summary_renders_from_step_files(tmp_path):
     assert "- ae3gis e1-h50-r1: capped" in md
 
 
+def test_e3_has_its_own_table_with_the_wait_for_quiet(tmp_path):
+    from compare_lib import summary
+
+    (tmp_path / "manifest.json").write_text(json.dumps({"host": {"host": "h"}}))
+    for p, quiet, capped in (("ae3gis", 300.0, False), ("gns3", 1200.0, True)):
+        d = tmp_path / p
+        d.mkdir()
+        e1 = _e1_record(p, 400, 1, ref_mem=1000, hold_mem=5000, lab_mem=0, nodes=424)
+        (d / "e1-h400-r1.json").write_text(json.dumps(e1))
+        e3 = {**e1, "exp": "e3", "quiet_after_deploy_s": quiet, "quiet_capped": capped}
+        (d / "e3-h400-r1.json").write_text(json.dumps(e3))
+    s = summary.summarize(tmp_path)
+    assert s["e1"]["ae3gis"][400]["reps"] == 1  # E3's step stays out of E1
+    assert s["e3"]["ae3gis"][400]["quiet_after_deploy_s"]["mean"] == 300.0
+    md = summary.markdown(s)
+    assert "## E3: a lab at rest once the deploy's aftermath is over" in md
+    assert "| 400 | 300 / 1200 (capped) | 1.10 / 1.10 |" in md
+
+
+def test_quiet_waits_for_as_many_quiet_sweeps_as_asked(tmp_path):
+    runner = Runner({"monitor_interval_s": 2}, {}, "img", tmp_path, log=lambda *_: None)
+
+    def line(t, busy):
+        # 100 ticks a second on one CPU; ``busy`` of them since the last sweep
+        return {"t": t, "ncpu": 1, "host": {"cpu": [busy, 0, 0, 100 * t - busy, 0, 0, 0, 0]}}
+
+    class Mon:
+        # busy, busy, then quiet for three sweeps
+        lines = [line(0, 0), line(1, 90), line(2, 180), line(3, 185), line(4, 190), line(5, 195)]
+
+    assert runner.quiet(Mon, 0.10, max_s=5, sweeps=3) < 1
+    assert runner.quiet(Mon, 0.10, max_s=0.5, sweeps=5) >= 0.5  # never 5 quiet sweeps
+
+
 # ── Windows ──
 
 
