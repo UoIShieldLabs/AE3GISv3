@@ -1,0 +1,99 @@
+{
+ "host": {
+  "_doc": "This machine (the M4 MacBook Air).",
+  "host": "m4-macbook-air",
+  "first": "ae3gis",
+  "probe_image": "ae3gis-compare/nettools:proto",
+  "ae3gis": {
+   "url": "http://localhost:8000",
+   "compose_project": "ae3gis-compare"
+  },
+  "gns3": {
+   "user": "gns3",
+   "vmx": "~/Virtual Machines.localized/GNS3-VM.vmwarevm/GNS3-VM.vmx",
+   "security_opt": [
+    "apparmor=unconfined"
+   ],
+   "concurrency": 16
+  }
+ },
+ "plan": {
+  "version": 1,
+  "monitor_interval_s": 2,
+  "sysctls": {
+   "net.ipv4.neigh.default.gc_thresh1": 4096,
+   "net.ipv4.neigh.default.gc_thresh2": 8192,
+   "net.ipv4.neigh.default.gc_thresh3": 16384
+  },
+  "step": {
+   "quiet_cpu_share": 0.1,
+   "quiet_max_s": 180,
+   "reference_s": 30,
+   "deploy_cap_s": 2700,
+   "ready_cap_s": 300,
+   "settle_s": 30,
+   "hold_s": 60,
+   "after_s": 30
+  },
+  "e0": {
+   "idle_s": 300
+  },
+  "e1": {
+   "reps": 3,
+   "sizes": [
+    25,
+    50,
+    100,
+    200,
+    400
+   ],
+   "extra_size": 800,
+   "extra_max_mem_share": 0.85
+  },
+  "e2": {
+   "lab": 100,
+   "ping": {
+    "count": 20,
+    "interval_s": 0.2
+   },
+   "flatout": {
+    "trials": 3,
+    "duration_s": 10,
+    "between_s": 10
+   },
+   "ladder": {
+    "patterns": [
+     "cs",
+     "mesh"
+    ],
+    "protocols": [
+     "tcp",
+     "udp"
+    ],
+    "rates": [
+     "100K",
+     "250K",
+     "500K",
+     "1M",
+     "2M",
+     "5M"
+    ],
+    "window_s": 60,
+    "between_s": 30,
+    "min_delivered": 0.95,
+    "max_loss": 0.01
+   }
+  }
+ },
+ "commit": "04e2d0f205f83e73097c67504f1c5270dca47e8a",
+ "started": 1793927401.695979,
+ "labs": {
+  "campus-100.json": "d1e80b7490a50805360df5453f31f7e27f457af7d0080b6b2a1d778596f35cae",
+  "campus-200.json": "1ddc64b5fcecba66ad46f85cf0b0359cb5fddf3ee6edd371edd48b0996a8c713",
+  "campus-25.json": "a3c2594a6e43969395e2599be9e80b41ed26997dee0cecc406fad46447280a2e",
+  "campus-400.json": "3bf75fd0f60dbecf43e107eed4176c9933e91c351174a6c457298ee6ed380dca",
+  "campus-50.json": "632b2b59046362849644a44f58d2028d378044f6d756de994251e2de83f7b337",
+  "campus-800.json": "089324bbb56eaf85472deb708d9b33a2489bc4af873fa7ac9137aa23eaa5bace"
+ },
+ "quick": false
+}
