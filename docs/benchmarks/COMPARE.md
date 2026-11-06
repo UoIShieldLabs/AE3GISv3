@@ -34,9 +34,16 @@ node's image pinned by digest:
 - **E2:** on one 100-host lab: ping latency, one flat-out TCP flow, then a
   load ladder of 4 patterns × 100K → 5M per flow, which stops at the first
   failure and repeats the edge.
+- **E3:** one more 400-host step per platform, whose hold waits until the
+  VM's CPU has stayed under 10% for 30 s (at most 20 min), then lasts 2 min:
+  the lab at rest once the deploy's aftermath is over. On Docker Desktop, its
+  UI re-listing every container after each container event keeps `dockerd`
+  and `containerd` busy for minutes after a big deploy, so E1's hold (30 s
+  after ready) still includes it from about 200 hosts up.
 
-**Time:** about 8 h on the M4 MacBook Air (both platforms). Machines that are
-slower to deploy take longer; the 45 min cap bounds each step.
+**Time:** about 6 h on the M4 MacBook Air (both platforms; E3 about 30 min of
+it). Machines that are slower to deploy take longer; the 45 min cap bounds
+each step.
 
 ## 1. Prepare the machine
 
@@ -170,8 +177,11 @@ They go to `backend/benchmark-results/<host>/<date>-compare/`:
 - `manifest.json`: the host config, the plan, the commit, and the lab files'
   sha256;
 - `ae3gis/` and `gns3/`, with one file per step: `e0-r1.json`,
-  `e1-h100-r2.json`, `e2.json`, … Each holds the per-phase metrics inside the
-  VM and on the host, plus a compact time series. There are no raw exports.
+  `e1-h100-r2.json`, `e2.json`, `e3-h400-r1.json`, … Each holds the per-phase
+  metrics inside the VM and on the host, plus a compact time series. There
+  are no raw exports.
+- A resume (`--resume`, or `--only` for some experiments) appends its commit
+  and plan to `manifest.json` under `resumes`.
 
 ```bash
 python3 scripts/compare.py summarize      # summary.md + summary.json in the run's folder

@@ -261,6 +261,9 @@ def sanity(run: Run) -> list[str]:
     if len(imgs) == 2 and imgs["ae3gis"] != imgs["gns3"]:
         out.append("the platforms ran different lab images")
     plan = run.manifest.get("plan") or {}
+    # a resume can add experiments (e.g. E3) with a newer plan
+    for r in run.manifest.get("resumes") or []:
+        plan = {**plan, **(r.get("plan") or {})}
     e1 = plan.get("e1") or {}
     for p in PLATFORMS:
         steps = recs.get(p, {})
@@ -270,4 +273,7 @@ def sanity(run: Run) -> list[str]:
                     out.append(f"{p}: {name} missing")
         if "e2" not in steps:
             out.append(f"{p}: e2 missing")
+        for size in (plan.get("e3") or {}).get("sizes") or []:
+            if f"e3-h{size}-r1" not in steps:
+                out.append(f"{p}: e3-h{size}-r1 missing")
     return out
