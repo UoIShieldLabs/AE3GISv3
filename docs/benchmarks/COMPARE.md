@@ -70,7 +70,9 @@ time** (the runner stops one before starting the other).
   - **Resources:** the same CPUs and memory as Docker Desktop.
   - **SSH:** key-based, as `gns3`. The password is `gns3`; run
     `ssh-copy-id gns3@<VM address>` yourself, since the runner never types
-    passwords.
+    passwords. Windows has no `ssh-copy-id`; in PowerShell:
+    `type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh gns3@<VM address> "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"`
+    (run `ssh-keygen -t ed25519` first if there's no key).
   - **API:** port 80 in the VM (`curl http://<VM address>/v2/version`).
   - **No GNS3 GUI** open during the run.
   - **VirtualBox:** the runner finds the VM's address through the Guest
@@ -79,7 +81,9 @@ time** (the runner stops one before starting the other).
     `nic` or `api_port` if needed) in the config below, and keep that address
     fixed.
 - **The host:**
-  - **Python 3.11+** and `git`. Windows also needs `pip install psutil`.
+  - **Python 3.11+** and `git`. Windows also needs `pip install psutil`, and
+    runs the commands below in Git Bash (`python` where they say `python3`,
+    if `python3` isn't found).
   - **On AC power** for the whole run, the lid open, and other apps closed.
     The runner keeps the machine awake. Big apps (browsers, Teams, Zoom,
     OneDrive) compete with the VMs for memory and CPU.
@@ -242,6 +246,9 @@ images match, and every planned step exists.
 - **Kathara's links on Docker Desktop** are userspace VDE switches (Docker
   Desktop's kernel has no Open vSwitch module). The GNS3 VM's are `ubridge`
   processes. That shows in E2.
+- **On Windows, VirtualBox runs on top of Hyper-V** whenever WSL 2 is on,
+  which Docker Desktop needs. That's slower than VirtualBox on its own, and
+  it's part of what's measured there.
 - **Docker Desktop's VM** on macOS is Apple's Virtualization framework, and
   its helpers (backend, services) are counted with it. VMware Fusion's
   helpers are counted with the GNS3 VM.
