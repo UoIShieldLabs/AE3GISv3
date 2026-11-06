@@ -3,7 +3,8 @@
     uv run --no-project --with-requirements analysis/requirements.txt python analysis/build.py [host …]
 
 Runs ``host_report.ipynb`` once per host (``hosts/<slug>.ipynb``) and then
-``comparison.ipynb`` in place, with their outputs saved so GitHub shows them.
+``comparison.ipynb`` in place, with their outputs saved so GitHub shows them,
+then ``platforms.ipynb`` (AE3GIS vs GNS3) once a comparison run is committed.
 A failing cell fails the build. Run timestamps are stripped so a rebuild only
 changes the notebooks when the results or the code changed.
 """
@@ -20,6 +21,7 @@ import papermill as pm
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from benchlib import compare  # noqa: E402
 from benchlib.hosts import HOSTS, ORDER  # noqa: E402
 from benchlib.load import RESULTS  # noqa: E402
 
@@ -80,6 +82,8 @@ def main(argv: list[str]) -> int:
         run(HERE / "host_report.ipynb", HERE / "hosts" / f"{HOSTS[key].slug}.ipynb", HOST=key)
     if not argv:
         run(HERE / "comparison.ipynb", HERE / "comparison.ipynb")
+        if compare.runs():
+            run(HERE / "platforms.ipynb", HERE / "platforms.ipynb")
     return 0
 
 

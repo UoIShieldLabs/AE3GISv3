@@ -172,3 +172,147 @@ def test_the_extra_size_runs_only_when_its_projected_memory_fits(tmp_path):
     assert runner.extra_fits(P, 1)
     record(ref=2, hold=8, total=16)  # 2 + 2 × 6 = 14 > 13.6
     assert not runner.extra_fits(P, 1)
+
+
+# ── summaries ──
+
+
+def _e1_record(platform, size, rep, *, ref_mem, hold_mem, lab_mem, nodes, status="ok"):
+    def window(mem, lab=0.0, fp=1.0 * 2**30, cores=0.5):
+        return {
+            "t": [0, 1],
+            "vm": {
+                "mem_used": mem,
+                "mem_used_max": mem,
+                "cpu_cores": 0.1,
+                "containers": {"lab_mem": lab},
+                "infra": {},
+            },
+            "host": {
+                "vm": {"footprint": fp, "footprint_max": fp, "cores": cores},
+                "helpers": {"footprint": 0.25 * 2**30, "footprint_max": 0.25 * 2**30, "cores": 0.1},
+            },
+        }
+
+    return {
+        "exp": "e1",
+        "platform": platform,
+        "size": size,
+        "rep": rep,
+        "nodes": nodes,
+        "status": status,
+        # the runner's first version: the teardown's timings landed in "deploy"
+        "deploy": {"deploy_s": 10.0, "stop_s": 2.0},
+        "destroy_s": 4.0,
+        "phases": {
+            "reference": window(ref_mem),
+            "deploy": window(hold_mem, lab_mem, fp=2.0 * 2**30),
+            "ready": {**window(hold_mem, lab_mem), "t": [10, 12.5]},
+            "hold": window(hold_mem, lab_mem, fp=1.5 * 2**30, cores=1.0),
+            "after": window(ref_mem + 100),
+        },
+    }
+
+
+def test_an_e1_row_is_growth_over_its_own_reference():
+    from compare_lib import summary
+
+    rec = _e1_record("ae3gis", 25, 1, ref_mem=1000, hold_mem=4000, lab_mem=1000, nodes=30)
+    r = summary.e1_row(rec)
+    assert r["usable_s"] == pytest.approx(12.5)
+    assert r["vm_mem_growth"] == 3000 and r["vm_mem_per_node"] == 100
+    assert r["platform_mem_growth"] == 2000  # growth minus the lab's containers
+    assert r["vm_mem_after"] == 100
+    assert r["host_footprint_growth"] == pytest.approx(0.5 * 2**30)
+    assert r["host_footprint_peak_growth"] == pytest.approx(1.0 * 2**30)
+    assert r["host_cores_hold"] == pytest.approx(1.1)
+    assert r["timings"]["stop_s"] == 2.0
+
+
+def test_e1_table_counts_only_ok_reps(tmp_path):
+    from compare_lib import summary
+
+    for rep, (hold, st) in enumerate([(4000, "ok"), (6000, "ok"), (9999, "not_ready")], 1):
+        write = tmp_path / "gns3" / f"e1-h25-r{rep}.json"
+        write.parent.mkdir(parents=True, exist_ok=True)
+        rec = _e1_record(
+            "gns3", 25, rep, ref_mem=1000, hold_mem=hold, lab_mem=0, nodes=30, status=st
+        )
+        write.write_text(json.dumps(rec))
+    cell = summary.e1_table(summary.load(tmp_path))["gns3"][25]
+    assert (cell["reps"], cell["ok"]) == (3, 2)
+    assert cell["vm_mem_growth"] == {"n": 2, "mean": 4000, "min": 3000, "max": 5000}
+    assert cell["statuses"] == ["not_ready", "ok"]
+
+
+def _step(rate, passed, repeat=False, delivered=None, flows=10):
+    return {
+        "rate": rate,
+        "passed": passed,
+        "repeat": repeat,
+        "flows": flows,
+        "delivered_bps": delivered if delivered is not None else rate_bps(rate) * flows,
+    }
+
+
+def test_a_ladder_keeps_the_highest_rate_every_run_passed():
+    from compare_lib import summary
+
+    # 1M passed, then failed its repeat: 500K is the result.
+    steps = [
+        _step("500K", True),
+        _step("1M", True),
+        _step("2M", False),
+        _step("1M", False, True),
+        _step("2M", False, True),
+    ]
+    assert summary.ladder_result(steps)["max_rate"] == "500K"
+    # A failure that passes on its repeat stays a failure.
+    steps = [
+        _step("500K", True),
+        _step("1M", False),
+        _step("500K", True, True),
+        _step("1M", True, True),
+    ]
+    r = summary.ladder_result(steps)
+    assert r["max_rate"] == "500K" and r["max_offered_bps"] == 5e6
+    # Nothing passed.
+    assert (
+        summary.ladder_result([_step("100K", False), _step("100K", False, True)])["max_rate"]
+        is None
+    )
+
+
+def test_cpu_per_100mbps_is_over_the_idle_reference():
+    from compare_lib import summary
+
+    ref = {"host": {"vm": {"cores": 0.5}}, "vm": {"cpu_cores": 0.1}}
+    s = {"delivered_bps": 2e8, "host": {"vm": {"cores": 2.5}}, "vm": {"cpu_cores": 1.1}}
+    cpu = summary._step_cpu(s, ref)
+    assert cpu["host_cores_per_100m"] == pytest.approx(1.0)
+    assert cpu["vm_cores_per_100m"] == pytest.approx(0.5)
+
+
+def test_the_summary_renders_from_step_files(tmp_path):
+    from compare_lib import summary
+
+    (tmp_path / "manifest.json").write_text(json.dumps({"host": {"host": "h"}, "commit": "abc"}))
+    for p, hold in (("ae3gis", 3000), ("gns3", 4000)):
+        d = tmp_path / p
+        d.mkdir()
+        (d / "e1-h25-r1.json").write_text(
+            json.dumps(_e1_record(p, 25, 1, ref_mem=1000, hold_mem=hold, lab_mem=0, nodes=30))
+        )
+        (d / "e1-h50-r1.json").write_text(
+            json.dumps({"exp": "e1", "platform": p, "size": 50, "rep": 1, "status": "capped"})
+        )
+        ladder = [{**_step("1M", True), "pattern": "cs", "protocol": "udp"}]
+        (d / "e2.json").write_text(
+            json.dumps({"status": "ok", "latency": {"same_lan": {"p50_ms": 0.4}}, "ladder": ladder})
+        )
+    s = summary.summarize(tmp_path)
+    md = summary.markdown(s)
+    assert "| 25 | 30 | 1/1 / 1/1 |" in md
+    assert "capped / capped" in md
+    assert s["e2_common"]["cs/udp"]["rate"] == "1M"
+    assert "- ae3gis e1-h50-r1: capped" in md

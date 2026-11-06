@@ -259,7 +259,7 @@ class Runner:
                 self.log(f"  e1: deploy {rec['status']}: {str(e)[:200]}")
                 return self._finish(rec, mon, hs, phases, set())
             phases["deploy"] = (t, time.time())
-            rec["deploy"] = deployed.timings
+            rec["deploy"] = dict(deployed.timings)
             containers = p.adapter.containers(deployed)
             node_pids = {
                 n: q

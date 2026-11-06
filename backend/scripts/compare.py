@@ -5,6 +5,7 @@
     python3 backend/scripts/compare.py run                # E0, E1, E2 on both; resumes
     python3 backend/scripts/compare.py run --quick --sizes 25,50 --reps 1   # a dry run
     python3 backend/scripts/compare.py smoke --platform gns3   # E2's traffic on 25 hosts
+    python3 backend/scripts/compare.py summarize          # the latest run's tables
     python3 backend/scripts/compare.py proto --platform ae3gis --lab 25 --image <tools image>
 
 The machine's settings come from ``backend/benchmarks/compare/compare.local.json``
@@ -333,6 +334,27 @@ def cmd_smoke(args) -> int:
     return 0 if rec.get("status") == "ok" else 1
 
 
+def cmd_summarize(args) -> int:
+    """Tables for one run: ``summary.md`` and ``summary.json`` beside its steps."""
+    from compare_lib import summary
+
+    if args.out:
+        out = Path(args.out)
+    else:
+        host = json.loads(Path(args.config).read_text())["host"]
+        runs = sorted((RESULTS / host).glob("*-compare" + ("-quick" if args.quick else "")))
+        if not runs:
+            sys.exit(f"no runs under {RESULTS / host}")
+        out = runs[-1]
+    s = summary.summarize(out)
+    write_json(out / "summary.json", s)
+    md = summary.markdown(s)
+    (out / "summary.md").write_text(md + "\n")
+    print(md)
+    print(f"\nwritten: {out / 'summary.md'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -376,10 +398,19 @@ def main(argv: list[str] | None = None) -> int:
     common(q)
     q.add_argument("--platform", choices=["ae3gis", "gns3"], required=True)
     q.add_argument("--out")
+    q = sub.add_parser("summarize", help="one run's tables (summary.md, summary.json)")
+    common(q)
+    q.add_argument("--out", help="the run's directory (default: this host's latest run)")
+    q.add_argument("--quick", action="store_true", help="the latest quick run")
     args = ap.parse_args(argv)
-    return {"proto": cmd_proto, "check": cmd_check, "run": cmd_run, "smoke": cmd_smoke}[args.cmd](
-        args
-    )
+    cmds = {
+        "proto": cmd_proto,
+        "check": cmd_check,
+        "run": cmd_run,
+        "smoke": cmd_smoke,
+        "summarize": cmd_summarize,
+    }
+    return cmds[args.cmd](args)
 
 
 if __name__ == "__main__":

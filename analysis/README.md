@@ -7,6 +7,7 @@ the `benchmarking/results` branch, which merges every host's
 | Notebook | What it shows |
 |---|---|
 | [`comparison.ipynb`](comparison.ipynb) | The hosts side by side: idle capacity, how alike they measure images, traffic at high and low rates, CPU per Mb/s, data quality, key takeaways |
+| [`platforms.ipynb`](platforms.ipynb) | AE3GIS vs GNS3 on the same machines ([COMPARE.md](../docs/benchmarks/COMPARE.md)): at rest, deploy/teardown and memory by lab size, idle CPU, disk, the network, takeaways |
 | [`hosts/m4-macbook-air.ipynb`](hosts/m4-macbook-air.ipynb) | One host's full report (from `host_report.ipynb`) |
 | [`hosts/m4-max-mac-studio.ipynb`](hosts/m4-max-mac-studio.ipynb) | 〃 |
 | [`hosts/core-ultra-7-surface-laptop-7.ipynb`](hosts/core-ultra-7-surface-laptop-7.ipynb) | 〃 |
@@ -44,6 +45,7 @@ benchlib/load.py           results → tidy DataFrames (climbs, steps, census, t
 benchlib/random_suite.py   idle summaries
 benchlib/traffic_suite.py  traffic summaries, data-quality checks
 benchlib/plots.py          shared figures (static matplotlib, so GitHub renders them)
+benchlib/compare.py        AE3GIS vs GNS3 runs → DataFrames, through the runner's own summarizer
 host_report.ipynb          the per-host template (parameter: HOST)
 build.py                   runs the template per host and the comparison, outputs saved
 ```
