@@ -316,3 +316,56 @@ def test_the_summary_renders_from_step_files(tmp_path):
     assert "capped / capped" in md
     assert s["e2_common"]["cs/udp"]["rate"] == "1M"
     assert "- ae3gis e1-h50-r1: capped" in md
+
+
+# ── Windows ──
+
+
+def test_the_psutil_sampler_reads_a_process():
+    pytest.importorskip("psutil")
+    import os
+
+    hs = hostsample.PsutilSampler({"vm": [os.getpid()], "helpers": []})
+    hs.start = lambda: None  # sampled by hand
+    first, second = hs.sample(), hs.sample()
+    assert first["g"]["vm"]["footprint"] > 0 and first["g"]["vm"]["cores"] is None
+    assert second["g"]["vm"]["cores"] is not None
+    assert "idle" in second["cpu"] and second["physmem"]["used"] > 0
+    gone = hostsample.PsutilSampler({"vm": [2**22 + 12345]}).sample()
+    assert gone["denied"] == [2**22 + 12345] and gone["g"]["vm"]["footprint"] == 0
+
+
+def test_wslconfig_and_memory_sizes(tmp_path):
+    from compare_lib import vm
+
+    assert vm.memory_mib("16GB") == vm.memory_mib("16384MB") == vm.memory_mib("16G") == 16384
+    assert vm.memory_mib("lots") is None
+    f = tmp_path / ".wslconfig"
+    f.write_text("[wsl2]\nprocessors=8  # cores\nmemory = 16GB\n[experimental]\nmemory=1GB\n")
+    assert vm.wslconfig(f) == {"processors": "8", "memory": "16GB"}
+    assert vm.wslconfig(tmp_path / "missing") == {}
+
+
+def test_a_virtualbox_vm_reads_its_settings_and_address(monkeypatch):
+    import subprocess
+
+    from compare_lib import vm
+
+    out = {
+        (
+            "showvminfo",
+        ): 'name="GNS3 VM"\nUUID="1234-abcd"\nVMState="running"\ncpus=8\nmemory=16384\n'
+        '"SATA-0-0"="C:\\\\VMs\\\\GNS3 VM\\\\GNS3 VM-disk001.vmdk"\n',
+        ("guestproperty",): "Value: 192.168.56.101\n",
+    }
+
+    def fake(self, *args, timeout=300):
+        return subprocess.CompletedProcess(args, 0, out.get((args[0],), ""), "")
+
+    monkeypatch.setattr(vm.VirtualBoxVm, "_vbox", fake)
+    g = Gns3("http://unresolved", Target("t"))
+    v = vm.VirtualBoxVm("GNS3 VM", Target("t"), adapter=g, api_port=3080)
+    assert v.running() and v.resources() == {"cpus": 8, "memory_mib": 16384}
+    assert v.resolve() == "192.168.56.101"
+    assert g.url == "http://192.168.56.101:3080" and v.target.ssh == "gns3@192.168.56.101"
+    assert vm.VirtualBoxVm("GNS3 VM", Target("t"), address="10.0.0.5").resolve() == "10.0.0.5"

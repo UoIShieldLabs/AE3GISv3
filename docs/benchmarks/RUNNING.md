@@ -13,6 +13,9 @@ Both are started by one command each and keep going on their own; the
 results land in `backend/benchmark-results/<host>/` (ignored by git; the
 reports are committed by hand, see [Results](#4-results)).
 
+**Comparing AE3GIS with GNS3** on a machine is a separate study with its own
+runner and checklist: [COMPARE.md](COMPARE.md).
+
 ## 1. Prepare the machine
 
 - **Docker.** macOS and Windows: Docker Desktop; give it the CPUs and memory

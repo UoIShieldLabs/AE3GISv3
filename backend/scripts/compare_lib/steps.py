@@ -28,9 +28,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import hostsample, metrics, probes, traffic
 from . import labs as labs_mod
-from . import metrics, probes, traffic
-from .hostsample import HostSampler
 from .target import Target, pids
 
 
@@ -139,10 +138,10 @@ class Runner:
 
     # ── probes for one window ──
 
-    def watch(self, p: Platform) -> tuple[probes.Monitor, HostSampler]:
+    def watch(self, p: Platform) -> tuple[probes.Monitor, Any]:
         mon = probes.Monitor(p.target, self.image, interval=self.plan["monitor_interval_s"])
         mon.start()
-        hs = HostSampler(p.vm.processes(), interval=self.plan["monitor_interval_s"])
+        hs = hostsample.sampler(p.vm.processes(), interval=self.plan["monitor_interval_s"])
         hs.start()
         mon.wait_first(timeout=120)
         return mon, hs
@@ -162,9 +161,7 @@ class Runner:
         """Runner clock minus the VM's clock."""
         return statistics.median(x["rt"] - x["t"] for x in mon.lines) if mon.lines else 0.0
 
-    def summarize(
-        self, mon: probes.Monitor, hs: HostSampler, phases: dict, lab_ids: set[str]
-    ) -> dict:
+    def summarize(self, mon: probes.Monitor, hs, phases: dict, lab_ids: set[str]) -> dict:
         return {
             name: {
                 "t": [t0, t1],

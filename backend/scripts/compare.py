@@ -5,6 +5,8 @@
     python3 backend/scripts/compare.py run                # E0, E1, E2 on both; resumes
     python3 backend/scripts/compare.py run --quick --sizes 25,50 --reps 1   # a dry run
     python3 backend/scripts/compare.py smoke --platform gns3   # E2's traffic on 25 hosts
+    python3 backend/scripts/compare.py images             # pinned images + probe in both VMs
+    python3 backend/scripts/compare.py memcheck --platform gns3   # the host memory metric here
     python3 backend/scripts/compare.py summarize          # the latest run's tables
     python3 backend/scripts/compare.py proto --platform ae3gis --lab 25 --image <tools image>
 
@@ -26,6 +28,7 @@ import copy
 import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -39,7 +42,7 @@ from compare_lib.ae3gis import Ae3gis  # noqa: E402
 from compare_lib.gns3 import Gns3  # noqa: E402
 from compare_lib.steps import Platform, Runner, write_json  # noqa: E402
 from compare_lib.target import Target, pids  # noqa: E402
-from compare_lib.vm import DockerDesktopVm, FusionVm  # noqa: E402
+from compare_lib.vm import DockerDesktopVm, FusionVm, VirtualBoxVm  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parents[1]
 ROOT = BACKEND.parent
@@ -200,10 +203,22 @@ def platforms(host: dict) -> dict[str, Platform]:
     gt = Target("gns3-vm", ssh=None)
     gt.ssh_opts = (*gt.ssh_opts, "-o", "StrictHostKeyChecking=accept-new")
     gns3 = Gns3("http://unresolved", gt, concurrency=int(g.get("concurrency", 16)))
-    fusion = FusionVm(g["vmx"], gt, user=g.get("user", "gns3"), adapter=gns3)
+    user = g.get("user", "gns3")
+    if g.get("vbox"):  # VirtualBox (Windows): the VM's name in VirtualBox
+        gvm = VirtualBoxVm(
+            g["vbox"],
+            gt,
+            user=user,
+            adapter=gns3,
+            address=g.get("address"),
+            nic=int(g.get("nic", 0)),
+            api_port=int(g.get("api_port", 80)),
+        )
+    else:
+        gvm = FusionVm(g["vmx"], gt, user=user, adapter=gns3)
     return {
         "ae3gis": Platform("ae3gis", dd, Ae3gis(a["url"], dd.target), dd.target, []),
-        "gns3": Platform("gns3", fusion, gns3, gt, list(g.get("security_opt") or [])),
+        "gns3": Platform("gns3", gvm, gns3, gt, list(g.get("security_opt") or [])),
     }
 
 
@@ -213,9 +228,7 @@ def log(msg: str) -> None:
 
 def checks(host: dict, plan: dict) -> list[tuple[str, bool, str]]:
     """(what, ok, detail) for this machine, before a run."""
-    out = []
-    pm = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
-    out.append(("on AC power", "AC Power" in pm, pm.splitlines()[0] if pm else "?"))
+    out = [power()]
     plats = platforms(host)
     dd, fv = plats["ae3gis"].vm, plats["gns3"].vm
     st = dd.settings()
@@ -227,30 +240,60 @@ def checks(host: dict, plan: dict) -> list[tuple[str, bool, str]]:
         )
     )
     out.append(("Docker Desktop: Kubernetes off", not st.get("KubernetesEnabled"), ""))
-    vmx = fv.config()
+    a, g = dd.resources(), fv.resources()
+    where = ".wslconfig" if sys.platform == "win32" else "Docker"
     out.append(
         (
             "same CPUs",
-            str(st.get("Cpus")) == vmx.get("numvcpus"),
-            f"Docker {st.get('Cpus')}, GNS3 VM {vmx.get('numvcpus')}",
+            a["cpus"] is not None and a["cpus"] == g["cpus"],
+            f"{where} {a['cpus']}, GNS3 VM {g['cpus']}",
         )
     )
     out.append(
         (
             "same memory",
-            str(st.get("MemoryMiB")) == vmx.get("memsize"),
-            f"Docker {st.get('MemoryMiB')} MiB, GNS3 VM {vmx.get('memsize')} MiB",
+            a["memory_mib"] is not None and a["memory_mib"] == g["memory_mib"],
+            f"{where} {a['memory_mib']} MiB, GNS3 VM {g['memory_mib']} MiB",
         )
     )
+    if sys.platform == "win32":
+        others = dd.other_distros()
+        out.append(("no other WSL distros running", not others, ", ".join(others)))
     sizes = [*plan["e1"]["sizes"], plan["e1"].get("extra_size"), plan["e2"]["lab"]]
     missing = [n for n in sizes if n and not (COMPARE / "labs" / f"campus-{n}.json").exists()]
     out.append(("lab files", not missing, f"missing {missing}" if missing else ""))
-    free = os.statvfs(BACKEND)
-    gb = free.f_bavail * free.f_frsize / 2**30
+    gb = shutil.disk_usage(BACKEND).free / 2**30
     out.append(("host disk free > 50 GB", gb > 50, f"{gb:.0f} GB"))
     running = [p.name for p in plats.values() if p.vm.running()]
     out.append(("at most one VM running", len(running) <= 1, f"running: {running}"))
     return out
+
+
+def power() -> tuple[str, bool, str]:
+    if sys.platform == "darwin":
+        pm = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
+        return ("on AC power", "AC Power" in pm, pm.splitlines()[0] if pm else "?")
+    try:
+        import psutil
+
+        b = psutil.sensors_battery()
+    except ImportError:
+        return ("on AC power", False, "needs psutil (pip install psutil)")
+    if b is None:
+        return ("on AC power", True, "no battery")
+    return ("on AC power", bool(b.power_plugged), f"battery {b.percent:.0f}%")
+
+
+def keep_awake():
+    """Keeps the machine (and display) awake until this process exits."""
+    if sys.platform == "darwin":
+        return subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
+    if sys.platform == "win32":
+        import ctypes
+
+        # ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x1 | 0x2)
+    return None
 
 
 def cmd_check(args) -> int:
@@ -304,7 +347,7 @@ def cmd_run(args) -> int:
                 "quick": bool(args.quick),
             },
         )
-    awake = subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
+    awake = keep_awake()
     plats = platforms(host)
     order = [host.get("first", "ae3gis"), *[n for n in plats if n != host.get("first", "ae3gis")]]
     log(f"results: {out}")
@@ -313,7 +356,8 @@ def cmd_run(args) -> int:
             order, only=set(args.only.split(",")) if args.only else None
         )
     finally:
-        awake.terminate()
+        if awake is not None:
+            awake.terminate()
     log("run finished")
     return 0
 
@@ -332,6 +376,111 @@ def cmd_smoke(args) -> int:
     write_json(out / f"{p.name}-e2.json", rec)
     log(f"smoke: {rec.get('status')} {rec.get('error', '')}")
     return 0 if rec.get("status") == "ok" else 1
+
+
+def lab_images() -> dict[str, str]:
+    """{ref: digest} over every lab file."""
+    out: dict[str, str] = {}
+    for f in sorted((COMPARE / "labs").glob("*.json")):
+        for ref, v in (labs_mod.load(f).doc.get("images") or {}).items():
+            out[ref] = v["digest"]
+    return out
+
+
+def probe_context() -> bytes:
+    """The tools image's build context as a tar (no caches), for ``docker build -``."""
+    import io
+    import tarfile
+
+    buf = io.BytesIO()
+    src = BACKEND / "tools" / "nettools"
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for f in sorted(src.iterdir()):
+            if f.is_file():
+                tar.add(f, arcname=f.name)
+    return buf.getvalue()
+
+
+def cmd_images(args) -> int:
+    """Puts the labs' images, at their pinned digests, and the probe image in
+    each platform's VM: ``docker pull <repo>@<digest>``, tagged as the lab
+    files name it, and the probe built from ``backend/tools/nettools``."""
+    host, plan = load_config(args)
+    plats = platforms(host)
+    runner = Runner(plan, plats, host["probe_image"], Path("."), log=log)
+    images = lab_images()
+    for name in [args.platform] if args.platform else list(plats):
+        p = plats[name]
+        runner.use(p)
+        for ref, digest in images.items():
+            pinned = f"{ref.rsplit(':', 1)[0]}@{digest}"
+            log(f"{name}: {pinned}")
+            p.target.out(p.target.docker("pull", "-q", pinned), timeout=1800)
+            p.target.out(p.target.docker("tag", pinned, ref))
+        log(f"{name}: building {host['probe_image']}")
+        res = p.target.run(
+            p.target.docker("build", "-q", "-t", host["probe_image"], "-"),
+            input=probe_context(),
+            timeout=1800,
+        )
+        if res.returncode != 0:
+            sys.exit(f"{name}: probe build failed: {res.stderr.decode(errors='replace')[-800:]}")
+        runner.check_images(p, labs_mod.load(plan["e2"]["lab"]))
+        log(f"{name}: images ok")
+    return 0
+
+
+def cmd_memcheck(args) -> int:
+    """Which host metric follows the VM's memory here? Samples the platform's
+    host processes while a probe container touches ``--gib`` GiB inside its VM,
+    then after it exits. The run's footprint should rise by about that much
+    (and keep it: both hypervisors hold freed guest memory)."""
+    from compare_lib import hostsample
+
+    host, plan = load_config(args)
+    plats = platforms(host)
+    p = plats[args.platform]
+    Runner(plan, plats, host["probe_image"], Path("."), log=log).use(p)
+    groups = p.vm.processes()
+    log(f"{p.name}: VM {groups['vm']}, {len(groups['helpers'])} helpers")
+    hs = hostsample.sampler(groups, interval=2)
+    hs.start()
+    phases = []
+
+    def mark(name: str) -> None:
+        phases.append((time.time(), name))
+        log(name)
+
+    mark("before")
+    time.sleep(10)
+    mark(f"touching {args.gib} GiB")
+    code = (
+        f"b=bytearray({args.gib}*1024**3); b[::4096]=b'\\x01'*(len(b)//4096); "
+        "import time; time.sleep(30)"
+    )
+    p.target.out(
+        p.target.docker(
+            "run", "--rm", "--network", "none", host["probe_image"], "python3", "-c", code
+        ),
+        timeout=300,
+    )
+    mark("freed")
+    time.sleep(30)
+    hs.stop()
+    t0 = hs.samples[0]["rt"] if hs.samples else time.time()
+    for smp in hs.samples:
+        ph = [n for t, n in phases if t <= smp["rt"]][-1:] or ["before"]
+        vm = smp["g"].get("vm", {})
+        line = (
+            f"{smp['rt'] - t0:5.0f}s {ph[0]:18s} footprint {vm.get('footprint', 0) / 2**30:6.2f} G"
+            f"  rss {vm.get('rss', 0) / 2**30:6.2f} G"
+        )
+        if "private" in vm:
+            line += f"  private {vm['private'] / 2**30:6.2f} G"
+        if smp.get("denied"):
+            line += f"  unreadable: {smp['denied']}"
+        print(line)
+    return 0
 
 
 def cmd_summarize(args) -> int:
@@ -398,6 +547,13 @@ def main(argv: list[str] | None = None) -> int:
     common(q)
     q.add_argument("--platform", choices=["ae3gis", "gns3"], required=True)
     q.add_argument("--out")
+    q = sub.add_parser("images", help="the pinned lab images and the probe, in each VM")
+    common(q)
+    q.add_argument("--platform", choices=["ae3gis", "gns3"], help="one platform (default: both)")
+    q = sub.add_parser("memcheck", help="which host metric follows a VM's memory")
+    common(q)
+    q.add_argument("--platform", choices=["ae3gis", "gns3"], required=True)
+    q.add_argument("--gib", type=int, default=2)
     q = sub.add_parser("summarize", help="one run's tables (summary.md, summary.json)")
     common(q)
     q.add_argument("--out", help="the run's directory (default: this host's latest run)")
@@ -408,6 +564,8 @@ def main(argv: list[str] | None = None) -> int:
         "check": cmd_check,
         "run": cmd_run,
         "smoke": cmd_smoke,
+        "images": cmd_images,
+        "memcheck": cmd_memcheck,
         "summarize": cmd_summarize,
     }
     return cmds[args.cmd](args)
