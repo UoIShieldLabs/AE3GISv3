@@ -66,6 +66,14 @@ Commit `04e2d0f205`. Cells are **AE3GIS / GNS3**; ratios are GNS3 ÷ AE3GIS.
 | mesh/tcp | 1M | 3.050 / 0.597 | 2.989 / 0.457 | 18.02 / 0.53 |
 | mesh/udp | 1M | 2.520 / 0.569 | 2.307 / 0.333 | – / – |
 
+## E3: a lab at rest once the deploy's aftermath is over
+
+The hold starts once the VM's CPU has stayed quiet for a while after the deploy (E1's hold starts 30 s after the network is ready).
+
+| hosts | quiet after the deploy, s | host cores | VM cores | dockerd, containerd & co | lab's containers | E1 hold: host cores |
+|---|---|---|---|---|---|---|
+| 400 | 337 / 79 | 0.24 / 0.26 | 0.13 / 0.19 | 0.07 / 0.09 | 0.004 / 0.005 | 4.20 / 0.41 |
+
 ## Steps not ok
 
 - gns3 e1-h200-r1: not_ready
