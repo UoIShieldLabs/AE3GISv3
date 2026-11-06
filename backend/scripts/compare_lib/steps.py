@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import statistics
+import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,7 +61,7 @@ def rate_bps(rate: str) -> float:
 def write_json(path: Path, doc: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(doc, indent=1, default=str))
+    tmp.write_text(json.dumps(doc, indent=1, default=str), newline="\n")
     os.replace(tmp, path)
 
 
@@ -126,20 +127,29 @@ class Runner:
         if not want:
             return {}
         sets = " ".join(f"{k}={v}" for k, v in want.items())
-        out = p.target.out(
-            p.target.docker(
-                "run",
-                "--rm",
-                "--privileged",
-                "--network",
-                "host",
-                self.image,
-                "sh",
-                "-c",
-                f"sysctl -q -w {sets} && sysctl {' '.join(want)}",
-            ),
-            timeout=120,
-        )
+        script = f"sysctl -q -w {sets} && sysctl {' '.join(want)}"
+        root_sh = getattr(p.vm, "root_netns_sh", None)
+        argv = root_sh(script) if root_sh else None
+        if argv:
+            r = subprocess.run(argv, capture_output=True, text=True, timeout=120)
+            if r.returncode != 0:
+                raise RuntimeError(f"{p.name}: sysctls failed: {r.stderr.strip()[:400]}")
+            out = r.stdout
+        else:
+            out = p.target.out(
+                p.target.docker(
+                    "run",
+                    "--rm",
+                    "--privileged",
+                    "--network",
+                    "host",
+                    self.image,
+                    "sh",
+                    "-c",
+                    script,
+                ),
+                timeout=120,
+            )
         return dict(line.split(" = ", 1) for line in out.splitlines() if " = " in line)
 
     # ── probes for one window ──

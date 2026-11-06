@@ -119,6 +119,14 @@ def _get(url: str, timeout: float = 5) -> dict | None:
         return None
 
 
+def _docker_answers(target: Target) -> bool:
+    """The VM's Docker answers over SSH; a hang while the VM boots is a no."""
+    try:
+        return target.run(target.docker("info", "-f", "{{.ID}}"), timeout=20).returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+
+
 def _wait(ok, timeout: float, what: str, every: float = 2.0) -> float:
     t0 = time.monotonic()
     while not ok():
@@ -155,6 +163,15 @@ class DockerDesktopVm:
         return bool(self._vm_pids()) and (
             subprocess.run(["docker", "info"], capture_output=True).returncode == 0
         )
+
+    def root_netns_sh(self, script: str) -> list[str] | None:
+        """argv running ``script`` in the VM's initial network namespace, when
+        ``docker run --network host`` doesn't reach it: on WSL 2, Docker's host
+        network is a namespace of its own, and the neighbour table's global
+        ``gc_thresh*`` sysctls exist only in the initial one."""
+        if WINDOWS:
+            return ["wsl", "-d", "docker-desktop", "-u", "root", "-e", "sh", "-c", script]
+        return None
 
     def compose(self, *args: str) -> None:
         env = {**os.environ, "COMPOSE_PROJECT_NAME": self.project}
@@ -279,9 +296,7 @@ class FusionVm:
     def up(self) -> bool:
         if not self.api_url or not _get(self.api_url + "/v2/version"):
             return False
-        return (
-            self.target.run(self.target.docker("info", "-f", "{{.ID}}"), timeout=20).returncode == 0
-        )
+        return _docker_answers(self.target)
 
     def start(self, timeout: float = 600) -> float:
         t0 = time.monotonic()
@@ -391,9 +406,7 @@ class VirtualBoxVm:
     def up(self) -> bool:
         if not self.api_url or not _get(self.api_url + "/v2/version"):
             return False
-        return (
-            self.target.run(self.target.docker("info", "-f", "{{.ID}}"), timeout=20).returncode == 0
-        )
+        return _docker_answers(self.target)
 
     def start(self, timeout: float = 600) -> float:
         t0 = time.monotonic()

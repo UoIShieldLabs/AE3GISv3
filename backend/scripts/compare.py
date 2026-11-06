@@ -169,7 +169,7 @@ def cmd_proto(args) -> int:
             print(f"  destroyed in {report['destroy_s']}s")
     report["retried"] = list(getattr(plat, "retried", []))
     out = Path(args.out) if args.out else Path(f"proto-{args.platform}-{lab.name}.json")
-    out.write_text(json.dumps(report, indent=1, default=str))
+    out.write_text(json.dumps(report, indent=1, default=str), newline="\n")
     print(f"report: {out}")
     return 0
 
@@ -403,7 +403,9 @@ def probe_context() -> bytes:
 
     buf = io.BytesIO()
     src = BACKEND / "tools" / "nettools"
-    with tarfile.open(fileobj=buf, mode="w") as tar:
+    # ustar, not the default pax: Python 3.13 writes a pax header for a float
+    # mtime first, and `docker build -` then takes stdin for a Dockerfile.
+    with tarfile.open(fileobj=buf, mode="w", format=tarfile.USTAR_FORMAT) as tar:
         for f in sorted(src.iterdir()):
             if f.is_file():
                 tar.add(f, arcname=f.name)
@@ -507,7 +509,7 @@ def cmd_summarize(args) -> int:
     s = summary.summarize(out)
     write_json(out / "summary.json", s)
     md = summary.markdown(s)
-    (out / "summary.md").write_text(md + "\n")
+    (out / "summary.md").write_text(md + "\n", encoding="utf-8", newline="\n")
     print(md)
     print(f"\nwritten: {out / 'summary.md'}")
     return 0
