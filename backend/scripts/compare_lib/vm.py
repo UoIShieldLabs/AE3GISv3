@@ -119,6 +119,14 @@ def _get(url: str, timeout: float = 5) -> dict | None:
         return None
 
 
+def _docker_info_ok(hung: bool = False) -> bool:
+    """``docker info`` succeeds on this machine; ``hung`` if it doesn't answer."""
+    try:
+        return subprocess.run(["docker", "info"], capture_output=True, timeout=60).returncode == 0
+    except subprocess.TimeoutExpired:
+        return hung
+
+
 def _docker_answers(target: Target) -> bool:
     """The VM's Docker answers over SSH; a hang while the VM boots is a no."""
     try:
@@ -160,9 +168,10 @@ class DockerDesktopVm:
         return _pgrep("-f", "com.apple.Virtualization.VirtualMachine")
 
     def running(self) -> bool:
-        return bool(self._vm_pids()) and (
-            subprocess.run(["docker", "info"], capture_output=True).returncode == 0
-        )
+        if not self._vm_pids():
+            return False
+        # A hung dockerd counts as running: it needs the stop.
+        return _docker_info_ok(hung=True)
 
     def root_netns_sh(self, script: str) -> list[str] | None:
         """argv running ``script`` in the VM's initial network namespace, when
@@ -195,11 +204,7 @@ class DockerDesktopVm:
             check=True,
             capture_output=True,
         )
-        _wait(
-            lambda: subprocess.run(["docker", "info"], capture_output=True).returncode == 0,
-            timeout,
-            "Docker",
-        )
+        _wait(_docker_info_ok, timeout, "Docker")
         self.compose("up", "-d", "backend")
         _wait(self.healthy, timeout, "the AE3GIS backend")
         return round(time.monotonic() - t0, 2)

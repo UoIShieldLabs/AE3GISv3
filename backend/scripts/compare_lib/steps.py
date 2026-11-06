@@ -598,4 +598,8 @@ class Runner:
 
 
 def restart_vm(p: Platform) -> dict:
-    return {"stop_s": p.vm.stop(), "start_s": p.vm.start()}
+    out = {"stop_s": p.vm.stop(), "start_s": p.vm.start()}
+    clear = getattr(p.adapter, "clear_leftovers", None)
+    if clear:  # after the timed start; the step's quiet wait follows
+        out["leftovers"] = clear()
+    return out

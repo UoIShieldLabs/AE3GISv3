@@ -58,6 +58,20 @@ class Ae3gis:
                 raise RuntimeError(f"job {job_id} still {job['status']} at the deadline")
             time.sleep(1.0)
 
+    def clear_leftovers(self, *, timeout_s: float = 1800) -> list[str]:
+        """Destroys and deletes every topology the comparison backend still
+        holds: a step deletes its own, so any left is from a step whose
+        teardown broke, and Kathara's containers come back with the VM. Only
+        this backend's topologies are touched, never other labs on Docker."""
+        cleared = []
+        for t in self.api.call("GET", "/topologies") or []:
+            if t.get("status") != "idle":
+                job = self.api.call("POST", f"/topologies/{t['id']}/destroy")
+                self.wait_job(job["id"], time.monotonic() + timeout_s)
+            self.api.call("DELETE", f"/topologies/{t['id']}")
+            cleared.append(t.get("name") or t["id"])
+        return cleared
+
     def deploy(self, lab: Lab, *, timeout_s: float = 2700, progress=print) -> Ae3gisLab:
         t0 = time.monotonic()
         topo = self.api.call(
