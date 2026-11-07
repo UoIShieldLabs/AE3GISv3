@@ -28,6 +28,8 @@ TYPE = AE3GIS + "type"
 DEFAULT = AE3GIS + "default"
 STABILITY = AE3GIS + "stability"
 SHELL = AE3GIS + "shell"
+# The Purdue level of every node running this image (overrides its type's).
+PURDUE = AE3GIS + "purdue-level"
 OWN_BRIDGE = AE3GIS + "own-bridge"
 TITLE = OCI + "title"
 DESCRIPTION = OCI + "description"
@@ -100,6 +102,7 @@ class ImageLabels:
     stability: str = "stable"
     shell: str | None = None
     own_bridge: str | None = None
+    purdue_level: float | None = None
     type_meta: TypeMeta = field(default_factory=TypeMeta)
 
 
@@ -176,6 +179,7 @@ _FIELDS = {
     STABILITY: ("image.stability", _one_of("stable", "experimental")),
     SHELL: ("image.shell", check_shell),
     OWN_BRIDGE: ("image.own_bridge", check_bridge),
+    PURDUE: ("image.purdue_level", _purdue),
     TYPE_NAME: ("type.name", _text),
     TYPE_ROLE: ("type.role", _one_of(*ROLES)),
     TYPE_LABEL: ("type.label", _label),

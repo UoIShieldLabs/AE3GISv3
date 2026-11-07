@@ -2032,6 +2032,8 @@ export interface components {
             ownBridge?: string | null;
             /** Platforms */
             platforms?: string[] | null;
+            /** Purduelevel */
+            purdueLevel?: number | null;
             /** Shell */
             shell?: string | null;
             /** Source */

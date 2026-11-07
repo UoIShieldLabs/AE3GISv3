@@ -116,6 +116,9 @@ class ImageSpec(BaseModel):
     # The shell the engine runs boot commands with, for images without bash
     # (e.g. Alpine's /bin/sh, BusyBox ash). None: the engine's default (bash).
     shell: str | None = None
+    # Purdue level of the nodes running this image (0-5, 3.5 = DMZ); overrides
+    # the type's. None: the type's level, else the node's subnet's.
+    purdueLevel: float | None = None
 
     @field_validator("shell")
     @classmethod
