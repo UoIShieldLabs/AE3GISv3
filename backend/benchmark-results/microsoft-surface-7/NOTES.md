@@ -67,6 +67,44 @@ Grids and notes in `summary.md`.
 - No "Not running" false failures (the bug fixed by `f7d795d` on
   `benchmarking/m4-max-mac-studio`) appear in this run.
 
+## AE3GIS vs GNS3 (`2026-11-06-compare/`)
+
+2026-11-06, 10:42 → 19:15 local, procedure `docs/benchmarks/COMPARE.md`,
+`first: gns3` (the Air went `ae3gis` first). Log: `2026-11-06-compare.log`.
+
+- **Setup:** Docker Desktop with Docker 29.9.2 (updated since the suites
+  above), `.wslconfig` 8 CPUs / 16 GB; the GNS3 VM in VirtualBox 7.1.12 (on
+  Hyper-V, since WSL 2 is on), resized from 6 CPUs / 10 GB to the same 8 /
+  16 GB. Both report 15.6 GB.
+- **GNS3 2.2.56.1**, not the Air's 2.2.54 (the VM installed here).
+- **Host memory on WSL 2 isn't a high-water mark.** `memcheck`: VirtualBox's
+  footprint rose by 2.0 GiB and stayed after "freed", as on macOS; Docker
+  Desktop's rose by 2.0 GiB and went back to Windows within ~10 s. So E1's
+  "host footprint" at hold is memory in use for AE3GIS but the peak since the
+  VM started for GNS3; peak growth (`host_footprint_peak_growth`) is the
+  like-for-like figure here. WSL was left at its defaults (Docker Desktop as
+  it ships).
+- **Runner fixes for Windows**, found in the checks and the dry run
+  (`2026-11-06-compare-quick`, not committed): `ff12f7f` (the probe's build
+  context as ustar, a GNS3 VM whose Docker hangs over SSH while booting, the
+  ARP limits set from the `docker-desktop` distro since Docker's host network
+  on WSL isn't the initial namespace, summary.md as UTF-8). The run started at
+  `ff12f7f`.
+- **`ae3gis e1-h800-r2`: error.** The lab deployed (464 s) and was ready
+  (1632/1632), but its teardown hung dockerd: 472 `docker ps` handlers stuck
+  refreshing images through ~3,800 containerd `content.Info` calls (the
+  containerd image store is on), with 4 GB of 16 used and no OOM. The destroy
+  hit the 45 min cap, then the runner blocked on `docker info` (no timeout).
+  The runner was stopped, Docker restarted, the leftover lab (231 containers
+  back up with the VM) destroyed and deleted through the backend, and the run
+  resumed at `19356a4` (14:08): `docker info` with a timeout, and leftovers
+  cleared after every AE3GIS VM restart. Rounds 1 and 3 at 800 hosts were ok
+  (1128 s and 1148 s). The step is recorded as it happened; the summary's
+  "2/2" for 800 hosts leaves it out.
+- **GNS3 at 800 hosts:** skipped in every round (projected memory over 85%
+  of the VM), as on the Air.
+- Every other step is ok, with readiness 100% on both platforms.
+
 ## Left out
 
 - `aborted-2026-10-08-random/`, `aborted-run.log`: a cancelled first start of
@@ -75,3 +113,5 @@ Grids and notes in `summary.md`.
   traffic starts that stopped while bringing the backend up (the random suite
   wasn't finished yet).
 - The `export.zip` files (raw samples): kept on the machine.
+- `2026-11-06-compare-quick/`: the comparison's dry run.
+- The dockerd goroutine dump from the 800-host teardown hang (31 MB): not kept.

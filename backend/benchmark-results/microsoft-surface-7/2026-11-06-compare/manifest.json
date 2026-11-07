@@ -1,0 +1,192 @@
+{
+ "host": {
+  "_doc": "This machine (the Microsoft Surface Laptop 7, Core Ultra 7 268V). See docs/benchmarks/COMPARE.md.",
+  "host": "microsoft-surface-7",
+  "first": "gns3",
+  "probe_image": "ae3gis-compare/nettools:proto",
+  "ae3gis": {
+   "url": "http://localhost:8000",
+   "compose_project": "ae3gis-compare"
+  },
+  "gns3": {
+   "user": "gns3",
+   "vbox": "GNS3 VM",
+   "security_opt": [
+    "apparmor=unconfined"
+   ],
+   "concurrency": 16
+  }
+ },
+ "plan": {
+  "version": 1,
+  "monitor_interval_s": 2,
+  "sysctls": {
+   "net.ipv4.neigh.default.gc_thresh1": 4096,
+   "net.ipv4.neigh.default.gc_thresh2": 8192,
+   "net.ipv4.neigh.default.gc_thresh3": 16384
+  },
+  "step": {
+   "quiet_cpu_share": 0.1,
+   "quiet_max_s": 180,
+   "reference_s": 30,
+   "deploy_cap_s": 2700,
+   "ready_cap_s": 300,
+   "settle_s": 30,
+   "hold_s": 60,
+   "after_s": 30
+  },
+  "e0": {
+   "idle_s": 300
+  },
+  "e1": {
+   "reps": 3,
+   "sizes": [
+    25,
+    50,
+    100,
+    200,
+    400
+   ],
+   "extra_size": 800,
+   "extra_max_mem_share": 0.85
+  },
+  "e3": {
+   "sizes": [
+    400
+   ],
+   "quiet_cpu_share": 0.1,
+   "quiet_for_s": 30,
+   "max_wait_s": 1200,
+   "hold_s": 120
+  },
+  "e2": {
+   "lab": 100,
+   "ping": {
+    "count": 20,
+    "interval_s": 0.2
+   },
+   "flatout": {
+    "trials": 3,
+    "duration_s": 10,
+    "between_s": 10
+   },
+   "ladder": {
+    "patterns": [
+     "cs",
+     "mesh"
+    ],
+    "protocols": [
+     "tcp",
+     "udp"
+    ],
+    "rates": [
+     "100K",
+     "250K",
+     "500K",
+     "1M",
+     "2M",
+     "5M"
+    ],
+    "window_s": 60,
+    "between_s": 30,
+    "min_delivered": 0.95,
+    "max_loss": 0.01
+   }
+  }
+ },
+ "commit": "ff12f7f629d7740f9be0a5dafc2f6fbfa8d9fd3a",
+ "started": 1793986965.899064,
+ "labs": {
+  "campus-100.json": "d1e80b7490a50805360df5453f31f7e27f457af7d0080b6b2a1d778596f35cae",
+  "campus-200.json": "1ddc64b5fcecba66ad46f85cf0b0359cb5fddf3ee6edd371edd48b0996a8c713",
+  "campus-25.json": "a3c2594a6e43969395e2599be9e80b41ed26997dee0cecc406fad46447280a2e",
+  "campus-400.json": "3bf75fd0f60dbecf43e107eed4176c9933e91c351174a6c457298ee6ed380dca",
+  "campus-50.json": "632b2b59046362849644a44f58d2028d378044f6d756de994251e2de83f7b337",
+  "campus-800.json": "089324bbb56eaf85472deb708d9b33a2489bc4af873fa7ac9137aa23eaa5bace"
+ },
+ "quick": false,
+ "resumes": [
+  {
+   "commit": "19356a442a0c7cddb04cda9bb342825729cefe05",
+   "at": 1793999315.065818,
+   "only": null,
+   "plan": {
+    "version": 1,
+    "monitor_interval_s": 2,
+    "sysctls": {
+     "net.ipv4.neigh.default.gc_thresh1": 4096,
+     "net.ipv4.neigh.default.gc_thresh2": 8192,
+     "net.ipv4.neigh.default.gc_thresh3": 16384
+    },
+    "step": {
+     "quiet_cpu_share": 0.1,
+     "quiet_max_s": 180,
+     "reference_s": 30,
+     "deploy_cap_s": 2700,
+     "ready_cap_s": 300,
+     "settle_s": 30,
+     "hold_s": 60,
+     "after_s": 30
+    },
+    "e0": {
+     "idle_s": 300
+    },
+    "e1": {
+     "reps": 3,
+     "sizes": [
+      25,
+      50,
+      100,
+      200,
+      400
+     ],
+     "extra_size": 800,
+     "extra_max_mem_share": 0.85
+    },
+    "e3": {
+     "sizes": [
+      400
+     ],
+     "quiet_cpu_share": 0.1,
+     "quiet_for_s": 30,
+     "max_wait_s": 1200,
+     "hold_s": 120
+    },
+    "e2": {
+     "lab": 100,
+     "ping": {
+      "count": 20,
+      "interval_s": 0.2
+     },
+     "flatout": {
+      "trials": 3,
+      "duration_s": 10,
+      "between_s": 10
+     },
+     "ladder": {
+      "patterns": [
+       "cs",
+       "mesh"
+      ],
+      "protocols": [
+       "tcp",
+       "udp"
+      ],
+      "rates": [
+       "100K",
+       "250K",
+       "500K",
+       "1M",
+       "2M",
+       "5M"
+      ],
+      "window_s": 60,
+      "between_s": 30,
+      "min_delivered": 0.95,
+      "max_loss": 0.01
+     }
+    }
+   }
+  }
+ ]
+}
