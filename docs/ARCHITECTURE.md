@@ -1047,7 +1047,7 @@ recovery for free.
 | Suite | Command | Covers |
 |---|---|---|
 | Backend | `cd backend && python -m pytest` | Validation matrix, lab plan and link resolution, exporters, job state machine (cancel, stop, logs, recovery), migrations, catalog models, image fingerprints/statuses, builds and deploy-time builds (FakeEngine + a `path` source), git sync against a local repo, reconcile, naming, auth and WebSockets, pcap framing and packet summaries, iperf3 parsing (real fixtures), telemetry, captures and traffic runs end to end on FakeEngine sidecars, API contract |
-| Frontend | `cd frontend && npm run test` | Store slices (topology, dock, view) and undo, themes (every theme defines every token), icon styles, canvas projection (incl. activity badges), layout, IP/CIDR helpers, catalog tree, palette, required images, job log paging, packet buffer, Wireshark commands, chart series, flow helpers |
+| Frontend | `cd frontend && npm run test` | Store slices (topology, dock, view) and undo, themes (every theme defines every token), icon styles, canvas projection (incl. activity badges, guest placement), layout (incl. Purdue), IP/CIDR helpers, catalog tree, palette, required images, job log paging, packet buffer, Wireshark commands, chart series, flow helpers |
 
 Backend tests use `FakeEngine` and a temporary SQLite file, so the full suite
 runs in about a second without Docker.

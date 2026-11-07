@@ -278,7 +278,13 @@ tables record every long operation.
   container; container positions are subnet-relative). Edges are *floating*
   (`edges/geometry.ts`), node cards are catalog-driven (`nodes/DeviceNode.tsx`).
   Interactions: `interactions/useCanvasHotkeys.ts`, DnD payload in
-  `interactions/dnd.ts`, context menu in `CanvasContextMenu.tsx`.
+  `interactions/dnd.ts`, context menu in `CanvasContextMenu.tsx`. Auto-layout
+  (`layout/`, toolbar Layout menu / `L`): Tree, Circle, Grid, Purdue
+  (`layout/purdue.ts`: at site scope subnets one row per Purdue level, from
+  `Subnet.purdueLevel` else inferred in `lib/purdue.ts`, and devices in level
+  rows with bridging devices on the edge facing their neighbour; root falls
+  back to Tree). LAN-view guests (leg-attached devices) sit on their home
+  subnet's side.
 - **Shell** (`shell/`): TopBar, Sidebar (Palette with drag-and-drop, Explorer
   tree), Inspector (context-sensitive forms that commit on blur), Dock
   (`features/dock`: terminal / capture / traffic / monitor / scenario tabs, bodies
