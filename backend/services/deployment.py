@@ -17,6 +17,9 @@ from services.jobs import JobRunner
 
 VERIFY_TIMEOUT_S = 15.0
 VERIFY_POLL_S = 1.0
+# Pauses before removing a destroyed lab's leftovers again: under load the
+# engine's force-remove can miss a container that a second pass removes.
+DESTROY_RETRY_S = (2.0, 5.0, 10.0)
 
 
 # ── starting jobs (called from requests) ─────────────────────────────
@@ -240,13 +243,26 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
                 runner.progress(job_id, "undeploy", "No engine state; nothing to remove")
         async with runner.step(job_id, "verify"):
             if state:
-                left = [s.name for s in await engine.status(state) if s.state == "running"]
+                left = await _still_running(engine, state)
+                for pause in DESTROY_RETRY_S:
+                    if not left:
+                        break
+                    runner.progress(
+                        job_id, "verify", f"Still running: {len(left)} node(s); removing again"
+                    )
+                    await asyncio.sleep(pause)
+                    await engine.destroy(state)
+                    left = await _still_running(engine, state)
                 if left:
                     raise RuntimeError(f"Still running: {', '.join(left)}")
         _set_topology(runner, topology_id, status="idle", engine_state=None)
     except Exception:
         _set_topology(runner, topology_id, status="error")
         raise
+
+
+async def _still_running(engine: DeploymentEngine, state: EngineState) -> list[str]:
+    return [s.name for s in await engine.status(state) if s.state == "running"]
 
 
 def register_handlers(runner: JobRunner) -> None:

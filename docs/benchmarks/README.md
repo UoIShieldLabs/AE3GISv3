@@ -119,7 +119,10 @@ teardown                          host in another subnet
 
 Docker keeps tearing the previous step's lab down after its destroy job ends,
 so a step first waits until host CPU stays under `quiet_cpu_pct` (up to
-`quiet_timeout_s`; recorded as `quiet_wait_s`).
+`quiet_timeout_s`; recorded as `quiet_wait_s`). A destroy that leaves a node
+running removes the lab again (`DESTROY_RETRY_S` in `services/deployment.py`)
+before the step fails as `destroy_failed`: at 2000+ nodes Docker can miss a
+container on the first pass.
 
 The generated topology is a small campus: a servers subnet (`10.0.0.0/24`)
 behind a core router; client subnets (`10.1.k.0/24`, up to 230 hosts each)

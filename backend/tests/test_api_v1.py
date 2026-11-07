@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from config import Settings
 from engine.fake import FakeEngine
 from main import create_app
+from services import deployment
 from tests.conftest import TWO_SUBNETS, make_settings
 
 EMPTY = {"name": "T", "sites": [], "siteConnections": []}
@@ -183,3 +184,47 @@ def test_runtime_lists_activity_and_destroy_stops_it_first(client, topology, wai
     steps = client.get(f"/api/v1/jobs/{job['id']}").json()["steps"]
     assert [s["name"] for s in steps] == ["stop", "undeploy", "verify"]
     assert steps[0]["message"] == "Nothing running"
+
+
+def _destroys_missing(monkeypatch, fake_engine, times):
+    """The engine's first ``times`` destroys leave the lab running."""
+    monkeypatch.setattr(deployment, "DESTROY_RETRY_S", (0.0, 0.0, 0.0))
+    real, calls = fake_engine.destroy, []
+
+    async def destroy(state):
+        calls.append(1)
+        if len(calls) > times:
+            await real(state)
+
+    monkeypatch.setattr(fake_engine, "destroy", destroy)
+    return calls
+
+
+def test_a_node_left_by_destroy_is_removed_again(
+    client, topology, wait_jobs, fake_engine, monkeypatch
+):
+    tid = topology["id"]
+    client.post(f"/api/v1/topologies/{tid}/deploy")
+    wait_jobs()
+    calls = _destroys_missing(monkeypatch, fake_engine, times=2)
+    job = client.post(f"/api/v1/topologies/{tid}/destroy").json()
+    wait_jobs()
+    assert client.get(f"/api/v1/jobs/{job['id']}").json()["status"] == "succeeded"
+    assert len(calls) == 3
+    assert client.get(f"/api/v1/topologies/{tid}").json()["status"] == "idle"
+
+
+def test_a_node_destroy_never_removes_fails_it(
+    client, topology, wait_jobs, fake_engine, monkeypatch
+):
+    tid = topology["id"]
+    client.post(f"/api/v1/topologies/{tid}/deploy")
+    wait_jobs()
+    calls = _destroys_missing(monkeypatch, fake_engine, times=99)
+    job = client.post(f"/api/v1/topologies/{tid}/destroy").json()
+    wait_jobs()
+    done = client.get(f"/api/v1/jobs/{job['id']}").json()
+    assert done["status"] == "failed"
+    assert "Still running" in done["error"]
+    assert len(calls) == 1 + len(deployment.DESTROY_RETRY_S)
+    assert client.get(f"/api/v1/topologies/{tid}").json()["status"] == "error"
