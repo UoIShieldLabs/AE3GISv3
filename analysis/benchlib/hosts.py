@@ -21,6 +21,7 @@ class Host:
     deviations: tuple[str, ...] = ()  # settings that differ from the shared suites
     issues: tuple[str, ...] = ()  # known problems in its data
     annotations: dict[str, str] = field(default_factory=dict)  # run key -> note
+    aliases: tuple[str, ...] = ()  # its other results folders (runs at other resources)
 
     @property
     def resources(self) -> str:
@@ -28,7 +29,7 @@ class Host:
 
 
 HOSTS: dict[str, Host] = {
-    h.key: h
+    k: h
     for h in (
         Host(
             key="m4-macbook-air",
@@ -60,6 +61,7 @@ HOSTS: dict[str, Host] = {
             mem_gb=101.9,
             color="#d62728",
             cooling="active",
+            aliases=("m4max-studio-dd12-60g",),  # the platform comparison, at 12 CPUs / 60 GB
             deviations=(
                 "Random climbs: max_factor 1.25 instead of 2.0, to stay below Docker Desktop's "
                 "deploy wall (~2400 hosts).",
@@ -117,6 +119,7 @@ HOSTS: dict[str, Host] = {
             },
         ),
     )
+    for k in (h.key, *h.aliases)
 }
 
 ORDER = ["m4-macbook-air", "m4max-studio-dd12-95g", "microsoft-surface-7"]
