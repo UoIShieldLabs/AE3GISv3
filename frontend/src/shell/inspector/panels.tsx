@@ -7,6 +7,7 @@ import { NodeGlyph } from '@/catalog/icons';
 import { canTakeInterfaceLegs, countContainers, countSubnets, gatewayOf, locate, locateConnection, membersOfSubnet, routersForSubnet, usedIpsInSubnet, type Scope } from '@/lib/topology';
 import { planNodeFor, usePlan } from '@/features/deployment/usePlan';
 import { isIpInCidr, isValidCidr, isValidIp } from '@/utils/validation';
+import { PURDUE_LEVELS, inferSubnetLevel, purdueLevelInfo } from '@/lib/purdue';
 import { Badge, Button, Select, Textarea, toast } from '@/ui';
 import { DeviceTypePicker } from '@/features/topology/DeviceTypePicker';
 import { ImagePicker } from '@/features/images/ImagePicker';
@@ -130,6 +131,16 @@ export function SubnetPanel({ site, subnet, ctx }: { site: Site; subnet: Subnet;
             placeholder={routers.length ? 'Choose a router' : 'No routers'}
             disabled={routers.length === 0}
             mono
+          />
+        </Row>
+        <Row label="Purdue level" hint="Where the Purdue layout places this subnet.">
+          <Select
+            value={typeof subnet.purdueLevel === 'number' ? String(subnet.purdueLevel) : 'auto'}
+            onValueChange={(v) => updateSubnet(subnet.id, { purdueLevel: v === 'auto' ? undefined : Number(v) })}
+            options={[
+              { value: 'auto', label: `Auto · ${purdueLevelInfo(inferSubnetLevel(subnet)).label}` },
+              ...PURDUE_LEVELS.map((l) => ({ value: String(l.level), label: `${l.label} · ${l.name}` })),
+            ]}
           />
         </Row>
       </Section>
