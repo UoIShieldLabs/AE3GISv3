@@ -62,6 +62,19 @@ class Run:
     def manifest(self) -> dict[str, Any]:
         return json.loads((self.dir / "manifest.json").read_text())
 
+    @cached_property
+    def images(self) -> dict[str, dict]:
+        """{platform: {"lab": {ref: digest}, "probe": id}} as each step recorded them
+        (the summary's VM facts don't carry images)."""
+        out: dict[str, dict] = {}
+        for p, steps in self.records.items():
+            for rec in steps.values():
+                imgs = (rec.get("vm") or {}).get("images") or {}
+                if imgs.get("lab"):
+                    out[p] = imgs
+                    break
+        return out
+
     # ── E0 ──
 
     @cached_property
@@ -254,7 +267,8 @@ def sanity(run: Run) -> list[str]:
             lab_imgs = ((rec.get("vm") or {}).get("images") or {}).get("lab")
             if lab_imgs:
                 imgs.setdefault(p, {}).update(lab_imgs)
-    want = run.manifest.get("labs") or {}
+    # the manifest names lab files (campus-25.json), the steps name labs (campus-25)
+    want = {k.removesuffix(".json"): v for k, v in (run.manifest.get("labs") or {}).items()}
     for lab, s in shas.items():
         if len(s) > 1 or (lab in want and want[lab] not in s):
             out.append(f"{lab}: lab files differ ({sorted(s)})")
