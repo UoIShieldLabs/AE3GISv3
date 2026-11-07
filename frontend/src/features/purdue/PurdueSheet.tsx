@@ -9,7 +9,7 @@ import { Select, Sheet } from '@/ui';
 
 const ZONE_CLASS: Record<string, string> = { IT: 'text-accent border-accent/40', DMZ: 'text-danger border-danger/40', OT: 'text-success border-success/40' };
 
-/** Devices of a site arranged by Purdue level (levels come from the catalog). */
+/** Devices of a site arranged by Purdue level (image, else type, else subnet). */
 export function PurdueSheet() {
   const open = useAppStore((s) => s.purdueOpen);
   const setOpen = useAppStore((s) => s.setPurdueOpen);
@@ -36,7 +36,7 @@ export function PurdueSheet() {
       onOpenChange={setOpen}
       side="full"
       title="Purdue model"
-      description="Devices grouped by the level their catalog type declares."
+      description="Devices grouped by Purdue level: their image's, else their type's, else their subnet's."
       headerAction={
         topology.sites.length > 1 ? (
           <Select value={site?.id} onValueChange={setSiteId} options={topology.sites.map((s) => ({ value: s.id, label: s.name }))} className="h-7 w-48 text-xs" size="sm" />
