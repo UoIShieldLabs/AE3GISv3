@@ -17,6 +17,8 @@ export const GRID = 16;
 export const GROUP_PADDING = 24;
 /** Header height of an expanded (group) node. */
 export const GROUP_HEADER = 36;
+/** Groups never get narrower than this so the header stays readable. */
+export const MIN_GROUP_WIDTH = 300;
 
 /** Spacing used when auto-placing a new node next to existing ones. */
 export const PLACEMENT_GAP = 32;

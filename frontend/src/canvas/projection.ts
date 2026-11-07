@@ -7,7 +7,7 @@ import { countContainers, gatewayOf, subnetGateway, type ConnectionKind, type Sc
 import type { RuntimeStatus, Selection } from '@/store/types';
 import type { Activity } from '@/api/client';
 import { GROUP_HEADER, GROUP_PADDING, NODE_SIZE } from './constants';
-import { boundsOf, type Rect } from './layout/placement';
+import { boundsOf, groupSize, type Rect } from './layout/placement';
 
 // ── Node / edge data ──────────────────────────────────────────────────
 
@@ -129,8 +129,6 @@ const ZERO: Position = { x: 0, y: 0 };
 /** Guest cards (leg-attached devices in a LAN view): column gap and row gap. */
 const GUEST_GAP = 96;
 const GUEST_ROW_GAP = 24;
-/** Groups never get narrower than this so the header stays readable. */
-const MIN_GROUP_WIDTH = 300;
 const pos = (p?: Position): Position => (p ? { x: p.x, y: p.y } : ZERO);
 
 interface Emitted {
@@ -300,8 +298,7 @@ class Projector {
     const rects: Rect[] = subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }));
     const b = boundsOf(rects) ?? { x: 0, y: 0, width: NODE_SIZE.device.width, height: NODE_SIZE.device.height };
     const origin: Position = { x: b.x - GROUP_PADDING, y: b.y - GROUP_HEADER - GROUP_PADDING };
-    const width = Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH);
-    const height = b.height + GROUP_PADDING * 2 + GROUP_HEADER;
+    const { width, height } = groupSize(b);
     const p = pos(subnet.position);
     this.push({
       id: subnet.id,
@@ -380,7 +377,7 @@ class Projector {
       if (this.input.expanded[subnet.id]) {
         const rects: Rect[] = subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }));
         const b = boundsOf(rects) ?? { x: 0, y: 0, ...NODE_SIZE.device };
-        sizes.set(subnet.id, { width: Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH), height: b.height + GROUP_PADDING * 2 + GROUP_HEADER });
+        sizes.set(subnet.id, groupSize(b));
       } else {
         sizes.set(subnet.id, NODE_SIZE.subnet);
       }
@@ -388,8 +385,7 @@ class Projector {
     const rects: Rect[] = site.subnets.map((s) => ({ ...pos(s.position), ...sizes.get(s.id)! }));
     const b = boundsOf(rects) ?? { x: 0, y: 0, ...NODE_SIZE.subnet };
     const origin: Position = { x: b.x - GROUP_PADDING, y: b.y - GROUP_HEADER - GROUP_PADDING };
-    const width = Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH);
-    const height = b.height + GROUP_PADDING * 2 + GROUP_HEADER;
+    const { width, height } = groupSize(b);
     this.push({
       id: site.id,
       type: 'group',

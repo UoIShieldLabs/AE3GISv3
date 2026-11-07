@@ -1,5 +1,5 @@
 import type { Position } from '@/types/topology';
-import { GRID, PLACEMENT_GAP } from '../constants';
+import { GRID, GROUP_HEADER, GROUP_PADDING, MIN_GROUP_WIDTH, PLACEMENT_GAP } from '../constants';
 
 export interface Rect extends Position {
   width: number;
@@ -45,4 +45,9 @@ export function boundsOf(rects: Rect[]): Rect | undefined {
   const maxX = Math.max(...rects.map((r) => r.x + r.width));
   const maxY = Math.max(...rects.map((r) => r.y + r.height));
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Rendered size of an expanded group whose children span `bounds`. */
+export function groupSize(bounds: { width: number; height: number }): { width: number; height: number } {
+  return { width: Math.max(bounds.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH), height: bounds.height + GROUP_PADDING * 2 + GROUP_HEADER };
 }
