@@ -99,8 +99,14 @@ Grids and notes in `summary.md`.
   back up with the VM) destroyed and deleted through the backend, and the run
   resumed at `19356a4` (14:08): `docker info` with a timeout, and leftovers
   cleared after every AE3GIS VM restart. Rounds 1 and 3 at 800 hosts were ok
-  (1128 s and 1148 s). The step is recorded as it happened; the summary's
-  "2/2" for 800 hosts leaves it out.
+  (1128 s and 1148 s).
+
+  **Re-run on 2026-11-07** (10:44 → 11:02, `run --resume --only e1` at
+  `7f93128`, the same runner code as `e936e7a`): ok in 1088 s (deploy 398 s,
+  ready 1632/1632, teardown 430 s). The failed attempt's record is kept in
+  `attempts/ae3gis-e1-h800-r2-attempt1.json`, outside the step folders, so the
+  summary's 800-host row is now 3/3. The re-run went after every other step,
+  a day later, and not between its round's neighbours as the plan orders it.
 - **GNS3 at 800 hosts:** skipped in every round (projected memory over 85%
   of the VM), as on the Air.
 - Every other step is ok, with readiness 100% on both platforms.

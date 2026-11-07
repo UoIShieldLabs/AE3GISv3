@@ -187,6 +187,88 @@
      }
     }
    }
+  },
+  {
+   "commit": "7f9312832cf9207fe2fb55595ab1b3d3fd569407",
+   "at": 1794073472.0268075,
+   "only": "e1",
+   "plan": {
+    "version": 1,
+    "monitor_interval_s": 2,
+    "sysctls": {
+     "net.ipv4.neigh.default.gc_thresh1": 4096,
+     "net.ipv4.neigh.default.gc_thresh2": 8192,
+     "net.ipv4.neigh.default.gc_thresh3": 16384
+    },
+    "step": {
+     "quiet_cpu_share": 0.1,
+     "quiet_max_s": 180,
+     "reference_s": 30,
+     "deploy_cap_s": 2700,
+     "ready_cap_s": 300,
+     "settle_s": 30,
+     "hold_s": 60,
+     "after_s": 30
+    },
+    "e0": {
+     "idle_s": 300
+    },
+    "e1": {
+     "reps": 3,
+     "sizes": [
+      25,
+      50,
+      100,
+      200,
+      400
+     ],
+     "extra_size": 800,
+     "extra_max_mem_share": 0.85
+    },
+    "e3": {
+     "sizes": [
+      400
+     ],
+     "quiet_cpu_share": 0.1,
+     "quiet_for_s": 30,
+     "max_wait_s": 1200,
+     "hold_s": 120
+    },
+    "e2": {
+     "lab": 100,
+     "ping": {
+      "count": 20,
+      "interval_s": 0.2
+     },
+     "flatout": {
+      "trials": 3,
+      "duration_s": 10,
+      "between_s": 10
+     },
+     "ladder": {
+      "patterns": [
+       "cs",
+       "mesh"
+      ],
+      "protocols": [
+       "tcp",
+       "udp"
+      ],
+      "rates": [
+       "100K",
+       "250K",
+       "500K",
+       "1M",
+       "2M",
+       "5M"
+      ],
+      "window_s": 60,
+      "between_s": 30,
+      "min_delivered": 0.95,
+      "max_loss": 0.01
+     }
+    }
+   }
   }
  ]
 }

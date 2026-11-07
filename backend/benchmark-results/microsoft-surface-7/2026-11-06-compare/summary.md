@@ -27,7 +27,7 @@ Commit `ff12f7f629`. Cells are **AE3GIS / GNS3**; ratios are GNS3 ÷ AE3GIS.
 | 100 | 109 | 3/3 / 3/3 | 28.5 / 124.0 | 1.2 / 3.8 | 29.7 / 127.8 | 21.4 / 58.7 | 4.31× |
 | 200 | 213 | 3/3 / 3/3 | 60.6 / 289.9 | 2.3 / 7.3 | 62.9 / 297.1 | 44.0 / 116.7 | 4.72× |
 | 400 | 424 | 3/3 / 3/3 | 148.1 / 747.3 | 4.0 / 15.2 | 152.1 / 762.5 | 108.6 / 239.4 | 5.01× |
-| 800 | 846 | 2/2 / 0/3 | 453.3 / skipped | 7.8 / skipped | 461.1 / skipped | 431.2 / skipped | – |
+| 800 | 846 | 3/3 / 0/3 | 434.8 / skipped | 8.1 / skipped | 443.0 / skipped | 430.9 / skipped | – |
 
 ## E1: what a lab adds (over the step's reference)
 
@@ -38,7 +38,7 @@ Commit `ff12f7f629`. Cells are **AE3GIS / GNS3**; ratios are GNS3 ÷ AE3GIS.
 | 100 | 0.94 / 2.06 | 8.8 / 19.3 | 3.1 / 4.2 | 0.61 / 1.62 | 1.21 / 2.32 | 1.92× | 0.08 / 0.46 | 0.041 / 0.201 |
 | 200 | 1.82 / 4.08 | 8.7 / 19.6 | 3.0 / 4.0 | 1.20 / 3.24 | 2.18 / 4.63 | 2.12× | 0.12 / 0.65 | 0.071 / 0.360 |
 | 400 | 3.56 / 8.19 | 8.6 / 19.8 | 2.9 / 4.0 | 2.37 / 6.55 | 4.07 / 9.58 | 2.35× | 0.19 / 0.90 | 0.119 / 0.601 |
-| 800 | 7.16 / skipped | 8.7 / skipped | 2.9 / skipped | 4.80 / skipped | 8.38 / skipped | – | 0.31 / skipped | 0.215 / skipped |
+| 800 | 7.15 / skipped | 8.7 / skipped | 2.9 / skipped | 4.80 / skipped | 8.25 / skipped | – | 0.31 / skipped | 0.216 / skipped |
 
 ## E2: network on the 100-host lab
 
@@ -76,7 +76,6 @@ The hold starts once the VM's CPU has stayed quiet for a while after the deploy 
 
 ## Steps not ok
 
-- ae3gis e1-h800-r2: error
 - gns3 e1-h800-r1: skipped
 - gns3 e1-h800-r2: skipped
 - gns3 e1-h800-r3: skipped
