@@ -51,6 +51,10 @@ export interface Container {
   status?: 'running' | 'stopped' | 'paused';
   config?: Record<string, unknown>;
   metadata?: Record<string, string>;
+  /** Environment variables set on this node at deploy time, applied on top of
+   *  the image's catalog env (the node's values win). e.g. point a client at a
+   *  peer's IP where the lab has no cross-node name resolution. */
+  env?: Record<string, string>;
   persistencePaths?: string[];
   /** Canvas position, relative to the enclosing subnet. Filled by normalizeTopology. */
   position?: Position;
@@ -118,6 +122,34 @@ export interface Scenario {
   [key: string]: unknown;
 }
 
+/** A note in a tutorial, written in Markdown. */
+export interface TutorialMarkdownCell {
+  id: string;
+  kind: 'markdown';
+  source: string;
+  [key: string]: unknown;
+}
+
+/** A command a tutorial types into a node's terminal (its normal dock tab). */
+export interface TutorialCommandCell {
+  id: string;
+  kind: 'command';
+  containerId: string;
+  command: string;
+  [key: string]: unknown;
+}
+
+export type TutorialCell = TutorialMarkdownCell | TutorialCommandCell;
+
+/** A notebook of notes and commands, stepped through on the deployed lab.
+ *  Editor-only: the backend never reads it; commands run in the browser's terminals. */
+export interface Tutorial {
+  id: string;
+  title: string;
+  cells: TutorialCell[];
+  [key: string]: unknown;
+}
+
 /** Editor view preferences stored with the topology. */
 export interface TopologyView {
   /** Position-format version; bumped when the coordinate model changes. */
@@ -144,6 +176,7 @@ export interface TopologyData {
   sites: Site[];
   siteConnections: Connection[];
   scenarios?: Scenario[];
+  tutorials?: Tutorial[];
   view?: TopologyView;
   /** Traffic flows kept with the design (run from the Traffic panel). */
   traffic?: { flows?: SavedFlow[]; [key: string]: unknown };

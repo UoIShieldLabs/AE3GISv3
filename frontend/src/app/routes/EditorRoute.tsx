@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAppStore } from '@/store';
 import { ROOT_SCOPE, defaultScopeFor, resolveScope, scopeEquals, scopePath, type Scope } from '@/lib/topology';
@@ -22,6 +22,9 @@ import { Inspector } from '@/shell/Inspector';
 import { StatusBar } from '@/shell/StatusBar';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { Spinner } from '@/ui';
+
+// Markdown rendering loads with the first tutorial, not with the editor.
+const TutorialsSection = lazy(() => import('@/features/tutorials/TutorialsSection').then((m) => ({ default: m.TutorialsSection })));
 
 export function EditorRoute() {
   const { topologyId = 'draft', siteId, subnetId } = useParams();
@@ -104,6 +107,11 @@ export function EditorRoute() {
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
         canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
+        tutorials={
+          <Suspense fallback={<div className="flex h-full items-center justify-center bg-surface"><Spinner /></div>}>
+            <TutorialsSection onSave={() => void save()} />
+          </Suspense>
+        }
         dock={<Dock />}
         statusBar={<StatusBar scope={scope} />}
       />

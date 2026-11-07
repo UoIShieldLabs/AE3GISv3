@@ -9,19 +9,23 @@ export interface EditorShellProps {
   canvas: React.ReactNode;
   sidebar?: React.ReactNode;
   inspector?: React.ReactNode;
+  /** Shown above the inspector in the right column while tutorials are open. */
+  tutorials?: React.ReactNode;
   dock?: React.ReactNode;
   statusBar?: React.ReactNode;
 }
 
-/** Fixed frame: top bar / [sidebar | breadcrumb + canvas + dock | inspector] / status bar. */
-export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspector, dock, statusBar }: EditorShellProps) {
-  const { sidebarOpen, inspectorOpen, dockMode } = useAppShallow((s) => ({
+/** Fixed frame: top bar / [sidebar | breadcrumb + canvas + dock | tutorials over inspector] / status bar. */
+export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspector, tutorials, dock, statusBar }: EditorShellProps) {
+  const { sidebarOpen, inspectorOpen, tutorialsOpen, dockMode } = useAppShallow((s) => ({
     sidebarOpen: s.sidebarOpen,
     inspectorOpen: s.inspectorOpen,
+    tutorialsOpen: s.tutorialsOpen,
     dockMode: s.dockTabs.length === 0 ? 'hidden' : s.dockMinimized ? 'minimized' : 'open',
   }));
   const showSidebar = !!sidebar && sidebarOpen;
   const showInspector = !!inspector && inspectorOpen;
+  const showTutorials = !!tutorials && tutorialsOpen;
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-app text-fg">
@@ -49,10 +53,21 @@ export function EditorShell({ topBar, breadcrumb, notice, canvas, sidebar, inspe
             {dock && dockMode === 'minimized' ? <div className="h-8 shrink-0">{dock}</div> : null}
           </main>
         </ResizablePanel>
-        {showInspector ? (
+        {showInspector || showTutorials ? (
           <>
             <ResizableHandle id="h-inspector" />
-            <ResizablePanel id="inspector" defaultSize={320} minSize={260} maxSize={560}>{inspector}</ResizablePanel>
+            <ResizablePanel id="inspector" defaultSize={340} minSize={260} maxSize={640}>
+              {/* One structure for every combination, so toggling one section never remounts the other. */}
+              <ResizableGroup orientation="vertical" className="min-h-0">
+                {showTutorials ? (
+                  <>
+                    <ResizablePanel id="tutorials" defaultSize="60%" minSize={160} className="border-l border-border">{tutorials}</ResizablePanel>
+                    {showInspector ? <ResizableHandle id="v-right" /> : null}
+                  </>
+                ) : null}
+                {showInspector ? <ResizablePanel id="inspector-body" minSize={120}>{inspector}</ResizablePanel> : null}
+              </ResizableGroup>
+            </ResizablePanel>
           </>
         ) : null}
       </ResizableGroup>

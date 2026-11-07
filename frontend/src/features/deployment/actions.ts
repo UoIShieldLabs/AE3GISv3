@@ -60,6 +60,7 @@ export async function loadTopology(id: string): Promise<boolean> {
       stopPolling();
       s.clearSelection();
       s.collapseAll();
+      if (s.backendId !== rec.id) s.resetTutorialSession();
       s.loadTopology(rec.data);
       applyRecord(rec);
       s.clearContainerStatuses();
@@ -122,6 +123,7 @@ export function createNewTopology(name?: string): void {
   s.clearSelection();
   s.collapseAll();
   s.clearBackend();
+  s.resetTutorialSession();
   s.newTopology(name);
 }
 

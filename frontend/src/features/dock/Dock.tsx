@@ -24,7 +24,7 @@ function title(tab: DockTab): string {
 function Body({ tab, active }: { tab: DockTab; active: boolean }) {
   switch (tab.kind) {
     case 'terminal':
-      return <TerminalSession containerId={tab.containerId} active={active} />;
+      return <TerminalSession tabId={tab.id} containerId={tab.containerId} active={active} />;
     case 'capture':
       return <div className={active ? 'flex h-full min-h-0 flex-1' : 'hidden'}><CaptureView jobId={tab.jobId} /></div>;
     case 'traffic':

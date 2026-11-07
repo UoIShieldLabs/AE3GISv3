@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData } from '@/types/topology';
+import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData, Tutorial, TutorialCell } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
 import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
@@ -36,6 +36,8 @@ export interface AddContainerInput {
   config?: Record<string, unknown>;
 }
 export interface AddConnectionInput { from: string; to: string; label?: string }
+/** Editable fields of a tutorial cell; each kind takes its own (source | containerId, command). */
+export interface TutorialCellPatch { source?: string; containerId?: string; command?: string }
 export interface NodeMove { id: string; position: Position }
 
 export interface TopologySlice {
@@ -85,6 +87,18 @@ export interface TopologySlice {
   removeStep: (phaseId: string, index: number) => void;
   /** Reorder a step within its phase. */
   moveStep: (phaseId: string, from: number, to: number) => void;
+
+  // ── Tutorials (notes + commands typed into node terminals; part of the saved design, undoable) ──
+  addTutorial: (title?: string) => string;
+  updateTutorial: (tutorialId: string, updates: Partial<Pick<Tutorial, 'title'>>) => void;
+  removeTutorial: (tutorialId: string) => void;
+  /** Copy a tutorial (new ids) right after it; returns the copy's id. */
+  duplicateTutorial: (tutorialId: string) => string | null;
+  /** Insert a cell at `index` (default: the end); returns its id. */
+  addTutorialCell: (tutorialId: string, kind: TutorialCell['kind'], index?: number, init?: TutorialCellPatch) => string | null;
+  updateTutorialCell: (tutorialId: string, cellId: string, updates: TutorialCellPatch) => void;
+  removeTutorialCell: (tutorialId: string, cellId: string) => void;
+  moveTutorialCell: (tutorialId: string, from: number, to: number) => void;
 }
 
 export interface DocumentSlice {
@@ -198,6 +212,31 @@ export interface DockSlice {
   closeTerminal: (containerId: string) => void;
 }
 
+/** Tutorials UI: which are open as tabs, and which commands ran this session.
+ *  Not saved and not undoable; reset when another topology is opened. */
+export interface TutorialSlice {
+  /** The Tutorials section of the right column is shown. */
+  tutorialsOpen: boolean;
+  /** Tutorials open as tabs, in tab order. */
+  openTutorialIds: string[];
+  /** The tab shown; null shows the list of this topology's tutorials. */
+  activeTutorialId: string | null;
+  /** Tutorials whose Edit toggle is on. */
+  editingTutorials: Record<string, true>;
+  /** Commands run this session: tutorial id → cell id → when (epoch ms). */
+  tutorialProgress: Record<string, Record<string, number>>;
+  setTutorialsOpen: (open: boolean) => void;
+  /** Show a tutorial's tab (opening the section), optionally in edit mode. */
+  openTutorial: (tutorialId: string, options?: { edit?: boolean }) => void;
+  closeTutorial: (tutorialId: string) => void;
+  setActiveTutorial: (tutorialId: string | null) => void;
+  setTutorialEditing: (tutorialId: string, editing: boolean) => void;
+  markCellRun: (tutorialId: string, cellId: string, at?: number) => void;
+  resetTutorialProgress: (tutorialId: string) => void;
+  /** Close every tab and forget progress (another topology was opened). */
+  resetTutorialSession: () => void;
+}
+
 export interface ActivitySlice {
   /** Captures and traffic runs running on the loaded topology (from /runtime). */
   activity: Activity[];
@@ -220,7 +259,7 @@ export interface ImagesSlice {
   setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & ActivitySlice & CatalogSlice & ImagesSlice;
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & ActivitySlice & CatalogSlice & ImagesSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 
