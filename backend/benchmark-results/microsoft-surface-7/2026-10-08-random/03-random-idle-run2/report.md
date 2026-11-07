@@ -1,49 +1,48 @@
 # Benchmark: microsoft-surface-7 · random-idle run 2
 
 - **Host:** microsoft-surface-7 · Docker Desktop · x86_64 · 8 CPUs · 16605.5 MB
-- **Kernel / Docker:** 6.6.87.2-microsoft-standard-WSL2 · Docker 28.3.3 · cgroup v2
+- **Kernel / Docker:** 6.6.87.2-microsoft-standard-WSL2 · Docker 29.9.2 · cgroup v2
 - **Kathará:** 3.8.3 · network plugin `kathara/katharanp_vde`
-- **AE3GIS:** `d3ccc923637a` · bench
-- **Environment fingerprint:** `9476f028774056264e0bb3c49269b67e9730142e0fd03421b00df0a179d93165`
+- **AE3GIS:** `b14a3c4efcbf` · bench
+- **Environment fingerprint:** `33e9ba4c2d41a1e0c353447beb0781c483a431470f4d022dd281d82544c121f1`
 - **Topology:** generated, random (seed 2), ≤ 200 hosts per subnet, ≤ 48 per switch: each node draws a type of its pool with equal odds, then one of its images. Hosts (14 types): router (frr), switch (base / open-vswitch), firewall (frr / iptables / nftables / firehol), ids (suricata / snort3 / snort2), web-server (httpd:alpine / apache / nginx), file-server (base / samba), ftp-server (vsftpd), database-server (postgres:alpine), dns-server (base), dhcp-server (isc-dhcp), workstation (base / benign-client / wazuh-agent / firefox), attacker (malicious-client), plc (base / openplc), hmi (base). Switches: switch (base / open-vswitch). Routers: router (frr), firewall (frr / iptables)
-- **Steps:** adaptive from 320 hosts toward 93% memory, done at ≥ 90% (closing 0.6 of the projected gap per step, ≥ 10 hosts, ≤ ×2), failures on a host limit retried lower (descend 0.7), ceiling rerun ×0 · pre 20.0s, settle 60.0s, hold 30.0s · monitor every 5.0s
+- **Steps:** adaptive from 340 hosts toward 93% memory, done at ≥ 90% (closing 0.6 of the projected gap per step, ≥ 10 hosts, ≤ ×2), failures on a host limit retried lower (descend 0.7), ceiling rerun ×0 · pre 20.0s, settle 60.0s, hold 30.0s · monitor every 5.0s
 - **Load:** idle (no traffic)
-- **At rest (before the first step):** 978.7 of 16605.5 MB used (5.9%) · host CPU 2.0% · Docker processes 351.7 MB · Docker's disk 13.3% used
-- **Outcome:** ceiling 410 hosts · climb: memory peaked at 90.7% at 410 hosts · 2026-10-08T23:03:12 → 2026-10-09T01:37:01
+- **At rest (before the first step):** 937.4 of 16605.5 MB used (5.6%) · host CPU 13.2% · Docker processes 232.0 MB · Docker's disk 13.6% used
+- **Outcome:** ceiling 630 hosts · climb: ceiling between 630 and 640 hosts (640 failed) · 2026-10-25T21:28:34 → 2026-10-25T22:52:25
 
 | Hosts | # | Nodes | Links | Deploy s | Ready s | Destroy s | Marginal MB/node | Docker MB/node | Node cgroup MB (mean / p95) | Host CPU % | Docker cores | Host mem % max | Mem stall % max | Disk MB/node | Disk % max | Delivered | Outcome |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| 320 | 1 | 334 | 333 | 708.7 | 7.86 | 363.3 | 33.3 | 28.7 | 15.4 / 56.7 | 70.2 | 4.19 | 70.2 | 0.00 | 3.4 | 13.4 | – | ok |
-| 380 | 1 | 395 | 394 | 1004.0 | 18.81 | 581.7 | 24.8 | 20.6 | 14.5 / 52.7 | 85.1 | 4.75 | 84.1 | 0.00 | 3.7 | 13.4 | – | ok |
-| 400 | 1 | 416 | 415 | 1099.6 | 53.17 | 629.0 | 24.8 | 21.0 | 14.3 / 52.8 | 82.7 | 4.96 | 78.0 | 0.01 | 3.8 | 13.4 | – | ok |
-| 440 | 1 | 458 | 457 | 976.7 | 8.64 | 595.0 | – | – | – / – | – | – | – | – | – | – | – | stopped: host memory 95.2% > 95.0% for 3 sweeps |
-| 420 | 1 | 438 | 437 | 745.9 | 7.92 | 502.4 | – | – | – / – | – | – | – | – | – | – | – | stopped: host memory 95.2% > 95.0% for 3 sweeps |
-| 410 | 1 | 428 | 427 | 776.0 | 6.91 | 464.9 | 18.5 | 14.6 | 12.2 / 45.7 | 80.7 | 4.92 | 90.7 | 0.10 | 3.8 | 13.4 | – | ok |
+| 340 | 1 | 354 | 353 | 169.3 | 4.78 | 107.2 | 21.0 | 12.2 | 16.4 / 56.6 | 20.4 | 0.20 | 50.4 | 0.00 | 3.3 | 13.7 | – | ok |
+| 540 | 1 | 561 | 560 | 315.3 | 7.47 | 243.5 | 19.3 | 12.0 | 14.5 / 52.0 | 22.7 | 0.30 | 73.1 | 0.00 | 3.6 | 13.8 | – | ok |
+| 640 | 1 | 665 | 664 | 427.8 | 12.15 | 316.8 | – | – | – / – | – | – | – | – | – | – | – | stopped: memory stalls 14.0% > 10.0% for 3 sweeps |
+| 590 | 1 | 612 | 611 | 376.1 | 8.72 | 274.3 | 18.9 | 11.9 | 14.6 / 52.0 | 23.9 | 0.34 | 79.5 | 0.01 | 3.8 | 13.8 | – | ok |
+| 630 | 1 | 655 | 654 | 407.0 | 9.56 | 321.7 | 18.5 | 11.9 | 13.7 / 51.9 | 25.1 | 0.40 | 82.8 | 0.06 | 3.7 | 13.8 | – | ok |
 
-Per image at 410 hosts (largest passing scale, mean of 1 run(s)): the container's cgroup memory over settle, its CPU over hold (100 = one core).
+Per image at 630 hosts (largest passing scale, mean of 1 run(s)): the container's cgroup memory over settle, its CPU over hold (100 = one core).
 
 | Image | Nodes | Cgroup MB / node | Share of node memory | CPU % / node |
 |---|---:|---:|---:|---:|
-| `ae3gis.local/firefox` | 6 | 321.8 | 36.9% | 0.42 |
-| `postgres:alpine` | 31 | 29.1 | 17.2% | 0.04 |
-| `ae3gis.local/openplc` | 17 | 42.7 | 13.8% | 0.04 |
-| `ae3gis.local/suricata` | 13 | 46.7 | 11.6% | 1.01 |
-| `ae3gis.local/open-vswitch` | 17 | 11.2 | 3.6% | 0.78 |
-| `ae3gis.local/apache` | 14 | 9.6 | 2.6% | 0.13 |
-| `kathara/base` | 122 | 1.1 | 2.5% | 0.00 |
-| `ae3gis.local/vsftpd` | 35 | 3.5 | 2.4% | 0.11 |
-| `ae3gis.local/samba` | 8 | 9.9 | 1.5% | 0.00 |
-| `ae3gis.local/malicious-client` | 24 | 2.8 | 1.3% | 0.00 |
-| `ae3gis.local/nginx` | 6 | 9.1 | 1.0% | 0.18 |
-| `kathara/frr` | 45 | 1.1 | 1.0% | 0.00 |
-| `httpd:alpine` | 9 | 5.5 | 0.9% | 0.01 |
-| `ae3gis.local/firehol` | 10 | 3.4 | 0.6% | 0.00 |
-| `ae3gis.local/iptables` | 10 | 2.8 | 0.5% | 0.00 |
-| `ae3gis.local/nftables` | 9 | 2.8 | 0.5% | 0.00 |
-| `ae3gis.local/isc-dhcp` | 23 | 1.1 | 0.5% | 0.00 |
-| `ae3gis.local/snort3` | 9 | 2.8 | 0.5% | 0.00 |
-| `ae3gis.local/snort2` | 8 | 2.8 | 0.4% | 0.00 |
-| `ae3gis.local/benign-client` | 6 | 3.6 | 0.4% | 0.00 |
-| `ae3gis.local/wazuh-agent` | 6 | 1.9 | 0.2% | 0.01 |
+| `ae3gis.local/firefox` | 9 | 402.5 | 40.2% | 0.30 |
+| `postgres:alpine` | 46 | 34.4 | 17.6% | 0.02 |
+| `ae3gis.local/openplc` | 22 | 52.5 | 12.8% | 0.02 |
+| `ae3gis.local/suricata` | 15 | 55.2 | 9.2% | 0.49 |
+| `ae3gis.local/open-vswitch` | 31 | 11.9 | 4.1% | 0.46 |
+| `kathara/base` | 190 | 1.1 | 2.2% | 0.00 |
+| `ae3gis.local/samba` | 19 | 10.1 | 2.1% | 0.00 |
+| `ae3gis.local/vsftpd` | 47 | 3.7 | 1.9% | 0.08 |
+| `ae3gis.local/apache` | 17 | 9.5 | 1.8% | 0.09 |
+| `ae3gis.local/malicious-client` | 42 | 3.0 | 1.4% | 0.00 |
+| `ae3gis.local/nginx` | 10 | 9.6 | 1.1% | 0.09 |
+| `httpd:alpine` | 17 | 5.4 | 1.0% | 0.00 |
+| `kathara/frr` | 60 | 1.1 | 0.8% | 0.00 |
+| `ae3gis.local/snort3` | 19 | 3.0 | 0.6% | 0.00 |
+| `ae3gis.local/firehol` | 13 | 3.8 | 0.6% | 0.00 |
+| `ae3gis.local/snort2` | 14 | 3.3 | 0.5% | 0.00 |
+| `ae3gis.local/isc-dhcp` | 40 | 1.1 | 0.5% | 0.00 |
+| `ae3gis.local/iptables` | 14 | 3.1 | 0.5% | 0.00 |
+| `ae3gis.local/nftables` | 12 | 3.5 | 0.5% | 0.00 |
+| `ae3gis.local/benign-client` | 9 | 3.4 | 0.3% | 0.00 |
+| `ae3gis.local/wazuh-agent` | 9 | 2.2 | 0.2% | 0.01 |
 
 Marginal memory = (host memory used after deploy − before) ÷ nodes; it includes what a node costs outside its container (containerd shim, VDE switches, kernel). Node cgroup memory is the container's own figure. Ready = every host reached its gateway and a far address. Host CPU, Docker cores (dockerd + containerd + shims + VDE switches) and memory are over the hold window.

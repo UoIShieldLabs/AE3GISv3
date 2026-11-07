@@ -3784,3 +3784,997 @@ cell 002/2 cs·udp·100K·1000ms  nodes   372  deploy       –s  ready      –
   burst-limits · 350 hosts · round 9: succeeded: 2 of 2 cells passed
   350 hosts: 2 of 2 cells passed
 === 2026-10-14 01:31:40 UTC · suite finished: backend\benchmark-results\microsoft-surface-7\2026-10-11-traffic\summary.md
+=== 2026-10-25 17:30:17 UTC · suite random on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-08-random
+error: The git tree has uncommitted changes; commit them or pass --allow-dirty
+=== 2026-10-25 17:31:34 UTC · suite random on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-08-random
+  bringing the backend up in bench mode (docker compose)
+#1 [internal] load local bake definitions
+#1 reading from stdin 554B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.34kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 2.8s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 106B 0.1s
+#4 transferring context: 110B 0.2s done
+#4 DONE 0.2s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#6 resolve docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 0.1s done
+#6 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 20.86MB 4.9s
+#5 transferring context: 35.79MB 5.6s done
+#5 DONE 5.7s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#6 sha256:5c397e4307db7bd392eff1d36de88b04da2a137a4b906b7e0e4657bada560645 249B / 249B 0.2s done
+#6 sha256:b524bb3aba7394d85233f3a0a742b8f1b56179e8f61492f73d42a1ff118623b7 12.12MB / 12.12MB 4.2s done
+#6 sha256:be6443c06d3c9914acdca3ffb368adad23d4f282b55e71e730878ad3e3c3f75c 1.29MB / 1.29MB 1.7s done
+#6 sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034 27.26MB / 29.84MB 5.0s
+#6 sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034 29.84MB / 29.84MB 5.0s done
+#6 extracting sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034
+#6 extracting sha256:f2be67225471500c788ce88c597eb5ea8336e912ad1ca4815650e0281afe2034 0.5s done
+#6 DONE 6.2s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#6 extracting sha256:be6443c06d3c9914acdca3ffb368adad23d4f282b55e71e730878ad3e3c3f75c 0.1s done
+#6 extracting sha256:b524bb3aba7394d85233f3a0a742b8f1b56179e8f61492f73d42a1ff118623b7
+#6 extracting sha256:b524bb3aba7394d85233f3a0a742b8f1b56179e8f61492f73d42a1ff118623b7 0.2s done
+#6 DONE 6.5s
+
+#6 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#6 extracting sha256:5c397e4307db7bd392eff1d36de88b04da2a137a4b906b7e0e4657bada560645 0.0s done
+#6 DONE 6.5s
+
+#7 [2/7] RUN apt-get update &&     apt-get install -y --no-install-recommends         ca-certificates curl git gnupg iproute2 &&     install -m 0755 -d /etc/apt/keyrings &&     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &&     chmod a+r /etc/apt/keyrings/docker.asc &&     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list &&     apt-get update &&     apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#7 0.415 Hit:1 http://deb.debian.org/debian trixie InRelease
+#7 0.445 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+#7 0.541 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+#7 0.662 Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9678 kB]
+#7 9.676 Get:5 http://deb.debian.org/debian trixie-updates/main amd64 Packages [720 B]
+#7 9.698 Get:6 http://deb.debian.org/debian-security trixie-security/main amd64 Packages [270 kB]
+#7 10.17 Fetched 10.0 MB in 10s (1007 kB/s)
+#7 10.17 Reading package lists...
+#7 10.53 Reading package lists...
+#7 10.92 Building dependency tree...
+#7 11.01 Reading state information...
+#7 11.15 ca-certificates is already the newest version (20250419+deb13u1).
+#7 11.15 The following additional packages will be installed:
+#7 11.15   dirmngr git-man gnupg-l10n gpg gpg-agent gpgconf gpgsm libassuan9 libbpf1
+#7 11.15   libbrotli1 libcap2-bin libcom-err2 libcurl3t64-gnutls libcurl4t64 libelf1t64
+#7 11.15   liberror-perl libexpat1 libgcrypt20 libgdbm-compat4t64 libgnutls30t64
+#7 11.15   libgpg-error0 libgssapi-krb5-2 libidn2-0 libk5crypto3 libkeyutils1 libkrb5-3
+#7 11.15   libkrb5support0 libksba8 libldap2 libmnl0 libnghttp2-14 libnghttp3-9
+#7 11.15   libngtcp2-16 libngtcp2-crypto-gnutls8 libnpth0t64 libp11-kit0 libperl5.40
+#7 11.15   libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1t64 libtasn1-6
+#7 11.15   libtirpc-common libtirpc3t64 libunistring5 libxtables12 perl
+#7 11.15   perl-modules-5.40 pinentry-curses
+#7 11.15 Suggested packages:
+#7 11.15   dbus-user-session libpam-systemd pinentry-gnome3 tor gettext-base git-doc
+#7 11.15   git-email git-gui gitk gitweb git-cvs git-mediawiki git-svn gpg-wks-server
+#7 11.15   parcimonie xloadimage scdaemon tpm2daemon python3:any rng-tools gnutls-bin
+#7 11.15   krb5-doc krb5-user sensible-utils perl-doc libterm-readline-gnu-perl
+#7 11.15   | libterm-readline-perl-perl make libtap-harness-archive-perl pinentry-doc
+#7 11.15 Recommended packages:
+#7 11.15   bash-completion patch less ssh-client gnupg-utils gpg-wks-client gpgv
+#7 11.15   libpam-cap libgpg-error-l10n krb5-locales libldap-common publicsuffix
+#7 11.15   libsasl2-modules
+#7 11.33 The following NEW packages will be installed:
+#7 11.33   curl dirmngr git git-man gnupg gnupg-l10n gpg gpg-agent gpgconf gpgsm
+#7 11.33   iproute2 libassuan9 libbpf1 libbrotli1 libcap2-bin libcom-err2
+#7 11.33   libcurl3t64-gnutls libcurl4t64 libelf1t64 liberror-perl libexpat1
+#7 11.33   libgcrypt20 libgdbm-compat4t64 libgnutls30t64 libgpg-error0 libgssapi-krb5-2
+#7 11.33   libidn2-0 libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libksba8
+#7 11.33   libldap2 libmnl0 libnghttp2-14 libnghttp3-9 libngtcp2-16
+#7 11.33   libngtcp2-crypto-gnutls8 libnpth0t64 libp11-kit0 libperl5.40 libpsl5t64
+#7 11.33   librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1t64 libtasn1-6
+#7 11.33   libtirpc-common libtirpc3t64 libunistring5 libxtables12 perl
+#7 11.33   perl-modules-5.40 pinentry-curses
+#7 11.40 0 upgraded, 54 newly installed, 0 to remove and 1 not upgraded.
+#7 11.40 Need to get 30.0 MB of archives.
+#7 11.40 After this operation, 140 MB of additional disk space will be used.
+#7 11.40 Get:1 http://deb.debian.org/debian-security trixie-security/main amd64 libexpat1 amd64 2.9.0-1~deb13u1 [126 kB]
+#7 11.47 Get:2 http://deb.debian.org/debian trixie/main amd64 libelf1t64 amd64 0.192-4 [189 kB]
+#7 11.49 Get:3 http://deb.debian.org/debian trixie/main amd64 libbpf1 amd64 1:1.5.0-3 [169 kB]
+#7 11.51 Get:4 http://deb.debian.org/debian trixie/main amd64 libmnl0 amd64 1.0.5-3 [11.9 kB]
+#7 11.51 Get:5 http://deb.debian.org/debian trixie/main amd64 libkrb5support0 amd64 1.21.3-5+deb13u1 [33.1 kB]
+#7 11.51 Get:6 http://deb.debian.org/debian trixie/main amd64 libcom-err2 amd64 1.47.2-3+b12 [25.0 kB]
+#7 11.52 Get:7 http://deb.debian.org/debian trixie/main amd64 libk5crypto3 amd64 1.21.3-5+deb13u1 [81.2 kB]
+#7 11.52 Get:8 http://deb.debian.org/debian trixie/main amd64 libkeyutils1 amd64 1.6.3-6 [9456 B]
+#7 11.53 Get:9 http://deb.debian.org/debian trixie/main amd64 libkrb5-3 amd64 1.21.3-5+deb13u1 [326 kB]
+#7 11.54 Get:10 http://deb.debian.org/debian trixie/main amd64 libgssapi-krb5-2 amd64 1.21.3-5+deb13u1 [138 kB]
+#7 11.55 Get:11 http://deb.debian.org/debian trixie/main amd64 libtirpc-common all 1.3.6+ds-1 [11.0 kB]
+#7 11.55 Get:12 http://deb.debian.org/debian trixie/main amd64 libtirpc3t64 amd64 1.3.6+ds-1 [83.3 kB]
+#7 11.56 Get:13 http://deb.debian.org/debian trixie/main amd64 libxtables12 amd64 1.8.11-2 [31.9 kB]
+#7 11.56 Get:14 http://deb.debian.org/debian trixie/main amd64 libcap2-bin amd64 1:2.75-10+deb13u1+b3 [36.5 kB]
+#7 11.56 Get:15 http://deb.debian.org/debian trixie/main amd64 iproute2 amd64 6.15.0-1 [1089 kB]
+#7 11.61 Get:16 http://deb.debian.org/debian trixie/main amd64 perl-modules-5.40 all 5.40.1-6+deb13u1 [3014 kB]
+#7 11.72 Get:17 http://deb.debian.org/debian trixie/main amd64 libgdbm-compat4t64 amd64 1.24-2 [50.3 kB]
+#7 11.73 Get:18 http://deb.debian.org/debian trixie/main amd64 libperl5.40 amd64 5.40.1-6+deb13u1 [4326 kB]
+#7 11.93 Get:19 http://deb.debian.org/debian trixie/main amd64 perl amd64 5.40.1-6+deb13u1 [268 kB]
+#7 11.94 Get:20 http://deb.debian.org/debian-security trixie-security/main amd64 libbrotli1 amd64 1.1.0-2+deb13u1 [304 kB]
+#7 11.95 Get:21 http://deb.debian.org/debian trixie/main amd64 libunistring5 amd64 1.3-2 [477 kB]
+#7 11.97 Get:22 http://deb.debian.org/debian trixie/main amd64 libidn2-0 amd64 2.3.8-2 [109 kB]
+#7 11.97 Get:23 http://deb.debian.org/debian trixie/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg1-9 [19.8 kB]
+#7 11.97 Get:24 http://deb.debian.org/debian trixie/main amd64 libsasl2-2 amd64 2.1.28+dfsg1-9 [57.5 kB]
+#7 11.97 Get:25 http://deb.debian.org/debian trixie/main amd64 libldap2 amd64 2.6.10+dfsg-1 [194 kB]
+#7 11.98 Get:26 http://deb.debian.org/debian trixie/main amd64 libnghttp2-14 amd64 1.64.0-1.1+deb13u1 [76.2 kB]
+#7 11.98 Get:27 http://deb.debian.org/debian trixie/main amd64 libnghttp3-9 amd64 1.8.0-1 [67.7 kB]
+#7 11.99 Get:28 http://deb.debian.org/debian trixie/main amd64 libpsl5t64 amd64 0.21.2-1.1+b1 [57.2 kB]
+#7 11.99 Get:29 http://deb.debian.org/debian trixie/main amd64 libp11-kit0 amd64 0.25.5-3 [425 kB]
+#7 12.00 Get:30 http://deb.debian.org/debian trixie/main amd64 libtasn1-6 amd64 4.20.0-2+deb13u1 [50.1 kB]
+#7 12.01 Get:31 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4 [1469 kB]
+#7 12.08 Get:32 http://deb.debian.org/debian trixie/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b5 [58.8 kB]
+#7 12.08 Get:33 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u2 [245 kB]
+#7 12.10 Get:34 http://deb.debian.org/debian-security trixie-security/main amd64 libcurl4t64 amd64 8.14.1-2+deb13u7 [392 kB]
+#7 12.11 Get:35 http://deb.debian.org/debian-security trixie-security/main amd64 curl amd64 8.14.1-2+deb13u7 [270 kB]
+#7 12.12 Get:36 http://deb.debian.org/debian trixie/main amd64 libgpg-error0 amd64 1.51-4 [82.1 kB]
+#7 12.12 Get:37 http://deb.debian.org/debian trixie/main amd64 libassuan9 amd64 3.0.2-2 [61.5 kB]
+#7 12.13 Get:38 http://deb.debian.org/debian trixie/main amd64 libgcrypt20 amd64 1.11.0-7+deb13u1 [843 kB]
+#7 12.16 Get:39 http://deb.debian.org/debian trixie/main amd64 gpgconf amd64 2.4.7-21+deb13u1+b5 [129 kB]
+#7 12.16 Get:40 http://deb.debian.org/debian trixie/main amd64 libksba8 amd64 1.6.7-2+b1 [136 kB]
+#7 12.16 Get:41 http://deb.debian.org/debian trixie/main amd64 libnpth0t64 amd64 1.8-3 [23.2 kB]
+#7 12.16 Get:42 http://deb.debian.org/debian trixie/main amd64 dirmngr amd64 2.4.7-21+deb13u1+b5 [384 kB]
+#7 12.19 Get:43 http://deb.debian.org/debian trixie/main amd64 libngtcp2-16 amd64 1.11.0-1+deb13u1 [132 kB]
+#7 12.19 Get:44 http://deb.debian.org/debian trixie/main amd64 libngtcp2-crypto-gnutls8 amd64 1.11.0-1+deb13u1 [29.5 kB]
+#7 12.20 Get:45 http://deb.debian.org/debian-security trixie-security/main amd64 libcurl3t64-gnutls amd64 8.14.1-2+deb13u7 [385 kB]
+#7 12.21 Get:46 http://deb.debian.org/debian trixie/main amd64 liberror-perl all 0.17030-1 [26.9 kB]
+#7 12.21 Get:47 http://deb.debian.org/debian trixie/main amd64 git-man all 1:2.47.3-0+deb13u1 [2205 kB]
+#7 12.31 Get:48 http://deb.debian.org/debian trixie/main amd64 git amd64 1:2.47.3-0+deb13u1 [8862 kB]
+#7 12.69 Get:49 http://deb.debian.org/debian trixie/main amd64 gnupg-l10n all 2.4.7-21+deb13u1 [749 kB]
+#7 12.76 Get:50 http://deb.debian.org/debian trixie/main amd64 gpg amd64 2.4.7-21+deb13u1+b5 [636 kB]
+#7 12.96 Get:51 http://deb.debian.org/debian trixie/main amd64 pinentry-curses amd64 1.3.1-2 [86.4 kB]
+#7 12.96 Get:52 http://deb.debian.org/debian trixie/main amd64 gpg-agent amd64 2.4.7-21+deb13u1+b5 [271 kB]
+#7 12.97 Get:53 http://deb.debian.org/debian trixie/main amd64 gpgsm amd64 2.4.7-21+deb13u1+b5 [276 kB]
+#7 12.98 Get:54 http://deb.debian.org/debian trixie/main amd64 gnupg all 2.4.7-21+deb13u1 [417 kB]
+#7 13.08 debconf: unable to initialize frontend: Dialog
+#7 13.08 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#7 13.08 debconf: falling back to frontend: Readline
+#7 13.08 debconf: unable to initialize frontend: Readline
+#7 13.08 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/x86_64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 54.)
+#7 13.08 debconf: falling back to frontend: Teletype
+#7 13.09 debconf: unable to initialize frontend: Teletype
+#7 13.09 debconf: (This frontend requires a controlling tty.)
+#7 13.09 debconf: falling back to frontend: Noninteractive
+#7 13.79 Preconfiguring packages ...
+#7 13.83 Fetched 30.0 MB in 2s (18.2 MB/s)
+#7 13.85 Selecting previously unselected package libexpat1:amd64.
+#7 13.85 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 5658 files and directories currently installed.)
+#7 13.86 Preparing to unpack .../00-libexpat1_2.9.0-1~deb13u1_amd64.deb ...
+#7 13.87 Unpacking libexpat1:amd64 (2.9.0-1~deb13u1) ...
+#7 13.91 Selecting previously unselected package libelf1t64:amd64.
+#7 13.91 Preparing to unpack .../01-libelf1t64_0.192-4_amd64.deb ...
+#7 13.91 Unpacking libelf1t64:amd64 (0.192-4) ...
+#7 13.95 Selecting previously unselected package libbpf1:amd64.
+#7 13.96 Preparing to unpack .../02-libbpf1_1%3a1.5.0-3_amd64.deb ...
+#7 13.96 Unpacking libbpf1:amd64 (1:1.5.0-3) ...
+#7 14.00 Selecting previously unselected package libmnl0:amd64.
+#7 14.00 Preparing to unpack .../03-libmnl0_1.0.5-3_amd64.deb ...
+#7 14.01 Unpacking libmnl0:amd64 (1.0.5-3) ...
+#7 14.05 Selecting previously unselected package libkrb5support0:amd64.
+#7 14.05 Preparing to unpack .../04-libkrb5support0_1.21.3-5+deb13u1_amd64.deb ...
+#7 14.05 Unpacking libkrb5support0:amd64 (1.21.3-5+deb13u1) ...
+#7 14.09 Selecting previously unselected package libcom-err2:amd64.
+#7 14.09 Preparing to unpack .../05-libcom-err2_1.47.2-3+b12_amd64.deb ...
+#7 14.10 Unpacking libcom-err2:amd64 (1.47.2-3+b12) ...
+#7 14.14 Selecting previously unselected package libk5crypto3:amd64.
+#7 14.14 Preparing to unpack .../06-libk5crypto3_1.21.3-5+deb13u1_amd64.deb ...
+#7 14.15 Unpacking libk5crypto3:amd64 (1.21.3-5+deb13u1) ...
+#7 14.19 Selecting previously unselected package libkeyutils1:amd64.
+#7 14.19 Preparing to unpack .../07-libkeyutils1_1.6.3-6_amd64.deb ...
+#7 14.19 Unpacking libkeyutils1:amd64 (1.6.3-6) ...
+#7 14.23 Selecting previously unselected package libkrb5-3:amd64.
+#7 14.23 Preparing to unpack .../08-libkrb5-3_1.21.3-5+deb13u1_amd64.deb ...
+#7 14.24 Unpacking libkrb5-3:amd64 (1.21.3-5+deb13u1) ...
+#7 14.29 Selecting previously unselected package libgssapi-krb5-2:amd64.
+#7 14.29 Preparing to unpack .../09-libgssapi-krb5-2_1.21.3-5+deb13u1_amd64.deb ...
+#7 14.30 Unpacking libgssapi-krb5-2:amd64 (1.21.3-5+deb13u1) ...
+#7 14.34 Selecting previously unselected package libtirpc-common.
+#7 14.34 Preparing to unpack .../10-libtirpc-common_1.3.6+ds-1_all.deb ...
+#7 14.34 Unpacking libtirpc-common (1.3.6+ds-1) ...
+#7 14.38 Selecting previously unselected package libtirpc3t64:amd64.
+#7 14.38 Preparing to unpack .../11-libtirpc3t64_1.3.6+ds-1_amd64.deb ...
+#7 14.39 Adding 'diversion of /lib/x86_64-linux-gnu/libtirpc.so.3 to /lib/x86_64-linux-gnu/libtirpc.so.3.usr-is-merged by libtirpc3t64'
+#7 14.40 Adding 'diversion of /lib/x86_64-linux-gnu/libtirpc.so.3.0.0 to /lib/x86_64-linux-gnu/libtirpc.so.3.0.0.usr-is-merged by libtirpc3t64'
+#7 14.41 Unpacking libtirpc3t64:amd64 (1.3.6+ds-1) ...
+#7 14.45 Selecting previously unselected package libxtables12:amd64.
+#7 14.45 Preparing to unpack .../12-libxtables12_1.8.11-2_amd64.deb ...
+#7 14.45 Unpacking libxtables12:amd64 (1.8.11-2) ...
+#7 14.48 Selecting previously unselected package libcap2-bin.
+#7 14.48 Preparing to unpack .../13-libcap2-bin_1%3a2.75-10+deb13u1+b3_amd64.deb ...
+#7 14.49 Unpacking libcap2-bin (1:2.75-10+deb13u1+b3) ...
+#7 14.53 Selecting previously unselected package iproute2.
+#7 14.53 Preparing to unpack .../14-iproute2_6.15.0-1_amd64.deb ...
+#7 14.56 Unpacking iproute2 (6.15.0-1) ...
+#7 14.63 Selecting previously unselected package perl-modules-5.40.
+#7 14.63 Preparing to unpack .../15-perl-modules-5.40_5.40.1-6+deb13u1_all.deb ...
+#7 14.64 Unpacking perl-modules-5.40 (5.40.1-6+deb13u1) ...
+#7 14.82 Selecting previously unselected package libgdbm-compat4t64:amd64.
+#7 14.83 Preparing to unpack .../16-libgdbm-compat4t64_1.24-2_amd64.deb ...
+#7 14.83 Unpacking libgdbm-compat4t64:amd64 (1.24-2) ...
+#7 14.87 Selecting previously unselected package libperl5.40:amd64.
+#7 14.87 Preparing to unpack .../17-libperl5.40_5.40.1-6+deb13u1_amd64.deb ...
+#7 14.87 Unpacking libperl5.40:amd64 (5.40.1-6+deb13u1) ...
+#7 15.07 Selecting previously unselected package perl.
+#7 15.07 Preparing to unpack .../18-perl_5.40.1-6+deb13u1_amd64.deb ...
+#7 15.08 Unpacking perl (5.40.1-6+deb13u1) ...
+#7 15.12 Selecting previously unselected package libbrotli1:amd64.
+#7 15.12 Preparing to unpack .../19-libbrotli1_1.1.0-2+deb13u1_amd64.deb ...
+#7 15.12 Unpacking libbrotli1:amd64 (1.1.0-2+deb13u1) ...
+#7 15.17 Selecting previously unselected package libunistring5:amd64.
+#7 15.17 Preparing to unpack .../20-libunistring5_1.3-2_amd64.deb ...
+#7 15.18 Unpacking libunistring5:amd64 (1.3-2) ...
+#7 15.23 Selecting previously unselected package libidn2-0:amd64.
+#7 15.23 Preparing to unpack .../21-libidn2-0_2.3.8-2_amd64.deb ...
+#7 15.24 Unpacking libidn2-0:amd64 (2.3.8-2) ...
+#7 15.27 Selecting previously unselected package libsasl2-modules-db:amd64.
+#7 15.28 Preparing to unpack .../22-libsasl2-modules-db_2.1.28+dfsg1-9_amd64.deb ...
+#7 15.28 Unpacking libsasl2-modules-db:amd64 (2.1.28+dfsg1-9) ...
+#7 15.32 Selecting previously unselected package libsasl2-2:amd64.
+#7 15.32 Preparing to unpack .../23-libsasl2-2_2.1.28+dfsg1-9_amd64.deb ...
+#7 15.33 Unpacking libsasl2-2:amd64 (2.1.28+dfsg1-9) ...
+#7 15.37 Selecting previously unselected package libldap2:amd64.
+#7 15.37 Preparing to unpack .../24-libldap2_2.6.10+dfsg-1_amd64.deb ...
+#7 15.38 Unpacking libldap2:amd64 (2.6.10+dfsg-1) ...
+#7 15.42 Selecting previously unselected package libnghttp2-14:amd64.
+#7 15.42 Preparing to unpack .../25-libnghttp2-14_1.64.0-1.1+deb13u1_amd64.deb ...
+#7 15.43 Unpacking libnghttp2-14:amd64 (1.64.0-1.1+deb13u1) ...
+#7 15.47 Selecting previously unselected package libnghttp3-9:amd64.
+#7 15.47 Preparing to unpack .../26-libnghttp3-9_1.8.0-1_amd64.deb ...
+#7 15.48 Unpacking libnghttp3-9:amd64 (1.8.0-1) ...
+#7 15.51 Selecting previously unselected package libpsl5t64:amd64.
+#7 15.52 Preparing to unpack .../27-libpsl5t64_0.21.2-1.1+b1_amd64.deb ...
+#7 15.52 Unpacking libpsl5t64:amd64 (0.21.2-1.1+b1) ...
+#7 15.56 Selecting previously unselected package libp11-kit0:amd64.
+#7 15.56 Preparing to unpack .../28-libp11-kit0_0.25.5-3_amd64.deb ...
+#7 15.57 Unpacking libp11-kit0:amd64 (0.25.5-3) ...
+#7 15.62 Selecting previously unselected package libtasn1-6:amd64.
+#7 15.62 Preparing to unpack .../29-libtasn1-6_4.20.0-2+deb13u1_amd64.deb ...
+#7 15.63 Unpacking libtasn1-6:amd64 (4.20.0-2+deb13u1) ...
+#7 15.66 Selecting previously unselected package libgnutls30t64:amd64.
+#7 15.66 Preparing to unpack .../30-libgnutls30t64_3.8.9-3+deb13u4_amd64.deb ...
+#7 15.67 Unpacking libgnutls30t64:amd64 (3.8.9-3+deb13u4) ...
+#7 15.74 Selecting previously unselected package librtmp1:amd64.
+#7 15.74 Preparing to unpack .../31-librtmp1_2.4+20151223.gitfa8646d.1-2+b5_amd64.deb ...
+#7 15.74 Unpacking librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#7 15.79 Selecting previously unselected package libssh2-1t64:amd64.
+#7 15.79 Preparing to unpack .../32-libssh2-1t64_1.11.1-1+deb13u2_amd64.deb ...
+#7 15.79 Unpacking libssh2-1t64:amd64 (1.11.1-1+deb13u2) ...
+#7 17.24 Selecting previously unselected package libcurl4t64:amd64.
+#7 17.24 Preparing to unpack .../33-libcurl4t64_8.14.1-2+deb13u7_amd64.deb ...
+#7 17.25 Unpacking libcurl4t64:amd64 (8.14.1-2+deb13u7) ...
+#7 17.29 Selecting previously unselected package curl.
+#7 17.29 Preparing to unpack .../34-curl_8.14.1-2+deb13u7_amd64.deb ...
+#7 17.29 Unpacking curl (8.14.1-2+deb13u7) ...
+#7 17.34 Selecting previously unselected package libgpg-error0:amd64.
+#7 17.34 Preparing to unpack .../35-libgpg-error0_1.51-4_amd64.deb ...
+#7 17.34 Unpacking libgpg-error0:amd64 (1.51-4) ...
+#7 17.38 Selecting previously unselected package libassuan9:amd64.
+#7 17.38 Preparing to unpack .../36-libassuan9_3.0.2-2_amd64.deb ...
+#7 17.39 Unpacking libassuan9:amd64 (3.0.2-2) ...
+#7 17.43 Selecting previously unselected package libgcrypt20:amd64.
+#7 17.43 Preparing to unpack .../37-libgcrypt20_1.11.0-7+deb13u1_amd64.deb ...
+#7 17.44 Unpacking libgcrypt20:amd64 (1.11.0-7+deb13u1) ...
+#7 17.49 Selecting previously unselected package gpgconf.
+#7 17.49 Preparing to unpack .../38-gpgconf_2.4.7-21+deb13u1+b5_amd64.deb ...
+#7 17.50 Unpacking gpgconf (2.4.7-21+deb13u1+b5) ...
+#7 17.54 Selecting previously unselected package libksba8:amd64.
+#7 17.54 Preparing to unpack .../39-libksba8_1.6.7-2+b1_amd64.deb ...
+#7 17.55 Unpacking libksba8:amd64 (1.6.7-2+b1) ...
+#7 17.59 Selecting previously unselected package libnpth0t64:amd64.
+#7 17.59 Preparing to unpack .../40-libnpth0t64_1.8-3_amd64.deb ...
+#7 17.59 Unpacking libnpth0t64:amd64 (1.8-3) ...
+#7 17.64 Selecting previously unselected package dirmngr.
+#7 17.64 Preparing to unpack .../41-dirmngr_2.4.7-21+deb13u1+b5_amd64.deb ...
+#7 17.65 Unpacking dirmngr (2.4.7-21+deb13u1+b5) ...
+#7 17.70 Selecting previously unselected package libngtcp2-16:amd64.
+#7 17.70 Preparing to unpack .../42-libngtcp2-16_1.11.0-1+deb13u1_amd64.deb ...
+#7 17.71 Unpacking libngtcp2-16:amd64 (1.11.0-1+deb13u1) ...
+#7 17.75 Selecting previously unselected package libngtcp2-crypto-gnutls8:amd64.
+#7 17.75 Preparing to unpack .../43-libngtcp2-crypto-gnutls8_1.11.0-1+deb13u1_amd64.deb ...
+#7 17.76 Unpacking libngtcp2-crypto-gnutls8:amd64 (1.11.0-1+deb13u1) ...
+#7 17.79 Selecting previously unselected package libcurl3t64-gnutls:amd64.
+#7 17.79 Preparing to unpack .../44-libcurl3t64-gnutls_8.14.1-2+deb13u7_amd64.deb ...
+#7 17.80 Unpacking libcurl3t64-gnutls:amd64 (8.14.1-2+deb13u7) ...
+#7 17.84 Selecting previously unselected package liberror-perl.
+#7 17.85 Preparing to unpack .../45-liberror-perl_0.17030-1_all.deb ...
+#7 17.85 Unpacking liberror-perl (0.17030-1) ...
+#7 17.89 Selecting previously unselected package git-man.
+#7 17.89 Preparing to unpack .../46-git-man_1%3a2.47.3-0+deb13u1_all.deb ...
+#7 17.89 Unpacking git-man (1:2.47.3-0+deb13u1) ...
+#7 17.97 Selecting previously unselected package git.
+#7 17.97 Preparing to unpack .../47-git_1%3a2.47.3-0+deb13u1_amd64.deb ...
+#7 17.98 Unpacking git (1:2.47.3-0+deb13u1) ...
+#7 18.20 Selecting previously unselected package gnupg-l10n.
+#7 18.21 Preparing to unpack .../48-gnupg-l10n_2.4.7-21+deb13u1_all.deb ...
+#7 18.21 Unpacking gnupg-l10n (2.4.7-21+deb13u1) ...
+#7 18.27 Selecting previously unselected package gpg.
+#7 18.27 Preparing to unpack .../49-gpg_2.4.7-21+deb13u1+b5_amd64.deb ...
+#7 18.28 Unpacking gpg (2.4.7-21+deb13u1+b5) ...
+#7 18.33 Selecting previously unselected package pinentry-curses.
+#7 18.33 Preparing to unpack .../50-pinentry-curses_1.3.1-2_amd64.deb ...
+#7 18.34 Unpacking pinentry-curses (1.3.1-2) ...
+#7 18.38 Selecting previously unselected package gpg-agent.
+#7 18.38 Preparing to unpack .../51-gpg-agent_2.4.7-21+deb13u1+b5_amd64.deb ...
+#7 18.39 Unpacking gpg-agent (2.4.7-21+deb13u1+b5) ...
+#7 18.43 Selecting previously unselected package gpgsm.
+#7 18.43 Preparing to unpack .../52-gpgsm_2.4.7-21+deb13u1+b5_amd64.deb ...
+#7 18.43 Unpacking gpgsm (2.4.7-21+deb13u1+b5) ...
+#7 18.47 Selecting previously unselected package gnupg.
+#7 18.47 Preparing to unpack .../53-gnupg_2.4.7-21+deb13u1_all.deb ...
+#7 18.48 Unpacking gnupg (2.4.7-21+deb13u1) ...
+#7 18.52 Setting up libexpat1:amd64 (2.9.0-1~deb13u1) ...
+#7 18.53 Setting up libnpth0t64:amd64 (1.8-3) ...
+#7 18.55 Setting up libkeyutils1:amd64 (1.6.3-6) ...
+#7 18.56 Setting up libgpg-error0:amd64 (1.51-4) ...
+#7 18.57 Setting up libgdbm-compat4t64:amd64 (1.24-2) ...
+#7 18.59 Setting up libtirpc-common (1.3.6+ds-1) ...
+#7 18.60 Setting up libbrotli1:amd64 (1.1.0-2+deb13u1) ...
+#7 18.62 Setting up libnghttp2-14:amd64 (1.64.0-1.1+deb13u1) ...
+#7 18.63 Setting up libgcrypt20:amd64 (1.11.0-7+deb13u1) ...
+#7 18.65 Setting up libcom-err2:amd64 (1.47.2-3+b12) ...
+#7 18.66 Setting up libelf1t64:amd64 (0.192-4) ...
+#7 18.68 Setting up libkrb5support0:amd64 (1.21.3-5+deb13u1) ...
+#7 18.69 Setting up libsasl2-modules-db:amd64 (2.1.28+dfsg1-9) ...
+#7 18.70 Setting up libcap2-bin (1:2.75-10+deb13u1+b3) ...
+#7 18.72 Setting up gnupg-l10n (2.4.7-21+deb13u1) ...
+#7 18.73 Setting up libp11-kit0:amd64 (0.25.5-3) ...
+#7 18.74 Setting up libunistring5:amd64 (1.3-2) ...
+#7 18.76 Setting up libmnl0:amd64 (1.0.5-3) ...
+#7 18.77 Setting up libk5crypto3:amd64 (1.21.3-5+deb13u1) ...
+#7 18.79 Setting up libxtables12:amd64 (1.8.11-2) ...
+#7 18.80 Setting up libsasl2-2:amd64 (2.1.28+dfsg1-9) ...
+#7 18.81 Setting up libnghttp3-9:amd64 (1.8.0-1) ...
+#7 18.82 Setting up perl-modules-5.40 (5.40.1-6+deb13u1) ...
+#7 18.84 Setting up libassuan9:amd64 (3.0.2-2) ...
+#7 18.85 Setting up gpgconf (2.4.7-21+deb13u1+b5) ...
+#7 18.86 Setting up libtasn1-6:amd64 (4.20.0-2+deb13u1) ...
+#7 18.88 Setting up git-man (1:2.47.3-0+deb13u1) ...
+#7 18.89 Setting up libngtcp2-16:amd64 (1.11.0-1+deb13u1) ...
+#7 18.90 Setting up libkrb5-3:amd64 (1.21.3-5+deb13u1) ...
+#7 18.92 Setting up libssh2-1t64:amd64 (1.11.1-1+deb13u2) ...
+#7 18.93 Setting up libldap2:amd64 (2.6.10+dfsg-1) ...
+#7 18.94 Setting up libbpf1:amd64 (1:1.5.0-3) ...
+#7 18.95 Setting up libksba8:amd64 (1.6.7-2+b1) ...
+#7 18.97 Setting up pinentry-curses (1.3.1-2) ...
+#7 18.99 Setting up gpg-agent (2.4.7-21+deb13u1+b5) ...
+#7 19.28 Setting up gpgsm (2.4.7-21+deb13u1+b5) ...
+#7 19.29 Setting up libidn2-0:amd64 (2.3.8-2) ...
+#7 19.30 Setting up libperl5.40:amd64 (5.40.1-6+deb13u1) ...
+#7 19.32 Setting up perl (5.40.1-6+deb13u1) ...
+#7 19.34 Setting up libgssapi-krb5-2:amd64 (1.21.3-5+deb13u1) ...
+#7 19.35 Setting up gpg (2.4.7-21+deb13u1+b5) ...
+#7 19.44 Setting up libgnutls30t64:amd64 (3.8.9-3+deb13u4) ...
+#7 19.46 Setting up libtirpc3t64:amd64 (1.3.6+ds-1) ...
+#7 19.47 Setting up iproute2 (6.15.0-1) ...
+#7 19.52 debconf: unable to initialize frontend: Dialog
+#7 19.52 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#7 19.52 debconf: falling back to frontend: Readline
+#7 19.53 debconf: unable to initialize frontend: Readline
+#7 19.53 debconf: (This frontend requires a controlling tty.)
+#7 19.53 debconf: falling back to frontend: Teletype
+#7 19.53 debconf: unable to initialize frontend: Teletype
+#7 19.53 debconf: (This frontend requires a controlling tty.)
+#7 19.53 debconf: falling back to frontend: Noninteractive
+#7 19.59 Setting up libpsl5t64:amd64 (0.21.2-1.1+b1) ...
+#7 19.60 Setting up liberror-perl (0.17030-1) ...
+#7 19.62 Setting up dirmngr (2.4.7-21+deb13u1+b5) ...
+#7 19.72 Setting up librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b5) ...
+#7 19.73 Setting up gnupg (2.4.7-21+deb13u1) ...
+#7 19.75 Setting up libngtcp2-crypto-gnutls8:amd64 (1.11.0-1+deb13u1) ...
+#7 19.76 Setting up libcurl4t64:amd64 (8.14.1-2+deb13u7) ...
+#7 19.78 Setting up libcurl3t64-gnutls:amd64 (8.14.1-2+deb13u7) ...
+#7 19.79 Setting up git (1:2.47.3-0+deb13u1) ...
+#7 19.81 Setting up curl (8.14.1-2+deb13u7) ...
+#7 19.83 Processing triggers for libc-bin (2.41-12+deb13u4) ...
+#7 20.15 Hit:1 http://deb.debian.org/debian trixie InRelease
+#7 20.16 Hit:2 http://deb.debian.org/debian trixie-updates InRelease
+#7 20.18 Hit:3 http://deb.debian.org/debian-security trixie-security InRelease
+#7 20.33 Get:4 https://download.docker.com/linux/debian trixie InRelease [32.5 kB]
+#7 20.38 Get:5 https://download.docker.com/linux/debian trixie/stable amd64 Packages [51.5 kB]
+#7 20.42 Fetched 84.0 kB in 0s (254 kB/s)
+#7 20.42 Reading package lists...
+#7 20.78 Reading package lists...
+#7 21.14 Building dependency tree...
+#7 21.23 Reading state information...
+#7 21.33 Suggested packages:
+#7 21.33   docker-model-plugin
+#7 21.33 Recommended packages:
+#7 21.33   docker-compose-plugin
+#7 21.35 The following NEW packages will be installed:
+#7 21.35   docker-buildx-plugin docker-ce-cli
+#7 21.50 0 upgraded, 2 newly installed, 0 to remove and 1 not upgraded.
+#7 21.50 Need to get 35.4 MB of archives.
+#7 21.50 After this operation, 124 MB of additional disk space will be used.
+#7 21.50 Get:1 https://download.docker.com/linux/debian trixie/stable amd64 docker-buildx-plugin amd64 0.38.1-1~debian.13~trixie [17.8 MB]
+#7 22.44 Get:2 https://download.docker.com/linux/debian trixie/stable amd64 docker-ce-cli amd64 5:29.9.2-1~debian.13~trixie [17.6 MB]
+#7 23.15 debconf: unable to initialize frontend: Dialog
+#7 23.15 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#7 23.15 debconf: falling back to frontend: Readline
+#7 23.15 debconf: unable to initialize frontend: Readline
+#7 23.15 debconf: (This frontend requires a controlling tty.)
+#7 23.15 debconf: falling back to frontend: Teletype
+#7 23.16 debconf: unable to initialize frontend: Teletype
+#7 23.16 debconf: (This frontend requires a controlling tty.)
+#7 23.16 debconf: falling back to frontend: Noninteractive
+#7 23.54 Fetched 35.4 MB in 2s (20.6 MB/s)
+#7 23.56 Selecting previously unselected package docker-buildx-plugin.
+#7 23.56 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 9708 files and directories currently installed.)
+#7 23.56 Preparing to unpack .../docker-buildx-plugin_0.38.1-1~debian.13~trixie_amd64.deb ...
+#7 23.57 Unpacking docker-buildx-plugin (0.38.1-1~debian.13~trixie) ...
+#7 23.93 Selecting previously unselected package docker-ce-cli.
+#7 23.93 Preparing to unpack .../docker-ce-cli_5%3a29.9.2-1~debian.13~trixie_amd64.deb ...
+#7 23.93 Unpacking docker-ce-cli (5:29.9.2-1~debian.13~trixie) ...
+#7 24.22 Setting up docker-buildx-plugin (0.38.1-1~debian.13~trixie) ...
+#7 24.23 Setting up docker-ce-cli (5:29.9.2-1~debian.13~trixie) ...
+#7 DONE 24.4s
+
+#8 [3/7] WORKDIR /app
+#8 DONE 0.1s
+
+#9 [4/7] COPY requirements.txt .
+#9 DONE 0.0s
+
+#10 [5/7] RUN pip install --no-cache-dir -r requirements.txt
+#10 1.113 Collecting fastapi (from -r requirements.txt (line 1))
+#10 1.284   Downloading fastapi-0.162.0-py3-none-any.whl.metadata (26 kB)
+#10 1.510 Collecting sqlalchemy (from -r requirements.txt (line 3))
+#10 1.536   Downloading sqlalchemy-2.1.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.7 kB)
+#10 1.575 Collecting alembic (from -r requirements.txt (line 4))
+#10 1.601   Downloading alembic-1.20.1-py3-none-any.whl.metadata (7.3 kB)
+#10 1.636 Collecting pydantic-settings (from -r requirements.txt (line 5))
+#10 1.661   Downloading pydantic_settings-2.16.1-py3-none-any.whl.metadata (4.0 kB)
+#10 1.735 Collecting python-multipart (from -r requirements.txt (line 6))
+#10 1.761   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+#10 1.848 Collecting websockets (from -r requirements.txt (line 7))
+#10 1.872   Downloading websockets-17.3-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.3 kB)
+#10 1.913 Collecting pyyaml (from -r requirements.txt (line 8))
+#10 1.936   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+#10 2.040 Collecting kathara<4.0,>=3.7.0 (from -r requirements.txt (line 10))
+#10 2.067   Downloading kathara-3.8.3-py3-none-any.whl.metadata (11 kB)
+#10 2.102 Collecting docker (from -r requirements.txt (line 13))
+#10 2.129   Downloading docker-7.2.0-py3-none-any.whl.metadata (3.8 kB)
+#10 2.164 Collecting httpx (from -r requirements.txt (line 15))
+#10 2.188   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#10 2.238 Collecting uvicorn[standard] (from -r requirements.txt (line 2))
+#10 2.264   Downloading uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+#10 2.304 Collecting starlette>=0.46.0 (from fastapi->-r requirements.txt (line 1))
+#10 2.336   Downloading starlette-1.10.0-py3-none-any.whl.metadata (6.6 kB)
+#10 2.409 Collecting pydantic>=2.9.0 (from fastapi->-r requirements.txt (line 1))
+#10 2.440   Downloading pydantic-2.14.1-py3-none-any.whl.metadata (133 kB)
+#10 2.508 Collecting typing-extensions>=4.8.0 (from fastapi->-r requirements.txt (line 1))
+#10 2.534   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#10 2.561 Collecting typing-inspection>=0.4.2 (from fastapi->-r requirements.txt (line 1))
+#10 2.589   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#10 2.618 Collecting annotated-doc>=0.0.2 (from fastapi->-r requirements.txt (line 1))
+#10 2.642   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#10 2.675 Collecting opentelemetry-api>=1.44.0 (from fastapi->-r requirements.txt (line 1))
+#10 2.699   Downloading opentelemetry_api-1.45.1-py3-none-any.whl.metadata (1.4 kB)
+#10 2.730 Collecting click>=7.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 2.755   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#10 2.783 Collecting h11>=0.8 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 2.810   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#10 2.849 Collecting httptools>=0.8.0 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 2.875   Downloading httptools-0.9.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+#10 2.910 Collecting python-dotenv>=0.13 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 2.939   Downloading python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+#10 2.983 Collecting uvloop>=0.15.1 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 3.009   Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.1 kB)
+#10 3.085 Collecting watchfiles>=0.20 (from uvicorn[standard]->-r requirements.txt (line 2))
+#10 3.108   Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+#10 3.150 Collecting Mako (from alembic->-r requirements.txt (line 4))
+#10 3.176   Downloading mako-1.4.3-py3-none-any.whl.metadata (2.9 kB)
+#10 3.220 Collecting binaryornot>=0.4.4 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.247   Downloading binaryornot-0.6.0-py3-none-any.whl.metadata (2.9 kB)
+#10 3.288 Collecting kubernetes>=23.3.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.314   Downloading kubernetes-37.0.1-py2.py3-none-any.whl.metadata (1.9 kB)
+#10 3.357 Collecting requests>=2.22.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.383   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+#10 3.416 Collecting pyroute2 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.443   Downloading pyroute2-0.9.7-py3-none-any.whl.metadata (8.8 kB)
+#10 3.487 Collecting rich (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.513   Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+#10 3.605 Collecting setuptools<81 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.632   Downloading setuptools-80.10.2-py3-none-any.whl.metadata (6.6 kB)
+#10 3.675 Collecting fs>=2.4.16 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.701   Downloading fs-2.4.16-py2.py3-none-any.whl.metadata (6.3 kB)
+#10 3.754 Collecting chardet<6.0.0 (from kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 3.780   Downloading chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+#10 3.819 Collecting urllib3>=1.26.0 (from docker->-r requirements.txt (line 13))
+#10 3.845   Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+#10 3.877 Collecting anyio (from httpx->-r requirements.txt (line 15))
+#10 3.901   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#10 3.935 Collecting certifi (from httpx->-r requirements.txt (line 15))
+#10 3.963   Downloading certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+#10 3.995 Collecting httpcore==1.* (from httpx->-r requirements.txt (line 15))
+#10 4.019   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#10 4.052 Collecting idna (from httpx->-r requirements.txt (line 15))
+#10 4.076   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#10 4.110 Collecting appdirs~=1.4.3 (from fs>=2.4.16->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.135   Downloading appdirs-1.4.4-py2.py3-none-any.whl.metadata (9.0 kB)
+#10 4.164 Collecting six~=1.10 (from fs>=2.4.16->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.188   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#10 4.220 Collecting python-dateutil>=2.8.2 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.246   Downloading python_dateutil-3.0.0-py2.py3-none-any.whl.metadata (8.2 kB)
+#10 4.290 Collecting websocket-client!=0.40.0,!=0.41.*,!=0.42.*,>=0.32.0 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.315   Downloading websocket_client-1.9.2-py3-none-any.whl.metadata (8.3 kB)
+#10 4.343 Collecting requests-oauthlib (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.368   Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
+#10 4.402 Collecting durationpy>=0.11 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.428   Downloading durationpy-0.11-py3-none-any.whl.metadata (474 bytes)
+#10 4.744 Collecting aiohttp<4.0.0,>=3.14.3 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.769   Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.3 kB)
+#10 4.802 Collecting aiohttp-retry>=2.9.1 (from kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 4.827   Downloading aiohttp_retry-2.9.1-py3-none-any.whl.metadata (8.8 kB)
+#10 4.859 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+#10 4.884   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#10 5.278 Collecting pydantic-core==2.50.1 (from pydantic>=2.9.0->fastapi->-r requirements.txt (line 1))
+#10 5.311   Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
+#10 5.397 Collecting charset_normalizer<4,>=2 (from requests>=2.22.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.424   Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+#10 5.500 Collecting MarkupSafe>=2.0 (from Mako->alembic->-r requirements.txt (line 4))
+#10 5.528   Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+#10 5.560 Collecting markdown-it-py>=2.2.0 (from rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.583   Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+#10 5.619 Collecting pygments<3.0.0,>=2.13.0 (from rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.643   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+#10 5.678 Collecting aiohappyeyeballs>=2.5.0 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.703   Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+#10 5.731 Collecting aiosignal>=1.4.0 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.756   Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+#10 5.786 Collecting attrs>=17.3.0 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 5.814   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+#10 5.871 Collecting frozenlist>=1.1.1 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.140   Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+#10 6.317 Collecting multidict<8.0,>=4.5 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.346   Downloading multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (6.1 kB)
+#10 6.400 Collecting propcache>=0.2.0 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.425   Downloading propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (25 kB)
+#10 6.568 Collecting yarl<2.0,>=1.25.1 (from aiohttp<4.0.0,>=3.14.3->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.594   Downloading yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (111 kB)
+#10 6.637 Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.664   Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+#10 6.698 Collecting tzdata (from python-dateutil>=2.8.2->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.720   Downloading tzdata-2026.5-py2.py3-none-any.whl.metadata (1.4 kB)
+#10 6.751 Collecting oauthlib>=3.0.0 (from requests-oauthlib->kubernetes>=23.3.0->kathara<4.0,>=3.7.0->-r requirements.txt (line 10))
+#10 6.786   Downloading oauthlib-4.0.0-py3-none-any.whl.metadata (8.6 kB)
+#10 6.841 Downloading fastapi-0.162.0-py3-none-any.whl (148 kB)
+#10 6.871 Downloading sqlalchemy-2.1.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.7 MB)
+#10 7.062    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 26.4 MB/s eta 0:00:00
+#10 7.089 Downloading alembic-1.20.1-py3-none-any.whl (270 kB)
+#10 7.122 Downloading pydantic_settings-2.16.1-py3-none-any.whl (80 kB)
+#10 7.148 Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+#10 7.173 Downloading websockets-17.3-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (225 kB)
+#10 7.205 Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+#10 7.232    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 35.3 MB/s eta 0:00:00
+#10 7.259 Downloading kathara-3.8.3-py3-none-any.whl (222 kB)
+#10 7.300 Downloading docker-7.2.0-py3-none-any.whl (148 kB)
+#10 7.332 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#10 7.359 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#10 7.392 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#10 7.417 Downloading binaryornot-0.6.0-py3-none-any.whl (14 kB)
+#10 7.444 Downloading chardet-5.2.0-py3-none-any.whl (199 kB)
+#10 7.477 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#10 7.503 Downloading fs-2.4.16-py2.py3-none-any.whl (135 kB)
+#10 7.535 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#10 7.562 Downloading httptools-0.9.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (552 kB)
+#10 7.581    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 552.8/552.8 kB 28.3 MB/s eta 0:00:00
+#10 7.610 Downloading kubernetes-37.0.1-py2.py3-none-any.whl (7.5 MB)
+#10 7.916    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.5/7.5 MB 24.3 MB/s eta 0:00:00
+#10 7.943 Downloading certifi-2026.10.23-py3-none-any.whl (135 kB)
+#10 7.970 Downloading opentelemetry_api-1.45.1-py3-none-any.whl (60 kB)
+#10 8.001 Downloading pydantic-2.14.1-py3-none-any.whl (488 kB)
+#10 8.042 Downloading pydantic_core-2.50.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
+#10 8.118    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 28.1 MB/s eta 0:00:00
+#10 8.143 Downloading python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+#10 8.171 Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+#10 8.196 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#10 8.223 Downloading setuptools-80.10.2-py3-none-any.whl (1.1 MB)
+#10 8.253    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 39.3 MB/s eta 0:00:00
+#10 8.278 Downloading starlette-1.10.0-py3-none-any.whl (80 kB)
+#10 8.304 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#10 8.338 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#10 8.363 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#10 8.388 Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+#10 8.417 Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.5 MB)
+#10 8.608    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 23.5 MB/s eta 0:00:00
+#10 8.635 Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (458 kB)
+#10 8.682 Downloading mako-1.4.3-py3-none-any.whl (80 kB)
+#10 8.713 Downloading pyroute2-0.9.7-py3-none-any.whl (491 kB)
+#10 8.759 Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+#10 8.797 Downloading uvicorn-0.54.0-py3-none-any.whl (87 kB)
+#10 8.827 Downloading aiohttp-3.14.5-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.9 MB)
+#10 8.900    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 25.8 MB/s eta 0:00:00
+#10 8.924 Downloading aiohttp_retry-2.9.1-py3-none-any.whl (10.0 kB)
+#10 8.948 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#10 8.972 Downloading appdirs-1.4.4-py2.py3-none-any.whl (9.6 kB)
+#10 8.998 Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (257 kB)
+#10 9.036 Downloading durationpy-0.11-py3-none-any.whl (4.1 kB)
+#10 9.071 Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+#10 9.097 Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+#10 9.123 Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+#10 9.163    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 32.4 MB/s eta 0:00:00
+#10 9.189 Downloading python_dateutil-3.0.0-py2.py3-none-any.whl (94 kB)
+#10 9.217 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#10 9.242 Downloading websocket_client-1.9.2-py3-none-any.whl (95 kB)
+#10 9.274 Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+#10 9.297 Downloading aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+#10 9.322 Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+#10 9.347 Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+#10 9.375 Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (242 kB)
+#10 9.410 Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+#10 9.436 Downloading multidict-7.2.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (516 kB)
+#10 9.505 Downloading oauthlib-4.0.0-py3-none-any.whl (159 kB)
+#10 9.536 Downloading propcache-0.5.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (250 kB)
+#10 9.570 Downloading yarl-1.25.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (117 kB)
+#10 9.609 Downloading tzdata-2026.5-py2.py3-none-any.whl (347 kB)
+#10 9.729 Installing collected packages: durationpy, appdirs, websockets, websocket-client, uvloop, urllib3, tzdata, typing-extensions, six, setuptools, pyyaml, python-multipart, python-dotenv, pyroute2, pygments, propcache, oauthlib, multidict, mdurl, MarkupSafe, idna, httptools, h11, frozenlist, click, charset_normalizer, chardet, certifi, binaryornot, attrs, annotated-types, annotated-doc, aiohappyeyeballs, yarl, uvicorn, typing-inspection, sqlalchemy, requests, python-dateutil, pydantic-core, opentelemetry-api, markdown-it-py, Mako, httpcore, fs, anyio, aiosignal, watchfiles, starlette, rich, requests-oauthlib, pydantic, httpx, docker, alembic, aiohttp, pydantic-settings, fastapi, aiohttp-retry, kubernetes, kathara
+#10 17.62 Successfully installed Mako-1.4.3 MarkupSafe-3.0.4 aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aiohttp-retry-2.9.1 aiosignal-1.4.0 alembic-1.20.1 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 appdirs-1.4.4 attrs-26.1.0 binaryornot-0.6.0 certifi-2026.10.23 chardet-5.2.0 charset_normalizer-3.5.2 click-8.5.0 docker-7.2.0 durationpy-0.11 fastapi-0.162.0 frozenlist-1.8.0 fs-2.4.16 h11-0.16.0 httpcore-1.0.9 httptools-0.9.0 httpx-0.28.1 idna-3.20 kathara-3.8.3 kubernetes-37.0.1 markdown-it-py-4.2.0 mdurl-0.1.2 multidict-7.2.1 oauthlib-4.0.0 opentelemetry-api-1.45.1 propcache-0.5.4 pydantic-2.14.1 pydantic-core-2.50.1 pydantic-settings-2.16.1 pygments-2.21.0 pyroute2-0.9.7 python-dateutil-3.0.0 python-dotenv-1.2.4 python-multipart-0.0.32 pyyaml-6.0.3 requests-2.34.2 requests-oauthlib-2.0.0 rich-15.0.0 setuptools-80.10.2 six-1.17.0 sqlalchemy-2.1.6 starlette-1.10.0 typing-extensions-4.16.0 typing-inspection-0.4.4 tzdata-2026.5 urllib3-2.8.0 uvicorn-0.54.0 uvloop-0.23.0 watchfiles-1.3.0 websocket-client-1.9.2 websockets-17.3 yarl-1.25.1
+#10 17.62 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#10 17.74 
+#10 17.74 [notice] A new release of pip is available: 25.0.1 -> 26.2.2
+#10 17.74 [notice] To update, run: pip install --upgrade pip
+#10 DONE 18.0s
+
+#11 [6/7] COPY . .
+#11 DONE 0.4s
+
+#12 [7/7] RUN mkdir -p /app/data
+#12 DONE 0.2s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 6.6s done
+#13 exporting manifest sha256:5143b550ab41398c522f601b604865ce8cd3a61b1760adad1ca8e161086e5508 0.0s done
+#13 exporting config sha256:a2caf36ee1f7d9df5059f103b194099e0fc6a57eb7a0267ad205d661c68abdce 0.0s done
+#13 exporting attestation manifest sha256:e1f9b54919a6d86d75bc5a7291128dd58a825e0bd2f90c52645c3cc91c000c0f 0.0s done
+#13 exporting manifest list sha256:6997400f1a6bd271e675f843b2089d937142fc1fa5e439213b0b01a234683f82 0.0s done
+#13 naming to docker.io/library/ae3gisv3-backend:latest 0.0s done
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest 4.2s done
+#13 DONE 11.0s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ ae3gisv3-backend  Built
+ Container ae3gisv3-backend-1  Recreate
+ Container ae3gisv3-backend-1  Recreated
+ Container ae3gisv3-backend-1  Starting
+ Container ae3gisv3-backend-1  Started
+  building 1 image(s): ae3gis.local/zeek
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-25 17:33:44 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1  Starting
+ Container ae3gisv3-backend-1  Started
+  letting the host settle (60s)
+  benchmark f636f0edc8f14b9aadf5e15c1e72f3c9: microsoft-surface-7 · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek
+  … preflight
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: checking 75 paths
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+  … 100 hosts: destroying
+     100 hosts  nodes   107  deploy   356.7s  ready   5.11s  destroy  129.0s    29.7 MB/node  host mem  34.4%  ok
+  → next 200 hosts: ~93% memory projected at 463 hosts (29.7 MB/node, peak 34.4% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  (retrying GET /benchmarks/f636f0edc8f14b9aadf5e15c1e72f3c9: timed out)
+  lost the backend (timed out); waiting for it
+  random-idle-run1 failed: The backend at http://localhost:8000/api/v1 did not answer
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+=== 2026-10-25 18:45:23 UTC · 03-random-idle-run2 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1  Starting
+ Container ae3gisv3-backend-1  Started
+  letting the host settle (60s)
+  benchmark 236ce50487bb4847bf7e1be77cd8424b: microsoft-surface-7 · random-idle run 2 · adaptive from 100 hosts
+  seed: 2
+  excluded: ids · ae3gis.local/zeek
+  … preflight
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: settling (60.0s)
+=== 2026-10-25 19:34:34 UTC · suite random on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-08-random
+  bringing the backend up in bench mode (docker compose)
+#1 [internal] load local bake definitions
+#1 reading from stdin 554B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.34kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 1.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 110B done
+#4 DONE 0.0s
+
+#5 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#5 resolve docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 465.73kB 0.1s done
+#6 DONE 0.1s
+
+#7 [3/7] WORKDIR /app
+#7 CACHED
+
+#8 [4/7] COPY requirements.txt .
+#8 CACHED
+
+#9 [2/7] RUN apt-get update &&     apt-get install -y --no-install-recommends         ca-certificates curl git gnupg iproute2 &&     install -m 0755 -d /etc/apt/keyrings &&     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &&     chmod a+r /etc/apt/keyrings/docker.asc &&     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list &&     apt-get update &&     apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [5/7] RUN pip install --no-cache-dir -r requirements.txt
+#10 CACHED
+
+#11 [6/7] COPY . .
+#11 DONE 0.5s
+
+#12 [7/7] RUN mkdir -p /app/data
+#12 DONE 0.2s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 1.9s done
+#13 exporting manifest sha256:5a9e82edf2c9f645642c75b07167f6e45827938785e95a43e1bf455dda098e8d 0.0s done
+#13 exporting config sha256:ebbdd8358c11812ed62d4f8e566b06ec05cbca60e8f9e055fb9e453b74c94080 0.0s done
+#13 exporting attestation manifest sha256:c34e6890de6f03bc6b446895f271b2d6f45f964255520e86423447c60274ca4a 0.0s done
+#13 exporting manifest list sha256:38d13a8c4d0b121d5d1b0246df1008a6b4579137118f00c14c22e2a8a6ca01f3 0.0s done
+#13 naming to docker.io/library/ae3gisv3-backend:latest done
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest 0.4s done
+#13 DONE 2.4s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ ae3gisv3-backend  Built
+ Container ae3gisv3-backend-1  Recreate
+ Container ae3gisv3-backend-1  Recreated
+ Container ae3gisv3-backend-1  Starting
+ Container ae3gisv3-backend-1  Started
+  building 1 image(s): ae3gis.local/zeek
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-25 19:34:57 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1  Starting
+ Container ae3gisv3-backend-1  Started
+  letting the host settle (60s)
+  benchmark a7615b9ee3524ea0820767139914a159: microsoft-surface-7 · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek
+  … preflight
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+  … 100 hosts: destroying
+     100 hosts  nodes   107  deploy    55.8s  ready   0.47s  destroy   26.0s    37.7 MB/node  host mem  30.1%  ok
+  → next 200 hosts: ~93% memory projected at 368 hosts (37.7 MB/node, peak 30.1% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+  (retrying GET /benchmarks/a7615b9ee3524ea0820767139914a159: timed out)
+=== 2026-10-25 20:43:25 UTC · suite random on microsoft-surface-7 → backend\benchmark-results\microsoft-surface-7\2026-10-08-random
+  bringing the backend up in bench mode (docker compose)
+ Image ae3gisv3-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 553B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.34kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.8s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 110B done
+#4 DONE 0.0s
+
+#5 [1/7] FROM docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+#5 resolve docker.io/library/python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 469.56kB 0.1s done
+#6 DONE 0.2s
+
+#7 [4/7] COPY requirements.txt .
+#7 CACHED
+
+#8 [2/7] RUN apt-get update &&     apt-get install -y --no-install-recommends         ca-certificates curl git gnupg iproute2 &&     install -m 0755 -d /etc/apt/keyrings &&     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &&     chmod a+r /etc/apt/keyrings/docker.asc &&     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list &&     apt-get update &&     apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [3/7] WORKDIR /app
+#9 CACHED
+
+#10 [5/7] RUN pip install --no-cache-dir -r requirements.txt
+#10 CACHED
+
+#11 [6/7] COPY . .
+#11 DONE 0.5s
+
+#12 [7/7] RUN mkdir -p /app/data
+#12 DONE 0.2s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 1.8s done
+#13 exporting manifest sha256:0f003d3bb47b580a506e31664157a3791f0272856d7d9a46ebd51e2dea2a8af0 0.0s done
+#13 exporting config sha256:306cd6d204ecf7618077bfcbc7bdc444bd601c36ac3f34098d3c99dc0d5b020d 0.0s done
+#13 exporting attestation manifest sha256:6245110a1a3f58f93098e9ea615121804d070c82e2d35f41e18c19cc585c3dcb 0.0s done
+#13 exporting manifest list sha256:53f6ed1ec3048de5a7f4860ad659eb30ff674e9ff89ca4dfe0420695869fb9ff 0.0s done
+#13 naming to docker.io/library/ae3gisv3-backend:latest
+#13 naming to docker.io/library/ae3gisv3-backend:latest done
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest
+#13 unpacking to docker.io/library/ae3gisv3-backend:latest 0.4s done
+#13 DONE 2.3s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ Image ae3gisv3-backend Built 
+ Container ae3gisv3-backend-1 Recreate 
+ Container ae3gisv3-backend-1 Recreated 
+ Container ae3gisv3-backend-1 Starting 
+ Container ae3gisv3-backend-1 Started 
+  building 1 image(s): ae3gis.local/zeek
+  not available here: ae3gis.local/zeek (BuildError: E: Couldn't find any package by regex 'zeekctl-6.0')
+=== 2026-10-25 20:43:47 UTC · 02-random-idle-run1 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 72dde0de09944f51b78a98cc8c1f1b84: microsoft-surface-7 · random-idle run 1 · adaptive from 100 hosts
+  seed: 1
+  excluded: ids · ae3gis.local/zeek
+  … preflight
+  … baseline: the host at rest (30s)
+  … 100 hosts: waiting for the host to go quiet
+  … 100 hosts: reference (20.0s, nothing deployed)
+  … 100 hosts: deploying 107 nodes
+  … 100 hosts: checking 75 paths
+  … 100 hosts: settling (60.0s)
+  … 100 hosts: holding idle (30s)
+  … 100 hosts: destroying
+     100 hosts  nodes   107  deploy    33.7s  ready   2.51s  destroy   20.7s    18.8 MB/node  host mem  17.7%  ok
+  → next 200 hosts: ~93% memory projected at 745 hosts (18.8 MB/node, peak 17.7% now)
+  … 200 hosts: waiting for the host to go quiet
+  … 200 hosts: reference (20.0s, nothing deployed)
+  … 200 hosts: deploying 209 nodes
+  … 200 hosts: settling (60.0s)
+  … 200 hosts: holding idle (30s)
+  … 200 hosts: destroying
+     200 hosts  nodes   209  deploy    73.5s  ready   2.31s  destroy   41.1s    22.6 MB/node  host mem  35.2%  ok
+  → next 400 hosts: ~93% memory projected at 611 hosts (22.6 MB/node, peak 35.2% now)
+  … 400 hosts: waiting for the host to go quiet
+  … 400 hosts: reference (20.0s, nothing deployed)
+  … 400 hosts: deploying 416 nodes
+  … 400 hosts: settling (60.0s)
+  … 400 hosts: holding idle (30s)
+  … 400 hosts: destroying
+     400 hosts  nodes   416  deploy   183.8s  ready   5.40s  destroy  116.8s    24.0 MB/node  host mem  67.5%  ok
+  → next 500 hosts: ~93% memory projected at 572 hosts (24.0 MB/node, peak 67.5% now)
+  … 500 hosts: waiting for the host to go quiet
+  … 500 hosts: reference (20.0s, nothing deployed)
+  … 500 hosts: deploying 521 nodes
+  (retrying GET /benchmarks/72dde0de09944f51b78a98cc8c1f1b84: [WinError 10054] An existing connection was forcibly closed by the remote host)
+  … 500 hosts: destroying
+     500 hosts  nodes   521  deploy   277.2s  ready   5.92s  destroy  190.9s       – MB/node  host mem     –%  stopped (memory stalls 18.6% > 10.0% for 3 sweeps)
+  → 500 hosts failed (memory_pressure): trying 450 hosts
+  … 450 hosts: waiting for the host to go quiet
+  … 450 hosts: reference (20.0s, nothing deployed)
+  … 450 hosts: deploying 470 nodes
+  … 450 hosts: checking 724 paths
+  … 450 hosts: settling (60.0s)
+  … 450 hosts: holding idle (30s)
+  … 450 hosts: destroying
+     450 hosts  nodes   470  deploy   237.4s  ready   5.81s  destroy  155.6s    23.9 MB/node  host mem  77.4%  ok
+  → next 490 hosts: ~93% memory projected at 556 hosts (23.9 MB/node, peak 77.4% now); below 500, which failed
+  … 490 hosts: waiting for the host to go quiet
+  … 490 hosts: reference (20.0s, nothing deployed)
+  … 490 hosts: deploying 510 nodes
+  … 490 hosts: settling (60.0s)
+  … 490 hosts: holding idle (30s)
+  … 490 hosts: destroying
+     490 hosts  nodes   510  deploy   266.9s  ready   6.54s  destroy  180.3s    23.1 MB/node  host mem  80.9%  ok
+  → ceiling between 490 and 500 hosts (500 failed)
+  random-idle-run1: succeeded: ceiling 490 hosts
+=== 2026-10-25 21:27:12 UTC · 03-random-idle-run2 (pending)
+  restarting Docker: docker desktop restart
+✓ Starting Docker Desktop
+ Container ae3gisv3-backend-1 Running 
+  letting the host settle (60s)
+  benchmark 5c8cafe1096349d3a549375b300905c2: microsoft-surface-7 · random-idle run 2 · adaptive from 340 hosts
+  seed: 2
+  start: 340
+  excluded: ids · ae3gis.local/zeek
+  … preflight
+  … baseline: the host at rest (30s)
+  … 340 hosts: waiting for the host to go quiet
+  … 340 hosts: reference (20.0s, nothing deployed)
+  … 340 hosts: deploying 354 nodes
+  … 340 hosts: settling (60.0s)
+  … 340 hosts: holding idle (30s)
+  … 340 hosts: destroying
+     340 hosts  nodes   354  deploy   169.3s  ready   4.78s  destroy  107.2s    21.0 MB/node  host mem  50.4%  ok
+  → next 540 hosts: ~93% memory projected at 666 hosts (21.0 MB/node, peak 50.4% now)
+  … 540 hosts: waiting for the host to go quiet
+  … 540 hosts: reference (20.0s, nothing deployed)
+  … 540 hosts: deploying 561 nodes
+  … 540 hosts: settling (60.0s)
+  … 540 hosts: holding idle (30s)
+  … 540 hosts: destroying
+     540 hosts  nodes   561  deploy   315.3s  ready   7.47s  destroy  243.5s    19.3 MB/node  host mem  73.1%  ok
+  → next 640 hosts: ~93% memory projected at 704 hosts (19.3 MB/node, peak 73.1% now)
+  … 640 hosts: waiting for the host to go quiet
+  … 640 hosts: reference (20.0s, nothing deployed)
+  … 640 hosts: deploying 665 nodes
+  … 640 hosts: destroying
+     640 hosts  nodes   665  deploy   427.8s  ready  12.15s  destroy  316.8s       – MB/node  host mem     –%  stopped (memory stalls 14.0% > 10.0% for 3 sweeps)
+  → 640 hosts failed (memory_pressure): trying 590 hosts
+  … 590 hosts: waiting for the host to go quiet
+  … 590 hosts: reference (20.0s, nothing deployed)
+  … 590 hosts: deploying 612 nodes
+  … 590 hosts: checking 916 paths
+  … 590 hosts: settling (60.0s)
+  … 590 hosts: holding idle (30s)
+  … 590 hosts: destroying
+     590 hosts  nodes   612  deploy   376.1s  ready   8.72s  destroy  274.3s    18.9 MB/node  host mem  79.5%  ok
+  → next 630 hosts: ~93% memory projected at 700 hosts (18.9 MB/node, peak 79.5% now); below 640, which failed
+  … 630 hosts: waiting for the host to go quiet
+  … 630 hosts: reference (20.0s, nothing deployed)
+  … 630 hosts: deploying 655 nodes
+  … 630 hosts: checking 972 paths
+  … 630 hosts: settling (60.0s)
+  … 630 hosts: holding idle (30s)
+  … 630 hosts: destroying
+     630 hosts  nodes   655  deploy   407.0s  ready   9.56s  destroy  321.7s    18.5 MB/node  host mem  82.8%  ok
+  → ceiling between 630 and 640 hosts (640 failed)
+  random-idle-run2: succeeded: ceiling 630 hosts
+=== 2026-10-25 22:52:30 UTC · suite finished: backend\benchmark-results\microsoft-surface-7\2026-10-08-random\summary.md
