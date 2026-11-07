@@ -200,6 +200,25 @@ describe('project() — interface legs (multi-homing)', () => {
     expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toMatchObject({ source: 'h1', target: 'r2' });
   });
 
+  it('draws guests on the side their home subnet sits', () => {
+    const lan = { level: 'subnet', siteId: 'site-a', subnetId: 'sub-2' } as const;
+    const guestAt = (t: TopologyData) => project({ topology: t, scope: lan, expanded: {} }).nodes.find((n) => n.id === 'h1')!.position;
+    // Same row, S1 left of S2: a column left of S2's devices (r2 at 0,0)…
+    expect(guestAt(withLeg())).toEqual({ x: -96 - 188, y: 0 });
+    // …and right of them when S1 sits to the right.
+    const right = withLeg();
+    right.sites[0].subnets[0].position = { x: 900, y: 100 };
+    expect(guestAt(right)).toEqual({ x: 188 + 96, y: 0 });
+    // S1 above S2: a row above S2's devices (r2 at 0,0), centred on them.
+    const above = withLeg();
+    above.sites[0].subnets[0].position = { x: 500, y: -300 };
+    expect(guestAt(above)).toEqual({ x: 0, y: -96 - 60 });
+    // S1 below S2: a row below them.
+    const below = withLeg();
+    below.sites[0].subnets[0].position = { x: 500, y: 400 };
+    expect(guestAt(below)).toEqual({ x: 0, y: 60 + 96 });
+  });
+
   it('omits the leg edge at subnet scope (target subnet not visible)', () => {
     const { edges } = project({ topology: withLeg(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
     expect(edges.find((e) => e.id === 'leg:h1:sub-2')).toBeUndefined();
