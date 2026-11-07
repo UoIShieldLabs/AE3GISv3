@@ -67,6 +67,7 @@ class RandomSuite:
     type_shares: pd.DataFrame  # mean / std share of each type at the ceiling
     across: dict[str, Any]  # the suite's own mean / std / min / max per metric
     extra_dirs: list[str] = field(default_factory=list)  # folders not in the manifest
+    sets: list[str] = field(default_factory=list)  # the host's climb sets, result first
 
 
 @dataclass
@@ -186,13 +187,19 @@ def load_random(host: str) -> RandomSuite | None:
                     }
                 )
     steps_df = pd.DataFrame(steps).drop(columns=["composition", "by_image"], errors="ignore")
+    climbs_df = pd.DataFrame(climbs)
+    sets = HOSTS[host].climb_sets
+    in_set = {n: name for name, ns in sets.items() for n in ns}
+    climbs_df["set"] = climbs_df["n"].map(in_set)
+    # the climbs that make the host's result: the first set, or all of them
+    climbs_df["headline"] = climbs_df["set"] == next(iter(sets)) if sets else True
     shares = pd.DataFrame(agg.get("type_shares") or {}).T
     listed = {r["dir"] for r in manifest["runs"]}
     extra = sorted(d.name for d in dir_.iterdir() if d.is_dir() and d.name not in listed)
     return RandomSuite(
         dir=dir_,
         manifest=manifest,
-        climbs=pd.DataFrame(climbs),
+        climbs=climbs_df,
         steps=steps_df,
         census=census,
         composition=pd.DataFrame(comp).T.fillna(0).astype(int) if comp else pd.DataFrame(),
@@ -200,6 +207,7 @@ def load_random(host: str) -> RandomSuite | None:
         type_shares=shares,
         across=agg.get("across") or {},
         extra_dirs=extra,
+        sets=list(sets),
     )
 
 

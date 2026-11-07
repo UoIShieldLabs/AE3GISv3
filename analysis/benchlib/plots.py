@@ -212,16 +212,19 @@ def ceilings(climbs: pd.DataFrame, color: str, title: str) -> plt.Figure:
     c = climbs.dropna(subset=["ceiling"])
     cols = [GREY if note else color for note in c["note"]]
     ax.bar(c["n"].astype(str), c["ceiling"], color=cols)
-    m, s = c["ceiling"].mean(), c["ceiling"].std()
+    base = c[c["headline"]]  # the host's result climbs (a set, when it splits them)
+    m, s = base["ceiling"].mean(), base["ceiling"].std()
     ax.axhline(m, color="black", lw=1)
     ax.axhspan(m - s, m + s, color="black", alpha=0.08)
     for x, (v, note) in enumerate(zip(c["ceiling"], c["note"], strict=False)):
         ax.text(
             x, v, f"{v:.0f}" + (f"\n{note}" if note else ""), ha="center", va="bottom", fontsize=7
         )
+    ax.set_ylim(0, c["ceiling"].max() * 1.18)  # room for the labels above the bars
     ax.set_xlabel("climb")
     ax.set_ylabel("ceiling (hosts)")
-    ax.set_title(f"{title}: {m:.0f} ± {s:.0f} hosts")
+    sub = f" ({c['set'][c['headline']].iloc[0]})" if base["set"].notna().any() else ""
+    ax.set_title(f"{title}: {m:.0f} ± {s:.0f} hosts{sub}")
     return fig
 
 
@@ -319,16 +322,17 @@ def idle_comparison(data: dict) -> plt.Figure:
     fig, axes = plt.subplots(1, 4, figsize=(15, 4), constrained_layout=True)
     names = [data[k].host.name for k in hosts]
     for i, k in enumerate(hosts):
-        d, c = data[k], data[k].random.climbs
+        d, every = data[k], data[k].random.climbs
+        c = every[every["headline"]]  # bars: the host's result climbs
         col = d.host.color
         axes[0].bar(
             i, c["ceiling"].mean(), yerr=c["ceiling"].std(), color=col, alpha=0.75, capsize=4
         )
-        jitter = np.linspace(-0.2, 0.2, len(c))
+        jitter = np.linspace(-0.2, 0.2, len(every))
         axes[0].scatter(
             i + jitter,
-            c["ceiling"],
-            color=[GREY if n else "black" for n in c["note"]],
+            every["ceiling"],
+            color=[GREY if n else "black" for n in every["note"]],
             s=10,
             zorder=3,
         )

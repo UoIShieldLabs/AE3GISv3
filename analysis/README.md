@@ -39,7 +39,7 @@ Every run counts in the statistics. Known problems from each host's `NOTES.md` a
 ## Layout
 
 ```
-benchlib/hosts.py          host metadata, settings that differ from the shared suites, known issues
+benchlib/hosts.py          host metadata, settings that differ from the shared suites, known issues, climb sets
 benchlib/load.py           results → tidy DataFrames (climbs, steps, census, traffic cells / rows / deploys)
 benchlib/random_suite.py   idle summaries
 benchlib/traffic_suite.py  traffic summaries, data-quality checks

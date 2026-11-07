@@ -21,6 +21,10 @@ class Host:
     deviations: tuple[str, ...] = ()  # settings that differ from the shared suites
     issues: tuple[str, ...] = ()  # known problems in its data
     annotations: dict[str, str] = field(default_factory=dict)  # run key -> note
+    # climbs that ran under different conditions (e.g. two Docker engines), as
+    # {set name: climb numbers}; the first set is the host's result, the others
+    # are reported beside it. Empty: every climb is the result.
+    climb_sets: dict[str, tuple[int, ...]] = field(default_factory=dict)
 
     @property
     def resources(self) -> str:
@@ -44,7 +48,8 @@ HOSTS: dict[str, Host] = {
             issues=(
                 "Traffic: measured with the old traffic driver until 2026-10-12, then the fixed "
                 "one; 54 cells were searched again after the fix and 13 more after the "
-                "memory-stall re-check (2026-10-19). 10 cells are still open (paused).",
+                "memory-stall re-check (2026-10-19). The search stopped there: 10 mesh cells at "
+                "50K-250K per flow stay open, with the range found so far.",
                 "Traffic cells rest before running (a quiet host, then an idle minute) because "
                 "the fanless chip throttled under back-to-back heavy cells.",
             ),
@@ -55,7 +60,8 @@ HOSTS: dict[str, Host] = {
             name="M4 Max Mac Studio",
             hardware="Mac Studio, Apple M4 Max (12P + 4E cores), 128 GB",
             os="macOS (Darwin 24.6.0)",
-            docker="Docker Desktop 4.47.0 (Docker 28.4.0, then 29.8.2 from climb 4)",
+            docker="Docker Desktop 4.47.0 (Docker 28.4.0 for the census, 29.8.2 for every climb "
+            "and the traffic suite)",
             cpus=12,
             mem_gb=101.9,
             color="#d62728",
@@ -65,12 +71,12 @@ HOSTS: dict[str, Host] = {
                 "deploy wall (~2400 hosts).",
             ),
             issues=(
-                "Random climbs 1-3 ran on Docker 28.4 left broken by a wedged dockerd (thousands "
-                "of leftover containers and networks): ~1160 hosts, not comparable with the clean "
-                "climbs 4-10 (~2290). Climb 6's ceiling (1640) is a failed teardown at 2050, not "
-                "capacity.",
+                "Random climbs 1, 2, 3, 6 and 8 were run again on 2026-10-24 to 10-27: the first "
+                "runs of 1-3 had a Docker broken by leftovers, 6 stopped on a failed teardown and "
+                "8 on a dropped connection. Climb 3 ran a third time after a teardown fix "
+                "(3af8219). The manifest keeps the earlier outcomes.",
                 "Idle climbs stop at Docker Desktop's deploy wall (deploys time out), with memory "
-                "at only ~75%: the hardware's memory is not what limits it.",
+                "at only ~78%: the hardware's memory is not what limits it.",
                 "Traffic: measured with the old traffic driver (before 2026-10-12). Its fast cores "
                 "and memory kept that driver mostly in step, but half the mesh runs at 850-1000 "
                 "hosts had clients that sent nothing, so those limits may be understated.",
@@ -78,12 +84,6 @@ HOSTS: dict[str, Host] = {
                 "failures (manifest.before-repair.json keeps the earlier state). The search tops "
                 "out at 1000 hosts.",
             ),
-            annotations={
-                "random-idle-run1": "broken Docker",
-                "random-idle-run2": "broken Docker",
-                "random-idle-run3": "broken Docker",
-                "random-idle-run6": "teardown failed",
-            },
         ),
         Host(
             key="microsoft-surface-7",
@@ -91,7 +91,8 @@ HOSTS: dict[str, Host] = {
             name="Surface Laptop 7",
             hardware="Microsoft Surface Laptop 7, Intel Core Ultra 7 268V (8 cores), 32 GB",
             os="Windows 11 (Docker on WSL2)",
-            docker="Docker Desktop 4.45.0 (Docker 28.3.3) on WSL2",
+            docker="Docker Desktop 4.45.0 (Docker 28.3.3) on WSL2; random climbs 1-2 on 4.96.3 "
+            "(Docker 29.9.2)",
             cpus=8,
             mem_gb=16.6,
             color="#2ca02c",
@@ -101,9 +102,12 @@ HOSTS: dict[str, Host] = {
                 "stays above the 10% threshold from ~260 hosts).",
             ),
             issues=(
-                "Random climbs 1-2: timings skewed by Modern Standby (memory figures are fine); "
-                "climb 1's ceiling comes from a slow deploy. Climb 10 took four attempts (the "
-                "-invalid / -crashed / -cancelled folders); the fourth counts.",
+                "Random climbs 1-2 were run again on 2026-10-25 on Docker 29.9.2 (October's were "
+                "skewed by Modern Standby, and reruns on Docker 28.3.3 crashed Docker). The climbs "
+                "are reported as two sets by engine: Docker 28.3.3 (climbs 3-10) is the result for "
+                "this host. Docker 29 needs about a fifth less memory per node and deploys about "
+                "4x faster. Climb 10 took four attempts (the -invalid / -crashed / -cancelled "
+                "folders); the fourth counts.",
                 "Traffic: deploys of 450+ hosts take 30-60 min, so every cell stops at 400 "
                 "(`deploy_slow`): '400 / 450' marks the most this host deploys in time, not a "
                 "traffic limit.",
@@ -112,8 +116,12 @@ HOSTS: dict[str, Host] = {
                 "ae3gis.local/zeek doesn't build here; malicious-client runs (amd64).",
             ),
             annotations={
-                "random-idle-run1": "sleep-skewed timings",
-                "random-idle-run2": "sleep-skewed timings",
+                "random-idle-run1": "Docker 29.9.2",
+                "random-idle-run2": "Docker 29.9.2",
+            },
+            climb_sets={
+                "Docker 28.3.3": (3, 4, 5, 6, 7, 8, 9, 10),
+                "Docker 29.9.2": (1, 2),
             },
         ),
     )

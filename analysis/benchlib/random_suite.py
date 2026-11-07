@@ -10,12 +10,39 @@ import pandas as pd
 from .load import RandomSuite
 
 
+def headline(rs: RandomSuite) -> pd.DataFrame:
+    """The climbs that make the host's result: every climb, or its first set
+    when the host splits them (e.g. by Docker engine)."""
+    return rs.climbs[rs.climbs["headline"]]
+
+
 def ceiling_stats(rs: RandomSuite) -> pd.Series:
-    """Mean / std / min / max over every climb (all runs count)."""
-    c = rs.climbs["ceiling"].dropna()
+    """Mean / std / min / max over the host's result climbs (all of them unless
+    the host splits them into sets)."""
+    c = headline(rs)["ceiling"].dropna()
     return pd.Series(
         {"climbs": len(c), "mean": c.mean(), "std": c.std(), "min": c.min(), "max": c.max()}
     )
+
+
+def set_table(rs: RandomSuite) -> pd.DataFrame:
+    """Per climb set: its climbs and their means ± std (empty without sets)."""
+    rows = []
+    for name in rs.sets:
+        c = rs.climbs[rs.climbs["set"] == name]
+        row = {"set": name, "climbs": ", ".join(str(int(n)) for n in c["n"])}
+        for col, label in (
+            ("ceiling", "ceiling hosts"),
+            ("nodes", "nodes"),
+            ("mem_pct", "peak memory %"),
+            ("mb_per_node", "MB / node"),
+            ("deploy_s_per_node", "deploy s / node"),
+        ):
+            row[label] = f"{c[col].mean():.{2 if col == 'deploy_s_per_node' else 0}f} ± " + (
+                f"{c[col].std():.{2 if col == 'deploy_s_per_node' else 0}f}"
+            )
+        rows.append(row)
+    return pd.DataFrame(rows).set_index("set") if rows else pd.DataFrame()
 
 
 def climb_table(rs: RandomSuite) -> pd.DataFrame:
