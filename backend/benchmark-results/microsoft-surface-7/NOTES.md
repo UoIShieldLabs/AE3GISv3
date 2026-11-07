@@ -104,6 +104,10 @@ Grids and notes in `summary.md`.
 - **GNS3 at 800 hosts:** skipped in every round (projected memory over 85%
   of the VM), as on the Air.
 - Every other step is ok, with readiness 100% on both platforms.
+- **Commit ids:** the run's `manifest.json` and `summary.md` name `ff12f7f`
+  and `19356a4`, the commits as they were on this machine. They were rebased
+  before the push and are `f49a32b` and `e936e7a` on the branch, with the same
+  code (the rebase only added the Air's `REPORT.md` underneath).
 
 ## Left out
 
