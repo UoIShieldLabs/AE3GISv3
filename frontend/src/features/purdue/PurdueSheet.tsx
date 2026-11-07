@@ -23,7 +23,7 @@ export function PurdueSheet() {
     if (!site) return map;
     for (const subnet of site.subnets) {
       for (const c of subnet.containers) {
-        const level = deviceLevel(c);
+        const level = deviceLevel(c, subnet);
         (map.get(level) ?? map.set(level, []).get(level)!).push({ container: c, subnet: subnet.name });
       }
     }

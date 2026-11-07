@@ -1,10 +1,11 @@
 // Purdue layout: subnets stacked by Purdue level at site scope (IT on top,
 // the DMZ in the middle, OT at the bottom), devices in rows by level inside
-// each subnet. Devices that bridge to another subnet sit on the edge facing
-// it. Pure: returns positions, never mutates.
+// each subnet, the switch on the edge bordering the next zone. Devices that
+// bridge to another subnet sit on the edge facing it. Pure: returns
+// positions, never mutates.
 import type { Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { roleFor } from '@/catalog/catalog';
-import { deviceLevel, subnetLevel } from '@/lib/purdue';
+import { deviceLevel, subnetLevel, zoneOf } from '@/lib/purdue';
 import { findSite, gatewayOf, type Scope } from '@/lib/topology';
 import { LAYOUT_SPACING, NODE_SIZE } from '../constants';
 import type { LayoutEdge } from './algorithms';
@@ -112,9 +113,12 @@ function layoutSite(site: Site, options: PurdueLayoutOptions): Map<string, Posit
 
 // ── Devices inside one subnet ─────────────────────────────────────────
 
-/** Rows by Purdue level, highest first, centred. Bridging devices join the
- *  outermost row on the side facing their neighbour (or the facing end of
- *  their row). The switch gets its own row in the middle. */
+/** Rows of a subnet, top to bottom by a sort value: a device's Purdue level;
+ *  devices bridging to a subnet above / below on the top / bottom edge; the
+ *  switch just past the subnet's own level toward the next zone (below it in
+ *  IT, above it in OT; a DMZ's first switch above, the others below). So in an
+ *  IT LAN a DMZ-level firewall sits under the switch, and in an OT LAN a
+ *  higher-level device sits over it. Every row is centred. */
 function layoutSubnetDevices(site: Site, subnet: Subnet, sideOf: SideOf): Map<string, Position> {
   const { nodeSpacing, rankSpacing } = LAYOUT_SPACING.subnet;
   const { width, height } = NODE_SIZE.device;
@@ -140,69 +144,34 @@ function layoutSubnetDevices(site: Site, subnet: Subnet, sideOf: SideOf): Map<st
     if (side) edgeSide.set(id, side);
   }
 
-  // Level rows of the devices that stay put, then the up/down edge devices
-  // join the outermost row on their side, centred in it (their legs leave
-  // straight out); left/right ones go to that end of their own row.
-  const stays = others.filter((c) => edgeSide.get(c.id) !== 'up' && edgeSide.get(c.id) !== 'down');
-  const levels = [...new Set(stays.map(deviceLevel))].sort((a, b) => b - a);
-  const rows: Container[][] = levels.map((l) => {
-    const row = stays.filter((c) => deviceLevel(c) === l);
-    const end = (c: Container) => (edgeSide.get(c.id) === 'left' ? -1 : edgeSide.get(c.id) === 'right' ? 1 : 0);
-    return row.map((c, i) => ({ c, i })).sort((a, b) => end(a.c) - end(b.c) || a.i - b.i).map(({ c }) => c);
-  });
-  const ups = others.filter((c) => edgeSide.get(c.id) === 'up');
-  const downs = others.filter((c) => edgeSide.get(c.id) === 'down');
-  if (ups.length) {
-    if (rows.length) rows[0] = centreIn(rows[0], ups);
-    else rows.push(ups);
+  const level = subnetLevel(subnet);
+  const zone = zoneOf(level);
+  const rows = new Map<number, Container[]>();
+  const add = (value: number, c: Container) => rows.set(value, [...(rows.get(value) ?? []), c]);
+  for (const c of others) {
+    const side = edgeSide.get(c.id);
+    add(side === 'up' ? TOP_EDGE : side === 'down' ? BOTTOM_EDGE : deviceLevel(c, subnet), c);
   }
-  if (downs.length) {
-    if (rows.length && (rows.length > 1 || !ups.length)) rows[rows.length - 1] = centreIn(rows[rows.length - 1], downs);
-    else rows.push(downs);
-  }
+  hubs.forEach((c, i) => add(zone === 'IT' || (zone === 'DMZ' && i > 0) ? level - PAST : level + PAST, c));
 
-  if (hubs.length) rows.splice(hubRowIndex(site, subnet, rows, ups.length, downs.length, sideOf), 0, hubs);
+  // Devices bridging sideways go to that end of their row.
+  const end = (c: Container) => (edgeSide.get(c.id) === 'left' ? -1 : edgeSide.get(c.id) === 'right' ? 1 : 0);
+  const ordered = [...rows.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([, row]) => row.map((c, i) => ({ c, i })).sort((a, b) => end(a.c) - end(b.c) || a.i - b.i).map(({ c }) => c));
 
   const out = new Map<string, Position>();
-  rows.forEach((row, r) => {
+  ordered.forEach((row, r) => {
     centredSlots(row.length, width, nodeSpacing).forEach((cx, i) => out.set(row[i].id, { x: cx - width / 2, y: r * (height + rankSpacing) }));
   });
   return out;
 }
 
-/** Where the switch row goes: with 2+ rows, the inner gap that splits the
- *  devices most evenly (upper on a tie). With one row, on top unless the
- *  subnet's links are mostly below (legs arriving from below, bridging
- *  devices whose legs leave upward). */
-function hubRowIndex(site: Site, subnet: Subnet, rows: Container[][], ups: number, downs: number, sideOf: SideOf): number {
-  if (rows.length >= 2) {
-    const total = rows.reduce((s, r) => s + r.length, 0);
-    let best = 1;
-    let bestDiff = Infinity;
-    let above = 0;
-    for (let g = 1; g < rows.length; g++) {
-      above += rows[g - 1].length;
-      const diff = Math.abs(above - (total - above));
-      if (diff < bestDiff) { best = g; bestDiff = diff; }
-    }
-    return best;
-  }
-  let inUp = 0;
-  let inDown = 0;
-  for (const home of site.subnets) {
-    if (home.id === subnet.id) continue;
-    for (const c of home.containers) {
-      if (!c.interfaces?.some((l) => l.subnetId === subnet.id)) continue;
-      const side = sideOf(home.id);
-      if (side === 'up') inUp++;
-      else if (side === 'down') inDown++;
-    }
-  }
-  // Cost of each spot: lines that would have to pass the hub or the row.
-  const costTop = ups + inDown;
-  const costBottom = downs + inUp;
-  return rows.length === 1 && costBottom < costTop ? 1 : 0;
-}
+/** Row sort values: the edges, and how far past its subnet's level a switch
+ *  sits (Purdue levels are at least 0.5 apart). */
+const TOP_EDGE = 100;
+const BOTTOM_EDGE = -100;
+const PAST = 0.25;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -210,12 +179,6 @@ function hubRowIndex(site: Site, subnet: Subnet, rows: Container[][], ups: numbe
 function centredSlots(n: number, width: number, gap: number): number[] {
   const total = n * width + Math.max(0, n - 1) * gap;
   return Array.from({ length: n }, (_, i) => -total / 2 + width / 2 + i * (width + gap));
-}
-
-/** `row` with `middle` inserted at its centre. */
-function centreIn<T>(row: T[], middle: T[]): T[] {
-  const half = Math.ceil(row.length / 2);
-  return [...row.slice(0, half), ...middle, ...row.slice(half)];
 }
 
 /** The most frequent side, or undefined on a tie. */

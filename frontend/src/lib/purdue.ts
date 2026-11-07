@@ -1,9 +1,10 @@
 // Purdue model levels: the one definition shared by the Purdue sheet, the
-// Purdue canvas layout and the subnet inspector. Device levels come from the
-// catalog (`purdueLevel` per type); a subnet's level is its own override, else
-// inferred from its devices.
+// Purdue canvas layout and the inspector. A device's level is its image's
+// (`io.ae3gis.purdue-level`), else its catalog type's, else its subnet's
+// (switches, routers, attackers, IDSs have none of their own). A subnet's
+// level is its own override, else inferred from its devices.
 import type { Container, Subnet } from '@/types/topology';
-import { purdueLevelFor, roleFor } from '@/catalog/catalog';
+import { effectiveImage, imagePurdueLevel, purdueLevelFor, roleFor } from '@/catalog/catalog';
 
 export type PurdueZone = 'IT' | 'DMZ' | 'OT';
 
@@ -17,7 +18,7 @@ export const PURDUE_LEVELS = [
   { level: 0, label: 'Level 0', name: 'Physical process', zone: 'OT' },
 ] as const satisfies readonly { level: number; label: string; name: string; zone: PurdueZone }[];
 
-/** Level used for a type the catalog gives no level (matches the Purdue sheet). */
+/** A subnet's level when nothing says otherwise (an office LAN). */
 export const DEFAULT_PURDUE_LEVEL = 4;
 
 /** Nearest of the model's levels (5, 4, 3.5, 3, 2, 1, 0). */
@@ -32,16 +33,42 @@ export function purdueLevelInfo(level: number): (typeof PURDUE_LEVELS)[number] {
   return PURDUE_LEVELS.find((l) => l.level === snapped) ?? PURDUE_LEVELS[1];
 }
 
-/** A device's level, from its catalog type. */
-export function deviceLevel(c: Pick<Container, 'type'>): number {
-  return snapPurdueLevel(purdueLevelFor(c.type) ?? DEFAULT_PURDUE_LEVEL);
+export function zoneOf(level: number): PurdueZone {
+  return purdueLevelInfo(level).zone;
+}
+
+/** A device's own level: its image's, else its type's; undefined when neither
+ *  has one (it then sits at its subnet's level). */
+export function deviceOwnLevel(c: Pick<Container, 'type' | 'image'>): number | undefined {
+  const own = imagePurdueLevel(effectiveImage(c)) ?? purdueLevelFor(c.type);
+  return own === undefined ? undefined : snapPurdueLevel(own);
+}
+
+export type PurdueLevelSource = 'image' | 'type' | 'subnet';
+
+/** A device's level and where it comes from (shown in the inspector). */
+export function deviceLevelInfo(c: Pick<Container, 'type' | 'image'>, subnet: Pick<Subnet, 'name' | 'containers' | 'purdueLevel'>): { level: number; source: PurdueLevelSource } {
+  const image = imagePurdueLevel(effectiveImage(c));
+  if (image !== undefined) return { level: snapPurdueLevel(image), source: 'image' };
+  const type = purdueLevelFor(c.type);
+  if (type !== undefined) return { level: snapPurdueLevel(type), source: 'type' };
+  return { level: subnetLevel(subnet), source: 'subnet' };
+}
+
+/** A device's level: its own, else its subnet's. */
+export function deviceLevel(c: Pick<Container, 'type' | 'image'>, subnet: Pick<Subnet, 'name' | 'containers' | 'purdueLevel'>): number {
+  return deviceOwnLevel(c) ?? subnetLevel(subnet);
 }
 
 /** A subnet's level when it has no override: "DMZ" in its name, else the
- *  median level of its hosts (switches and routers are generic), else L4. */
+ *  median own level of its hosts (switches and routers are generic), else L4. */
 export function inferSubnetLevel(subnet: Pick<Subnet, 'name' | 'containers'>): number {
   if (/\bdmz\b/i.test(subnet.name)) return 3.5;
-  const levels = subnet.containers.filter((c) => roleFor(c.type) === 'host').map(deviceLevel).sort((a, b) => a - b);
+  const levels = subnet.containers
+    .filter((c) => roleFor(c.type) === 'host')
+    .map(deviceOwnLevel)
+    .filter((l): l is number => l !== undefined)
+    .sort((a, b) => a - b);
   if (levels.length === 0) return DEFAULT_PURDUE_LEVEL;
   const mid = Math.floor(levels.length / 2);
   return snapPurdueLevel(levels.length % 2 ? levels[mid] : (levels[mid - 1] + levels[mid]) / 2);

@@ -1,27 +1,34 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { applyCatalog, type Catalog, type NodeTypeSpec } from '@/catalog/catalog';
-import { inferSubnetLevel, subnetLevel } from '@/lib/purdue';
+import { deviceLevel, deviceLevelInfo, deviceOwnLevel, inferSubnetLevel, subnetLevel } from '@/lib/purdue';
 import type { Container, Position, Subnet, TopologyData } from '@/types/topology';
 import { CATALOG } from '@/test/catalogFixture';
 import { NODE_SIZE } from '../../constants';
 import { layoutScope } from '../scope';
 
-const type = (role: NodeTypeSpec['role'], purdueLevel: number): NodeTypeSpec => ({
-  displayName: role, role, category: 'misc', defaultImage: 'kathara/base', color: '#999', label: 'X', icon: 'default', description: '', purdueLevel,
+const type = (role: NodeTypeSpec['role'], purdueLevel?: number): NodeTypeSpec => ({
+  displayName: role, role, category: 'misc', defaultImage: 'kathara/base', color: '#999', label: 'X', icon: 'default', description: '',
+  ...(purdueLevel === undefined ? {} : { purdueLevel }),
 });
 
+// Levels as in the built-in catalog: none on switches, routers, attackers, IDSs.
 const PURDUE_CATALOG: Catalog = {
   ...CATALOG,
+  images: {
+    ...CATALOG.images,
+    // A workstation variant labelled io.ae3gis.purdue-level=0.
+    'lab/process-sim:latest': { displayName: 'Process sim', description: '', stability: 'stable', purdueLevel: 0 },
+  },
   types: {
     ...CATALOG.types,
     firewall: { ...CATALOG.types.firewall, purdueLevel: 3.5 },
-    router: { ...CATALOG.types.router, purdueLevel: 3 },
-    switch: type('switch', 2),
-    workstation: type('host', 4),
+    router: { ...CATALOG.types.router },
+    switch: type('switch'),
+    workstation: { ...type('host', 4), images: ['kathara/base', 'lab/process-sim:latest'] },
     'database-server': type('host', 4),
     'web-server': type('host', 4),
-    attacker: type('host', 5),
-    ids: type('host', 3.5),
+    attacker: type('host'),
+    ids: type('host'),
     hmi: type('host', 2),
     plc: type('host', 1),
   },
@@ -29,32 +36,35 @@ const PURDUE_CATALOG: Catalog = {
 
 beforeAll(() => applyCatalog(PURDUE_CATALOG));
 
-const dev = (id: string, t: string, legs: string[] = []): Container => ({
-  id, name: id, type: t, ip: '10.0.0.1', ...(legs.length ? { interfaces: legs.map((subnetId) => ({ subnetId, ip: '10.0.9.1' })) } : {}),
+const dev = (id: string, t: string, legs: string[] = [], image?: string): Container => ({
+  id, name: id, type: t, ip: '10.0.0.1', ...(image ? { image } : {}),
+  ...(legs.length ? { interfaces: legs.map((subnetId) => ({ subnetId, ip: '10.0.9.1' })) } : {}),
 });
 
 const star = (sw: string, ids: string[]) => ids.map((id) => ({ id: `${sw}-${id}`, from: sw, to: id }));
 
-/** The ICS preset's shape: IT-LAN bridged to OT-LAN by fw + historian, OT-LAN to PROCESS by the plc. */
+const subnet = (id: string, containers: Container[], extra: Partial<Subnet> = {}): Subnet => ({
+  id, name: id, cidr: '10.0.0.0/24', containers, connections: [], ...extra,
+});
+
+const siteOf = (subnets: Subnet[]): TopologyData => ({
+  sites: [{ id: 's', name: 'Lab', location: '', position: { x: 0, y: 0 }, subnets, subnetConnections: [] }], siteConnections: [],
+});
+
+/** The ICS preset's shape: IT-LAN bridged to OT-LAN by fw + historian, OT-LAN
+ *  to PROCESS by the plc; process-sim's image is labelled L0. */
 function ics(): TopologyData {
-  const subnets: Subnet[] = [
-    {
-      id: 'it', name: 'IT-LAN', cidr: '10.0.5.0/24',
-      containers: [dev('fw', 'firewall', ['ot']), dev('it-sw', 'switch'), dev('attacker', 'attacker'), dev('engws', 'workstation'), dev('historian', 'database-server', ['ot'])],
-      connections: star('it-sw', ['fw', 'attacker', 'historian', 'engws']),
-    },
-    {
-      id: 'ot', name: 'OT-LAN', cidr: '10.0.3.0/24',
-      containers: [dev('ot-sw', 'switch'), dev('plc', 'plc', ['process']), dev('hmi', 'hmi'), dev('ids', 'ids')],
-      connections: star('ot-sw', ['plc', 'hmi', 'ids']),
-    },
-    {
-      id: 'process', name: 'PROCESS', cidr: '10.0.1.0/24', purdueLevel: 0,
-      containers: [dev('proc-sw', 'switch'), dev('process-sim', 'workstation')],
-      connections: star('proc-sw', ['process-sim']),
-    },
-  ];
-  return { sites: [{ id: 's', name: 'ICS Lab', location: '', position: { x: 0, y: 0 }, subnets, subnetConnections: [] }], siteConnections: [] };
+  return siteOf([
+    subnet('it', [dev('fw', 'firewall', ['ot']), dev('it-sw', 'switch'), dev('attacker', 'attacker'), dev('engws', 'workstation'), dev('historian', 'database-server', ['ot'])], {
+      name: 'IT-LAN', connections: star('it-sw', ['fw', 'attacker', 'historian', 'engws']),
+    }),
+    subnet('ot', [dev('ot-sw', 'switch'), dev('plc', 'plc', ['process']), dev('hmi', 'hmi'), dev('ids', 'ids')], {
+      name: 'OT-LAN', connections: star('ot-sw', ['plc', 'hmi', 'ids']),
+    }),
+    subnet('process', [dev('proc-sw', 'switch'), dev('process-sim', 'workstation', [], 'lab/process-sim:latest')], {
+      name: 'PROCESS', connections: star('proc-sw', ['process-sim']),
+    }),
+  ]);
 }
 
 const site = { level: 'site', siteId: 's' } as const;
@@ -65,18 +75,32 @@ function rowsOf(pos: Map<string, Position>, ids: string[]): string[][] {
   const ys = [...new Set(ids.map((id) => pos.get(id)!.y))].sort((a, b) => a - b);
   return ys.map((y) => ids.filter((id) => pos.get(id)!.y === y).sort((a, b) => pos.get(a)!.x - pos.get(b)!.x));
 }
+const idsOf = (t: TopologyData, subnetId: string) => t.sites[0].subnets.find((s) => s.id === subnetId)!.containers.map((c) => c.id);
 
-describe('subnet Purdue level', () => {
-  it('is the median level of its hosts, ignoring switches and routers', () => {
-    const [it, ot] = ics().sites[0].subnets;
+describe('Purdue levels', () => {
+  it("takes a device's image level over its type's, else its subnet's", () => {
+    const [it, , proc] = ics().sites[0].subnets;
+    expect(deviceOwnLevel(dev('w', 'workstation'))).toBe(4);
+    expect(deviceOwnLevel(dev('sim', 'workstation', [], 'lab/process-sim:latest'))).toBe(0);
+    expect(deviceLevelInfo(dev('sim', 'workstation', [], 'lab/process-sim:latest'), proc)).toEqual({ level: 0, source: 'image' });
+    // Switches and attackers have no level of their own: their subnet's.
+    expect(deviceOwnLevel(dev('sw', 'switch'))).toBeUndefined();
+    expect(deviceLevelInfo(dev('sw', 'switch'), proc)).toEqual({ level: 0, source: 'subnet' });
+    expect(deviceLevel(dev('a', 'attacker'), it)).toBe(4);
+  });
+
+  it('infers a subnet from the hosts that have a level of their own', () => {
+    const [it, ot, proc] = ics().sites[0].subnets;
     expect(inferSubnetLevel(it)).toBe(4);
     expect(inferSubnetLevel(ot)).toBe(2);
+    expect(inferSubnetLevel(proc)).toBe(0);
+    expect(inferSubnetLevel({ name: 'x', containers: [dev('a', 'attacker'), dev('i', 'ids')] })).toBe(4);
   });
 
   it('reads "DMZ" in the name, defaults to L4, and an override wins', () => {
     expect(inferSubnetLevel({ name: 'Corp DMZ', containers: [dev('web', 'web-server')] })).toBe(3.5);
     expect(inferSubnetLevel({ name: 'empty', containers: [dev('sw', 'switch')] })).toBe(4);
-    expect(subnetLevel(ics().sites[0].subnets[2])).toBe(0);
+    expect(subnetLevel({ name: 'x', containers: [dev('w', 'workstation')], purdueLevel: 0 })).toBe(0);
     expect(subnetLevel({ name: 'x', containers: [], purdueLevel: 3.4 })).toBe(3.5);
   });
 });
@@ -94,10 +118,9 @@ describe('Purdue layout', () => {
     const t = ics();
     const s = t.sites[0];
     // A second IT subnet, and a second OT one hanging off it, listed first.
-    s.subnets.unshift({ id: 'ot2', name: 'OT2', cidr: '10.0.7.0/24', containers: [dev('hmi2', 'hmi')], connections: [] });
-    s.subnets.push({ id: 'it2', name: 'IT2', cidr: '10.0.6.0/24', containers: [dev('ws2', 'workstation', ['ot2'])], connections: [] });
-    const pos = layoutScope(t, site, 'purdue', {}).entries();
-    const p = new Map(pos);
+    s.subnets.unshift(subnet('ot2', [dev('hmi2', 'hmi')]));
+    s.subnets.push(subnet('it2', [dev('ws2', 'workstation', ['ot2'])]));
+    const p = layoutScope(t, site, 'purdue');
     expect(p.get('it')!.y).toBe(p.get('it2')!.y);
     expect(p.get('it')!.x).toBeLessThan(p.get('it2')!.x);
     expect(p.get('it')!.x + p.get('it2')!.x + NODE_SIZE.subnet.width).toBeCloseTo(0);
@@ -106,17 +129,40 @@ describe('Purdue layout', () => {
     expect(p.get('ot')!.x).toBeLessThan(p.get('ot2')!.x);
   });
 
-  it('rows devices by level with the bridging ones on the facing edge and the switch in the middle', () => {
-    const pos = layoutScope(ics(), site, 'purdue');
-    // fw (L3.5) and historian (L4) bridge to OT-LAN below: bottom row, centred.
-    expect(rowsOf(pos, ['fw', 'it-sw', 'attacker', 'engws', 'historian'])).toEqual([['attacker'], ['it-sw'], ['engws', 'fw', 'historian']]);
-    // The plc bridges to PROCESS below.
-    expect(rowsOf(pos, ['ot-sw', 'plc', 'hmi', 'ids'])).toEqual([['ids'], ['ot-sw'], ['hmi', 'plc']]);
-    // PROCESS has one row and its leg arrives from above: switch on top.
-    expect(rowsOf(pos, ['proc-sw', 'process-sim'])).toEqual([['proc-sw'], ['process-sim']]);
-    for (const row of [['engws', 'fw', 'historian'], ['hmi', 'plc'], ['attacker'], ['it-sw']]) {
+  it('puts the switch on the edge bordering the next zone, bridging devices past it', () => {
+    const t = ics();
+    const pos = layoutScope(t, site, 'purdue');
+    // IT: switch at the bottom of the office rows; fw and historian bridge down below it.
+    expect(rowsOf(pos, idsOf(t, 'it'))).toEqual([['attacker', 'engws'], ['it-sw'], ['fw', 'historian']]);
+    // OT: switch on top; the plc bridges down to PROCESS.
+    expect(rowsOf(pos, idsOf(t, 'ot'))).toEqual([['ot-sw'], ['hmi', 'ids'], ['plc']]);
+    expect(rowsOf(pos, idsOf(t, 'process'))).toEqual([['proc-sw'], ['process-sim']]);
+    for (const row of [['attacker', 'engws'], ['fw', 'historian'], ['it-sw'], ['plc']]) {
       expect(row.reduce((s, id) => s + centre(pos.get(id)!), 0) / row.length).toBeCloseTo(0);
     }
+  });
+
+  it('puts a lower-level device under the IT switch and a higher-level one over the OT switch', () => {
+    const t = siteOf([
+      subnet('it', [dev('sw', 'switch'), dev('ws', 'workstation'), dev('fw', 'firewall')]),
+      subnet('ot', [dev('ot-sw', 'switch'), dev('plc', 'plc'), dev('ws2', 'workstation')]),
+    ]);
+    const pos = layoutScope(t, site, 'purdue');
+    expect(rowsOf(pos, ['sw', 'ws', 'fw'])).toEqual([['ws'], ['sw'], ['fw']]);
+    // A workstation (L4) in an L1 subnet: over the OT switch.
+    expect(rowsOf(pos, ['ot-sw', 'plc', 'ws2'])).toEqual([['ws2'], ['ot-sw'], ['plc']]);
+  });
+
+  it('lays out a DMZ: IT-side router on top, OT-side router at the bottom, switches around its own row', () => {
+    const dmz = (switches: string[]) => siteOf([
+      subnet('it', [dev('ws', 'workstation')]),
+      subnet('dmz', [...switches.map((id) => dev(id, 'switch')), dev('fw', 'firewall'), dev('ids', 'ids'), dev('r-it', 'router', ['it']), dev('r-ot', 'router', ['ot'])], { name: 'DMZ' }),
+      subnet('ot', [dev('plc', 'plc')]),
+    ]);
+    const one = layoutScope(dmz(['sw']), site, 'purdue');
+    expect(rowsOf(one, ['sw', 'fw', 'ids', 'r-it', 'r-ot'])).toEqual([['r-it'], ['sw'], ['fw', 'ids'], ['r-ot']]);
+    const two = layoutScope(dmz(['sw-a', 'sw-b']), site, 'purdue');
+    expect(rowsOf(two, ['sw-a', 'sw-b', 'fw', 'ids', 'r-it', 'r-ot'])).toEqual([['r-it'], ['sw-a'], ['fw', 'ids'], ['sw-b'], ['r-ot']]);
   });
 
   it('sizes expanded subnets from their new device layout', () => {
@@ -132,21 +178,21 @@ describe('Purdue layout', () => {
     t.sites[0].subnets.forEach((s, i) => { s.position = { x: 0, y: i * 300 }; });
     const pos = layoutScope(t, { level: 'subnet', siteId: 's', subnetId: 'ot' }, 'purdue');
     expect([...pos.keys()].sort()).toEqual(['hmi', 'ids', 'ot-sw', 'plc']);
-    expect(rowsOf(pos, ['ot-sw', 'plc', 'hmi', 'ids'])).toEqual([['ids'], ['ot-sw'], ['hmi', 'plc']]);
+    expect(rowsOf(pos, idsOf(t, 'ot'))).toEqual([['ot-sw'], ['hmi', 'ids'], ['plc']]);
     // PROCESS moved above OT-LAN: the plc now sits on the top edge.
     t.sites[0].subnets[2].position = { x: 0, y: -300 };
     const moved = layoutScope(t, { level: 'subnet', siteId: 's', subnetId: 'ot' }, 'purdue');
-    expect(rowsOf(moved, ['ot-sw', 'plc', 'hmi', 'ids'])).toEqual([['ids', 'plc'], ['ot-sw'], ['hmi']]);
+    expect(rowsOf(moved, idsOf(t, 'ot'))).toEqual([['plc'], ['ot-sw'], ['hmi', 'ids']]);
   });
 
   it('puts a device bridging to a subnet beside it at that end of its row', () => {
-    const t = ics();
-    const [it] = t.sites[0].subnets;
-    t.sites[0].subnets = [it, { id: 'side', name: 'Side', cidr: '10.0.8.0/24', containers: [dev('ws3', 'workstation')], connections: [] }];
-    it.containers = [dev('it-sw', 'switch'), dev('a', 'workstation'), dev('b', 'workstation', ['side']), dev('c', 'workstation')];
+    const t = siteOf([
+      subnet('it', [dev('it-sw', 'switch'), dev('a', 'workstation'), dev('b', 'workstation', ['side']), dev('c', 'workstation')]),
+      subnet('side', [dev('ws3', 'workstation')]),
+    ]);
     const pos = layoutScope(t, site, 'purdue');
     expect(pos.get('it')!.y).toBe(pos.get('side')!.y);
-    expect(rowsOf(pos, ['it-sw', 'a', 'b', 'c'])).toEqual([['it-sw'], ['a', 'c', 'b']]);
+    expect(rowsOf(pos, ['it-sw', 'a', 'b', 'c'])).toEqual([['a', 'c', 'b'], ['it-sw']]);
   });
 
   it('falls back to the tree layout at root scope', () => {
