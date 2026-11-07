@@ -1,12 +1,13 @@
 import dagre from '@dagrejs/dagre';
 import type { Position } from '@/types/topology';
 
-export type LayoutMode = 'tree' | 'circle' | 'grid';
+export type LayoutMode = 'tree' | 'circle' | 'grid' | 'purdue';
 
 export const LAYOUT_MODES: { value: LayoutMode; label: string }[] = [
   { value: 'tree', label: 'Tree' },
   { value: 'circle', label: 'Circle' },
   { value: 'grid', label: 'Grid' },
+  { value: 'purdue', label: 'Purdue' },
 ];
 
 export interface LayoutNode {

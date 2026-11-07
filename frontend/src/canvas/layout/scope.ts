@@ -3,8 +3,9 @@
 import type { Connection, Position, TopologyData } from '@/types/topology';
 import { rankFor } from '@/catalog/catalog';
 import { findSite, findSubnet, gatewayOf, type Scope } from '@/lib/topology';
-import { NODE_SIZE, type NodeKind } from '../constants';
+import { LAYOUT_SPACING, NODE_SIZE, type NodeKind } from '../constants';
 import { computeLayout, type LayoutEdge, type LayoutMode, type LayoutNode } from './algorithms';
+import { layoutPurdue } from './purdue';
 
 export interface ScopeChild {
   id: string;
@@ -70,13 +71,18 @@ export function scopeLayoutEdges(topology: TopologyData, scope: Scope): LayoutEd
 export interface LayoutScopeOptions {
   /** Rendered sizes to use instead of the default per-kind size (e.g. expanded groups). */
   sizes?: ReadonlyMap<string, { width: number; height: number }>;
+  /** Ids drawn expanded (Purdue sizes expanded subnets from their re-laid-out devices). */
+  expanded?: Readonly<Record<string, true>>;
 }
 
-/** Compute positions for every child of a scope with the given algorithm. */
+/** Compute positions for every child of a scope with the given algorithm.
+ *  Purdue at site scope also places the devices inside every subnet; at root
+ *  scope (sites have no level) it falls back to Tree. */
 export function layoutScope(topology: TopologyData, scope: Scope, mode: LayoutMode, options: LayoutScopeOptions = {}): Map<string, Position> {
   const children = scopeChildren(topology, scope);
   const nodes: LayoutNode[] = children.map((c) => ({ id: c.id, ...(options.sizes?.get(c.id) ?? NODE_SIZE[c.kind]) }));
   const edges = scopeLayoutEdges(topology, scope);
+  if (mode === 'purdue' && scope.level !== 'root') return layoutPurdue(topology, scope, { expanded: options.expanded, edges });
 
   let priority: Map<string, number> | undefined;
   if (scope.level === 'subnet') {
@@ -84,12 +90,7 @@ export function layoutScope(topology: TopologyData, scope: Scope, mode: LayoutMo
     priority = new Map(subnet?.containers.map((c) => [c.id, rankFor(c.type)]) ?? []);
   }
 
-  const spacing =
-    scope.level === 'subnet'
-      ? { nodeSpacing: 40, rankSpacing: 72 }
-      : scope.level === 'site'
-        ? { nodeSpacing: 72, rankSpacing: 110 }
-        : { nodeSpacing: 96, rankSpacing: 140, direction: 'LR' as const };
+  const spacing = scope.level === 'root' ? { ...LAYOUT_SPACING.root, direction: 'LR' as const } : LAYOUT_SPACING[scope.level];
 
   // In a LAN the gateway router is the natural root; make sure it is first so
   // the tree pass places it top-centre.

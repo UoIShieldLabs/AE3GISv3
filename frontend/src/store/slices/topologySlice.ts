@@ -697,8 +697,8 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
       if (changed) s.dirty = true;
     }, false, 'moveNodes'),
 
-  applyLayout: (scope, mode, sizes) => {
-    const positions = layoutScope(get().topology, scope, mode, { sizes });
+  applyLayout: (scope, mode, sizes, expanded) => {
+    const positions = layoutScope(get().topology, scope, mode, { sizes, expanded: expanded ?? get().expanded });
     get().moveNodes([...positions.entries()].map(([id, position]) => ({ id, position })));
   },
 });

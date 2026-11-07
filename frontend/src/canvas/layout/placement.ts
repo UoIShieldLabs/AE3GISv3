@@ -1,5 +1,5 @@
-import type { Position } from '@/types/topology';
-import { GRID, GROUP_HEADER, GROUP_PADDING, MIN_GROUP_WIDTH, PLACEMENT_GAP } from '../constants';
+import type { Position, Subnet } from '@/types/topology';
+import { GRID, GROUP_HEADER, GROUP_PADDING, MIN_GROUP_WIDTH, NODE_SIZE, PLACEMENT_GAP } from '../constants';
 
 export interface Rect extends Position {
   width: number;
@@ -50,4 +50,23 @@ export function boundsOf(rects: Rect[]): Rect | undefined {
 /** Rendered size of an expanded group whose children span `bounds`. */
 export function groupSize(bounds: { width: number; height: number }): { width: number; height: number } {
   return { width: Math.max(bounds.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH), height: bounds.height + GROUP_PADDING * 2 + GROUP_HEADER };
+}
+
+/** Rendered box of a subnet at its stored position: its card, or the group
+ *  around its devices when it is drawn expanded. */
+export function subnetRect(subnet: Pick<Subnet, 'position' | 'containers'>, expanded = false): Rect {
+  const p = subnet.position ?? { x: 0, y: 0 };
+  if (!expanded) return { x: p.x, y: p.y, ...NODE_SIZE.subnet };
+  const devices = subnet.containers.map((c) => ({ x: c.position?.x ?? 0, y: c.position?.y ?? 0, ...NODE_SIZE.device }));
+  return { x: p.x, y: p.y, ...groupSize(boundsOf(devices) ?? { x: 0, y: 0, ...NODE_SIZE.device }) };
+}
+
+export type Side = 'up' | 'down' | 'left' | 'right';
+
+/** The side of `a` that faces `b`: up / down when `b` lies wholly above or
+ *  below `a`, otherwise left / right. */
+export function relativeSide(a: Rect, b: Rect): Side {
+  if (b.y + b.height <= a.y) return 'up';
+  if (b.y >= a.y + a.height) return 'down';
+  return b.x + b.width / 2 < a.x + a.width / 2 ? 'left' : 'right';
 }

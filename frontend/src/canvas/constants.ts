@@ -22,3 +22,11 @@ export const MIN_GROUP_WIDTH = 300;
 
 /** Spacing used when auto-placing a new node next to existing ones. */
 export const PLACEMENT_GAP = 32;
+
+/** Gaps between nodes in a row and between rows, per scope level, for the
+ *  layered layouts (Tree, Purdue). */
+export const LAYOUT_SPACING = {
+  subnet: { nodeSpacing: 40, rankSpacing: 72 },
+  site: { nodeSpacing: 72, rankSpacing: 110 },
+  root: { nodeSpacing: 96, rankSpacing: 140 },
+} as const;
