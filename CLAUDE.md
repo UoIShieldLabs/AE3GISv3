@@ -281,9 +281,12 @@ tables record every long operation.
   `interactions/dnd.ts`, context menu in `CanvasContextMenu.tsx`. Auto-layout
   (`layout/`, toolbar Layout menu / `L`): Tree, Circle, Grid, Purdue
   (`layout/purdue.ts`: at site scope subnets one row per Purdue level, from
-  `Subnet.purdueLevel` else inferred in `lib/purdue.ts`, and devices in level
-  rows with bridging devices on the edge facing their neighbour; root falls
-  back to Tree). LAN-view guests (leg-attached devices) sit on their home
+  `Subnet.purdueLevel` else inferred in `lib/purdue.ts`; inside a subnet,
+  devices in level rows, bridging devices on the edge facing their neighbour,
+  the switch on the edge bordering the next zone (IT bottom, OT top); root
+  falls back to Tree). A device's level is its image's
+  (`io.ae3gis.purdue-level`, `ImageSpec.purdueLevel`), else its type's, else
+  its subnet's. LAN-view guests (leg-attached devices) sit on their home
   subnet's side.
 - **Shell** (`shell/`): TopBar, Sidebar (Palette with drag-and-drop, Explorer
   tree), Inspector (context-sensitive forms that commit on blur), Dock
