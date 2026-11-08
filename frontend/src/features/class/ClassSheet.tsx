@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Copy, KeyRound, RefreshCw, RotateCcw, Square, Trash2, Users } from 'lucide-react';
 import * as api from '@/api/client';
-import { Badge, Button, Dialog, EmptyState, IconButton, Sheet, Spinner, Switch, toast } from '@/ui';
+import { Badge, Button, Dialog, IconButton, Sheet, Spinner, Switch, toast } from '@/ui';
 
 export interface ClassSheetProps {
   open: boolean;
@@ -111,7 +111,7 @@ export function ClassSheet({ open, onOpenChange, onChanged }: ClassSheetProps) {
       open={open}
       onOpenChange={onOpenChange}
       title="Class"
-      description="Students sign themselves up with the join code; every lab runs on this host."
+      description="Sign-up, students and their labs"
       size="620px"
       headerAction={<IconButton label="Refresh" size="icon-sm" onClick={() => void refresh()}><RefreshCw /></IconButton>}
     >
@@ -123,7 +123,7 @@ export function ClassSheet({ open, onOpenChange, onChanged }: ClassSheetProps) {
             <label className="flex items-center justify-between gap-3">
               <span>
                 <span className="block text-[13px] font-medium">Students can sign up</span>
-                <span className="text-fg-muted">Turn off once everyone has joined; accounts stay.</span>
+                <span className="text-fg-muted">Accounts stay when you turn it off.</span>
               </span>
               <Switch checked={settings.signup_open} disabled={busy === 'signup'} onCheckedChange={setSignup} aria-label="Students can sign up" />
             </label>
@@ -133,12 +133,12 @@ export function ClassSheet({ open, onOpenChange, onChanged }: ClassSheetProps) {
                 <IconButton label="Copy join code" size="icon-sm" onClick={() => void copyCode()}><Copy /></IconButton>
                 <Button size="xs" variant="ghost" onClick={rotate} loading={busy === 'rotate'}><RotateCcw /> New code</Button>
                 <span className="w-full text-fg-muted">
-                  Students open <span className="font-mono">{joinUrl}</span> → Join class.
-                  {settings.signup_open ? null : ' Sign-up is closed: the code does not work right now.'}
+                  Join at <span className="font-mono">{joinUrl}</span>
+                  {settings.signup_open ? null : ' (closed now)'}
                 </span>
               </div>
             ) : (
-              <p className="text-fg-muted">Turning sign-up on makes a join code to share with the class.</p>
+              <p className="text-fg-muted">Turn it on to get a join code.</p>
             )}
           </section>
 
@@ -146,11 +146,11 @@ export function ClassSheet({ open, onOpenChange, onChanged }: ClassSheetProps) {
             <h3 className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wide text-fg-muted">
               <Users className="size-3.5" /> Students ({list.length})
               <span className="ml-auto font-normal normal-case tracking-normal text-fg-subtle">
-                {running} lab{running === 1 ? '' : 's'} running · {students.max_labs > 0 ? `up to ${students.max_labs} per student` : 'no per-student limit'}
+                {running} running · {students.max_labs > 0 ? `max ${students.max_labs} each` : 'no limit'}
               </span>
             </h3>
             {list.length === 0 ? (
-              <EmptyState icon={<Users />} title="No students yet" description="They appear here as they sign up." className="rounded-lg border border-dashed border-border-strong" />
+              <p className="text-fg-subtle">No students yet.</p>
             ) : (
               <ul className="divide-y divide-border rounded-lg border border-border">
                 {list.map((s) => (

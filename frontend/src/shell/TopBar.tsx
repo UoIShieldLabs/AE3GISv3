@@ -13,6 +13,7 @@ import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
 import { openScenarioPanel } from '@/features/scenario/actions';
 import { openTutorialsPanel } from '@/features/tutorials/actions';
 import { useCan } from '@/lib/permissions';
+import { RecordChips } from '@/features/topology/SourceBanner';
 import { AppearanceMenu } from './AppearanceMenu';
 import { UserMenu } from './UserMenu';
 
@@ -69,6 +70,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
         {dirty ? (
           <Tooltip content="Unsaved changes"><span className="size-1.5 shrink-0 rounded-full bg-warning" /></Tooltip>
         ) : null}
+        <RecordChips />
       </div>
 
       <div className="ml-auto flex items-center gap-1">

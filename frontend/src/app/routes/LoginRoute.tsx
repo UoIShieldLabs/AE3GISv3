@@ -61,7 +61,7 @@ export function LoginRoute() {
       <div className="flex min-h-0 flex-1 items-start justify-center overflow-y-auto px-4 py-16">
         <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-sm">
           <h1 className="text-base font-semibold">Welcome</h1>
-          <p className="mt-1 text-xs text-fg-muted">Sign in to this AE3GIS lab, or join your class with the code your instructor shared.</p>
+          <p className="mt-1 text-xs text-fg-muted">Sign in, or join your class with its code.</p>
           <Tabs defaultValue="signin" className="mt-5">
             <TabsList variant="pills" className="w-full">
               <TabsTrigger value="signin" className="flex-1 justify-center"><LogIn /> Sign in</TabsTrigger>
@@ -74,9 +74,7 @@ export function LoginRoute() {
               {signupOpen ? (
                 <JoinForm next={next} />
               ) : (
-                <p className="rounded-md border border-dashed border-border-strong p-3 text-xs text-fg-muted">
-                  Sign-up is closed right now. Ask your instructor to open it, then reload this page.
-                </p>
+                <p className="text-xs text-fg-muted">Sign-up is closed. Ask your instructor to open it.</p>
               )}
             </TabsContent>
           </Tabs>
@@ -146,8 +144,8 @@ function JoinForm({ next }: { next: string }) {
   };
   return (
     <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-3" noValidate>
-      <Field label="Join code" error={errors.joinCode?.message} hint="From your instructor, e.g. kq7m-x3fa">
-        {(ctl) => <Input {...ctl} {...register('joinCode')} mono autoComplete="off" autoFocus />}
+      <Field label="Join code" error={errors.joinCode?.message}>
+        {(ctl) => <Input {...ctl} {...register('joinCode')} mono autoComplete="off" autoFocus placeholder="e.g. kq7m-x3fa" />}
       </Field>
       <Field label="Choose a username" error={errors.username?.message}>
         {(ctl) => <Input {...ctl} {...register('username')} autoComplete="username" />}
