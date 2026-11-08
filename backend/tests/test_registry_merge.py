@@ -163,3 +163,59 @@ def test_a_ref_the_built_in_catalog_describes_keeps_its_spec():
 def test_no_snapshots_is_the_built_in_catalog():
     merged, reports = merge(BASE, [])
     assert merged.types.keys() == BASE.types.keys() and reports == {}
+
+
+def test_a_default_label_makes_an_image_its_built_in_types_default():
+    snap = Snapshot(
+        "lab",
+        [
+            cand("malicious-client", standard_labels("attacker", default="true")),
+            cand("kali", standard_labels("attacker")),
+        ],
+    )
+    merged, reports = merge(BASE, [snap])
+    attacker = merged.types["attacker"]
+    assert attacker.defaultImage == "lab/malicious-client:latest"
+    assert attacker.images[0] == "lab/malicious-client:latest"
+    # the built-in default stays a variant; the built-in catalog is untouched
+    assert BASE.types["attacker"].defaultImage in attacker.images
+    assert merged.types["attacker"].role == BASE.types["attacker"].role
+    assert BASE.types["attacker"].defaultImage != "lab/malicious-client:latest"
+    assert reports["lab"].warnings == []
+
+
+def test_without_the_label_a_variant_leaves_the_default_alone():
+    snap = Snapshot("lab", [cand("kali", standard_labels("attacker"))])
+    merged, _ = merge(BASE, [snap])
+    assert merged.types["attacker"].defaultImage == BASE.types["attacker"].defaultImage
+
+
+def test_the_earliest_registry_claims_a_types_default():
+    first = Snapshot("one", [cand("zeek", standard_labels("ids", default="true"))])
+    second = Snapshot("two", [cand("suricata", standard_labels("ids", default="true"))])
+    merged, reports = merge(BASE, [first, second])
+    assert merged.types["ids"].defaultImage == "one/zeek:latest"
+    assert "two/suricata:latest" in merged.types["ids"].images
+    assert any("already defaults to registry one" in w for w in reports["two"].warnings)
+
+
+def test_two_default_claims_in_one_registry_warn_and_the_first_repo_wins():
+    snap = Snapshot(
+        "lab",
+        [
+            cand("zeek", standard_labels("ids", default="true")),
+            cand("suricata", standard_labels("ids", default="true")),
+        ],
+    )
+    merged, reports = merge(BASE, [snap])
+    assert merged.types["ids"].defaultImage == "lab/suricata:latest"
+    assert any("2 images say io.ae3gis.default" in w for w in reports["lab"].warnings)
+
+
+def test_a_type_another_registry_defined_keeps_its_default():
+    a = standard_labels("bastion", type_name="Bastion", type_role="host", default="true")
+    first = Snapshot("one", [cand("bastion", a)])
+    second = Snapshot("two", [cand("jump", standard_labels("bastion", default="true"))])
+    merged, reports = merge(BASE, [first, second])
+    assert merged.types["bastion"].defaultImage == "one/bastion:latest"
+    assert any("io.ae3gis.default ignored" in w for w in reports["two"].warnings)

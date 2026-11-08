@@ -181,7 +181,9 @@ repo's short description starts with `[ae3gis]` (other repos are never
 inspected) and the image carries `io.ae3gis.schema` + `io.ae3gis.type` labels
 (parsed by `domain/image_labels.py`; a built-in type id joins that type as a
 variant, a new id defines a type from its `io.ae3gis.default` image's
-`io.ae3gis.type.*` labels; `shell`/`own-bridge` as in the catalog). A sync job
+`io.ae3gis.type.*` labels; an `io.ae3gis.default` image of a built-in type
+becomes that type's default while its registry is added, first namespace
+wins; `shell`/`own-bridge` as in the catalog). A sync job
 (`list → inspect → apply`) lists repos/tags through the Hub API (free), reads
 labels through the registry (one Docker Hub pull per image: anonymous limit
 100/h per IP), reuses labels while a tag's digest is unchanged, and stops while

@@ -131,6 +131,39 @@ def _type_spec(namespace: str, type_id: str, meta: TypeMeta, refs: list[str]) ->
     )
 
 
+def _claim_default(
+    type_id: str,
+    spec: NodeTypeSpec,
+    members: list[_Image],
+    ns: str,
+    claimed: dict[str, str],
+    report: Report,
+) -> None:
+    """An image labelled ``io.ae3gis.default`` becomes an existing type's
+    default (listed first), so its nodes pull it instead of, say, building the
+    built-in default. The earliest-added registry wins; within one registry,
+    the first repo by name."""
+    defaults = [m for m in members if m.labels.default]
+    if not defaults:
+        return
+    if len(defaults) > 1:
+        report.warnings.append(
+            f"type {type_id!r}: {len(defaults)} images say io.ae3gis.default; "
+            f"using {defaults[0].cand.repo}"
+        )
+    owner = claimed.get(type_id) or spec.origin
+    if owner:
+        report.warnings.append(
+            f"{defaults[0].cand.repo}: type {type_id!r} already defaults to registry "
+            f"{owner}'s image; io.ae3gis.default ignored"
+        )
+        return
+    ref = defaults[0].ref
+    claimed[type_id] = ns
+    spec.defaultImage = ref
+    spec.images = [ref] + [r for r in spec.images if r != ref]
+
+
 def merge(base: Catalog, snapshots: list[Snapshot]) -> tuple[Catalog, dict[str, Report]]:
     """The catalog with every registry's images, and a report per registry.
 
@@ -140,6 +173,8 @@ def merge(base: Catalog, snapshots: list[Snapshot]) -> tuple[Catalog, dict[str, 
     types: dict[str, NodeTypeSpec] = {k: v.model_copy(deep=True) for k, v in base.types.items()}
     categories: list[CategorySpec] = list(base.categories)
     reports: dict[str, Report] = {}
+    # Built-in types whose default image a registry image has claimed, and by whom.
+    claimed: dict[str, str] = {}
 
     for snap in snapshots:
         ns = snap.namespace
@@ -220,6 +255,7 @@ def merge(base: Catalog, snapshots: list[Snapshot]) -> tuple[Catalog, dict[str, 
                 for m in members:
                     if m.ref not in existing.images:
                         existing.images.append(m.ref)
+                _claim_default(type_id, existing, members, ns, claimed, report)
                 new_type = False
 
             for m in members:
