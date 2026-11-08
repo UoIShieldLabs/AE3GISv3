@@ -477,7 +477,11 @@ and how to run it (`shell`, `own-bridge`, a new type's role, color…).
 - **Merging** happens at startup and after every add, remove or sync, from the
   DB only (`catalog/registry.py`, labels parsed by `domain/image_labels.py`),
   and yields a report per registry: loaded, rejected (with reasons), warnings.
-  A failed sync keeps the previous snapshot. Nothing syncs on its own.
+  An `io.ae3gis.default` image of a built-in type becomes that type's default
+  (first-added namespace wins). A failed sync keeps the previous snapshot.
+  Nothing syncs on its own, except that `AE3GIS_DEFAULT_REGISTRIES` (compose:
+  `tollan`) adds the listed namespaces at startup when missing, which starts
+  their first sync.
 - **Deploys** pull registry images like any other. An image not published for
   the host's platform is pulled for amd64 (or its first platform) with a
   `deploy.images_emulated` warning: buildx pushes an index even for one

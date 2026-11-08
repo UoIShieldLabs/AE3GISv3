@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+from fastapi.testclient import TestClient
 
 import catalog
 from engine.fake import FakeEngine
@@ -207,3 +208,25 @@ def test_an_image_not_built_for_the_host_is_pulled_for_amd64(client, wait_jobs, 
     events = client.get(f"/api/v1/topologies/{topo['id']}/events").json()
     emulated = [e for e in events if e["type"] == "deploy.images_emulated"]
     assert emulated and "lab/openplc:latest" in emulated[0]["data"]["refs"]
+
+
+def test_default_registries_are_added_at_startup_and_synced_once(tmp_path, fake_engine, hub):
+    def start(entries: str) -> list[dict]:
+        app = create_app(make_settings(tmp_path, default_registries=entries), fake_engine)
+        app.state.registries.hub = hub.client
+        with TestClient(app) as c:
+            c.portal.call(app.state.runner.wait_idle)
+            return c.get("/api/v1/registries").json()
+
+    # A name and its URL are one namespace; a bad entry is skipped.
+    [reg] = start("lab, https://hub.docker.com/u/lab, not a namespace!")
+    assert reg["namespace"] == "lab"
+    assert reg["last_job"]["status"] == "succeeded" and len(reg["loaded"]) == 2
+
+    # A restart neither adds it again nor syncs it again.
+    [again] = start("lab")
+    assert again["id"] == reg["id"] and again["last_job"]["id"] == reg["last_job"]["id"]
+
+
+def test_no_default_registries_by_default(client):
+    assert client.get("/api/v1/registries").json() == []
