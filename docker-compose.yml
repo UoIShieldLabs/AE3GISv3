@@ -1,10 +1,6 @@
 services:
   frontend:
-    build:
-      context: ./frontend
-      args:
-        # Must match AE3GIS_INSTRUCTOR_TOKEN when auth is turned on.
-        - VITE_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
+    build: ./frontend
     ports:
       - "3000:80"
     depends_on:
@@ -29,8 +25,16 @@ services:
       - ./backend:/app
     environment:
       - AE3GIS_DB_PATH=/app/data/ae3gis.db
-      # Empty by default: the API is open. Set AE3GIS_INSTRUCTOR_TOKEN (and the
-      # frontend's VITE_INSTRUCTOR_TOKEN) to require a bearer token.
+      # Accounts (classroom mode) are off by default: the API is open and every
+      # visitor is the instructor. Set AE3GIS_INSTRUCTOR_PASSWORD to turn them
+      # on: the instructor signs in (username AE3GIS_INSTRUCTOR_USERNAME,
+      # default "instructor") and students join with the class code.
+      - AE3GIS_INSTRUCTOR_PASSWORD=${AE3GIS_INSTRUCTOR_PASSWORD:-}
+      - AE3GIS_INSTRUCTOR_USERNAME=${AE3GIS_INSTRUCTOR_USERNAME:-instructor}
+      # Labs one student may have deployed at once (0 = no limit); every lab
+      # runs on this host's Docker.
+      - AE3GIS_STUDENT_MAX_LABS=${AE3GIS_STUDENT_MAX_LABS:-1}
+      # Optional static instructor bearer for headless clients (bench.sh --token).
       - AE3GIS_INSTRUCTOR_TOKEN=${AE3GIS_INSTRUCTOR_TOKEN:-}
       - AE3GIS_CORS_ORIGINS=${AE3GIS_CORS_ORIGINS:-*}
       # Recorded with every capture and traffic run (see start.sh): which code

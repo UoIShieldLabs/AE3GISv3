@@ -20,5 +20,10 @@ if git rev-parse HEAD >/dev/null 2>&1; then
   fi
 fi
 
+if [ -z "${AE3GIS_INSTRUCTOR_PASSWORD:-}" ] && [ -z "${AE3GIS_INSTRUCTOR_TOKEN:-}" ]; then
+  echo "Note: accounts are off, so anyone who can reach :3000 or :8000 has full access."
+  echo "      For a class, set AE3GIS_INSTRUCTOR_PASSWORD (see README, \"Accounts\")."
+fi
+
 echo "Starting AE3GIS (frontend :3000, backend :8000)..."
 exec docker compose up --build
