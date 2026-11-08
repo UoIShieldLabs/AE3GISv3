@@ -457,7 +457,7 @@ checkpoint (CRIU is experimental and unavailable on Docker Desktop). A snapshot
 costs only its diff layer (~100 kB for a lightly edited node). Saves are per
 topology, not per student. `DELETE /topologies/{id}/saved-state` (idle/error
 only) and deleting the topology remove the images. The UI's Destroy opens a
-dialog (Save & stop / Keep running / Delete); Deploy becomes
+dialog (Save & destroy / Don't save; closing it keeps the lab running); Deploy becomes
 **Resume** with a "Deploy fresh" option while a save exists.
 
 ### 5.6 Node images built from Dockerfiles

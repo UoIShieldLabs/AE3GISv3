@@ -44,7 +44,8 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
   const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen, openImages } = useAppStore.getState();
   const setMeta = useAppStore((s) => s.setTopologyMeta);
   const { canUndo, canRedo } = useUndoState();
-  const status = STATUS[deployStatus];
+  // An idle lab with a save to resume says so.
+  const status = deployStatus === 'idle' && savedState ? { ...STATUS.idle, label: 'Saved' } : STATUS[deployStatus];
   const transitioning = deployStatus === 'deploying' || deployStatus === 'destroying';
   const runningStep = activeJob?.steps.find((st) => st.status === 'running');
   const stepLabel = runningStep ? `${status.label.replace('…', '')} · ${runningStep.message ?? runningStep.name}` : status.label;
