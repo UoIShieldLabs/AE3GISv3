@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     registry_pull_reserve: int = 10
     # Seconds one Docker Hub request may take.
     registry_timeout_s: float = 20
+    # Docker Hub namespaces added at startup when missing (comma-separated
+    # names or hub.docker.com URLs, e.g. "tollan"); each new one syncs once.
+    # A listed registry removed in the UI comes back on the next restart.
+    default_registries: str = ""
 
     # Captures and traffic runs keep their output (pcaps, time series, run.json)
     # under data_dir/artifacts/<job id>/, deleted after the retention period.
@@ -108,6 +112,10 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         path = self.db_path or (self.data_dir / "ae3gis.db")
         return f"sqlite:///{path}"
+
+    @property
+    def default_registry_list(self) -> list[str]:
+        return [r.strip() for r in self.default_registries.split(",") if r.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -187,7 +187,9 @@ wins; `shell`/`own-bridge` as in the catalog). A sync job
 (`list → inspect → apply`) lists repos/tags through the Hub API (free), reads
 labels through the registry (one Docker Hub pull per image: anonymous limit
 100/h per IP), reuses labels while a tag's digest is unchanged, and stops while
-`AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are `pending`). The
+`AE3GIS_REGISTRY_PULL_RESERVE` pulls are left (the rest are `pending`).
+`AE3GIS_DEFAULT_REGISTRIES` (comma-separated; compose default `tollan`) adds
+those namespaces at startup when missing; syncing stays explicit otherwise. The
 registry's snapshot is stored and merged without network; rejected images keep
 their reasons for the UI. Deploys pull an image not published for the host's
 platform as amd64 (`pull_image(platform=)`) with a `deploy.images_emulated`

@@ -126,6 +126,27 @@ class RegistryManager:
         self.start_sync(db, reg.id)
         return reg
 
+    def ensure_defaults(self, entries: list[str]) -> list[str]:
+        """Add the configured default registries that are missing; each starts
+        its first sync. Returns the namespaces added (bad entries are logged)."""
+        added: list[str] = []
+        with self.runner.session_factory() as db:
+            have = {ns for (ns,) in db.query(Registry.namespace).all()}
+            for entry in entries:
+                try:
+                    namespace = parse_hub_url(entry)
+                except ValueError as exc:
+                    log.warning("AE3GIS_DEFAULT_REGISTRIES: skipping %r: %s", entry, exc)
+                    continue
+                if namespace in have:
+                    continue
+                self.add(db, entry)
+                have.add(namespace)
+                added.append(namespace)
+        if added:
+            log.info("Added default registries: %s", ", ".join(added))
+        return added
+
     def remove(self, db: Session, registry_id: str) -> None:
         reg = self._get(db, registry_id)
         if jobs.active_for_subject(db, registry_subject(reg.id)):

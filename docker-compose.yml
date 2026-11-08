@@ -39,6 +39,9 @@ services:
       - AE3GIS_GIT_COMMIT=${AE3GIS_GIT_COMMIT:-}
       - AE3GIS_GIT_DIRTY=${AE3GIS_GIT_DIRTY:-false}
       - AE3GIS_HOST_LABEL=${AE3GIS_HOST_LABEL:-}
+      # Docker Hub namespaces added (and synced once) at startup when missing,
+      # comma-separated. Set it empty to start without any registry.
+      - AE3GIS_DEFAULT_REGISTRIES=${AE3GIS_DEFAULT_REGISTRIES-tollan}
       # To build node images from a local checkout instead of the git source
       # in the catalog, mount it and add (JSON):
       #   - AE3GIS_SOURCE_OVERRIDES={"ae3gis-containers": "/sources/ae3gis-containers"}

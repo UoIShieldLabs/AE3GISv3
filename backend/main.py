@@ -99,6 +99,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         stale = recover_stale_jobs(session_factory)
         if stale:
             log.warning("Failed %d job(s) left running by a previous process", stale)
+        registry_manager.ensure_defaults(settings.default_registry_list)
         logs.gc(settings.job_log_retention_days)
         artifacts.gc(settings.artifact_retention_days)
         if ok:
