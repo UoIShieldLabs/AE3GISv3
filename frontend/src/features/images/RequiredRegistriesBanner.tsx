@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Boxes, Plus, X } from 'lucide-react';
 import { useAppStore } from '@/store';
+import { useCan } from '@/lib/permissions';
 import { Button, IconButton } from '@/ui';
 import { addRegistry } from './actions';
 import { requiredRegistries } from './requiredRegistries';
@@ -12,6 +13,7 @@ export function RequiredRegistriesBanner() {
   const report = useAppStore((s) => s.images);
   const [dismissed, setDismissed] = useState('');
   const [adding, setAdding] = useState(false);
+  const manage = useCan('manageImages');
 
   const missing = useMemo(
     () => requiredRegistries(topology, (report?.registries ?? []).map((r) => r.namespace)),
@@ -36,7 +38,11 @@ export function RequiredRegistriesBanner() {
         This scenario uses images from Docker Hub {missing.length === 1 ? 'namespace' : 'namespaces'}{' '}
         <span className="font-mono">{missing.map((m) => m.namespace).join(', ')}</span> — not added yet.
       </span>
-      <Button size="xs" variant="ghost" loading={adding} onClick={() => void addAll()}><Plus /> Add &amp; sync</Button>
+      {manage ? (
+        <Button size="xs" variant="ghost" loading={adding} onClick={() => void addAll()}><Plus /> Add &amp; sync</Button>
+      ) : (
+        <span className="shrink-0">Ask your instructor to add {missing.length === 1 ? 'it' : 'them'}.</span>
+      )}
       <IconButton label="Dismiss" size="icon-xs" onClick={() => setDismissed(signature)}><X /></IconButton>
     </div>
   );

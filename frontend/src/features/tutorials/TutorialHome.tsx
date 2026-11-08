@@ -3,20 +3,26 @@ import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
 import type { Tutorial } from '@/types/topology';
 import { Button, EmptyState } from '@/ui';
+import { useCan } from '@/lib/permissions';
 import { createTutorial } from './actions';
 import { commandCells, progressOf } from './model';
 
 /** The topology's tutorials, to open one or start a new one. */
 export function TutorialHome({ tutorials }: { tutorials: Tutorial[] }) {
   const progress = useAppShallow((s) => s.tutorialProgress);
+  const author = useCan('authorTutorials');
   if (tutorials.length === 0) {
     return (
       <EmptyState
         className="flex-1"
         icon={<BookOpen />}
         title="No tutorials yet"
-        description="A tutorial mixes notes with commands that run, one step at a time, in your lab's node terminals. It's saved with this topology."
-        action={<Button size="sm" variant="primary" onClick={() => createTutorial()}><Plus /> New tutorial</Button>}
+        description={
+          author
+            ? "A tutorial mixes notes with commands that run, one step at a time, in your lab's node terminals. It's saved with this topology."
+            : 'Your instructor has not added a tutorial to this topology.'
+        }
+        action={author ? <Button size="sm" variant="primary" onClick={() => createTutorial()}><Plus /> New tutorial</Button> : undefined}
       />
     );
   }
@@ -24,7 +30,7 @@ export function TutorialHome({ tutorials }: { tutorials: Tutorial[] }) {
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-3">
         <span className="ae-label text-2xs font-semibold uppercase tracking-wide text-fg-subtle">In this topology</span>
-        <Button size="xs" variant="ghost" onClick={() => createTutorial()}><Plus /> New</Button>
+        {author ? <Button size="xs" variant="ghost" onClick={() => createTutorial()}><Plus /> New</Button> : null}
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
         {tutorials.map((t) => {

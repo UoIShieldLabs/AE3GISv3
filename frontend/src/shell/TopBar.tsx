@@ -12,7 +12,9 @@ import {
 import { JobDetailsPopover } from '@/features/deployment/JobDetailsPopover';
 import { openScenarioPanel } from '@/features/scenario/actions';
 import { openTutorialsPanel } from '@/features/tutorials/actions';
+import { useCan } from '@/lib/permissions';
 import { AppearanceMenu } from './AppearanceMenu';
+import { UserMenu } from './UserMenu';
 
 export interface TopBarProps {
   onSave: () => void;
@@ -44,6 +46,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
   const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen, openImages } = useAppStore.getState();
   const setMeta = useAppStore((s) => s.setTopologyMeta);
   const { canUndo, canRedo } = useUndoState();
+  const manageImages = useCan('manageImages');
   // An idle lab with a save to resume says so.
   const status = deployStatus === 'idle' && savedState ? { ...STATUS.idle, label: 'Saved' } : STATUS[deployStatus];
   const transitioning = deployStatus === 'deploying' || deployStatus === 'destroying';
@@ -97,7 +100,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
             <DropdownMenuItem onSelect={() => onExportLab('kathara')} disabled={!backendId}><PackageOpen /> Kathara lab (zip)</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExportLab('containerlab')} disabled={!backendId}><PackageOpen /> ContainerLab topology (zip)</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
+            {manageImages ? <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem> : null}
             <DropdownMenuItem onSelect={() => openScenarioPanel()}><ListChecks /> Scenario runner…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openTutorialsPanel()}><BookOpen /> Tutorials…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setPurdueOpen(true)}><Layers3 /> Purdue model…</DropdownMenuItem>
@@ -145,6 +148,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
         )}
         <Separator orientation="vertical" className="mx-1 h-5" />
         <AppearanceMenu />
+        <UserMenu />
       </div>
     </div>
   );

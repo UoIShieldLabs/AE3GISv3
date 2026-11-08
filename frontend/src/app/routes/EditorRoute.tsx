@@ -14,6 +14,7 @@ import { StartCaptureDialog } from '@/features/capture/StartCaptureDialog';
 import { RunsSheet } from '@/features/runs/RunsSheet';
 import { RequiredImagesBanner } from '@/features/images/RequiredImagesBanner';
 import { RequiredRegistriesBanner } from '@/features/images/RequiredRegistriesBanner';
+import { SourceBanner } from '@/features/topology/SourceBanner';
 import { TopologyCanvas } from '@/canvas/TopologyCanvas';
 import { EditorShell } from '@/shell/EditorShell';
 import { TopBar } from '@/shell/TopBar';
@@ -47,10 +48,15 @@ export function EditorRoute() {
     }
     inflight.current = topologyId;
     const openedAtRoot = !siteId;
-    void loadTopology(topologyId).then((ok) => {
+    void loadTopology(topologyId).then((loaded) => {
       if (inflight.current === topologyId) inflight.current = null;
-      if (!ok) {
+      if (!loaded) {
         void navigate('/', { replace: true });
+        return;
+      }
+      // A student who opened a published topology got their own copy.
+      if (loaded !== topologyId) {
+        void navigate(scopePath(loaded, defaultScopeFor(useAppStore.getState().topology)), { replace: true });
         return;
       }
       // Fresh open at the root URL: jump to the deepest single-child scope.
@@ -105,7 +111,7 @@ export function EditorRoute() {
           />
         }
         breadcrumb={<Breadcrumb scope={scope} onNavigate={onNavigate} />}
-        notice={<><RequiredRegistriesBanner /><RequiredImagesBanner /></>}
+        notice={<><SourceBanner /><RequiredRegistriesBanner /><RequiredImagesBanner /></>}
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
         canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}

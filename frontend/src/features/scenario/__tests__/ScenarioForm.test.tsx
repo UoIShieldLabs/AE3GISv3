@@ -8,10 +8,10 @@ import { ScenarioForm } from '../ScenarioForm';
 
 const S = () => useAppStore.getState();
 
-function renderForm() {
+function renderForm(readOnly = false) {
   render(
     <TooltipProvider>
-      <ScenarioForm />
+      <ScenarioForm readOnly={readOnly} />
     </TooltipProvider>,
   );
 }
@@ -58,5 +58,23 @@ describe('ScenarioForm', () => {
     expect(runPhase).toBeDisabled();
     expect(runPhase).toHaveAttribute('title', 'Save your changes first');
     expect(screen.getByRole('button', { name: 'Run step' })).toBeDisabled();
+  });
+
+  it('read-only (a student): steps as text, no authoring, still runnable', () => {
+    deployedPhase();
+    renderForm(true);
+    expect(screen.getByText('ip -o addr')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /New scenario/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Add step/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove step' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Run phase/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run step' })).toBeEnabled();
+  });
+
+  it('read-only with no scenarios says so instead of offering to add one', () => {
+    renderForm(true);
+    expect(screen.getByText(/has not added a scenario/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /New scenario/ })).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { clearHistory, useAppStore } from '@/store';
 import { applyCatalog } from '@/catalog/catalog';
@@ -134,5 +134,22 @@ describe('TutorialsSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close SSH pivot' }));
     expect(S().openTutorialIds).toEqual([]);
     expect(screen.getByText('In this topology')).toBeInTheDocument();
+  });
+});
+
+describe('TutorialsSection for a student', () => {
+  beforeEach(() => { useAppStore.setState({ user: { id: 's1', username: 'alice', role: 'student' } }); });
+  afterEach(() => { useAppStore.setState({ user: null }); });
+
+  it('steps through a tutorial without any authoring controls', () => {
+    const { id } = setup();
+    deploy();
+    renderSection();
+    expect(screen.queryByRole('button', { name: /New/ })).toBeNull();
+    act(() => { S().openTutorial(id, { edit: true }); }); // even an edit request stays read-only
+    expect(screen.queryByRole('button', { name: /^Edit$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Done/ })).toBeNull();
+    expect(screen.queryByDisplayValue('SSH pivot')).toBeNull();
+    expect(screen.getByRole('button', { name: /Next step/ })).toBeEnabled();
   });
 });

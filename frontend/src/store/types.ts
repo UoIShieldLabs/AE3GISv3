@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData, Tutorial, TutorialCell } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
-import type { Activity, Diagnostic, ImagesReport, Job, SavedState } from '@/api/client';
+import type { Activity, Diagnostic, ImagesReport, Job, Owner, SavedState, SessionUser } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 import type { ThemePref } from '@/app/themes';
@@ -123,6 +123,14 @@ export interface DocumentSlice {
   savedState: SavedState | null;
   /** The destroy dialog (keep running / save & destroy / destroy) is open. */
   destroyDialogOpen: boolean;
+  /** Classroom mode: the student who owns the loaded topology (null: the instructor's). */
+  owner: Owner | null;
+  /** Students can see it (and open their own copy). */
+  published: boolean;
+  /** The published topology this one is a student's copy of. */
+  sourceId: string | null;
+  /** Its source changed since the copy was taken (or last reset). */
+  updateAvailable: boolean;
 
   setBackendInfo: (info: { id: string; name: string; status: string; version?: number }) => void;
   setVersion: (version: number) => void;
@@ -136,6 +144,30 @@ export interface DocumentSlice {
   setBusy: (busy: boolean) => void;
   setSavedState: (saved: SavedState | null) => void;
   setDestroyDialogOpen: (open: boolean) => void;
+  setRecordMeta: (meta: RecordMeta) => void;
+}
+
+/** The account fields of a topology record (classroom mode). */
+export interface RecordMeta {
+  owner: Owner | null;
+  published: boolean;
+  sourceId: string | null;
+  updateAvailable: boolean;
+}
+
+export type AuthStatus = 'unknown' | 'signedOut' | 'signedIn';
+
+/** Who is signed in (classroom mode); see features/auth/actions.ts. Not persisted:
+ *  the token lives in api/session.ts. */
+export interface AuthSlice {
+  /** Accounts are on (classroom mode); null until the backend answered. */
+  authRequired: boolean | null;
+  /** Students can sign themselves up right now. */
+  signupOpen: boolean;
+  /** The signed-in caller (the instructor while accounts are off). */
+  user: SessionUser | null;
+  authStatus: AuthStatus;
+  setAuth: (patch: Partial<Pick<AuthSlice, 'authRequired' | 'signupOpen' | 'user' | 'authStatus'>>) => void;
 }
 
 export interface ViewSlice {
@@ -266,7 +298,7 @@ export interface ImagesSlice {
   setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & ActivitySlice & CatalogSlice & ImagesSlice;
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & ActivitySlice & CatalogSlice & ImagesSlice & AuthSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 

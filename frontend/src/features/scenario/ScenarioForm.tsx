@@ -14,8 +14,9 @@ const NO_SCENARIOS: Scenario[] = [];
 
 /** Author scenarios (phases → steps) and run a step or a whole phase.
  *  Scenarios are part of the saved topology, so running needs a deployed lab
- *  with no unsaved edits (the backend runs from what was deployed). */
-export function ScenarioForm() {
+ *  with no unsaved edits (the backend runs from what was deployed).
+ *  `readOnly` (a student): the steps as text, Run buttons only. */
+export function ScenarioForm({ readOnly = false }: { readOnly?: boolean }) {
   const { stored, deployStatus, dirty, backendId } = useAppShallow((s) => ({
     stored: (s.topology as TopologyData).scenarios,
     deployStatus: s.deployStatus,
@@ -50,13 +51,17 @@ export function ScenarioForm() {
   if (scenarios.length === 0) {
     return (
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-        <Header scenarios={scenarios} activeId={null} onSelect={setActiveId} onAdd={addScenario} />
+        <Header scenarios={scenarios} activeId={null} onSelect={setActiveId} onAdd={readOnly ? undefined : addScenario} />
         <EmptyState
           className="flex-1"
           icon={<ListChecks />}
           title="No scenarios yet"
-          description="A scenario is phases of steps — each step an ordinary command run on a node. Add one, then step through it on a deployed lab."
-          action={<Button size="sm" onClick={addScenario}><Plus /> New scenario</Button>}
+          description={
+            readOnly
+              ? 'Your instructor has not added a scenario to this topology.'
+              : 'A scenario is phases of steps — each step an ordinary command run on a node. Add one, then step through it on a deployed lab.'
+          }
+          action={readOnly ? undefined : <Button size="sm" onClick={addScenario}><Plus /> New scenario</Button>}
         />
       </div>
     );
@@ -64,7 +69,7 @@ export function ScenarioForm() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      <Header scenarios={scenarios} activeId={active?.id ?? null} onSelect={setActiveId} onAdd={addScenario} />
+      <Header scenarios={scenarios} activeId={active?.id ?? null} onSelect={setActiveId} onAdd={readOnly ? undefined : addScenario} />
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-3">
         {runHint ? <p className="text-2xs text-fg-subtle">{runHint} to run steps.</p> : null}
         {active ? (
@@ -74,6 +79,7 @@ export function ScenarioForm() {
             nodeOptions={nodeOptions}
             canRun={canRun}
             runHint={runHint}
+            readOnly={readOnly}
           />
         ) : null}
       </div>
@@ -87,7 +93,8 @@ function Header({
   scenarios: Scenario[];
   activeId: string | null;
   onSelect: (id: string) => void;
-  onAdd: () => void;
+  /** Omitted: no "New scenario" (read-only). */
+  onAdd?: () => void;
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-border px-3 py-2">
@@ -103,40 +110,50 @@ function Header({
           aria-label="Active scenario"
         />
       ) : null}
-      <Button size="sm" variant="ghost" className="ml-auto" onClick={onAdd}><Plus /> New scenario</Button>
+      {onAdd ? <Button size="sm" variant="ghost" className="ml-auto" onClick={onAdd}><Plus /> New scenario</Button> : null}
     </div>
   );
 }
 
 function ScenarioBlock({
-  scenario, nodeOptions, canRun, runHint,
+  scenario, nodeOptions, canRun, runHint, readOnly,
 }: {
   scenario: Scenario;
   nodeOptions: { value: string; label: string }[];
   canRun: boolean;
   runHint?: string;
+  readOnly: boolean;
 }) {
   const a = () => useAppStore.getState();
   return (
     <section className="rounded-md border border-border">
       <header className="flex items-center gap-2 border-b border-border bg-surface-2/50 px-2 py-1.5">
         <div className="min-w-0 flex-1">
-          <CommitInput
-            className="h-7 font-medium"
-            value={scenario.name}
-            onCommit={(name) => a().updateScenario(scenario.id, { name })}
-            aria-label="Scenario name"
-          />
+          {readOnly ? (
+            <h3 className="truncate px-1 text-[13px] font-medium" title={scenario.name}>{scenario.name}</h3>
+          ) : (
+            <CommitInput
+              className="h-7 font-medium"
+              value={scenario.name}
+              onCommit={(name) => a().updateScenario(scenario.id, { name })}
+              aria-label="Scenario name"
+            />
+          )}
         </div>
-        <Button size="sm" variant="ghost" onClick={() => a().addPhase(scenario.id)}><Plus /> Phase</Button>
-        <IconButton label="Remove scenario" size="icon-sm" onClick={() => a().removeScenario(scenario.id)}><Trash2 /></IconButton>
+        {readOnly ? null : (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => a().addPhase(scenario.id)}><Plus /> Phase</Button>
+            <IconButton label="Remove scenario" size="icon-sm" onClick={() => a().removeScenario(scenario.id)}><Trash2 /></IconButton>
+          </>
+        )}
       </header>
+      {readOnly && scenario.description ? <p className="border-b border-border px-3 py-2 text-xs text-fg-muted">{scenario.description}</p> : null}
       <div className="space-y-2 p-2">
         {(scenario.phases ?? []).length === 0 ? (
           <p className="px-1 text-2xs text-fg-subtle">No phases yet.</p>
         ) : (
           scenario.phases.map((phase) => (
-            <PhaseBlock key={phase.id} phase={phase} nodeOptions={nodeOptions} canRun={canRun} runHint={runHint} />
+            <PhaseBlock key={phase.id} phase={phase} nodeOptions={nodeOptions} canRun={canRun} runHint={runHint} readOnly={readOnly} />
           ))
         )}
       </div>
@@ -145,12 +162,13 @@ function ScenarioBlock({
 }
 
 function PhaseBlock({
-  phase, nodeOptions, canRun, runHint,
+  phase, nodeOptions, canRun, runHint, readOnly,
 }: {
   phase: AttackPhase;
   nodeOptions: { value: string; label: string }[];
   canRun: boolean;
   runHint?: string;
+  readOnly: boolean;
 }) {
   const a = () => useAppStore.getState();
   const steps = phase.executions ?? [];
@@ -159,12 +177,16 @@ function PhaseBlock({
     <div className="rounded-md border border-border bg-surface">
       <header className="flex items-center gap-2 px-2 py-1.5">
         <div className="min-w-0 flex-1">
-          <CommitInput
-            className="h-7"
-            value={phase.name}
-            onCommit={(name) => a().updatePhase(phase.id, { name })}
-            aria-label="Phase name"
-          />
+          {readOnly ? (
+            <span className="block truncate px-1 text-xs font-medium" title={phase.name}>{phase.name}</span>
+          ) : (
+            <CommitInput
+              className="h-7"
+              value={phase.name}
+              onCommit={(name) => a().updatePhase(phase.id, { name })}
+              aria-label="Phase name"
+            />
+          )}
         </div>
         <Button
           size="sm"
@@ -175,8 +197,9 @@ function PhaseBlock({
         >
           <Play /> Run phase
         </Button>
-        <IconButton label="Remove phase" size="icon-sm" onClick={() => a().removePhase(phase.id)}><Trash2 /></IconButton>
+        {readOnly ? null : <IconButton label="Remove phase" size="icon-sm" onClick={() => a().removePhase(phase.id)}><Trash2 /></IconButton>}
       </header>
+      {readOnly && phase.description ? <p className="px-3 pb-1.5 text-2xs text-fg-muted">{phase.description}</p> : null}
       <ol className="divide-y divide-border border-t border-border">
         {steps.map((step, i) => (
           <StepRow
@@ -188,24 +211,27 @@ function PhaseBlock({
             nodeOptions={nodeOptions}
             canRun={canRun}
             runHint={runHint}
+            readOnly={readOnly}
           />
         ))}
       </ol>
-      <div className="px-2 py-1.5">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => a().addStep(phase.id, { containerId: defaultNode, script: '' })}
-        >
-          <Plus /> Add step
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="px-2 py-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => a().addStep(phase.id, { containerId: defaultNode, script: '' })}
+          >
+            <Plus /> Add step
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
 function StepRow({
-  step, index, count, phaseId, nodeOptions, canRun, runHint,
+  step, index, count, phaseId, nodeOptions, canRun, runHint, readOnly,
 }: {
   step: ScriptExecution;
   index: number;
@@ -214,9 +240,27 @@ function StepRow({
   nodeOptions: { value: string; label: string }[];
   canRun: boolean;
   runHint?: string;
+  readOnly: boolean;
 }) {
   const a = () => useAppStore.getState();
   const runnable = canRun && !!step.containerId && !!step.script.trim();
+  const run = (
+    <IconButton label="Run step" size="icon-sm" disabled={!runnable} tooltip={runHint ?? 'Run this step'}
+      onClick={() => void startScenarioStep({ containerId: step.containerId, script: step.script, args: step.args, label: '' })}>
+      <Play />
+    </IconButton>
+  );
+  if (readOnly) {
+    const node = nodeOptions.find((o) => o.value === step.containerId)?.label ?? step.containerId;
+    return (
+      <li className="flex items-center gap-2 px-2 py-1.5">
+        <span className="w-4 shrink-0 text-right font-mono text-2xs text-fg-subtle">{index + 1}</span>
+        <span className="w-40 shrink-0 truncate text-xs text-fg-muted" title={node}>{node}</span>
+        <code className="min-w-0 flex-1 truncate font-mono text-xs" title={step.script}>{step.script}</code>
+        {run}
+      </li>
+    );
+  }
   return (
     <li className="flex items-center gap-1.5 px-2 py-1.5">
       <span className="w-4 shrink-0 text-right font-mono text-2xs text-fg-subtle">{index + 1}</span>
@@ -238,10 +282,7 @@ function StepRow({
           aria-label="Command"
         />
       </div>
-      <IconButton label="Run step" size="icon-sm" disabled={!runnable} tooltip={runHint ?? 'Run this step'}
-        onClick={() => void startScenarioStep({ containerId: step.containerId, script: step.script, args: step.args, label: '' })}>
-        <Play />
-      </IconButton>
+      {run}
       <IconButton label="Move up" size="icon-sm" disabled={index === 0} onClick={() => a().moveStep(phaseId, index, index - 1)}><ChevronUp /></IconButton>
       <IconButton label="Move down" size="icon-sm" disabled={index === count - 1} onClick={() => a().moveStep(phaseId, index, index + 1)}><ChevronDown /></IconButton>
       <IconButton label="Remove step" size="icon-sm" onClick={() => a().removeStep(phaseId, index)}><Trash2 /></IconButton>

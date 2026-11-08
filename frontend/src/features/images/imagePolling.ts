@@ -6,6 +6,7 @@
 import * as api from '@/api/client';
 import { useAppStore } from '@/store';
 import { toast } from '@/ui';
+import { can } from '@/lib/permissions';
 
 const ACTIVE_MS = 2000;
 
@@ -32,9 +33,11 @@ function announce(prev: api.ImagesReport | null, next: api.ImagesReport) {
     const was = before.get(img.ref);
     if (!was?.active_job || img.active_job) continue;
     const openImages = () => useAppStore.getState().openImages(img.ref);
+    // The Images sheet is the instructor's (students' deploys still build).
+    const action = can(useAppStore.getState().user, 'manageImages') ? { label: 'View log', onClick: openImages } : undefined;
     if (img.last_job?.status === 'succeeded') toast.success(`${img.display_name} image ready`, { description: img.ref });
     else if (img.last_job?.status === 'failed') {
-      toast.error(`${img.display_name} build failed`, { description: img.last_job.error ?? undefined, duration: 10000, action: { label: 'View log', onClick: openImages } });
+      toast.error(`${img.display_name} build failed`, { description: img.last_job.error ?? undefined, duration: 10000, action });
     }
   }
   const sources = new Map(prev.sources.map((s) => [s.name, s]));

@@ -3,6 +3,7 @@
 // typed source of truth for the API; only `TopologyData` is frontend-owned.
 import type { components } from './schema';
 import type { TopologyData } from '../types/topology';
+import { getToken, notifyUnauthorized } from './session';
 
 type S = components['schemas'];
 
@@ -53,6 +54,13 @@ export type MonitorRequest = S['MonitorRequest'];
 export type Monitor = S['MonitorOut'];
 export type NodeSelector = S['NodeSelector'];
 export type MonitorSamples = S['MonitorSamplesOut'];
+export type SessionUser = S['UserOut'];
+export type SignIn = S['SessionOut'];
+export type Me = S['MeOut'];
+export type Owner = S['OwnerOut'];
+export type ClassSettings = S['ClassSettingsOut'];
+export type Student = S['StudentOut'];
+export type Students = S['StudentsOut'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -78,26 +86,25 @@ export function errorMessage(err: unknown, fallback = 'Something went wrong'): s
 }
 
 // ── Auth token ─────────────────────────────────────────────────────
-// There is no sign-in screen: the backend leaves its API open unless
-// AE3GIS_INSTRUCTOR_TOKEN is set. When it is, build/run the frontend with a
-// matching VITE_INSTRUCTOR_TOKEN and every request carries it automatically.
-const AUTH_TOKEN: string | null = import.meta.env.VITE_INSTRUCTOR_TOKEN?.trim() || null;
+// With accounts off (the default) the backend needs no token. In classroom
+// mode the sign-in's token (api/session.ts) rides every request: as a bearer
+// header, and as `?token=` on WebSocket and plain-link URLs (GET only).
 
-export function getAuthToken(): string | null { return AUTH_TOKEN; }
-
-/** WebSocket URL with the auth token as a query param (browsers can't set
+/** WebSocket URL with the session token as a query param (browsers can't set
  *  headers on WS upgrades). */
 export function wsUrl(path: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const base = `${protocol}//${window.location.host}${path}`;
-  return AUTH_TOKEN ? `${base}?token=${encodeURIComponent(AUTH_TOKEN)}` : base;
+  const token = getToken();
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 // ── Transport ──────────────────────────────────────────────────────
 const V1 = '/api/v1';
 
 function authHeaders(): Record<string, string> {
-  return AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {};
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function toApiError(res: Response): Promise<ApiError> {
@@ -119,13 +126,55 @@ async function toApiError(res: Response): Promise<ApiError> {
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, { ...init, headers: { ...authHeaders(), ...(init.headers as Record<string, string> | undefined) } });
-  if (!res.ok) throw await toApiError(res);
+  if (!res.ok) {
+    const err = await toApiError(res);
+    // "Sign in required" (not e.g. a wrong password on the login form).
+    if (err.status === 401 && err.code === 'unauthorized') notifyUnauthorized();
+    throw err;
+  }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
 function json(body: unknown, method = 'POST'): RequestInit {
   return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+// ── Accounts (classroom mode) ──────────────────────────────────────
+export function login(username: string, password: string): Promise<SignIn> {
+  return request(`${V1}/auth/login`, json({ username, password }));
+}
+export function signup(username: string, password: string, joinCode: string): Promise<SignIn> {
+  return request(`${V1}/auth/signup`, json({ username, password, join_code: joinCode }));
+}
+export function logout(): Promise<void> {
+  return request(`${V1}/auth/logout`, { method: 'POST' });
+}
+export function getMe(): Promise<Me> {
+  return request(`${V1}/auth/me`);
+}
+export function changePassword(current: string, next: string): Promise<void> {
+  return request(`${V1}/auth/password`, json({ current, new: next }));
+}
+/** Let a node web-UI iframe authenticate (it cannot send a header): sets a
+ *  cookie only the relay accepts. Call before showing one. */
+export function issueWebUiCookie(): Promise<void> {
+  return request(`${V1}/auth/webui-cookie`, { method: 'POST' });
+}
+export function getClassSettings(): Promise<ClassSettings> {
+  return request(`${V1}/class`);
+}
+export function updateClassSettings(patch: { signup_open?: boolean; rotate_join_code?: boolean }): Promise<ClassSettings> {
+  return request(`${V1}/class`, json(patch, 'PUT'));
+}
+export function listStudents(): Promise<Students> {
+  return request(`${V1}/class/students`);
+}
+export function resetStudentPassword(userId: string): Promise<{ password: string }> {
+  return request(`${V1}/class/students/${encodeURIComponent(userId)}/reset-password`, { method: 'POST' });
+}
+export function removeStudent(userId: string): Promise<void> {
+  return request(`${V1}/class/students/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }
 
 // ── Catalog ────────────────────────────────────────────────────────
@@ -154,6 +203,19 @@ export async function importJsonTopology(file: File): Promise<TopologyRecord> {
   form.append('file', file);
   return request(`${V1}/topologies/import-json`, { method: 'POST', body: form });
 }
+/** A copy for the caller: a student's personal copy of a published topology
+ *  (the one they already have, if any), else a duplicate they own. */
+export function copyTopology(id: string): Promise<TopologyRecord> {
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/copy`, { method: 'POST' });
+}
+/** Replace a copy's design with its source's latest (the lab must be down). */
+export function resetTopology(id: string): Promise<TopologyRecord> {
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/reset`, { method: 'POST' });
+}
+/** Publish a topology to students, or stop (instructor). */
+export function setPublished(id: string, published: boolean): Promise<TopologyRecord> {
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/published`, json({ published }, 'PUT'));
+}
 export function validateTopology(data: TopologyData): Promise<ValidationResult> {
   return request(`${V1}/topologies/validate`, json({ data }));
 }
@@ -171,7 +233,11 @@ export function listEvents(id: string, after = 0, limit = 200): Promise<Topology
  *  (named by the server's Content-Disposition, else `fallbackName`). */
 export async function downloadUrl(url: string, fallbackName: string): Promise<void> {
   const res = await fetch(url, { headers: authHeaders() });
-  if (!res.ok) throw await toApiError(res);
+  if (!res.ok) {
+    const err = await toApiError(res);
+    if (err.status === 401 && err.code === 'unauthorized') notifyUnauthorized();
+    throw err;
+  }
   const blob = await res.blob();
   const disposition = res.headers.get('Content-Disposition') ?? '';
   const match = /filename="?([^";]+)"?/.exec(disposition);
@@ -310,7 +376,8 @@ export function getPackets(jobId: string, after = 0, limit = 500): Promise<Packe
 export function pcapUrl(jobId: string, follow = false): string {
   const q = new URLSearchParams();
   if (follow) q.set('follow', 'true');
-  if (AUTH_TOKEN) q.set('token', AUTH_TOKEN);
+  const token = getToken();
+  if (token) q.set('token', token);
   const qs = q.toString();
   return `${window.location.origin}${V1}/captures/${encodeURIComponent(jobId)}/pcap${qs ? `?${qs}` : ''}`;
 }

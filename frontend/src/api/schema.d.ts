@@ -4,6 +4,129 @@
  */
 
 export interface paths {
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Sign in. 401 ``bad_credentials``; 429 ``too_many_attempts`` after
+         *     repeated failures; 409 ``accounts_off`` when the instance has no accounts.
+         */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description End this sign-in (a no-op for an unknown token).
+         */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Password
+         * @description Change your own password; your other sign-ins end. The instructor's is
+         *     set by the environment (409 ``managed_by_env``).
+         */
+        post: operations["change_password_api_v1_auth_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Create a student account with the class join code, and sign in.
+         *     403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;
+         *     422 ``invalid_username`` / ``weak_password``.
+         */
+        post: operations["signup_api_v1_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/webui-cookie": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Webui Cookie
+         * @description Let the node web-UI relay's iframe pages authenticate: they cannot send
+         *     a header, so this sign-in's token goes into an HttpOnly, SameSite=Strict
+         *     cookie that only the relay routes accept. Call it before opening one.
+         */
+        post: operations["webui_cookie_api_v1_auth_webui_cookie_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/benchmarks": {
         parameters: {
             query?: never;
@@ -157,6 +280,87 @@ export interface paths {
         get: operations["get_catalog_api_v1_catalog_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/class": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Class */
+        get: operations["get_class_api_v1_class_get"];
+        /**
+         * Update Class
+         * @description Open or close sign-up (opening the first time makes a join code), or
+         *     rotate the join code (students already signed up are unaffected).
+         */
+        put: operations["update_class_api_v1_class_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/class/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Students */
+        get: operations["list_students_api_v1_class_students_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/class/students/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Student
+         * @description Remove a student with their topologies and saved lab state. 409
+         *     ``student_has_labs`` while any of their labs is up (destroy them first).
+         */
+        delete: operations["remove_student_api_v1_class_students__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/class/students/{user_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description A temporary password (shown once) for a student who forgot theirs;
+         *     their current sign-ins end.
+         */
+        post: operations["reset_password_api_v1_class_students__user_id__reset_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -428,7 +632,7 @@ export interface paths {
         put?: never;
         /**
          * Load Preset
-         * @description Create a new topology from a preset template.
+         * @description Create a new topology (the caller's) from a preset template.
          */
         post: operations["load_preset_api_v1_presets__preset_id__load_post"];
         delete?: never;
@@ -682,7 +886,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Topologies */
+        /**
+         * List Topologies
+         * @description The instructor sees every topology; a student their own and the published.
+         */
         get: operations["list_topologies_api_v1_topologies_get"];
         put?: never;
         /** Create Topology */
@@ -815,6 +1022,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Topology
+         * @description A copy for the caller. A student opening a published topology gets
+         *     their personal copy (200 with the one they already have, 201 when new);
+         *     copying your own topology (the instructor: any) makes a duplicate (201).
+         */
+        post: operations["copy_topology_api_v1_topologies__topology_id__copy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/deploy": {
         parameters: {
             query?: never;
@@ -827,6 +1056,7 @@ export interface paths {
         /**
          * Deploy
          * @description Start a deploy job. Poll ``/runtime`` (or ``/jobs/{id}``) for progress.
+         *     A student over ``AE3GIS_STUDENT_MAX_LABS`` gets 409 ``lab_limit``.
          */
         post: operations["deploy_api_v1_topologies__topology_id__deploy_post"];
         delete?: never;
@@ -964,6 +1194,50 @@ export interface paths {
         get: operations["get_plan_api_v1_topologies__topology_id__plan_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/{topology_id}/published": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Publish Topology
+         * @description Publish a topology to students (or stop): they see it in their library
+         *     and open it as their own copy. Does not change its version.
+         */
+        put: operations["publish_topology_api_v1_topologies__topology_id__published_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/topologies/{topology_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Topology
+         * @description Replace a copy's design with its source's latest (your edits to it are
+         *     lost). The lab must be destroyed first (409 ``bad_state``); its saved
+         *     state is discarded. 409 ``no_source`` when it is not a copy or its source
+         *     is gone or no longer published.
+         */
+        post: operations["reset_topology_api_v1_topologies__topology_id__reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1748,6 +2022,23 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** ClassSettingsIn */
+        ClassSettingsIn: {
+            /**
+             * Rotate Join Code
+             * @default false
+             */
+            rotate_join_code: boolean;
+            /** Signup Open */
+            signup_open?: boolean | null;
+        };
+        /** ClassSettingsOut */
+        ClassSettingsOut: {
+            /** Join Code */
+            join_code?: string | null;
+            /** Signup Open */
+            signup_open: boolean;
+        };
         /** ContextOut */
         ContextOut: {
             /** Events */
@@ -2019,6 +2310,11 @@ export interface components {
             engine_detail: string;
             /** Engine Ok */
             engine_ok: boolean;
+            /**
+             * Signup Open
+             * @default false
+             */
+            signup_open: boolean;
             /** Status */
             status: string;
             /** Topologies */
@@ -2272,6 +2568,7 @@ export interface components {
             lab_hash: string;
             /** Machines */
             machines: string[];
+            owner?: components["schemas"]["OwnerOut"] | null;
             /** Running */
             running: number;
             /** Topology Id */
@@ -2333,6 +2630,13 @@ export interface components {
              */
             kind: "link";
         };
+        /** LoginIn */
+        LoginIn: {
+            /** Password */
+            password: string;
+            /** Username */
+            username: string;
+        };
         /**
          * MatrixPattern
          * @description A traffic matrix's pattern: its axes may give the bitrate (and burst).
@@ -2390,6 +2694,12 @@ export interface components {
             protocol: "tcp" | "udp";
             /** Servers */
             servers?: "all" | string[] | components["schemas"]["NodeSelector"] | null;
+        };
+        /** MeOut */
+        MeOut: {
+            /** Auth Required */
+            auth_required: boolean;
+            user: components["schemas"]["UserOut"];
         };
         /**
          * MixEntry
@@ -2538,6 +2848,16 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * OwnerOut
+         * @description The student who owns a topology (None on a topology: the instructor's).
+         */
+        OwnerOut: {
+            /** Id */
+            id: string;
+            /** Username */
+            username: string;
+        };
         /** PacketPageOut */
         PacketPageOut: {
             /** Items */
@@ -2581,6 +2901,13 @@ export interface components {
             src: string;
             /** Ts */
             ts: number;
+        };
+        /** PasswordChangeIn */
+        PasswordChangeIn: {
+            /** Current */
+            current: string;
+            /** New */
+            new: string;
         };
         /**
          * PathSource
@@ -2640,6 +2967,11 @@ export interface components {
              * @default 0
              */
             site_count: number;
+        };
+        /** PublishIn */
+        PublishIn: {
+            /** Published */
+            published: boolean;
         };
         /** PurgeResult */
         PurgeResult: {
@@ -2900,6 +3232,30 @@ export interface components {
             /** Type */
             type: string;
         };
+        /**
+         * SessionOut
+         * @description A sign-in: send ``token`` as ``Authorization: Bearer`` (``?token=`` on
+         *     GET and WebSocket URLs).
+         */
+        SessionOut: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Token */
+            token: string;
+            user: components["schemas"]["UserOut"];
+        };
+        /** SignupIn */
+        SignupIn: {
+            /** Join Code */
+            join_code: string;
+            /** Password */
+            password: string;
+            /** Username */
+            username: string;
+        };
         /** SourceOut */
         SourceOut: {
             active_job?: components["schemas"]["JobOut"] | null;
@@ -2935,6 +3291,45 @@ export interface components {
             /** Topology Name */
             topology_name: string;
         };
+        /** StudentLabOut */
+        StudentLabOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+        };
+        /** StudentOut */
+        StudentOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Labs */
+            labs: components["schemas"]["StudentLabOut"][];
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /** Topology Count */
+            topology_count: number;
+            /** Username */
+            username: string;
+        };
+        /** StudentsOut */
+        StudentsOut: {
+            /** Max Labs */
+            max_labs: number;
+            /** Students */
+            students: components["schemas"]["StudentOut"][];
+        };
+        /** TemporaryPasswordOut */
+        TemporaryPasswordOut: {
+            /** Password */
+            password: string;
+        };
         /** TopologyCreate */
         TopologyCreate: {
             /** Data */
@@ -2965,9 +3360,22 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            owner?: components["schemas"]["OwnerOut"] | null;
+            /**
+             * Published
+             * @default false
+             */
+            published: boolean;
             saved?: components["schemas"]["SavedStateOut"] | null;
+            /** Source Id */
+            source_id?: string | null;
             /** Status */
             status: string;
+            /**
+             * Update Available
+             * @default false
+             */
+            update_available: boolean;
             /**
              * Updated At
              * Format: date-time
@@ -2987,8 +3395,21 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            owner?: components["schemas"]["OwnerOut"] | null;
+            /**
+             * Published
+             * @default false
+             */
+            published: boolean;
+            /** Source Id */
+            source_id?: string | null;
             /** Status */
             status: string;
+            /**
+             * Update Available
+             * @default false
+             */
+            update_available: boolean;
             /**
              * Updated At
              * Format: date-time
@@ -3165,6 +3586,18 @@ export interface components {
             /** T */
             t: number;
         };
+        /** UserOut */
+        UserOut: {
+            /** Id */
+            id?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "instructor" | "student";
+            /** Username */
+            username: string;
+        };
         /** ValidateBody */
         ValidateBody: {
             /** Data */
@@ -3200,6 +3633,194 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_auth_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_v1_auth_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    webui_cookie_api_v1_auth_webui_cookie_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_benchmarks_api_v1_benchmarks_get: {
         parameters: {
             query?: {
@@ -3489,6 +4110,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Catalog"];
+                };
+            };
+        };
+    };
+    get_class_api_v1_class_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_class_api_v1_class_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_students_api_v1_class_students_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_student_api_v1_class_students__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_v1_class_students__user_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemporaryPasswordOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4756,6 +5538,39 @@ export interface operations {
             };
         };
     };
+    copy_topology_api_v1_topologies__topology_id__copy_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     deploy_api_v1_topologies__topology_id__deploy_post: {
         parameters: {
             query?: never;
@@ -5054,6 +5869,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_topology_api_v1_topologies__topology_id__published_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_topology_api_v1_topologies__topology_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyRecord"];
                 };
             };
             /** @description Validation Error */
