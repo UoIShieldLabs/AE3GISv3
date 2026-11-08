@@ -5,11 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from api.access import check_view
 from api.deps import get_db, get_images, get_registries
 from api.schemas import BuildRequest, ImagesReport, JobOut
-from auth import require_any_auth, require_instructor
+from auth import current_identity, require_instructor
+from db.models import Topology
 from domain.topology import images_in
-from services import jobs, topologies
+from services import jobs
+from services.accounts import Identity
 from services.images import ImageManager
 from services.registries import RegistryManager
 
@@ -24,14 +27,15 @@ async def list_images(
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
     registries: RegistryManager = Depends(get_registries),
-    _=Depends(require_any_auth),
+    identity: Identity = Depends(current_identity),
 ):
     """Host build support, image sources and registries, and the status of each image.
 
     Without ``topology_id``: every image the catalog describes.
     """
     if topology_id:
-        refs = images_in(topologies.get_or_404(db, topology_id).data or {})
+        topo = check_view(identity, db.get(Topology, topology_id))
+        refs = images_in(topo.data or {})
     else:
         refs = images.catalog_refs()
     report = await images.report(refs)
@@ -44,7 +48,7 @@ def build_images(
     body: BuildRequest,
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Start a build job per image (an image already building returns its job)."""
     return [jobs.job_to_dict(j) for j in images.start_builds(db, body.refs, fresh=body.fresh)]
@@ -55,7 +59,7 @@ def sync_source(
     name: str,
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Fetch a git source's configured ref; the job reports which images changed."""
     return jobs.job_to_dict(images.start_sync(db, name))

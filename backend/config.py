@@ -26,11 +26,25 @@ class Settings(BaseSettings):
     data_dir: Path = BASE_DIR / "data"
     db_path: Path | None = None
 
-    # Auth is OPT-IN. Empty (the default) leaves the API open: fine for a local
-    # single-user lab, NOT for a shared or network-reachable host, since the API
-    # creates and destroys containers. Set a token to require it on every REST
-    # route and WebSocket upgrade.
+    # Accounts are OPT-IN. With neither a password nor a token (the default)
+    # the API is open and every request acts as the instructor: fine for a
+    # local single-user lab, NOT for a shared or network-reachable host, since
+    # the API creates and destroys containers.
+    #
+    # Classroom mode: set the instructor's password. The instructor signs in as
+    # ``instructor_username``; students sign themselves up with the class join
+    # code the instructor opens in the UI (services.accounts). The password is
+    # re-read at every start.
+    instructor_username: str = "instructor"
+    instructor_password: str = ""
+    # A static instructor bearer for headless clients (bench.sh --token). Set
+    # on its own it also turns accounts on and is the instructor's password.
     instructor_token: str = ""
+    # How long a sign-in lasts.
+    session_ttl_hours: float = 168
+    # Labs one student may have deployed at once (0 = no limit). Every lab runs
+    # on this host's Docker, whichever device the student browses from.
+    student_max_labs: int = 1
 
     # Comma-separated origins, or "*" for any (dev default).
     cors_origins: str = "*"
@@ -126,7 +140,12 @@ class Settings(BaseSettings):
 
     @property
     def auth_required(self) -> bool:
-        return bool(self.instructor_token.strip())
+        return bool(self.instructor_password.strip() or self.instructor_token.strip())
+
+    @property
+    def instructor_login_password(self) -> str:
+        """The password the instructor signs in with ('' = accounts off)."""
+        return self.instructor_password.strip() or self.instructor_token.strip()
 
     @property
     def job_logs_dir(self) -> Path:

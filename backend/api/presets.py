@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 from api.deps import get_db
 from api.errors import NotFound
 from api.schemas import PresetList, PresetSummary, TopologyRecord
-from auth import require_instructor
+from auth import current_identity
 from config import BASE_DIR
 from services import topologies
+from services.accounts import Identity
 
 log = logging.getLogger(__name__)
 
@@ -58,11 +59,15 @@ def get_preset(preset_id: str) -> dict:
 
 
 @router.post("/{preset_id}/load", response_model=TopologyRecord, status_code=201)
-def load_preset(preset_id: str, db: Session = Depends(get_db), _=Depends(require_instructor)):
-    """Create a new topology from a preset template."""
+def load_preset(
+    preset_id: str, db: Session = Depends(get_db), identity: Identity = Depends(current_identity)
+):
+    """Create a new topology (the caller's) from a preset template."""
+    from api.topologies import record_out
+
     preset = _load_preset(preset_id)
     data = preset.get("topology") if isinstance(preset.get("topology"), dict) else {}
-    topo, diags = topologies.create(db, name=preset.get("name") or preset_id, data=data)
-    rec = TopologyRecord.model_validate(topo)
-    rec.diagnostics = [d.to_dict() for d in diags]  # type: ignore[assignment]
-    return rec
+    topo, diags = topologies.create(
+        db, name=preset.get("name") or preset_id, data=data, owner_id=identity.owner_id
+    )
+    return record_out(db, topo, diags)

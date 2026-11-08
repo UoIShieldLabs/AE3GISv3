@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from api.access import owned_topology, readable_job, writable_job
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import Conflict, NotFound
 from api.schemas import ArtifactOut, JobLogOut, JobOut
-from auth import require_any_auth, require_instructor
-from db.models import Job
+from db.models import Job, Topology
 from services import jobs, topologies
 from services.artifacts import ArtifactStore, content_type
 from services.jobs import JobRunner
@@ -26,7 +26,7 @@ def _get_job(db: Session, job_id: str) -> Job:
 
 
 @router.get("/jobs/{job_id}", response_model=JobOut)
-def get_job(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_job(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     return jobs.job_to_dict(_get_job(db, job_id))
 
 
@@ -37,7 +37,7 @@ def get_job_log(
     limit: int = Query(default=65536, ge=1024, le=1_048_576),
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """A slice of the job's log. ``done`` turns true once the job has finished
     and the slice reaches the end of the log."""
@@ -57,7 +57,7 @@ async def cancel_job(
     job_id: str,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Job = Depends(writable_job),
 ):
     """Cancel a queued or running job. Deploys can only be cancelled before the
     engine starts creating containers; destroys cannot be cancelled."""
@@ -74,7 +74,7 @@ async def stop_job(
     job_id: str,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Job = Depends(writable_job),
 ):
     """Stop an open-ended job (a capture or traffic run): it winds down, keeps
     what it recorded, and finishes as ``succeeded``. Use cancel to abort."""
@@ -88,7 +88,7 @@ async def stop_job(
 
 @router.get("/topologies/{topology_id}/jobs", response_model=list[JobOut])
 def list_topology_jobs(
-    topology_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)
+    topology_id: str, db: Session = Depends(get_db), _: Topology = Depends(owned_topology)
 ):
     topologies.get_or_404(db, topology_id)
     return [jobs.job_to_dict(j) for j in jobs.list_jobs(db, topology_id)]
@@ -99,7 +99,7 @@ def list_artifacts(
     job_id: str,
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """Files the job produced (a capture's pcap, a traffic run's time series)."""
     job = _get_job(db, job_id)
@@ -116,7 +116,7 @@ def download_artifact(
     name: str,
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """Download one artifact. Accepts ``?token=`` so it works as a plain link."""
     job = _get_job(db, job_id)

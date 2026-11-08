@@ -18,7 +18,18 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    false,
+)
 
 from db.session import Base
 
@@ -61,6 +72,15 @@ class Topology(Base):
     # one committed image per node, used instead of the catalog image on the next
     # deploy. None: deploys start fresh.
     saved_state = Column(JSON, nullable=True)
+    # Accounts (see ``services.accounts``): the student who owns the topology,
+    # None for the instructor. Published instructor topologies are visible to
+    # students, who work on a copy: ``source_id`` / ``source_version`` name the
+    # published topology and the version the copy was taken from. No foreign
+    # keys (migration 0007): the services keep these consistent.
+    owner_id = Column(String, nullable=True, index=True)
+    published = Column(Boolean, default=False, server_default=false(), nullable=False)
+    source_id = Column(String, nullable=True)
+    source_version = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -128,3 +148,41 @@ class Registry(Base):
     created_at = Column(DateTime, default=utcnow, nullable=False)
     synced_at = Column(DateTime, nullable=True)
     snapshot = Column(JSON, nullable=True)
+
+
+USER_ROLES = ("instructor", "student")
+
+
+class User(Base):
+    """An account. One ``instructor`` row (from the environment, see
+    ``services.accounts.bootstrap_instructor``) and any number of students."""
+
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=new_id)
+    username = Column(String, nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False)  # one of USER_ROLES
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    last_seen_at = Column(DateTime, nullable=True)
+
+
+class UserSession(Base):
+    """A signed-in browser. The bearer token is only ever stored hashed."""
+
+    __tablename__ = "sessions"
+
+    token_hash = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    last_seen_at = Column(DateTime, nullable=True)
+
+
+class AppSetting(Base):
+    """Instance settings changed from the UI (e.g. class sign-up), by key."""
+
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(JSON, nullable=True)

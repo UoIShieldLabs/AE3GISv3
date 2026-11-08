@@ -16,11 +16,11 @@ from fastapi import APIRouter, Depends, Query, Response, WebSocket, WebSocketDis
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from api.access import owned_topology, readable_job, ws_guard
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import Conflict, NotFound
 from api.live_ws import ClientGone, forward, unless_disconnected
 from api.schemas import CaptureOut, CaptureRequest, PacketPageOut
-from auth import require_any_auth, require_instructor, valid_ws_token
 from db.models import Job, Topology
 from domain.packets import summarize
 from domain.pcap import PcapSplitter
@@ -96,7 +96,7 @@ def start_capture(
     response: Response,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Start capturing on a link or a node interface of a deployed topology.
 
@@ -115,14 +115,14 @@ def list_captures(
     topology_id: str,
     limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
-    _=Depends(require_any_auth),
+    _: Topology = Depends(owned_topology),
 ):
     topologies.get_or_404(db, topology_id)
     return [capture_out(j) for j in jobs.list_jobs(db, topology_id, limit, kinds=(capture.KIND,))]
 
 
 @router.get("/captures/{job_id}", response_model=CaptureOut)
-def get_capture(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_capture(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     return capture_out(_get_capture(db, job_id))
 
 
@@ -176,7 +176,7 @@ def get_pcap(
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """The capture as a pcap file. Valid at any moment, even mid-capture.
     Accepts ``?token=`` so curl and plain links work with auth on."""
@@ -239,7 +239,7 @@ async def get_packets(
     limit: int = Query(default=500, ge=1, le=5000),
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """Summaries of the captured packets, read from the pcap (any capture)."""
     job = _get_capture(db, job_id)
@@ -264,8 +264,7 @@ async def capture_live(
     """Live packet summaries. Messages (JSON): ``hello`` {capture, recent},
     ``packets`` {items, undecoded, dropped}, ``status`` {packets, bytes,
     file_bytes, pps, bps}, ``end`` {result}."""
-    if not valid_ws_token(websocket, token):
-        await websocket.close(code=4003, reason="Forbidden")
+    if not await ws_guard(websocket, token, topology_id):
         return
     hub: LiveHub = websocket.app.state.live
     store: ArtifactStore = websocket.app.state.artifacts

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -24,7 +25,11 @@ VERIFY_POLL_S = 1.0
 # ── starting jobs (called from requests) ─────────────────────────────
 
 
-def start_deploy(db: Session, runner: JobRunner, topo: Topology) -> Job:
+def start_deploy(
+    db: Session, runner: JobRunner, topo: Topology, *, admit: Callable[[], None] | None = None
+) -> Job:
+    """``admit`` (e.g. a student's lab cap) runs under the admission lock, after
+    the state checks, and raises to refuse the deploy."""
     with runner.admission:
         db.refresh(topo)
         if jobs.active_job(db, topo.id):
@@ -35,6 +40,8 @@ def start_deploy(db: Session, runner: JobRunner, topo: Topology) -> Job:
                 code="bad_state",
                 status=topo.status,
             )
+        if admit is not None:
+            admit()
         diags = validation.validate(topo.data)
         if validation.has_errors(diags):
             raise Invalid(

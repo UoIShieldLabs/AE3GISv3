@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db, get_registries
 from api.schemas import JobOut, RegistryCreate, RegistryOut
-from auth import require_any_auth, require_instructor
+from auth import current_identity, require_instructor
 from services import jobs
+from services.accounts import Identity
 from services.registries import RegistryManager
 
 router = APIRouter(prefix="/api/v1/registries", tags=["registries"])
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/api/v1/registries", tags=["registries"])
 @router.get("", response_model=list[RegistryOut])
 def list_registries(
     registries: RegistryManager = Depends(get_registries),
-    _=Depends(require_any_auth),
+    _: Identity = Depends(current_identity),
 ):
     """Every registry, with what its last sync loaded, rejected and skipped."""
     return registries.rows()
@@ -28,7 +29,7 @@ def add_registry(
     body: RegistryCreate,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Add a Docker Hub namespace (by URL or name) and start its first sync."""
     reg = registries.add(db, body.url)
@@ -40,7 +41,7 @@ def sync_registry(
     registry_id: str,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Re-read the namespace (a sync already running returns its job)."""
     return jobs.job_to_dict(registries.start_sync(db, registry_id))
@@ -51,7 +52,7 @@ def remove_registry(
     registry_id: str,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Remove a registry: its images and types leave the catalog."""
     registries.remove(db, registry_id)

@@ -112,3 +112,40 @@ def test_0005_adds_the_registries_table(tmp_path):
                 )
         assert _rows(c, "SELECT id, kind FROM registries") == [("r1", "dockerhub")]
     command.upgrade(cfg, "head")  # a no-op
+
+
+def test_0007_adds_accounts_and_keeps_topologies_and_the_cascade(tmp_path):
+    url = f"sqlite:///{tmp_path / 'm.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0006_topology_saved_state")
+    engine = sa.create_engine(url)
+    with engine.begin() as c:
+        c.execute(
+            sa.text(
+                "INSERT INTO topologies (id, name, data, status, version) "
+                "VALUES ('t1', 'T', '{}', 'idle', 3)"
+            )
+        )
+        c.execute(
+            sa.text(
+                "INSERT INTO jobs (id, topology_id, subject, kind, status, steps, created_at) "
+                "VALUES ('j1', 't1', 'topology:t1', 'deploy', 'succeeded', '[]', "
+                "CURRENT_TIMESTAMP)"
+            )
+        )
+
+    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "head")  # idempotent
+
+    inspector = sa.inspect(engine)
+    assert {"users", "sessions", "app_settings"} <= set(inspector.get_table_names())
+    with engine.begin() as c:
+        # Existing topologies are the instructor's, unpublished, not copies.
+        assert _rows(c, "SELECT id, version, owner_id, published, source_id FROM topologies") == [
+            ("t1", 3, None, 0, None)
+        ]
+    with engine.connect() as c:
+        c.exec_driver_sql("PRAGMA foreign_keys=ON")
+        c.execute(sa.text("DELETE FROM topologies WHERE id = 't1'"))
+        c.commit()
+        assert _rows(c, "SELECT id FROM jobs") == []

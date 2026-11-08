@@ -16,9 +16,10 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 import catalog
+from api.access import owned_topology
 from api.deps import get_db, get_engine
 from api.errors import Conflict, Invalid, NotFound
-from auth import require_any_auth, require_instructor
+from db.models import Topology
 from domain.topology import find_container
 from engine.base import DeploymentEngine, EngineState
 from services import topologies
@@ -151,7 +152,7 @@ async def _relay(
 
 
 @router.get("/topologies/{topology_id}/webui/{node_id}")
-def webui_root(topology_id: str, node_id: str, _=Depends(require_any_auth)):
+def webui_root(topology_id: str, node_id: str, _: Topology = Depends(owned_topology)):
     return RedirectResponse(url=_prefix(topology_id, node_id))
 
 
@@ -163,7 +164,7 @@ async def webui_get(
     request: Request,
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
-    _=Depends(require_any_auth),
+    _: Topology = Depends(owned_topology),
 ):
     """Relay a GET to the node's web UI (the page, its assets)."""
     return await _relay(request, topology_id, node_id, path, db, engine)
@@ -177,7 +178,7 @@ async def webui_post(
     request: Request,
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Relay a POST to the node's web UI (e.g. an HMI's open/close button)."""
     return await _relay(request, topology_id, node_id, path, db, engine)

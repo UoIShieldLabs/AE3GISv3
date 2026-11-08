@@ -36,6 +36,21 @@ class Invalid(ApiError):
         super().__init__(422, code, detail, **extra)
 
 
+class Unauthorized(ApiError):
+    def __init__(self, detail: str = "Sign in required", code: str = "unauthorized") -> None:
+        super().__init__(401, code, detail)
+
+
+class Forbidden(ApiError):
+    def __init__(self, detail: str, code: str = "forbidden", **extra: Any) -> None:
+        super().__init__(403, code, detail, **extra)
+
+
+class TooManyRequests(ApiError):
+    def __init__(self, detail: str, code: str = "too_many_requests", **extra: Any) -> None:
+        super().__init__(429, code, detail, **extra)
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, exc: ApiError) -> JSONResponse:

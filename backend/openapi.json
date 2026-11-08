@@ -1161,6 +1161,52 @@
         "title": "CensusCase",
         "type": "object"
       },
+      "ClassSettingsIn": {
+        "properties": {
+          "rotate_join_code": {
+            "default": false,
+            "title": "Rotate Join Code",
+            "type": "boolean"
+          },
+          "signup_open": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signup Open"
+          }
+        },
+        "title": "ClassSettingsIn",
+        "type": "object"
+      },
+      "ClassSettingsOut": {
+        "properties": {
+          "join_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Join Code"
+          },
+          "signup_open": {
+            "title": "Signup Open",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "signup_open"
+        ],
+        "title": "ClassSettingsOut",
+        "type": "object"
+      },
       "ContextOut": {
         "properties": {
           "events": {
@@ -1815,6 +1861,11 @@
           },
           "engine_ok": {
             "title": "Engine Ok",
+            "type": "boolean"
+          },
+          "signup_open": {
+            "default": false,
+            "title": "Signup Open",
             "type": "boolean"
           },
           "status": {
@@ -2589,6 +2640,16 @@
             "title": "Machines",
             "type": "array"
           },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "running": {
             "title": "Running",
             "type": "integer"
@@ -2806,6 +2867,24 @@
         "title": "LinkTarget",
         "type": "object"
       },
+      "LoginIn": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginIn",
+        "type": "object"
+      },
       "MatrixPattern": {
         "description": "A traffic matrix's pattern: its axes may give the bitrate (and burst).",
         "properties": {
@@ -2978,6 +3057,23 @@
           "kind"
         ],
         "title": "MatrixPattern",
+        "type": "object"
+      },
+      "MeOut": {
+        "properties": {
+          "auth_required": {
+            "title": "Auth Required",
+            "type": "boolean"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          }
+        },
+        "required": [
+          "user",
+          "auth_required"
+        ],
+        "title": "MeOut",
         "type": "object"
       },
       "MixEntry": {
@@ -3395,6 +3491,25 @@
         "title": "NodeTypeSpec",
         "type": "object"
       },
+      "OwnerOut": {
+        "description": "The student who owns a topology (None on a topology: the instructor's).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username"
+        ],
+        "title": "OwnerOut",
+        "type": "object"
+      },
       "PacketPageOut": {
         "properties": {
           "items": {
@@ -3489,6 +3604,24 @@
           "caplen"
         ],
         "title": "PacketSummaryOut",
+        "type": "object"
+      },
+      "PasswordChangeIn": {
+        "properties": {
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "new": {
+            "title": "New",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current",
+          "new"
+        ],
+        "title": "PasswordChangeIn",
         "type": "object"
       },
       "PathSource": {
@@ -3604,6 +3737,19 @@
           "name"
         ],
         "title": "PresetSummary",
+        "type": "object"
+      },
+      "PublishIn": {
+        "properties": {
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "published"
+        ],
+        "title": "PublishIn",
         "type": "object"
       },
       "PurgeResult": {
@@ -4277,6 +4423,53 @@
         "title": "ServerMixEntry",
         "type": "object"
       },
+      "SessionOut": {
+        "description": "A sign-in: send ``token`` as ``Authorization: Bearer`` (``?token=`` on\nGET and WebSocket URLs).",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at",
+          "user"
+        ],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "SignupIn": {
+        "properties": {
+          "join_code": {
+            "title": "Join Code",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "join_code"
+        ],
+        "title": "SignupIn",
+        "type": "object"
+      },
       "SourceOut": {
         "properties": {
           "active_job": {
@@ -4395,6 +4588,112 @@
         "title": "StaleOut",
         "type": "object"
       },
+      "StudentLabOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "StudentLabOut",
+        "type": "object"
+      },
+      "StudentOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "labs": {
+            "items": {
+              "$ref": "#/components/schemas/StudentLabOut"
+            },
+            "title": "Labs",
+            "type": "array"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "topology_count": {
+            "title": "Topology Count",
+            "type": "integer"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "created_at",
+          "topology_count",
+          "labs"
+        ],
+        "title": "StudentOut",
+        "type": "object"
+      },
+      "StudentsOut": {
+        "properties": {
+          "max_labs": {
+            "title": "Max Labs",
+            "type": "integer"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/StudentOut"
+            },
+            "title": "Students",
+            "type": "array"
+          }
+        },
+        "required": [
+          "students",
+          "max_labs"
+        ],
+        "title": "StudentsOut",
+        "type": "object"
+      },
+      "TemporaryPasswordOut": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "TemporaryPasswordOut",
+        "type": "object"
+      },
       "TopologyCreate": {
         "properties": {
           "data": {
@@ -4453,6 +4752,21 @@
             "title": "Name",
             "type": "string"
           },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "default": false,
+            "title": "Published",
+            "type": "boolean"
+          },
           "saved": {
             "anyOf": [
               {
@@ -4463,9 +4777,25 @@
               }
             ]
           },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "update_available": {
+            "default": false,
+            "title": "Update Available",
+            "type": "boolean"
           },
           "updated_at": {
             "format": "date-time",
@@ -4504,9 +4834,40 @@
             "title": "Name",
             "type": "string"
           },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "default": false,
+            "title": "Published",
+            "type": "boolean"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "update_available": {
+            "default": false,
+            "title": "Update Available",
+            "type": "boolean"
           },
           "updated_at": {
             "format": "date-time",
@@ -4956,6 +5317,39 @@
         "title": "TrafficTotalsOut",
         "type": "object"
       },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "role": {
+            "enum": [
+              "instructor",
+              "student"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "role"
+        ],
+        "title": "UserOut",
+        "type": "object"
+      },
       "ValidateBody": {
         "properties": {
           "data": {
@@ -5038,6 +5432,278 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Sign in. 401 ``bad_credentials``; 429 ``too_many_attempts`` after\nrepeated failures; 409 ``accounts_off`` when the instance has no accounts.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "End this sign-in (a no-op for an unknown token).",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "description": "Change your own password; your other sign-ins end. The instructor's is\nset by the environment (409 ``managed_by_env``).",
+        "operationId": "change_password_api_v1_auth_password_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "description": "Create a student account with the class join code, and sign in.\n403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;\n422 ``invalid_username`` / ``weak_password``.",
+        "operationId": "signup_api_v1_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/webui-cookie": {
+      "post": {
+        "description": "Let the node web-UI relay's iframe pages authenticate: they cannot send\na header, so this sign-in's token goes into an HttpOnly, SameSite=Strict\ncookie that only the relay routes accept. Call it before opening one.",
+        "operationId": "webui_cookie_api_v1_auth_webui_cookie_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Webui Cookie",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/benchmarks": {
       "get": {
         "operationId": "list_benchmarks_api_v1_benchmarks_get",
@@ -5561,6 +6227,273 @@
         "summary": "Get Catalog",
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/api/v1/class": {
+      "get": {
+        "operationId": "get_class_api_v1_class_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Class",
+        "tags": [
+          "class"
+        ]
+      },
+      "put": {
+        "description": "Open or close sign-up (opening the first time makes a join code), or\nrotate the join code (students already signed up are unaffected).",
+        "operationId": "update_class_api_v1_class_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Class",
+        "tags": [
+          "class"
+        ]
+      }
+    },
+    "/api/v1/class/students": {
+      "get": {
+        "operationId": "list_students_api_v1_class_students_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Students",
+        "tags": [
+          "class"
+        ]
+      }
+    },
+    "/api/v1/class/students/{user_id}": {
+      "delete": {
+        "description": "Remove a student with their topologies and saved lab state. 409\n``student_has_labs`` while any of their labs is up (destroy them first).",
+        "operationId": "remove_student_api_v1_class_students__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Student",
+        "tags": [
+          "class"
+        ]
+      }
+    },
+    "/api/v1/class/students/{user_id}/reset-password": {
+      "post": {
+        "description": "A temporary password (shown once) for a student who forgot theirs;\ntheir current sign-ins end.",
+        "operationId": "reset_password_api_v1_class_students__user_id__reset_password_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporaryPasswordOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Password",
+        "tags": [
+          "class"
         ]
       }
     },
@@ -6384,7 +7317,7 @@
     },
     "/api/v1/presets/{preset_id}/load": {
       "post": {
-        "description": "Create a new topology from a preset template.",
+        "description": "Create a new topology (the caller's) from a preset template.",
         "operationId": "load_preset_api_v1_presets__preset_id__load_post",
         "parameters": [
           {
@@ -7129,6 +8062,7 @@
     },
     "/api/v1/topologies": {
       "get": {
+        "description": "The instructor sees every topology; a student their own and the published.",
         "operationId": "list_topologies_api_v1_topologies_get",
         "parameters": [
           {
@@ -7815,9 +8749,68 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/copy": {
+      "post": {
+        "description": "A copy for the caller. A student opening a published topology gets\ntheir personal copy (200 with the one they already have, 201 when new);\ncopying your own topology (the instructor: any) makes a duplicate (201).",
+        "operationId": "copy_topology_api_v1_topologies__topology_id__copy_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Copy Topology",
+        "tags": [
+          "topologies"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/deploy": {
       "post": {
-        "description": "Start a deploy job. Poll ``/runtime`` (or ``/jobs/{id}``) for progress.",
+        "description": "Start a deploy job. Poll ``/runtime`` (or ``/jobs/{id}``) for progress.\nA student over ``AE3GIS_STUDENT_MAX_LABS`` gets 409 ``lab_limit``.",
         "operationId": "deploy_api_v1_topologies__topology_id__deploy_post",
         "parameters": [
           {
@@ -8413,6 +9406,134 @@
           }
         },
         "summary": "Get Plan",
+        "tags": [
+          "topologies"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/published": {
+      "put": {
+        "description": "Publish a topology to students (or stop): they see it in their library\nand open it as their own copy. Does not change its version.",
+        "operationId": "publish_topology_api_v1_topologies__topology_id__published_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Topology",
+        "tags": [
+          "topologies"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/reset": {
+      "post": {
+        "description": "Replace a copy's design with its source's latest (your edits to it are\nlost). The lab must be destroyed first (409 ``bad_state``); its saved\nstate is discarded. 409 ``no_source`` when it is not a copy or its source\nis gone or no longer published.",
+        "operationId": "reset_topology_api_v1_topologies__topology_id__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Topology",
         "tags": [
           "topologies"
         ]

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from api.access import owned_topology, readable_job, ws_guard
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import NotFound
 from api.live_ws import ClientGone, forward, unless_disconnected
@@ -22,8 +23,7 @@ from api.schemas import (
     ScenarioSamplesOut,
     ScenarioStepRequest,
 )
-from auth import require_any_auth, require_instructor, valid_ws_token
-from db.models import Job
+from db.models import Job, Topology
 from services import jobs, live, scenario, topologies
 from services.artifacts import ArtifactStore
 from services.jobs import JobRunner
@@ -80,7 +80,7 @@ def run_step(
     body: ScenarioStepRequest,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Run one command on a node. One scenario run at a time per topology
     (409 ``scenario_active``); the topology must be deployed (409 ``bad_state``)."""
@@ -100,7 +100,7 @@ def run_phase(
     body: ScenarioPhaseRunRequest | None = None,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Run every step of a stored phase, in order."""
     topo = topologies.get_or_404(db, topology_id)
@@ -112,7 +112,7 @@ def list_runs(
     topology_id: str,
     limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
-    _=Depends(require_any_auth),
+    _: Topology = Depends(owned_topology),
 ):
     topologies.get_or_404(db, topology_id)
     return [
@@ -122,12 +122,12 @@ def list_runs(
 
 
 @router.get("/scenario/runs/{job_id}", response_model=ScenarioRunOut)
-def get_run(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_run(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     return run_out(_get_run(db, job_id))
 
 
 @router.get("/scenario/runs/{job_id}/samples", response_model=ScenarioSamplesOut)
-def get_samples(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_samples(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     """The run's completed-step results so far (live or finished)."""
     return _backlog(_get_run(db, job_id))
 
@@ -142,7 +142,7 @@ def export_run(
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """The run as a zip: run.json (request, per-step results) and the job log."""
     job = _get_run(db, job_id)
@@ -176,8 +176,7 @@ async def scenario_live(
     """Live step output. Messages (JSON): ``hello`` {run, backlog: {steps}},
     ``step`` {index, status, container_id?, command?, exit_code?}, ``output``
     {index, stream, text}, ``end`` {result}."""
-    if not valid_ws_token(websocket, token):
-        await websocket.close(code=4003, reason="Forbidden")
+    if not await ws_guard(websocket, token, topology_id):
         return
     hub: LiveHub = websocket.app.state.live
     session_factory = websocket.app.state.session_factory

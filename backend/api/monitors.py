@@ -14,12 +14,12 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from api.access import owned_topology, readable_job, ws_guard
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import NotFound
 from api.live_ws import ClientGone, forward, unless_disconnected
 from api.schemas import MonitorOut, MonitorRequest, MonitorSamplesOut
-from auth import require_any_auth, require_instructor, valid_ws_token
-from db.models import Job
+from db.models import Job, Topology
 from services import jobs, live, topologies
 from services import monitor as monitor_service
 from services.artifacts import ArtifactStore
@@ -100,7 +100,7 @@ def start_monitor(
     body: MonitorRequest,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Start recording CPU, memory and network of the selected nodes and of the
     host every ``interval_s``. One monitor at a time per topology (409
@@ -119,7 +119,7 @@ def list_monitors(
     topology_id: str,
     limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
-    _=Depends(require_any_auth),
+    _: Topology = Depends(owned_topology),
 ):
     topologies.get_or_404(db, topology_id)
     return [
@@ -129,7 +129,7 @@ def list_monitors(
 
 
 @router.get("/monitors/{job_id}", response_model=MonitorOut)
-def get_monitor(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_monitor(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     return monitor_out(_get_monitor(db, job_id))
 
 
@@ -142,7 +142,7 @@ async def get_samples(
     host_only: bool = Query(default=False, description="Leave out node and interface rows"),
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """Recorded sweeps of a monitor (live or finished)."""
     _get_monitor(db, job_id)
@@ -160,7 +160,7 @@ def export_monitor(
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """The monitor as a zip: monitor.json (request, environment, summary), the
     CSV files and the job log."""
@@ -193,8 +193,7 @@ async def monitor_live(
     """Live sweeps. Messages (JSON): ``hello`` {monitor, backlog: [sweep…]},
     ``sweep`` {t, host, groups, selection, nodes (≤ 50 nodes, else null), tools,
     oom, missing}, ``marker`` {t, source, text}, ``end`` {result}."""
-    if not valid_ws_token(websocket, token):
-        await websocket.close(code=4003, reason="Forbidden")
+    if not await ws_guard(websocket, token, topology_id):
         return
     hub: LiveHub = websocket.app.state.live
     session_factory = websocket.app.state.session_factory
