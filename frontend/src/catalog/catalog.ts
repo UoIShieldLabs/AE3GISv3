@@ -87,6 +87,11 @@ export function imageSpecFor(ref: string): ImageSpec | undefined {
   return _catalog?.images?.[ref];
 }
 
+/** An image's own Purdue level (`io.ae3gis.purdue-level`), if it declares one. */
+export function imagePurdueLevel(ref: string): number | undefined {
+  return imageSpecFor(ref)?.purdueLevel ?? undefined;
+}
+
 /** Friendly name for an image ref (its catalog name, else the ref itself). */
 export function imageNameFor(ref: string): string {
   return imageSpecFor(ref)?.displayName ?? ref;

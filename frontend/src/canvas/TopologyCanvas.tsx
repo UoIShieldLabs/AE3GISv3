@@ -216,9 +216,10 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   const autoLayout = useCallback((expandedOverride?: Record<string, true>) => {
     if (readOnly) return;
     const st = useAppStore.getState();
-    const top = project({ topology: st.topology, scope, expanded: expandedOverride ?? st.expanded }).nodes.filter((n) => !n.parentId);
+    const expanded = expandedOverride ?? st.expanded;
+    const top = project({ topology: st.topology, scope, expanded }).nodes.filter((n) => !n.parentId);
     const sizes = new Map(top.map((n) => [n.id, { width: n.width ?? 0, height: n.height ?? 0 }]));
-    st.applyLayout(scope, st.layoutMode, sizes);
+    st.applyLayout(scope, st.layoutMode, sizes, expanded);
     window.setTimeout(() => void rf.fitView({ padding: 0.2, maxZoom: 1.25, duration: 200 }), 30);
   }, [scope, rf, readOnly]);
 

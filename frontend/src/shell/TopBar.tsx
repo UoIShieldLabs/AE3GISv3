@@ -70,9 +70,6 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <Search /> Search… <span className="ml-auto font-mono text-2xs">{MOD}K</span>
           </Button>
         </Tooltip>
-        <Tooltip content="Purdue model view">
-          <Button size="sm" variant="ghost" onClick={() => setPurdueOpen(true)}><Layers3 /> Purdue</Button>
-        </Tooltip>
         {!readOnly ? (
           <>
             <IconButton label="Undo" shortcut={`${MOD}Z`} size="icon-sm" disabled={!canUndo} onClick={() => undo()}><Undo2 /></IconButton>
@@ -99,6 +96,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <DropdownMenuItem onSelect={() => openImages()}><Boxes /> Images…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openScenarioPanel()}><ListChecks /> Scenario runner…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => openTutorialsPanel()}><BookOpen /> Tutorials…</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setPurdueOpen(true)}><Layers3 /> Purdue model…</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => useAppStore.getState().setRunsOpen(true)} disabled={!backendId}><Activity /> Monitors, captures & traffic…</DropdownMenuItem>
             <DropdownMenuItem onSelect={onLibrary}><Library /> Topology library</DropdownMenuItem>
           </DropdownMenuContent>

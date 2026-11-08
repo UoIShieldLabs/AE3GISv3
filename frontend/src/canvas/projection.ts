@@ -6,8 +6,8 @@ import { roleFor, type NodeRole } from '@/catalog/catalog';
 import { countContainers, gatewayOf, subnetGateway, type ConnectionKind, type Scope } from '@/lib/topology';
 import type { RuntimeStatus, Selection } from '@/store/types';
 import type { Activity } from '@/api/client';
-import { GROUP_HEADER, GROUP_PADDING, NODE_SIZE } from './constants';
-import { boundsOf, type Rect } from './layout/placement';
+import { GROUP_HEADER, GROUP_PADDING, LAYOUT_SPACING, NODE_SIZE } from './constants';
+import { boundsOf, groupSize, relativeSide, subnetRect, type Rect, type Side } from './layout/placement';
 
 // ── Node / edge data ──────────────────────────────────────────────────
 
@@ -129,9 +129,18 @@ const ZERO: Position = { x: 0, y: 0 };
 /** Guest cards (leg-attached devices in a LAN view): column gap and row gap. */
 const GUEST_GAP = 96;
 const GUEST_ROW_GAP = 24;
-/** Groups never get narrower than this so the header stays readable. */
-const MIN_GROUP_WIDTH = 300;
 const pos = (p?: Position): Position => (p ? { x: p.x, y: p.y } : ZERO);
+
+/** The `i`th of `n` guest cards beside device bounds `b`, on `side`. */
+function guestPosition(side: Side, i: number, n: number, b: Rect): Position {
+  const { width: w, height: h } = NODE_SIZE.device;
+  if (side === 'left' || side === 'right') {
+    return { x: side === 'right' ? b.x + b.width + GUEST_GAP : b.x - GUEST_GAP - w, y: b.y + i * (h + GUEST_ROW_GAP) };
+  }
+  const gap = LAYOUT_SPACING.subnet.nodeSpacing;
+  const rowWidth = n * w + (n - 1) * gap;
+  return { x: b.x + b.width / 2 - rowWidth / 2 + i * (w + gap), y: side === 'up' ? b.y - GUEST_GAP - h : b.y + b.height + GUEST_GAP };
+}
 
 interface Emitted {
   nodes: CanvasNode[];
@@ -237,14 +246,15 @@ class Projector {
   private emitLan(subnet: Subnet, siteId: string) {
     for (const c of subnet.containers) this.push(this.deviceNode(c, subnet, siteId));
     this.deviceEdges(subnet);
-    this.emitGuests(subnet);
+    this.emitGuests(subnet, siteId);
   }
 
   /** Devices from other subnets that join this one through a leg (a firewall
-   *  gatewaying it, a dual-homed historian): drawn at their leg address in a
-   *  column beside the subnet's own devices, wired to the switch the leg
+   *  gatewaying it, a dual-homed historian): drawn at their leg address beside
+   *  the subnet's own devices, on the side their home subnet sits (a row above
+   *  or below, else a column left or right), wired to the switch the leg
    *  attaches to. Their position is synthetic, so they can't be dragged. */
-  private emitGuests(subnet: Subnet) {
+  private emitGuests(subnet: Subnet, siteId: string) {
     const t = this.input.topology;
     const guests = t.sites.flatMap((site) =>
       site.subnets.flatMap((home) =>
@@ -259,14 +269,23 @@ class Projector {
     const b = boundsOf(subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }))) ?? { x: 0, y: 0, width: 0, height: 0 };
     const gateway = subnetGateway(t, subnet)?.id;
     const anchor = subnet.containers.find((c) => roleFor(c.type) === 'switch') ?? gatewayOf(subnet) ?? subnet.containers[0];
-    guests.forEach(({ c, leg, home, siteId }, i) => {
-      const node = this.deviceNode(c, home, siteId);
-      node.position = { x: b.x + b.width + GUEST_GAP, y: b.y + i * (NODE_SIZE.device.height + GUEST_ROW_GAP) };
-      node.draggable = false;
-      node.data = { ...node.data, isGateway: gateway === c.id, guest: { ip: leg.ip, homeSubnet: home.name } };
-      this.push(node);
-      if (anchor) this.pushLeg(`leg:${c.id}:${subnet.id}`, c.id, anchor.id);
-    });
+    const expanded = this.input.expanded;
+    const here = subnetRect(subnet, !!expanded[subnet.id]);
+    const bySide = new Map<Side, typeof guests>();
+    for (const g of guests) {
+      const side = g.siteId === siteId ? relativeSide(here, subnetRect(g.home, !!expanded[g.home.id])) : 'right';
+      bySide.set(side, [...(bySide.get(side) ?? []), g]);
+    }
+    for (const [side, list] of bySide) {
+      list.forEach(({ c, leg, home, siteId: homeSite }, i) => {
+        const node = this.deviceNode(c, home, homeSite);
+        node.position = guestPosition(side, i, list.length, b);
+        node.draggable = false;
+        node.data = { ...node.data, isGateway: gateway === c.id, guest: { ip: leg.ip, homeSubnet: home.name } };
+        this.push(node);
+        if (anchor) this.pushLeg(`leg:${c.id}:${subnet.id}`, c.id, anchor.id);
+      });
+    }
   }
 
   // ── Subnets ──
@@ -300,8 +319,7 @@ class Projector {
     const rects: Rect[] = subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }));
     const b = boundsOf(rects) ?? { x: 0, y: 0, width: NODE_SIZE.device.width, height: NODE_SIZE.device.height };
     const origin: Position = { x: b.x - GROUP_PADDING, y: b.y - GROUP_HEADER - GROUP_PADDING };
-    const width = Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH);
-    const height = b.height + GROUP_PADDING * 2 + GROUP_HEADER;
+    const { width, height } = groupSize(b);
     const p = pos(subnet.position);
     this.push({
       id: subnet.id,
@@ -377,19 +395,13 @@ class Projector {
     // Child sizes depend on whether each subnet is expanded; measure with a dry run.
     const sizes = new Map<string, { width: number; height: number }>();
     for (const subnet of site.subnets) {
-      if (this.input.expanded[subnet.id]) {
-        const rects: Rect[] = subnet.containers.map((c) => ({ ...pos(c.position), ...NODE_SIZE.device }));
-        const b = boundsOf(rects) ?? { x: 0, y: 0, ...NODE_SIZE.device };
-        sizes.set(subnet.id, { width: Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH), height: b.height + GROUP_PADDING * 2 + GROUP_HEADER });
-      } else {
-        sizes.set(subnet.id, NODE_SIZE.subnet);
-      }
+      const { width, height } = subnetRect(subnet, !!this.input.expanded[subnet.id]);
+      sizes.set(subnet.id, { width, height });
     }
     const rects: Rect[] = site.subnets.map((s) => ({ ...pos(s.position), ...sizes.get(s.id)! }));
     const b = boundsOf(rects) ?? { x: 0, y: 0, ...NODE_SIZE.subnet };
     const origin: Position = { x: b.x - GROUP_PADDING, y: b.y - GROUP_HEADER - GROUP_PADDING };
-    const width = Math.max(b.width + GROUP_PADDING * 2, MIN_GROUP_WIDTH);
-    const height = b.height + GROUP_PADDING * 2 + GROUP_HEADER;
+    const { width, height } = groupSize(b);
     this.push({
       id: site.id,
       type: 'group',

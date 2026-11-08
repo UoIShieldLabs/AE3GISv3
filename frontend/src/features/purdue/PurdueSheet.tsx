@@ -1,24 +1,15 @@
 import { useMemo, useState } from 'react';
 import type { Container } from '@/types/topology';
 import { useAppStore } from '@/store';
-import { colorFor, labelFor, purdueLevelFor } from '@/catalog/catalog';
+import { colorFor, labelFor } from '@/catalog/catalog';
+import { PURDUE_LEVELS, deviceLevel } from '@/lib/purdue';
 import { NodeGlyph } from '@/catalog/icons';
 import { cn } from '@/lib/cn';
 import { Select, Sheet } from '@/ui';
 
-const LEVELS = [
-  { level: 5, label: 'Level 5', name: 'Enterprise network', zone: 'IT' },
-  { level: 4, label: 'Level 4', name: 'Business planning & logistics', zone: 'IT' },
-  { level: 3.5, label: 'DMZ', name: 'Demilitarized zone', zone: 'DMZ' },
-  { level: 3, label: 'Level 3', name: 'Operations management', zone: 'OT' },
-  { level: 2, label: 'Level 2', name: 'Control (SCADA / HMI)', zone: 'OT' },
-  { level: 1, label: 'Level 1', name: 'Field control (PLC / RTU)', zone: 'OT' },
-  { level: 0, label: 'Level 0', name: 'Physical process', zone: 'OT' },
-] as const;
-
 const ZONE_CLASS: Record<string, string> = { IT: 'text-accent border-accent/40', DMZ: 'text-danger border-danger/40', OT: 'text-success border-success/40' };
 
-/** Devices of a site arranged by Purdue level (levels come from the catalog). */
+/** Devices of a site arranged by Purdue level (image, else type, else subnet). */
 export function PurdueSheet() {
   const open = useAppStore((s) => s.purdueOpen);
   const setOpen = useAppStore((s) => s.setPurdueOpen);
@@ -28,11 +19,11 @@ export function PurdueSheet() {
 
   const byLevel = useMemo(() => {
     const map = new Map<number, { container: Container; subnet: string }[]>();
-    for (const l of LEVELS) map.set(l.level, []);
+    for (const l of PURDUE_LEVELS) map.set(l.level, []);
     if (!site) return map;
     for (const subnet of site.subnets) {
       for (const c of subnet.containers) {
-        const level = purdueLevelFor(c.type) ?? 4;
+        const level = deviceLevel(c, subnet);
         (map.get(level) ?? map.set(level, []).get(level)!).push({ container: c, subnet: subnet.name });
       }
     }
@@ -45,7 +36,7 @@ export function PurdueSheet() {
       onOpenChange={setOpen}
       side="full"
       title="Purdue model"
-      description="Devices grouped by the level their catalog type declares."
+      description="Devices grouped by Purdue level: their image's, else their type's, else their subnet's."
       headerAction={
         topology.sites.length > 1 ? (
           <Select value={site?.id} onValueChange={setSiteId} options={topology.sites.map((s) => ({ value: s.id, label: s.name }))} className="h-7 w-48 text-xs" size="sm" />
@@ -57,9 +48,9 @@ export function PurdueSheet() {
         <p className="p-6 text-center text-xs text-fg-muted">Add a site to see its Purdue view.</p>
       ) : (
         <div className="flex flex-col">
-          {LEVELS.map((l, i) => {
+          {PURDUE_LEVELS.map((l, i) => {
             const items = byLevel.get(l.level) ?? [];
-            const showZone = i === 0 || LEVELS[i - 1].zone !== l.zone;
+            const showZone = i === 0 || PURDUE_LEVELS[i - 1].zone !== l.zone;
             return (
               <div key={l.level} className={cn('grid grid-cols-[64px_160px_1fr] border-b border-border', showZone && 'border-t-2')}>
                 <div className={cn('flex items-start justify-center border-r px-2 py-3 text-2xs font-bold', ZONE_CLASS[l.zone])}>{showZone ? l.zone : ''}</div>

@@ -77,6 +77,15 @@ def test_every_label():
     }
 
 
+def test_an_image_carries_its_own_purdue_level():
+    p = parse_image_labels(
+        {"io.ae3gis.schema": "1", "io.ae3gis.type": "workstation", "io.ae3gis.purdue-level": "0"}
+    )
+    assert p.errors == [] and p.warnings == []
+    # the image's level, not its (built-in) type's
+    assert p.image.purdue_level == 0 and p.image.type_meta.purdue_level is None
+
+
 def test_images_without_the_schema_label_are_rejected():
     p = parse_image_labels({"io.ae3gis.type": "plc"})
     assert p.image is None and "io.ae3gis.schema" in p.errors[0]
@@ -109,6 +118,7 @@ def test_the_type_is_required():
         ("io.ae3gis.type.icon", "rocket"),
         ("io.ae3gis.type.category", "Security"),
         ("io.ae3gis.type.purdue-level", "7"),
+        ("io.ae3gis.purdue-level", "-1"),
         ("io.ae3gis.type.web-ui-port", "http"),
         ("org.opencontainers.image.title", "  "),
     ],

@@ -85,6 +85,9 @@ export interface Subnet {
   connections: Connection[];
   /** Canvas position, relative to the enclosing site. */
   position?: Position;
+  /** Purdue level override (5, 4, 3.5 = DMZ, 3…0) for the Purdue layout;
+   *  unset = inferred from its devices (`lib/purdue.ts`). */
+  purdueLevel?: number;
   [key: string]: unknown;
 }
 

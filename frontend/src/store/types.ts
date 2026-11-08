@@ -70,7 +70,8 @@ export interface TopologySlice {
   deleteItems: (nodeIds: string[], edgeIds: string[]) => void;
   duplicateNodes: (ids: string[]) => string[];
   moveNodes: (moves: NodeMove[]) => void;
-  applyLayout: (scope: Scope, mode: LayoutMode, sizes?: ReadonlyMap<string, { width: number; height: number }>) => void;
+  /** Lay out a scope's children (`sizes`: rendered sizes; `expanded`: defaults to the view's). One undo step. */
+  applyLayout: (scope: Scope, mode: LayoutMode, sizes?: ReadonlyMap<string, { width: number; height: number }>, expanded?: Record<string, true>) => void;
   /** Replace the traffic flows saved with the design (undoable). */
   setTrafficFlows: (flows: SavedFlow[]) => void;
 

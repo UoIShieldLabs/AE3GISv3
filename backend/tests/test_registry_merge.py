@@ -40,6 +40,14 @@ def test_an_image_of_a_built_in_type_joins_it_as_a_variant():
     assert "lab/openplc:latest" not in BASE.types["plc"].images
 
 
+def test_an_image_purdue_level_reaches_its_spec_not_its_type():
+    snap = Snapshot("lab", [cand("process-sim", standard_labels("workstation", purdue__level="0"))])
+    merged, reports = merge(BASE, [snap])
+    assert reports["lab"].rejected == []
+    assert merged.images["lab/process-sim:latest"].purdueLevel == 0
+    assert merged.types["workstation"].purdueLevel == BASE.types["workstation"].purdueLevel
+
+
 def test_a_new_type_comes_from_its_default_image():
     a = standard_labels("bastion", type_name="Bastion A", type_role="host")
     b = standard_labels(

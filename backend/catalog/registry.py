@@ -110,6 +110,7 @@ def _image_spec(namespace: str, img: _Image) -> ImageSpec:
         platforms=img.cand.platforms or None,
         shell=lb.shell,
         ownBridge=lb.own_bridge,
+        purdueLevel=lb.purdue_level,
     )
 
 
