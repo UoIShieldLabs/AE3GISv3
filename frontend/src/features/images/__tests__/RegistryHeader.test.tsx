@@ -4,7 +4,7 @@ import type { Registry } from '@/api/client';
 import { applyCatalog } from '@/catalog/catalog';
 import { CATALOG } from '@/test/catalogFixture';
 import { TooltipProvider } from '@/ui';
-import { RegistryRow } from '../RegistriesPanel';
+import { RegistryHeader } from '../RegistryHeader';
 import { registrySummary } from '../imagePolling';
 
 const REG: Registry = {
@@ -27,31 +27,34 @@ const REG: Registry = {
   last_job: null,
 };
 
-function renderRow(reg: Registry = REG) {
-  render(<TooltipProvider><RegistryRow registry={reg} /></TooltipProvider>);
+function renderHeader(reg: Registry = REG) {
+  render(<TooltipProvider><RegistryHeader registry={reg} /></TooltipProvider>);
 }
 
-describe('RegistryRow', () => {
+describe('RegistryHeader', () => {
   beforeEach(() => applyCatalog(CATALOG));
 
-  it('summarises a sync', () => {
+  it('summarises a sync, with its problems on one line', () => {
     expect(registrySummary(REG)).toBe('1 image loaded · 1 rejected · 1 pending');
-    renderRow();
+    renderHeader();
     expect(screen.getByText('lab')).toBeInTheDocument();
     expect(screen.getByText(/2 of 6 repos not marked/)).toBeInTheDocument();
-    expect(screen.getByText(/1 rejected · 1 waiting for Docker Hub's pull limit/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /1 rejected · 1 waiting for Docker Hub's pull limit · 1 warning/ })).toBeInTheDocument();
   });
 
-  it('expands to loaded images, rejection reasons, pending repos and warnings', () => {
-    renderRow();
-    expect(screen.queryByText('Edge FW')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Show details' }));
-    expect(screen.getByText('Edge FW')).toBeInTheDocument();
-    expect(screen.getByText('variant of Firewall')).toBeInTheDocument();
+  it('expands to rejection reasons, pending repos and warnings', () => {
+    renderHeader();
+    expect(screen.queryByText('broken:latest')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /1 rejected/ }));
     expect(screen.getByText('broken:latest')).toBeInTheDocument();
     expect(screen.getByText(/io.ae3gis.type is required/)).toBeInTheDocument();
     expect(screen.getByText(/10 Docker Hub pulls left/)).toBeInTheDocument();
     expect(screen.getByText(/unknown label io.ae3gis.type.colour/)).toBeInTheDocument();
+  });
+
+  it('shows no problem line for a clean sync', () => {
+    renderHeader({ ...REG, rejected: [], pending: [], warnings: [] });
+    expect(screen.queryByRole('button', { name: /rejected|warning|waiting/ })).not.toBeInTheDocument();
   });
 
   it('shows the running step while syncing', () => {
@@ -59,7 +62,7 @@ describe('RegistryRow', () => {
       id: 'j', kind: 'sync_registry', status: 'running', created_at: '2026-10-07T10:02:00Z',
       steps: [{ name: 'inspect', status: 'running', message: 'Reading edge-fw (1/2)', jobs: [] }],
     };
-    renderRow({ ...REG, active_job: job });
+    renderHeader({ ...REG, active_job: job });
     expect(screen.getByText('Reading edge-fw (1/2)')).toBeInTheDocument();
   });
 });

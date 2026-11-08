@@ -42,16 +42,16 @@ export async function cancelJob(jobId: string, what = 'Job'): Promise<void> {
   }
 }
 
-/** Add a Docker Hub namespace (URL or name); true if it was added. */
-export async function addRegistry(url: string): Promise<boolean> {
+/** Add a Docker Hub namespace (URL or name); the new registry, or null if it was not added. */
+export async function addRegistry(url: string): Promise<api.Registry | null> {
   try {
     const reg = await api.addRegistry(url);
     toast.info(`Reading ${reg.namespace} from Docker Hub`, { description: 'Its images join the catalog when the sync ends.' });
     await refreshImages();
-    return true;
+    return reg;
   } catch (err) {
     toast.error('Could not add the registry', { description: api.errorMessage(err) });
-    return false;
+    return null;
   }
 }
 

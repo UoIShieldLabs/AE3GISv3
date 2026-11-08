@@ -299,8 +299,11 @@ tables record every long operation.
   the tab ends one. `features/topology/AddEntityProvider` owns every "add…" dialog so
   toolbar, palette, menus and drops share one flow. Deployment actions are plain
   functions in `features/deployment/actions.ts`; status polling is a singleton.
-  Images: `features/images` (ImagesSheet, variant `ImagePicker`, status line,
-  `RequiredImagesBanner` over the canvas, build/sync/cancel actions);
+  Images: `features/images` (ImagesSheet: sources on the left from
+  `sources.ts` (all, each Docker Hub registry, each build source, public), the
+  selected one's header (`RegistryHeader`, build source + host) and images on
+  the right; variant `ImagePicker`, status line, `RequiredImagesBanner` over
+  the canvas, build/sync/cancel actions);
   `features/jobs/JobLog` follows any job's log; the TopBar status badge opens
   `JobDetailsPopover` (steps + deploy/build logs).
   Capture: `features/capture` (StartCaptureDialog from edge/device menus and the
