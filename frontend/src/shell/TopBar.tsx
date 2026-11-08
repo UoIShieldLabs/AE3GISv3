@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, BookOpen, Boxes, ChevronDown, Download, FileJson, Layers3, Library, ListChecks, PackageOpen, PanelLeft, PanelRight, Play, Redo2, Save, Search, Square, Undo2 } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, Boxes, ChevronDown, Download, FileJson, Layers3, Library, ListChecks, PackageOpen, PanelLeft, PanelRight, Play, Redo2, RotateCcw, Save, Search, Square, Undo2 } from 'lucide-react';
 import type { ExportFormat } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { MOD } from '@/lib/keyboard';
@@ -20,6 +20,8 @@ export interface TopBarProps {
   onExportLab: (format: ExportFormat) => void;
   onDeploy: () => void;
   onDestroy: () => void;
+  /** Deploy from the catalog images, discarding the saved lab state. */
+  onDeployFresh?: () => void;
   onLibrary: () => void;
   readOnly?: boolean;
 }
@@ -32,16 +34,18 @@ const STATUS: Record<DeployStatus, { label: string; tone: 'neutral' | 'success' 
   error: { label: 'Error', tone: 'danger', dot: true },
 };
 
-export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onLibrary, readOnly }: TopBarProps) {
-  const { name, dirty, backendId, deployStatus, busy, lastError, sidebarOpen, inspectorOpen, activeJob, errorCount } = useAppShallow((s) => ({
+export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onDeployFresh, onLibrary, readOnly }: TopBarProps) {
+  const { name, dirty, backendId, deployStatus, busy, lastError, sidebarOpen, inspectorOpen, activeJob, errorCount, savedState } = useAppShallow((s) => ({
     name: s.topology.name ?? '', dirty: s.dirty, backendId: s.backendId, deployStatus: s.deployStatus, busy: s.busy, lastError: s.lastError,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, activeJob: s.activeJob,
     errorCount: s.diagnostics.filter((d) => d.severity === 'error').length,
+    savedState: s.savedState,
   }));
   const { setSidebarOpen, setInspectorOpen, setPurdueOpen, setCommandPaletteOpen, openImages } = useAppStore.getState();
   const setMeta = useAppStore((s) => s.setTopologyMeta);
   const { canUndo, canRedo } = useUndoState();
-  const status = STATUS[deployStatus];
+  // An idle lab with a save to resume says so.
+  const status = deployStatus === 'idle' && savedState ? { ...STATUS.idle, label: 'Saved' } : STATUS[deployStatus];
   const transitioning = deployStatus === 'deploying' || deployStatus === 'destroying';
   const runningStep = activeJob?.steps.find((st) => st.status === 'running');
   const stepLabel = runningStep ? `${status.label.replace('…', '')} · ${runningStep.message ?? runningStep.name}` : status.label;
@@ -118,17 +122,40 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onL
             <Square /> Destroy
           </Button>
         ) : (
-          <Tooltip content={!backendId ? 'Save the topology before deploying' : errorCount ? `Fix ${errorCount} issue${errorCount === 1 ? '' : 's'} before deploying` : deployStatus === 'error' ? 'Retry deployment' : 'Deploy with Kathara'}>
-            <Button size="sm" variant="primary" onClick={onDeploy} disabled={busy || transitioning || !backendId || readOnly || errorCount > 0} loading={deployStatus === 'deploying'} className={cn(deployStatus !== 'deploying' && 'bg-success hover:bg-success/90')}>
-              <Play /> Deploy
-            </Button>
-          </Tooltip>
+          <div className="flex items-center">
+            <Tooltip content={!backendId ? 'Save the topology before deploying' : errorCount ? `Fix ${errorCount} issue${errorCount === 1 ? '' : 's'} before deploying` : savedState ? `Resume the lab state saved ${savedAt(savedState.created_at)} (${savedState.nodes} node${savedState.nodes === 1 ? '' : 's'})` : deployStatus === 'error' ? 'Retry deployment' : 'Deploy with Kathara'}>
+              <Button size="sm" variant="primary" onClick={onDeploy} disabled={busy || transitioning || !backendId || readOnly || errorCount > 0} loading={deployStatus === 'deploying'} className={cn(deployStatus !== 'deploying' && 'bg-success hover:bg-success/90', savedState && onDeployFresh && 'rounded-r-none')}>
+                <Play /> {savedState ? 'Resume' : 'Deploy'}
+              </Button>
+            </Tooltip>
+            {savedState && onDeployFresh ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="primary" aria-label="Deploy options" disabled={busy || transitioning || readOnly || errorCount > 0} className="rounded-l-none border-l border-black/15 bg-success px-1.5 hover:bg-success/90">
+                    <ChevronDown />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onDeploy}><Play /> Resume saved state</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={onDeployFresh} variant="danger"><RotateCcw /> Deploy fresh (discard saved state)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         )}
         <Separator orientation="vertical" className="mx-1 h-5" />
         <AppearanceMenu />
       </div>
     </div>
   );
+}
+
+/** "today 14:05" / "Nov 3 09:12" for a saved state's timestamp. */
+function savedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString() ? `today ${time}` : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
 }
 
 function NameEditor({ value, onCommit, readOnly }: { value: string; onCommit: (v: string) => void; readOnly?: boolean }) {

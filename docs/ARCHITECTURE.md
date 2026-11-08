@@ -353,7 +353,8 @@ sequenceDiagram
 ```
 
 - **Steps.** Deploy runs `validate → images → plan → deploy → verify`; destroy
-  runs `undeploy → verify`; an image build runs `source → snapshot → build →
+  runs `stop → undeploy → verify` (`stop → save → undeploy → verify` with
+  `?save=true`, §5.5a); an image build runs `source → snapshot → build →
   verify`. Each transition is written to the job row and mirrored into `events`.
 - **Subjects.** A job serialises on its `subject`: `topology:<id>`,
   `image:<ref>`, `source:<name>`, `capture:<topology>:<node>:<interface>`,
@@ -411,7 +412,7 @@ Exposed as **Labs on this host** in the library UI, and run once at startup.
 SQLite via Alembic (`db/migrations/`). Three tables:
 
 - **`topologies`** — `data` (the opaque document), `engine_state` (how to find
-  the deployed lab), `status`, `version`.
+  the deployed lab), `status`, `version`, `saved_state` (§5.5a).
 - **`jobs`** — kind, `subject`, `params`, status, ordered `steps`, error,
   `result` (`topology_id` for jobs that belong to a topology; logs and
   artifacts are files, see §5.3).
@@ -425,6 +426,39 @@ is what keeps a human and an agent from silently overwriting each other.
 > **Any schema change needs a migration.** `0001_baseline` deliberately no-ops
 > on databases created before migrations existed, so live data volumes upgrade
 > in place.
+
+### 5.5a Saved lab state ("save & destroy")
+
+So a student can stop a lab and pick up later without keeping it running,
+`POST /topologies/{id}/destroy?save=true` adds a `save` step before `undeploy`:
+`engine.snapshot_nodes` runs `saved_state.PREPARE_SCRIPT` in every node (dumps
+`iptables-save` to `/etc/ae3gis/iptables.rules`, removes stale `*.pid` files)
+and `docker commit`s it to `ae3gis.local/snapshot/<topology id[:12]>:<machine>-<time>`,
+keeping the *base image's* config (CMD, entrypoint, env, labels), not
+Kathara's runtime container config. `Topology.saved_state` records
+`{created_at, deployed_version, nodes: {id: {ref, base_image}}}`
+([`domain/saved_state.py`](../backend/domain/saved_state.py)); the previous
+save's images are removed once the lab is gone, and a plain destroy discards
+the save (only an explicit save can be resumed). A failed save leaves the lab
+deployed and the old save in place.
+
+The next deploy's `plan` step swaps each node's image for its snapshot
+(`saved_state.apply`) when the node still exists, its catalog image is
+unchanged (`EngineState.base_images` records what a deploy planned, before the
+swap) and the snapshot is present locally; others start fresh with a
+`deploy.saved_state_skipped` warning. Resumed nodes get `RESTORE_COMMAND`
+(`iptables-restore`) appended to their startup. Addressing and routes still come
+from the plan.
+
+**What is kept:** the node's filesystem (edited configs, files, installed
+packages) and iptables rules. **Not kept:** processes, shells, and other kernel
+state typed by hand (`ip addr/route`, sysctls) — Docker has no portable
+checkpoint (CRIU is experimental and unavailable on Docker Desktop). A snapshot
+costs only its diff layer (~100 kB for a lightly edited node). Saves are per
+topology, not per student. `DELETE /topologies/{id}/saved-state` (idle/error
+only) and deleting the topology remove the images. The UI's Destroy opens a
+dialog (Save & destroy / Don't save; closing it keeps the lab running); Deploy becomes
+**Resume** with a "Deploy fresh" option while a save exists.
 
 ### 5.6 Node images built from Dockerfiles
 

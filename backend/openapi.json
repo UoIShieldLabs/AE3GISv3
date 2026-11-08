@@ -3950,6 +3950,16 @@
             "title": "Nodes",
             "type": "array"
           },
+          "saved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SavedStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3970,6 +3980,25 @@
           "nodes"
         ],
         "title": "RuntimeOut",
+        "type": "object"
+      },
+      "SavedStateOut": {
+        "description": "A topology's saved lab state (\"save & destroy\"); the next deploy resumes it.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "nodes": {
+            "title": "Nodes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created_at",
+          "nodes"
+        ],
+        "title": "SavedStateOut",
         "type": "object"
       },
       "ScenarioPhaseRunRequest": {
@@ -4423,6 +4452,16 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SavedStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "status": {
             "title": "Status",
@@ -7849,6 +7888,18 @@
             }
           },
           {
+            "description": "Save every node's filesystem first; the next deploy resumes from it.",
+            "in": "query",
+            "name": "save",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Save every node's filesystem first; the next deploy resumes from it.",
+              "title": "Save",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -8421,6 +8472,58 @@
           }
         },
         "summary": "Get Runtime",
+        "tags": [
+          "topologies"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/saved-state": {
+      "delete": {
+        "description": "Forget the saved lab state (and remove its images): the next deploy starts fresh.",
+        "operationId": "discard_saved_state_api_v1_topologies__topology_id__saved_state_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard Saved State",
         "tags": [
           "topologies"
         ]

@@ -57,6 +57,10 @@ class Topology(Base):
     engine_state = Column(JSON, nullable=True)
     status = Column(String, default="idle", nullable=False)
     version = Column(Integer, default=1, nullable=False)
+    # The lab's nodes as last saved by a "save & destroy" (``domain.saved_state``):
+    # one committed image per node, used instead of the catalog image on the next
+    # deploy. None: deploys start fresh.
+    saved_state = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 

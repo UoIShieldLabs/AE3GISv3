@@ -57,10 +57,19 @@ class TopologySummary(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SavedStateOut(BaseModel):
+    """A topology's saved lab state ("save & destroy"); the next deploy resumes it."""
+
+    created_at: str
+    nodes: int
+
+
 class TopologyRecord(TopologySummary):
     data: dict[str, Any]
     engine_state: dict[str, Any] | None = None
     diagnostics: list[Diagnostic] = Field(default_factory=list)
+    # Set when the next deploy resumes nodes from a saved state.
+    saved: SavedStateOut | None = None
 
 
 class JobStep(BaseModel):
@@ -234,6 +243,8 @@ class RuntimeOut(BaseModel):
     # Captures and traffic runs (they never block deploy or destroy).
     activity: list[ActivityOut] = []
     nodes: list[NodeState]
+    # Set when the next deploy resumes nodes from a saved state.
+    saved: SavedStateOut | None = None
 
 
 class LinkEndpointOut(BaseModel):

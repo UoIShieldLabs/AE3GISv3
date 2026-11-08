@@ -990,6 +990,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/saved-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Discard Saved State
+         * @description Forget the saved lab state (and remove its images): the next deploy starts fresh.
+         */
+        delete: operations["discard_saved_state_api_v1_topologies__topology_id__saved_state_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/scenario/phases/{phase_id}/run": {
         parameters: {
             query?: never;
@@ -2748,12 +2768,23 @@ export interface components {
             activity: components["schemas"]["ActivityOut"][];
             /** Nodes */
             nodes: components["schemas"]["NodeState"][];
+            saved?: components["schemas"]["SavedStateOut"] | null;
             /** Status */
             status: string;
             /** Topology Id */
             topology_id: string;
             /** Version */
             version: number;
+        };
+        /**
+         * SavedStateOut
+         * @description A topology's saved lab state ("save & destroy"); the next deploy resumes it.
+         */
+        SavedStateOut: {
+            /** Created At */
+            created_at: string;
+            /** Nodes */
+            nodes: number;
         };
         /** ScenarioPhaseRunRequest */
         ScenarioPhaseRunRequest: {
@@ -2934,6 +2965,7 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            saved?: components["schemas"]["SavedStateOut"] | null;
             /** Status */
             status: string;
             /**
@@ -4759,7 +4791,10 @@ export interface operations {
     };
     destroy_api_v1_topologies__topology_id__destroy_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Save every node's filesystem first; the next deploy resumes from it. */
+                save?: boolean;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -5053,6 +5088,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RuntimeOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_saved_state_api_v1_topologies__topology_id__saved_state_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

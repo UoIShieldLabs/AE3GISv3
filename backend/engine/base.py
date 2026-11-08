@@ -31,6 +31,9 @@ class EngineState:
     # against this, not a plan recomputed from data edited since the deploy.
     links: list[dict[str, Any]] = field(default_factory=list)
     deployed_version: int | None = None
+    # node id -> the catalog image it was planned with (before a saved state
+    # swapped in its snapshot): what "save & destroy" records as the base.
+    base_images: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -47,6 +50,7 @@ class EngineState:
             nodes=dict(raw.get("nodes") or {}),
             links=list(raw.get("links") or []),
             deployed_version=raw.get("deployed_version"),
+            base_images=dict(raw.get("base_images") or {}),
         )
 
 
@@ -354,6 +358,24 @@ class DeploymentEngine(Protocol):
 
         Cancelling the awaiting task must stop the build.
         """
+        ...
+
+    # ── saved state ──
+
+    async def snapshot_nodes(
+        self, state: EngineState, repository: str, tag_suffix: str, on_progress: Progress
+    ) -> dict[str, str]:
+        """Commit each of the lab's node containers to ``repository:<machine>-<suffix>``.
+
+        Runs ``domain.saved_state.PREPARE_SCRIPT`` in each running node first.
+        The image keeps its base image's config (CMD, entrypoint, labels). Returns
+        node id -> image ref; nodes without a container are left out. On failure
+        removes what it committed and raises.
+        """
+        ...
+
+    async def remove_images(self, refs: list[str]) -> None:
+        """Remove local images, best effort (one in use or already gone is skipped)."""
         ...
 
     # ── sidecars (captures) ──

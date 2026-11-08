@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAppStore } from '@/store';
 import { ROOT_SCOPE, defaultScopeFor, resolveScope, scopeEquals, scopePath, type Scope } from '@/lib/topology';
-import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson, loadTopology, saveTopology } from '@/features/deployment/actions';
+import { createNewTopology, deployFresh, deployTopology, exportLab, exportTopologyJson, loadTopology, requestDestroy, saveTopology } from '@/features/deployment/actions';
+import { DestroyDialog } from '@/features/deployment/DestroyDialog';
 import { useServerValidation } from '@/features/deployment/useServerValidation';
 import { UnsavedChangesGuard } from '@/features/topology/UnsavedChangesGuard';
 import { AddEntityProvider } from '@/features/topology/AddEntityProvider';
@@ -98,7 +99,8 @@ export function EditorRoute() {
             onExport={exportTopologyJson}
             onExportLab={(f) => void exportLab(f)}
             onDeploy={() => void deployTopology()}
-            onDestroy={() => void destroyTopology()}
+            onDestroy={requestDestroy}
+            onDeployFresh={() => void deployFresh()}
             onLibrary={() => void navigate('/')}
           />
         }
@@ -121,6 +123,7 @@ export function EditorRoute() {
       <StartCaptureDialog />
       <CommandPalette scope={scope} onNavigate={onNavigate} onSave={() => void save()} />
       <UnsavedChangesGuard onSave={save} />
+      <DestroyDialog />
     </AddEntityProvider>
   );
 }

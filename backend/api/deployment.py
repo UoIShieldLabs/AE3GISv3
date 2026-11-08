@@ -39,12 +39,16 @@ def deploy(
 @router.post("/{topology_id}/destroy", response_model=JobOut, status_code=202)
 def destroy(
     topology_id: str,
+    save: bool = Query(
+        False,
+        description="Save every node's filesystem first; the next deploy resumes from it.",
+    ),
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
     _=Depends(require_instructor),
 ):
     topo = topologies.get_or_404(db, topology_id)
-    return jobs.job_to_dict(deployment.start_destroy(db, runner, topo))
+    return jobs.job_to_dict(deployment.start_destroy(db, runner, topo, save=save))
 
 
 @router.get("/{topology_id}/interfaces", response_model=DeployedInterfacesOut)

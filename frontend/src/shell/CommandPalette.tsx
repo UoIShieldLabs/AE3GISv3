@@ -1,6 +1,6 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Activity, BookOpen, Gauge, Boxes, Building2, Download, Layers3, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, Save, Sparkles, Square } from 'lucide-react';
+import { Activity, BookOpen, Gauge, Boxes, Building2, Download, Layers3, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, RotateCcw, Save, Sparkles, Square } from 'lucide-react';
 import { openTrafficPanel } from '@/features/traffic/actions';
 import { openMonitorPanel } from '@/features/monitor/actions';
 import { openScenarioPanel } from '@/features/scenario/actions';
@@ -15,7 +15,7 @@ import { ThemeSwatch } from './AppearanceMenu';
 import { MOD } from '@/lib/keyboard';
 import type { Scope } from '@/lib/topology';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/ui';
-import { createNewTopology, deployTopology, destroyTopology, exportLab, exportTopologyJson } from '@/features/deployment/actions';
+import { createNewTopology, deployFresh, deployTopology, exportLab, exportTopologyJson, requestDestroy } from '@/features/deployment/actions';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
 import { targetSiteFor, targetSubnetFor } from '@/features/topology/addTargets';
 import { cn } from '@/lib/cn';
@@ -29,8 +29,8 @@ export interface CommandPaletteProps {
 
 /** ⌘K: jump to any entity or run an editor action. */
 export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProps) {
-  const { open, topology, deployStatus, backendId, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
-    open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId,
+  const { open, topology, deployStatus, backendId, savedState, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
+    open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId, savedState: s.savedState,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, layoutMode: s.layoutMode, selection: s.selection,
   }));
   const navigate = useNavigate();
@@ -56,10 +56,13 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
               <CommandGroup heading="Actions">
                 <CommandItem onSelect={run(onSave)} shortcut={`${MOD}S`}><Save /> Save topology</CommandItem>
                 {deployStatus === 'deployed' ? (
-                  <CommandItem onSelect={run(() => void destroyTopology())}><Square /> Destroy deployment</CommandItem>
+                  <CommandItem onSelect={run(requestDestroy)} keywords={['save', 'stop', 'suspend', 'log off']}><Square /> Destroy deployment…</CommandItem>
                 ) : (
-                  <CommandItem onSelect={run(() => void deployTopology())} disabled={!backendId || deployStatus === 'deploying'}><Play /> Deploy topology</CommandItem>
+                  <CommandItem onSelect={run(() => void deployTopology())} disabled={!backendId || deployStatus === 'deploying'}><Play /> {savedState ? 'Resume saved lab state' : 'Deploy topology'}</CommandItem>
                 )}
+                {deployStatus !== 'deployed' && savedState ? (
+                  <CommandItem onSelect={run(() => void deployFresh())} disabled={!backendId || deployStatus === 'deploying'} keywords={['fresh', 'reset', 'discard', 'saved']}><RotateCcw /> Deploy fresh (discard saved state)</CommandItem>
+                ) : null}
                 <CommandItem onSelect={run(() => st().applyLayout(scope, layoutMode))} shortcut="L"><Sparkles /> Apply {layoutMode} layout</CommandItem>
                 {scope.level === 'root' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'site' }, {}))}><Plus /> Add site…</CommandItem> : null}
                 {scope.level !== 'subnet' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'subnet' }, { siteId: targetSiteFor(scope, selection.nodeIds) }))}><Plus /> Add subnet…</CommandItem> : null}

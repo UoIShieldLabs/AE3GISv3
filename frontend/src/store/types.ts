@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData, Tutorial, TutorialCell } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
-import type { Activity, Diagnostic, ImagesReport, Job } from '@/api/client';
+import type { Activity, Diagnostic, ImagesReport, Job, SavedState } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 import type { ThemePref } from '@/app/themes';
@@ -119,6 +119,10 @@ export interface DocumentSlice {
   lastError: string | null;
   /** A save/load/deploy/destroy request is in flight. */
   busy: boolean;
+  /** The lab state saved by "save & destroy": the next deploy resumes it. */
+  savedState: SavedState | null;
+  /** The destroy dialog (keep running / save & destroy / destroy) is open. */
+  destroyDialogOpen: boolean;
 
   setBackendInfo: (info: { id: string; name: string; status: string; version?: number }) => void;
   setVersion: (version: number) => void;
@@ -130,6 +134,8 @@ export interface DocumentSlice {
   setDiagnostics: (diagnostics: Diagnostic[]) => void;
   clearBackend: () => void;
   setBusy: (busy: boolean) => void;
+  setSavedState: (saved: SavedState | null) => void;
+  setDestroyDialogOpen: (open: boolean) => void;
 }
 
 export interface ViewSlice {

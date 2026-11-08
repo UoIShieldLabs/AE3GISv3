@@ -18,6 +18,7 @@ from api.schemas import (
     GenerateRequest,
     PlanOut,
     RuntimeOut,
+    SavedStateOut,
     TopologyCreate,
     TopologyRecord,
     TopologySummary,
@@ -27,7 +28,7 @@ from api.schemas import (
 )
 from auth import require_any_auth, require_instructor
 from db.models import Topology
-from domain import validation
+from domain import saved_state, validation
 from domain.export import containerlab, kathara, labspec
 from domain.generator import GeneratorError, GeneratorParams, check_catalog, generate
 from engine.base import DeploymentEngine
@@ -39,6 +40,8 @@ router = APIRouter(prefix="/api/v1/topologies", tags=["topologies"])
 def _record(topo: Topology, diags: list[validation.Diagnostic]) -> TopologyRecord:
     rec = TopologyRecord.model_validate(topo)
     rec.diagnostics = [Diagnostic(**d.to_dict()) for d in diags]
+    saved = saved_state.summary(topo.saved_state)
+    rec.saved = SavedStateOut(**saved) if saved else None
     return rec
 
 
@@ -122,8 +125,29 @@ def update_topology(
 
 
 @router.delete("/{topology_id}", status_code=204)
-def delete_topology(topology_id: str, db: Session = Depends(get_db), _=Depends(require_instructor)):
-    topologies.delete(db, topologies.get_or_404(db, topology_id))
+async def delete_topology(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    engine: DeploymentEngine = Depends(get_engine),
+    _=Depends(require_instructor),
+):
+    topo = topologies.get_or_404(db, topology_id)
+    refs = saved_state.refs(topo.saved_state)
+    topologies.delete(db, topo)
+    await engine.remove_images(refs)
+    return Response(status_code=204)
+
+
+@router.delete("/{topology_id}/saved-state", status_code=204)
+async def discard_saved_state(
+    topology_id: str,
+    db: Session = Depends(get_db),
+    engine: DeploymentEngine = Depends(get_engine),
+    _=Depends(require_instructor),
+):
+    """Forget the saved lab state (and remove its images): the next deploy starts fresh."""
+    topo = topologies.get_or_404(db, topology_id)
+    await engine.remove_images(deployment.discard_saved_state_refs(db, topo))
     return Response(status_code=204)
 
 
