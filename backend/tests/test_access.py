@@ -137,22 +137,90 @@ def test_a_copy_tracks_its_source_and_resets_to_it(setup):
     assert r.json()["code"] == "no_source"
 
 
-def test_unpublishing_and_deleting_the_source_keep_copies(setup):
+def _publish(cls, tid: str, published: bool):
+    r = cls.client.put(
+        f"{V1}/topologies/{tid}/published", json={"published": published}, headers=cls.instructor
+    )
+    assert r.status_code == 200, r.text
+    return r
+
+
+def _exists(cls, tid: str) -> bool:
+    return cls.client.get(f"{V1}/topologies/{tid}", headers=cls.instructor).status_code == 200
+
+
+def test_unpublishing_removes_lesson_copies_and_republishing_starts_fresh(setup):
     cls, alice, bob, draft, published, mine = setup
     c = cls.client
-    copy_ = c.post(f"{V1}/topologies/{published['id']}/copy", headers=alice).json()
-    c.put(
-        f"{V1}/topologies/{published['id']}/published",
-        json={"published": False},
-        headers=cls.instructor,
-    )
-    assert _ids(c.get(f"{V1}/topologies", headers=bob).json()) == set()
-    assert c.post(f"{V1}/topologies/{copy_['id']}/reset", headers=alice).json()["code"] == (
-        "no_source"
-    )
+    pid = published["id"]
+    started = c.post(f"{V1}/topologies/{pid}/copy", headers=alice).json()
+    c.put(f"{V1}/topologies/{started['id']}", json={"name": "alice's work"}, headers=alice)
+
+    _publish(cls, pid, False)
+    cls.wait()
+    # Gone for everyone, the lesson too (for students).
+    assert _ids(c.get(f"{V1}/topologies", headers=alice).json()) == {mine["id"]}
+    assert c.get(f"{V1}/topologies/{started['id']}", headers=alice).status_code == 404
+    assert not _exists(cls, started["id"])
+    assert mine["id"] in _ids(c.get(f"{V1}/topologies", headers=alice).json())
+
+    _publish(cls, pid, True)
+    fresh = c.post(f"{V1}/topologies/{pid}/copy", headers=alice)
+    assert fresh.status_code == 201
+    assert fresh.json()["id"] != started["id"] and fresh.json()["name"] == "lesson"
+
+
+def test_unpublishing_destroys_a_running_lesson_lab_first(setup):
+    cls, alice, bob, draft, published, mine = setup
+    c = cls.client
+    started = c.post(f"{V1}/topologies/{published['id']}/copy", headers=alice).json()
+    assert c.post(f"{V1}/topologies/{started['id']}/deploy", headers=alice).status_code == 202
+    cls.wait()
+    _publish(cls, published["id"], False)
+    # Retired at once: hidden from its student, and no longer counted in their cap.
+    assert c.get(f"{V1}/topologies/{started['id']}", headers=alice).status_code == 404
+    assert c.post(f"{V1}/topologies/{mine['id']}/deploy", headers=alice).status_code == 202
+    cls.wait()  # destroy job, then the delete
+    assert not _exists(cls, started["id"])
+    students = c.get("/api/v1/class/students", headers=cls.instructor).json()["students"]
+    labs = {lab["id"] for s in students for lab in s["labs"]}
+    assert started["id"] not in labs and mine["id"] in labs
+
+
+def test_deleting_a_lesson_removes_its_copies(setup):
+    cls, alice, bob, draft, published, mine = setup
+    c = cls.client
+    started = c.post(f"{V1}/topologies/{published['id']}/copy", headers=alice).json()
     assert c.delete(f"{V1}/topologies/{published['id']}", headers=cls.instructor).status_code == 204
-    kept = c.get(f"{V1}/topologies/{copy_['id']}", headers=alice).json()
-    assert kept["source_id"] is None
+    cls.wait()
+    assert not _exists(cls, started["id"])
+
+
+def test_duplicates_are_the_students_and_survive_unpublishing(setup):
+    cls, alice, bob, draft, published, mine = setup
+    c = cls.client
+    pid = published["id"]
+    # Duplicating the lesson itself (not started) ...
+    plain = c.post(f"{V1}/topologies/{pid}/copy?duplicate=true", headers=alice)
+    assert plain.status_code == 201
+    assert plain.json()["source_id"] is None and plain.json()["name"] == "lesson (copy)"
+    assert plain.json()["data"]["tutorials"] == published["data"]["tutorials"]
+    # ... and duplicating the lesson copy keeps the student's edits.
+    started = c.post(f"{V1}/topologies/{pid}/copy", headers=alice).json()
+    edited = copy.deepcopy(started["data"])
+    edited["description"] = "my notes"
+    c.put(f"{V1}/topologies/{started['id']}", json={"data": edited}, headers=alice)
+    mine_dup = c.post(f"{V1}/topologies/{started['id']}/copy", headers=alice).json()
+    assert mine_dup["source_id"] is None and mine_dup["data"]["description"] == "my notes"
+    # Opening the lesson still gives the lesson copy, not a duplicate.
+    again = c.post(f"{V1}/topologies/{pid}/copy", headers=alice).json()
+    assert again["id"] == started["id"]
+
+    _publish(cls, pid, False)
+    cls.wait()
+    left = _ids(c.get(f"{V1}/topologies", headers=alice).json())
+    assert {plain.json()["id"], mine_dup["id"]} <= left
+    assert started["id"] not in left
 
 
 def test_only_the_instructor_publishes(setup):

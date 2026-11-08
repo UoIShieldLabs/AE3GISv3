@@ -38,13 +38,16 @@ SHARED_JOB_KINDS = ("build", "sync_source", "sync_registry")
 
 
 def can_view(identity: Identity, topo: Topology) -> bool:
-    return can_own(identity, topo) or bool(topo.published)
+    return can_own(identity, topo) or (bool(topo.published) and topo.retired_at is None)
 
 
 def can_own(identity: Identity, topo: Topology) -> bool:
     if identity.is_instructor:
         return True
-    return topo.owner_id is not None and topo.owner_id == identity.user_id
+    # A retired lesson copy (its lesson was unpublished) is gone for its student.
+    return (
+        topo.owner_id is not None and topo.owner_id == identity.user_id and topo.retired_at is None
+    )
 
 
 def check_view(identity: Identity, topo: Topology | None) -> Topology:

@@ -203,10 +203,12 @@ export async function importJsonTopology(file: File): Promise<TopologyRecord> {
   form.append('file', file);
   return request(`${V1}/topologies/import-json`, { method: 'POST', body: form });
 }
-/** A copy for the caller: a student's personal copy of a published topology
- *  (the one they already have, if any), else a duplicate they own. */
-export function copyTopology(id: string): Promise<TopologyRecord> {
-  return request(`${V1}/topologies/${encodeURIComponent(id)}/copy`, { method: 'POST' });
+/** A copy for the caller: a student's lesson copy of a published topology
+ *  (the one they started, if any), else a duplicate they own. `duplicate`
+ *  always makes an unlinked duplicate (it outlives the lesson). */
+export function copyTopology(id: string, opts: { duplicate?: boolean } = {}): Promise<TopologyRecord> {
+  const q = opts.duplicate ? '?duplicate=true' : '';
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/copy${q}`, { method: 'POST' });
 }
 /** Replace a copy's design with its source's latest (the lab must be down). */
 export function resetTopology(id: string): Promise<TopologyRecord> {

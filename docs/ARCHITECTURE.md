@@ -753,14 +753,24 @@ turns them on.
   follow their topology; build and sync jobs are readable by all; everything
   host-wide (images, registries, labs, reconcile, benchmarks, generate, class,
   publishing) is the instructor's.
-- **Published → personal copy.** A lab is one per topology record
+- **Published → lesson copy.** A lab is one per topology record
   (`lab_name(id)`, subject `topology:<id>`), so students never deploy the
   instructor's record: `POST /topologies/{id}/copy` gives a student their
-  copy (one per source, reopened after), remembering `source_id` and
-  `source_version`. When the source's `version` moves on, summaries say
-  `update_available` and `POST …/reset` (lab down) replaces the copy's data and
+  lesson copy (one per lesson, reopened after), remembering `source_id` and
+  `source_version`; they reach it only from the lesson's card. When the
+  lesson's `version` moves on, summaries say `update_available` and
+  `POST …/reset` (lab down; "Start over" in the UI) replaces the copy's data and
   discards its saved state. Tutorials and scenarios live in `data`, so they
   travel with the topology.
+- **Lesson copies live and die with publishing.** Unpublishing or deleting a
+  lesson retires its copies (`topologies.retire_copies`: `retired_at` set, hidden
+  from everyone at once, not counted in the lab cap); `services/lessons.py`
+  then, in a runner background task per copy, waits for a running job,
+  destroys a lab still up (without saving) and deletes the row and its
+  saved-state images (`resume` at startup finishes what a restart cut off). A
+  republished lesson starts students afresh. `?duplicate=true` (or copying
+  one's own lesson copy) makes an unlinked duplicate in *My topologies*, which
+  outlives all this.
 - **Capacity.** Every lab runs on the instructor's Docker.
   `AE3GIS_STUDENT_MAX_LABS` (default 1) caps a student's labs that hold
   containers; the deploy checks it under the runner's admission lock, so it

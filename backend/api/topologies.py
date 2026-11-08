@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 import catalog
 from api.access import can_view, owned_topology, visible_topology
-from api.deps import get_db, get_engine
+from api.deps import get_db, get_engine, get_runner
 from api.errors import Conflict, Invalid
 from api.schemas import (
     ContextOut,
@@ -35,8 +35,9 @@ from domain import saved_state, validation
 from domain.export import containerlab, kathara, labspec
 from domain.generator import GeneratorError, GeneratorParams, check_catalog, generate
 from engine.base import DeploymentEngine
-from services import deployment, events, topologies
+from services import deployment, events, lessons, topologies
 from services.accounts import Identity
+from services.jobs import JobRunner
 
 router = APIRouter(prefix="/api/v1/topologies", tags=["topologies"])
 
@@ -153,10 +154,14 @@ def update_topology(
 async def delete_topology(
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
+    runner: JobRunner = Depends(get_runner),
     topo: Topology = Depends(owned_topology),
 ):
+    """Delete a topology. Deleting a lesson removes the students' copies of it
+    (their labs are destroyed in the background); their duplicates stay."""
     refs = saved_state.refs(topo.saved_state)
-    topologies.delete(db, topo)
+    retired = topologies.delete(db, topo)
+    lessons.schedule(runner, engine, retired)
     await engine.remove_images(refs)
     return Response(status_code=204)
 
@@ -255,14 +260,18 @@ async def get_context(
 @router.post("/{topology_id}/copy", response_model=TopologyRecord)
 def copy_topology(
     response: Response,
+    duplicate: bool = Query(
+        False, description="A plain duplicate the caller owns, never a lesson copy."
+    ),
     db: Session = Depends(get_db),
     identity: Identity = Depends(current_identity),
     source: Topology = Depends(visible_topology),
 ):
-    """A copy for the caller. A student opening a published topology gets
-    their personal copy (200 with the one they already have, 201 when new);
-    copying your own topology (the instructor: any) makes a duplicate (201)."""
-    topo, created = topologies.copy_for(db, identity, source)
+    """A copy for the caller. A student opening a published topology (a
+    lesson) gets their lesson copy (200 with the one they started, 201 when
+    new), which goes when the lesson is unpublished. ``duplicate``, or copying
+    your own topology (the instructor: any), makes an unlinked duplicate (201)."""
+    topo, created = topologies.copy_for(db, identity, source, duplicate=duplicate)
     response.status_code = 201 if created else 200
     return record_out(db, topo, topologies.diagnostics_for(topo.data))
 
@@ -289,13 +298,19 @@ async def reset_topology(
 
 
 @router.put("/{topology_id}/published", response_model=TopologyRecord)
-def publish_topology(
+async def publish_topology(
     body: PublishIn,
     db: Session = Depends(get_db),
+    engine: DeploymentEngine = Depends(get_engine),
+    runner: JobRunner = Depends(get_runner),
     _: Identity = Depends(require_instructor),
     topo: Topology = Depends(owned_topology),
 ):
-    """Publish a topology to students (or stop): they see it in their library
-    and open it as their own copy. Does not change its version."""
-    topologies.set_published(db, topo, body.published)
+    """Publish a topology to students as a lesson (or stop): they see it in
+    their library and open it as their own copy. Unpublishing removes those
+    copies (their labs are destroyed in the background); a republished lesson
+    starts students afresh, and what they duplicated stays. Does not change the
+    topology's version."""
+    retired = topologies.set_published(db, topo, body.published)
+    lessons.schedule(runner, engine, retired)
     return record_out(db, topo, topologies.diagnostics_for(topo.data))

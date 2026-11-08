@@ -428,7 +428,9 @@ WebSockets included) = owner or instructor; others' topologies are 404, own-leve
 calls on a published one 403 `not_owner`. Jobs follow their topology. Host-wide
 routes (images builds/syncs, registries writes, labs, reconcile, purge,
 benchmarks, generate, class, publishing) are `require_instructor`. Students
-open a published topology as a personal copy (one lab per record), and run at
+open a published topology (a lesson) as their lesson copy (one lab per record;
+removed, lab destroyed, when the lesson is unpublished or deleted:
+`services/lessons.py`; `?duplicate=true` makes an unlinked one), and run at
 most `AE3GIS_STUDENT_MAX_LABS` labs (default 1, checked under the admission
 lock). Tests: `classroom` fixture in `tests/conftest.py`. New routes must
 resolve the caller (`tests/test_route_auth.py`).

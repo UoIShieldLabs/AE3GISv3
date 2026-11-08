@@ -81,6 +81,9 @@ class Topology(Base):
     published = Column(Boolean, default=False, server_default=false(), nullable=False)
     source_id = Column(String, nullable=True)
     source_version = Column(Integer, nullable=True)
+    # A student's copy whose lesson was unpublished or deleted: hidden at once,
+    # its lab destroyed and the row deleted in the background (services.lessons).
+    retired_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 

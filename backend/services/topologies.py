@@ -18,7 +18,7 @@ from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session
 
 from api.errors import Conflict, Invalid, NotFound
-from db.models import Topology
+from db.models import Topology, utcnow
 from domain import saved_state, validation
 from domain.plan import LabPlan, build_lab_plan
 from domain.validation import Diagnostic
@@ -39,8 +39,11 @@ def list_all(db: Session) -> list[Topology]:
 
 
 def list_visible(db: Session, identity: Identity) -> list[Topology]:
-    """Everything for the instructor; a student's own plus the published."""
-    stmt = select(Topology).order_by(Topology.updated_at.desc())
+    """Everything for the instructor; a student's own plus the published.
+    Retired lesson copies (on their way out) are nobody's."""
+    stmt = (
+        select(Topology).where(Topology.retired_at.is_(None)).order_by(Topology.updated_at.desc())
+    )
     if not identity.is_instructor:
         stmt = stmt.where(or_(Topology.owner_id == identity.user_id, Topology.published.is_(True)))
     return list(db.scalars(stmt))
@@ -144,17 +147,19 @@ def update(
     return topo, diagnostics_for(topo.data)
 
 
-def delete(db: Session, topo: Topology) -> None:
+def delete(db: Session, topo: Topology) -> list[str]:
+    """Delete a topology; returns the students' lesson copies it retired."""
     if jobs.active_job(db, topo.id):
         raise Conflict(
             "A job is running for this topology; wait for it to finish", code="job_active"
         )
     if topo.status in ("deployed", "deploying", "destroying"):
         raise Conflict("Destroy the deployment before deleting the topology", code="deployed")
-    # Copies of it stay (they are their students'), now without a source.
-    db.execute(sql_update(Topology).where(Topology.source_id == topo.id).values(source_id=None))
+    # Students' lesson copies go with it (the caller settles them: services.lessons).
+    retired = retire_copies(db, topo)
     db.delete(topo)
     db.commit()
+    return retired
 
 
 def import_json(
@@ -179,19 +184,26 @@ def import_json(
 # ── copies and publishing (classroom mode) ──────────────────────────
 
 
-def copy_for(db: Session, identity: Identity, source: Topology) -> tuple[Topology, bool]:
+def copy_for(
+    db: Session, identity: Identity, source: Topology, *, duplicate: bool = False
+) -> tuple[Topology, bool]:
     """A copy of ``source`` for the caller; returns (topology, created).
 
-    A student opening a published topology that is not theirs gets their
-    personal copy: the existing one if they made it before, else a new one
-    remembering its source. Copying your own topology (the instructor: any
-    topology) makes a plain duplicate that you own.
+    A student opening a published topology (a lesson) that is not theirs gets
+    their lesson copy: the one they started, else a new one linked to the
+    lesson. It lives as long as the lesson stays published (``retire_copies``).
+    ``duplicate``, or copying your own topology (the instructor: any topology),
+    makes a plain, unlinked duplicate that you own.
     """
-    personal = not identity.is_instructor and source.owner_id != identity.user_id
+    personal = not duplicate and not identity.is_instructor and source.owner_id != identity.user_id
     if personal:
         existing = db.scalar(
             select(Topology)
-            .where(Topology.owner_id == identity.user_id, Topology.source_id == source.id)
+            .where(
+                Topology.owner_id == identity.user_id,
+                Topology.source_id == source.id,
+                Topology.retired_at.is_(None),
+            )
             .order_by(Topology.created_at)
         )
         if existing is not None:
@@ -248,9 +260,42 @@ def reset_from_source(db: Session, topo: Topology, source: Topology) -> list[str
     return refs
 
 
-def set_published(db: Session, topo: Topology, published: bool) -> Topology:
+def retire_copies(db: Session, source: Topology) -> list[str]:
+    """Hide every student's lesson copy of ``source`` (unpublished or deleted):
+    returns their ids for ``services.lessons.schedule``, which destroys their
+    labs and deletes them. A republished lesson starts students afresh."""
+    ids = list(
+        db.scalars(
+            select(Topology.id).where(
+                Topology.source_id == source.id,
+                Topology.owner_id.is_not(None),
+                Topology.retired_at.is_(None),
+            )
+        )
+    )
+    if ids:
+        db.execute(sql_update(Topology).where(Topology.id.in_(ids)).values(retired_at=utcnow()))
+        events.record(
+            db,
+            type="lesson.copies_retired",
+            message=f"Removed {len(ids)} student cop{'y' if len(ids) == 1 else 'ies'}",
+            topology_id=source.id,
+            data={"copies": ids},
+        )
+    return ids
+
+
+def retired_ids(db: Session) -> list[str]:
+    return list(db.scalars(select(Topology.id).where(Topology.retired_at.is_not(None))))
+
+
+def set_published(db: Session, topo: Topology, published: bool) -> list[str]:
+    """Publish or unpublish; returns the lesson copies retired by unpublishing."""
+    retired: list[str] = []
     if bool(topo.published) != published:
         topo.published = published
+        if not published:
+            retired = retire_copies(db, topo)
         events.record(
             db,
             type="topology.published" if published else "topology.unpublished",
@@ -259,4 +304,4 @@ def set_published(db: Session, topo: Topology, published: bool) -> Topology:
         )
         db.commit()
         db.refresh(topo)
-    return topo
+    return retired

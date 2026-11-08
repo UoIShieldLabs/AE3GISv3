@@ -149,3 +149,21 @@ def test_0007_adds_accounts_and_keeps_topologies_and_the_cascade(tmp_path):
         c.execute(sa.text("DELETE FROM topologies WHERE id = 't1'"))
         c.commit()
         assert _rows(c, "SELECT id FROM jobs") == []
+
+
+def test_0008_adds_retired_at(tmp_path):
+    url = f"sqlite:///{tmp_path / 'm.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0007_accounts")
+    engine = sa.create_engine(url)
+    with engine.begin() as c:
+        c.execute(
+            sa.text(
+                "INSERT INTO topologies (id, name, data, status, version) "
+                "VALUES ('t1', 'T', '{}', 'idle', 1)"
+            )
+        )
+    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "head")  # idempotent
+    with engine.begin() as c:
+        assert _rows(c, "SELECT id, retired_at FROM topologies") == [("t1", None)]

@@ -378,7 +378,7 @@ def list_students(db: Session) -> list[dict[str, Any]]:
     counts = dict(
         db.execute(
             select(Topology.owner_id, func.count(Topology.id))
-            .where(Topology.owner_id.is_not(None))
+            .where(Topology.owner_id.is_not(None), Topology.retired_at.is_(None))
             .group_by(Topology.owner_id)
         ).all()
     )
@@ -446,7 +446,10 @@ def check_lab_cap(db: Session, identity: Identity, topo: Topology, settings: Set
     cap = settings.student_max_labs
     if identity.is_instructor or cap <= 0 or not identity.user_id:
         return
-    others = [t for t in lab_topologies(db, identity.user_id) if t.id != topo.id]
+    # A retired lesson copy's lab is being destroyed; it never blocks the student.
+    others = [
+        t for t in lab_topologies(db, identity.user_id) if t.id != topo.id and t.retired_at is None
+    ]
     if len(others) >= cap:
         names = ", ".join(f"'{t.name}'" for t in others)
         raise Conflict(

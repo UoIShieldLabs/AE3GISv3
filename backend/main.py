@@ -38,7 +38,7 @@ from db.migrations import run_migrations
 from db.session import make_engine, make_session_factory
 from engine.base import DeploymentEngine
 from engine.fake import make_engine as make_deployment_engine
-from services import accounts, capture, reconcile
+from services import accounts, capture, lessons, reconcile
 from services import benchmark as benchmark_service
 from services import monitor as monitor_service
 from services import scenario as scenario_service
@@ -123,6 +123,9 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
                     log.warning("Reconcile: %s", summary)
             except Exception as exc:  # pragma: no cover - environment dependent
                 log.warning("Startup reconcile skipped: %s", exc)
+            # Lesson copies retired before a restart: destroy and delete them.
+            if retired := lessons.resume(runner, engine):
+                log.info("Settling %d retired lesson cop(ies)", retired)
         yield
         # Long builds are cancelled rather than awaited, so a restart (or a dev
         # reload) does not hang on them; everything else finishes.

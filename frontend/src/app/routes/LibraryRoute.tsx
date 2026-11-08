@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Boxes, Clock, Copy, Ellipsis, EyeOff, FilePlus2, FolderOpen, GraduationCap, LayoutTemplate, Plus, RefreshCw, Server, Share2, Trash2, Upload, Users,
+  Boxes, Clock, Copy, Ellipsis, FilePlus2, FolderOpen, GraduationCap, LayoutTemplate, Plus, RefreshCw, RotateCcw, Server, Trash2, Upload, Users,
 } from 'lucide-react';
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
 import {
   Badge, Button, Dialog, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-  EmptyState, IconButton, Spinner, Tooltip, toast,
+  EmptyState, IconButton, Spinner, Switch, Tooltip, toast,
 } from '@/ui';
 import { cn } from '@/lib/cn';
 import { AppearanceMenu } from '@/shell/AppearanceMenu';
@@ -51,7 +51,7 @@ function Flag({ tone, title, children }: { tone: 'accent' | 'warning'; title?: s
 
 /** One topology: name, when, status, one primary action and a "⋯" menu.
  *  Everything on one line truncates, so long names never push the card wider. */
-function TopologyCard({ t, status = t.status, onOpen, marker, flags, primary, menu }: {
+function TopologyCard({ t, status = t.status, onOpen, marker, flags, primary, trailing, menu }: {
   t: api.TopologySummary;
   /** Shown instead of the topology's own (a lesson shows its copy's). */
   status?: string;
@@ -61,6 +61,8 @@ function TopologyCard({ t, status = t.status, onOpen, marker, flags, primary, me
   /** `Flag`s after the date. */
   flags?: React.ReactNode;
   primary: React.ReactNode;
+  /** Right of the primary action, before the menu (e.g. the publish switch). */
+  trailing?: React.ReactNode;
   /** Items of the "⋯" menu. */
   menu?: React.ReactNode;
 }) {
@@ -81,14 +83,17 @@ function TopologyCard({ t, status = t.status, onOpen, marker, flags, primary, me
       </div>
       <div className="mt-auto flex items-center gap-1 pt-1">
         {primary}
-        {menu ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton label="More" size="icon-sm" className="ml-auto opacity-60 group-hover:opacity-100 data-[state=open]:opacity-100"><Ellipsis /></IconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">{menu}</DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+        <div className="ml-auto flex items-center gap-1">
+          {trailing}
+          {menu ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton label="More" size="icon-sm" className="opacity-60 group-hover:opacity-100 data-[state=open]:opacity-100"><Ellipsis /></IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{menu}</DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       </div>
     </li>
   );
@@ -99,6 +104,10 @@ export function LibraryRoute() {
   const [topologies, setTopologies] = useState<api.TopologySummary[] | null>(null);
   const [presets, setPresets] = useState<api.PresetSummary[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<api.TopologySummary | null>(null);
+  // Unpublishing a lesson students started removes their copies: confirm first.
+  const [unpublishTarget, setUnpublishTarget] = useState<api.TopologySummary | null>(null);
+  // A student's "Start over" on a lesson they started: { lesson, their copy }.
+  const [startOver, setStartOver] = useState<{ lesson: api.TopologySummary; copy: api.TopologySummary } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [labsOpen, setLabsOpen] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
@@ -129,12 +138,9 @@ export function LibraryRoute() {
   const sections = useMemo(() => {
     const all = topologies ?? [];
     const published = isStudent ? all.filter((t) => t.published && t.owner?.id !== user?.id) : [];
-    // A student's copy of a lesson is opened from the lesson's card; it shows
-    // here only once the lesson is gone (unpublished or deleted).
-    const lessonIds = new Set(published.map((t) => t.id));
-    const mine = all.filter((t) =>
-      isStudent ? t.owner?.id === user?.id && !(t.source_id && lessonIds.has(t.source_id)) : !t.owner,
-    );
+    // A student's lesson copies are reached from the lesson's card (and go
+    // when it is unpublished); "My topologies" is what they made or duplicated.
+    const mine = all.filter((t) => (isStudent ? t.owner?.id === user?.id && !t.source_id : !t.owner));
     const byStudent = new Map<string, api.TopologySummary[]>();
     if (!isStudent) {
       for (const t of all) {
@@ -187,32 +193,68 @@ export function LibraryRoute() {
       await refresh();
     }, 'Could not duplicate');
 
-  const togglePublished = (t: api.TopologySummary, published: boolean) =>
+  /** Students who started a lesson (the instructor sees their copies). */
+  const startedBy = (lessonId: string) =>
+    (topologies ?? []).filter((x) => x.source_id === lessonId && x.owner).length;
+
+  const setPublished = (t: api.TopologySummary, published: boolean) =>
     void withBusy(t.id, async () => {
       const rec = await api.setPublished(t.id, published);
-      setTopologies((prev) => prev?.map((x) => (x.id === t.id ? { ...x, published: rec.published ?? published } : x)) ?? null);
       toast.success(published ? 'Published to students' : 'No longer published', { description: t.name });
+      if (published) {
+        setTopologies((prev) => prev?.map((x) => (x.id === t.id ? { ...x, published: rec.published ?? published } : x)) ?? null);
+      } else {
+        await refresh(); // the students' copies are gone
+      }
     }, 'Could not change publishing');
+
+  const togglePublished = (t: api.TopologySummary, published: boolean) => {
+    if (!published && startedBy(t.id) > 0) setUnpublishTarget(t);
+    else setPublished(t, published);
+  };
+
+  /** Into "My topologies": the student's work if they started, else the lesson. */
+  const duplicateLesson = (lesson: api.TopologySummary) =>
+    void withBusy(lesson.id, async () => {
+      const started = copyOf(lesson.id);
+      const rec = started ? await api.copyTopology(started.id) : await api.copyTopology(lesson.id, { duplicate: true });
+      toast.success('Duplicated to My topologies', { description: rec.name, action: { label: 'Open', onClick: () => open(rec.id) } });
+      await refresh();
+    }, 'Could not duplicate');
+
+  const confirmStartOver = () => {
+    if (!startOver) return;
+    const { lesson, copy } = startOver;
+    setStartOver(null);
+    void withBusy(lesson.id, async () => {
+      await api.resetTopology(copy.id);
+      toast.success('Started over', { description: lesson.name });
+      await refresh();
+    }, 'Could not start over');
+  };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
       await api.deleteTopology(deleteTarget.id);
-      setTopologies((prev) => prev?.filter((t) => t.id !== deleteTarget.id) ?? null);
       toast.success('Deleted', { description: deleteTarget.name });
+      await refresh(); // a lesson takes its students' copies with it
     } catch (err) {
       toast.error('Delete failed', { description: api.errorMessage(err) });
     }
     setDeleteTarget(null);
   };
 
+  const publishSwitch = (t: api.TopologySummary) =>
+    canPublish ? (
+      <label className="mr-1 flex cursor-pointer items-center gap-1.5 text-2xs text-fg-muted" title={t.published ? 'Students see it as a lesson' : 'Publish to students as a lesson'}>
+        Publish
+        <Switch checked={!!t.published} disabled={busyId === t.id} onCheckedChange={(v) => togglePublished(t, v)} aria-label={`Publish ${t.name}`} />
+      </label>
+    ) : null;
+
   const ownMenu = (t: api.TopologySummary) => (
     <>
-      {canPublish ? (
-        t.published
-          ? <DropdownMenuItem onSelect={() => togglePublished(t, false)}><EyeOff /> Stop publishing</DropdownMenuItem>
-          : <DropdownMenuItem onSelect={() => togglePublished(t, true)}><Share2 /> Publish to students</DropdownMenuItem>
-      ) : null}
       <DropdownMenuItem onSelect={() => duplicate(t)}><Copy /> Duplicate</DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem variant="danger" onSelect={() => setDeleteTarget(t)}><Trash2 /> Delete</DropdownMenuItem>
@@ -237,7 +279,9 @@ export function LibraryRoute() {
     );
   };
 
-  const copyOf = (sourceId: string) => (topologies ?? []).find((t) => t.source_id === sourceId && t.owner?.id === user?.id);
+  function copyOf(sourceId: string) {
+    return (topologies ?? []).find((t) => t.source_id === sourceId && t.owner?.id === user?.id);
+  }
 
   return (
     <div className="flex h-full flex-col bg-app">
@@ -289,11 +333,14 @@ export function LibraryRoute() {
                             onOpen={() => openCopy(t)}
                             flags={mineCopy?.update_available ? <Flag tone="warning" title="Changed since you started; reset it from the editor">Updated</Flag> : null}
                             primary={
-                              <Button size="sm" variant={mineCopy ? 'secondary' : 'primary'} onClick={() => openCopy(t)} loading={busyId === t.id} disabled={busyId !== null}>
-                                {mineCopy ? 'Continue' : 'Start'}
-                              </Button>
+                              <Button size="sm" variant="secondary" onClick={() => openCopy(t)} loading={busyId === t.id} disabled={busyId !== null}>Open</Button>
                             }
-                            menu={mineCopy ? <DropdownMenuItem variant="danger" onSelect={() => setDeleteTarget(mineCopy)}><Trash2 /> Delete my copy</DropdownMenuItem> : undefined}
+                            menu={
+                              <>
+                                <DropdownMenuItem onSelect={() => duplicateLesson(t)}><Copy /> Duplicate to My topologies</DropdownMenuItem>
+                                {mineCopy ? <DropdownMenuItem onSelect={() => setStartOver({ lesson: t, copy: mineCopy })}><RotateCcw /> Start over</DropdownMenuItem> : null}
+                              </>
+                            }
                           />
                         );
                       })}
@@ -321,6 +368,7 @@ export function LibraryRoute() {
                         onOpen={() => open(t.id)}
                         flags={ownFlags(t)}
                         primary={<Button size="sm" variant="secondary" onClick={() => open(t.id)}>Open</Button>}
+                        trailing={publishSwitch(t)}
                         menu={ownMenu(t)}
                       />
                     ))}
@@ -394,9 +442,46 @@ export function LibraryRoute() {
       >
         <p className="text-xs text-fg-muted">
           This cannot be undone. A deployed topology should be destroyed first.
-          {deleteTarget?.published ? ' Students keep their copies.' : ''}
+          {deleteTarget && startedBy(deleteTarget.id) > 0 ? ` ${studentsText(startedBy(deleteTarget.id))}` : ''}
         </p>
+      </Dialog>
+
+      <Dialog
+        open={!!unpublishTarget}
+        onOpenChange={(o) => !o && setUnpublishTarget(null)}
+        title="Stop publishing?"
+        description={unpublishTarget ? `“${unpublishTarget.name}”` : undefined}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setUnpublishTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => { const t = unpublishTarget; setUnpublishTarget(null); if (t) setPublished(t, false); }}>Stop publishing</Button>
+          </>
+        }
+      >
+        <p className="text-xs text-fg-muted">{unpublishTarget ? studentsText(startedBy(unpublishTarget.id)) : null}</p>
+      </Dialog>
+
+      <Dialog
+        open={!!startOver}
+        onOpenChange={(o) => !o && setStartOver(null)}
+        title="Start over?"
+        description={startOver ? `“${startOver.lesson.name}”` : undefined}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setStartOver(null)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmStartOver}>Start over</Button>
+          </>
+        }
+      >
+        <p className="text-xs text-fg-muted">Your changes and saved lab state are discarded, and you get the latest version. Duplicate it first to keep your work.</p>
       </Dialog>
     </div>
   );
+}
+
+/** What unpublishing or deleting a lesson does to the students who started it. */
+function studentsText(n: number): string {
+  return `${n} student${n === 1 ? '' : 's'} started this lesson. Their copies and any running labs are removed; anything they duplicated stays.`;
 }

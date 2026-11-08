@@ -971,7 +971,11 @@ export interface paths {
         /** Update Topology */
         put: operations["update_topology_api_v1_topologies__topology_id__put"];
         post?: never;
-        /** Delete Topology */
+        /**
+         * Delete Topology
+         * @description Delete a topology. Deleting a lesson removes the students' copies of it
+         *     (their labs are destroyed in the background); their duplicates stay.
+         */
         delete: operations["delete_topology_api_v1_topologies__topology_id__delete"];
         options?: never;
         head?: never;
@@ -1033,9 +1037,10 @@ export interface paths {
         put?: never;
         /**
          * Copy Topology
-         * @description A copy for the caller. A student opening a published topology gets
-         *     their personal copy (200 with the one they already have, 201 when new);
-         *     copying your own topology (the instructor: any) makes a duplicate (201).
+         * @description A copy for the caller. A student opening a published topology (a
+         *     lesson) gets their lesson copy (200 with the one they started, 201 when
+         *     new), which goes when the lesson is unpublished. ``duplicate``, or copying
+         *     your own topology (the instructor: any), makes an unlinked duplicate (201).
          */
         post: operations["copy_topology_api_v1_topologies__topology_id__copy_post"];
         delete?: never;
@@ -1210,8 +1215,11 @@ export interface paths {
         get?: never;
         /**
          * Publish Topology
-         * @description Publish a topology to students (or stop): they see it in their library
-         *     and open it as their own copy. Does not change its version.
+         * @description Publish a topology to students as a lesson (or stop): they see it in
+         *     their library and open it as their own copy. Unpublishing removes those
+         *     copies (their labs are destroyed in the background); a republished lesson
+         *     starts students afresh, and what they duplicated stays. Does not change the
+         *     topology's version.
          */
         put: operations["publish_topology_api_v1_topologies__topology_id__published_put"];
         post?: never;
@@ -5540,7 +5548,10 @@ export interface operations {
     };
     copy_topology_api_v1_topologies__topology_id__copy_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A plain duplicate the caller owns, never a lesson copy. */
+                duplicate?: boolean;
+            };
             header?: {
                 authorization?: string | null;
             };

@@ -94,8 +94,10 @@ AE3GIS_INSTRUCTOR_PASSWORD='choose-one' ./start.sh
   full access. In the library's **Class** sheet, turn sign-up on and share the
   join code; students open `http://<your-ip>:3000/login` → **Join class**.
 - **Publish** a topology from the library: its tutorials and scenarios go with
-  it. Students see it under *From your instructor*; opening it gives each
-  student their own copy to deploy and edit (and to reset when you update it).
+  it. Students see it under *Lessons*; opening it gives each student their own
+  copy to deploy and edit (and to reset when you update it). Unpublishing or
+  deleting it removes those copies (running labs are destroyed); republishing
+  starts students afresh. Students keep what they *Duplicate to My topologies*.
 - Students also create, import and export their own topologies. They run
   tutorials and scenarios but don't author them, and can't manage images, the
   host's labs or the class.
