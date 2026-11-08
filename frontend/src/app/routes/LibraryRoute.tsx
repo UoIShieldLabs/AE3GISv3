@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Boxes, Clock, FilePlus2, FolderOpen, Gauge, LayoutTemplate, Plus, RefreshCw, Server, Trash2, Upload } from 'lucide-react';
+import { Boxes, Clock, FilePlus2, FolderOpen, LayoutTemplate, Plus, RefreshCw, Server, Trash2, Upload } from 'lucide-react';
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
 import { Badge, Button, Dialog, EmptyState, IconButton, Spinner, toast } from '@/ui';
 import { AppearanceMenu } from '@/shell/AppearanceMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
-import { BenchmarksSheet } from '@/features/benchmarks/BenchmarksSheet';
 import { useAppStore } from '@/store';
 
 function formatDate(iso: string): string {
@@ -25,7 +24,6 @@ export function LibraryRoute() {
   const [deleteTarget, setDeleteTarget] = useState<api.TopologySummary | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [labsOpen, setLabsOpen] = useState(false);
-  const [benchOpen, setBenchOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -93,7 +91,6 @@ export function LibraryRoute() {
         <div className="ml-auto flex items-center gap-1">
           <Button size="sm" variant="ghost" onClick={() => useAppStore.getState().openImages()}><Boxes /> Images</Button>
           <Button size="sm" variant="ghost" onClick={() => setLabsOpen(true)}><Server /> Labs on this host</Button>
-          <Button size="sm" variant="ghost" onClick={() => setBenchOpen(true)}><Gauge /> Benchmarks</Button>
           <IconButton label="Refresh" size="icon-sm" onClick={() => { setTopologies(null); void refresh(); }}><RefreshCw /></IconButton>
           <AppearanceMenu />
         </div>
@@ -168,7 +165,6 @@ export function LibraryRoute() {
 
       <LabsDialog open={labsOpen} onOpenChange={setLabsOpen} onChanged={() => void refresh()} />
       <ImagesSheet />
-      <BenchmarksSheet open={benchOpen} onOpenChange={setBenchOpen} />
 
       <Dialog
         open={!!deleteTarget}

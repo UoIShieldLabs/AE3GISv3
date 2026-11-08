@@ -52,8 +52,6 @@ export type MonitorRequest = S['MonitorRequest'];
 export type Monitor = S['MonitorOut'];
 export type NodeSelector = S['NodeSelector'];
 export type MonitorSamples = S['MonitorSamplesOut'];
-export type Benchmark = S['BenchmarkOut'];
-export type BenchmarkRequest = S['BenchmarkRequest'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -369,20 +367,6 @@ export function monitorSamples(jobId: string, opts: { since?: number; nodes?: st
 }
 export function monitorExportUrl(jobId: string): string {
   return `${V1}/monitors/${encodeURIComponent(jobId)}/export`;
-}
-
-// ── Benchmarks ─────────────────────────────────────────────────────
-export function listBenchmarks(limit = 50): Promise<Benchmark[]> {
-  return request(`${V1}/benchmarks?limit=${limit}`);
-}
-export function getBenchmark(jobId: string): Promise<Benchmark> {
-  return request(`${V1}/benchmarks/${encodeURIComponent(jobId)}`);
-}
-export function benchmarkExportUrl(jobId: string): string {
-  return `${V1}/benchmarks/${encodeURIComponent(jobId)}/export`;
-}
-export function benchmarkReportUrl(jobId: string): string {
-  return `${V1}/benchmarks/${encodeURIComponent(jobId)}/report.md`;
 }
 
 // ── Live channels (WebSocket paths; open with `wsUrl`) ─────────────

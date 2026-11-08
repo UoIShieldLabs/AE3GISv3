@@ -742,7 +742,7 @@ add-entity flow), `terminal`, `capture` (start dialog, live packet table,
 Wireshark commands), `traffic` (flows or a pattern, live totals and per-flow
 charts via `ui/charts/TimeSeriesChart` on uPlot, run summary), `monitor`
 (node selection, host / group / per-node charts, loaded history then live
-sweeps), `benchmarks` (read-only sweep results on the library page), `runs`
+sweeps), `runs`
 (history sheet), `dock`, `images`, `purdue`, `system` (labs dialog),
 `tutorials` (§6.6).
 `ui/MultiSelect` picks node sets. The canvas badges captured links and busy

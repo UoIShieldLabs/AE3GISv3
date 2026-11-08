@@ -8,7 +8,7 @@ alone or together:
 |---|---|---|
 | **Monitor** | Records CPU, memory and network of chosen nodes, the host (on Docker Desktop: its Linux VM) and Docker's own processes, every N seconds | Dock tab (⌘K → *Start monitor*, or right-click a node) · `POST /topologies/{id}/monitors` |
 | **Traffic** | Generates iperf3 load: picked flows, clients → servers, or a mesh; hundreds of flows from one driver container | Dock tab (⌘K → *New traffic run*) · `POST /topologies/{id}/traffic/runs` |
-| **Benchmark** | Generated topologies deployed, checked, loaded and measured step by step: sweeps of growing size, climbs to the host's limit, image censuses, traffic matrices | Headless: `./bench.sh` (a suite per host) or `backend/scripts/bench.py` (one spec) · results on the Library page (*Benchmarks*) |
+| **Benchmark** | Generated topologies deployed, checked, loaded and measured step by step: sweeps of growing size, climbs to the host's limit, image censuses, traffic matrices | Headless: `./bench.sh` (a suite per host) or `backend/scripts/bench.py` (one spec) · results in `backend/benchmark-results/<host>/` |
 
 This page is about benchmarks: how to run them on a machine, what the numbers
 mean, and how to get numbers you can trust and compare between machines. To

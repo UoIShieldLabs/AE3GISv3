@@ -318,8 +318,8 @@ tables record every long operation.
   notes via `react-markdown` (no raw HTML) + command cells; Run / Next step types
   the command into the node's normal terminal session, so later steps run inside
   what earlier ones started, e.g. an ssh; step-by-step only, no completion
-  detection; deploy-gated, no save needed; More → Tutorials… / ⌘K). Benchmarks:
-  `features/benchmarks/BenchmarksSheet` (read-only, on the library page).
+  detection; deploy-gated, no save needed; More → Tutorials… / ⌘K). Benchmarks
+  have no UI on main: run and read them headless (`./bench.sh`).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
   The canvas badges captured links / busy nodes from the `activity` slice via
