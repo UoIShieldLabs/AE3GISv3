@@ -34,6 +34,7 @@ async function tick(topologyId: string) {
     st.setDeployStatus(rt.status as typeof st.deployStatus, st.lastError);
     st.setActiveJob(rt.active_job ?? null);
     st.setActivity(rt.activity ?? []);
+    st.setSavedState(rt.saved ?? null);
     // Captures and traffic runs: poll briskly so their badges come and go on time.
     if (rt.activity?.length) delay = FAST_MS;
     if (rt.version !== st.version) st.setVersion(rt.version);
@@ -55,6 +56,7 @@ async function tick(topologyId: string) {
         toast.info(finished.kind === 'deploy' ? 'Deploy cancelled' : 'Destroy cancelled', { action: details });
       } else if (finished?.status === 'succeeded') {
         if (finished.kind === 'deploy') toast.success('Deployed', { description: `${rt.nodes.length} nodes running` });
+        else if (finished.params?.save) toast.success('Saved & destroyed', { description: 'The next deploy resumes from the saved state.' });
         else toast.success('Destroyed', { description: 'All containers were removed.' });
       }
     }

@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from api.errors import Conflict, Invalid
 from db.models import Job, Topology
-from domain import validation
+from domain import saved_state, validation
+from domain.plan import LabPlan
 from domain.topology import images_in
 from engine.base import DeploymentEngine, EngineState, NodeLog
 from services import activity, events, jobs, topologies
@@ -57,7 +59,8 @@ def start_deploy(db: Session, runner: JobRunner, topo: Topology) -> Job:
     return job
 
 
-def start_destroy(db: Session, runner: JobRunner, topo: Topology) -> Job:
+def start_destroy(db: Session, runner: JobRunner, topo: Topology, *, save: bool = False) -> Job:
+    """Start a destroy job; ``save`` first commits every node (see ``domain.saved_state``)."""
     with runner.admission:
         db.refresh(topo)
         if jobs.active_job(db, topo.id):
@@ -66,14 +69,24 @@ def start_destroy(db: Session, runner: JobRunner, topo: Topology) -> Job:
             raise Conflict(
                 "Nothing is deployed for this topology", code="bad_state", status=topo.status
             )
+        if save and topo.status != "deployed":
+            raise Conflict(
+                "Only a deployed lab can be saved; destroy it without saving",
+                code="bad_state",
+                status=topo.status,
+            )
         topo.status = "destroying"
         job = jobs.create_job(
-            db, "destroy", subject=jobs.topology_subject(topo.id), topology_id=topo.id
+            db,
+            "destroy",
+            subject=jobs.topology_subject(topo.id),
+            topology_id=topo.id,
+            params={"save": save},
         )
         events.record(
             db,
             type="destroy.requested",
-            message="Destroy requested",
+            message="Save & destroy requested" if save else "Destroy requested",
             topology_id=topo.id,
             job_id=job.id,
         )
@@ -125,9 +138,12 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 topo = db.get(Topology, topology_id)
                 plan = topologies.plan_for(topo)
                 deployed_version = topo.version
+                saved = topo.saved_state
             runner.progress(
                 job_id, "plan", f"{len(plan.nodes)} nodes, {len(plan.collision_domains)} links"
             )
+            base_images = {n.id: n.image for n in plan.nodes}
+            await _restore_saved_state(runner, job_id, saved, plan)
 
         # Once the engine starts creating containers the job runs to completion
         # (the engine call runs in a worker thread and cannot be interrupted).
@@ -141,6 +157,7 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
                 nodes={n.id: n.machine_name for n in plan.nodes},
                 links=plan.links(),
                 deployed_version=deployed_version,
+                base_images=base_images,
             )
             _set_topology(runner, topology_id, engine_state=provisional.to_dict())
             state = await engine.deploy(
@@ -148,6 +165,7 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
             )
             state.links = plan.links()
             state.deployed_version = deployed_version
+            state.base_images = base_images
             _set_topology(runner, topology_id, engine_state=state.to_dict(), status="deployed")
 
         async with runner.step(job_id, "verify"):
@@ -205,6 +223,37 @@ async def run_deploy(runner: JobRunner, job_id: str) -> None:
         raise
 
 
+async def _restore_saved_state(
+    runner: JobRunner, job_id: str, saved: dict[str, Any] | None, plan: LabPlan
+) -> None:
+    """Inside the plan step: resume nodes from the topology's saved state."""
+    refs = saved_state.refs(saved)
+    if not refs:
+        return
+    present = await runner.engine.images_present(refs)
+    restore = saved_state.apply(plan, saved, present)
+    if restore.applied:
+        runner.progress(
+            job_id, "plan", f"Resuming {len(restore.applied)} node(s) from the saved state"
+        )
+        runner.event(
+            job_id,
+            "deploy.saved_state_restored",
+            f"Resumed {len(restore.applied)} node(s) from the state saved "
+            f"{(saved or {}).get('created_at', '')}",
+            data={"nodes": restore.applied},
+        )
+    if restore.skipped:
+        runner.event(
+            job_id,
+            "deploy.saved_state_skipped",
+            f"{len(restore.skipped)} node(s) start fresh: "
+            + "; ".join(f"{n}: {why}" for n, why in restore.skipped.items()),
+            level="warning",
+            data={"nodes": restore.skipped},
+        )
+
+
 async def _crashed_nodes(runner: JobRunner, job_id: str, state: EngineState) -> list[NodeLog]:
     """Nodes whose container exited, with their output written to the job log."""
     try:
@@ -223,6 +272,11 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
     engine = runner.engine
     topology_id, _, raw_state, _ = _load(runner, job_id)
     state = EngineState.from_dict(raw_state)
+    with runner.session_factory() as db:
+        job = db.get(Job, job_id)
+        save = bool((job.params or {}).get("save"))
+        topo = db.get(Topology, topology_id)
+        previous = topo.saved_state if topo else None
     try:
         async with runner.step(job_id, "stop"):
             # Captures and traffic runs keep what they recorded; their sidecars
@@ -233,6 +287,15 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
                 "stop",
                 f"Stopped {stopped} capture/traffic job(s)" if stopped else "Nothing running",
             )
+        if save and state:
+            try:
+                async with runner.step(job_id, "save"):
+                    saved = await _save_state(runner, job_id, topology_id, state)
+            except Exception:
+                # Nothing was removed: the lab stays up, and so does the old save.
+                _set_topology(runner, topology_id, status="deployed")
+                raise
+            _set_topology(runner, topology_id, saved_state=saved)
         async with runner.step(job_id, "undeploy"):
             if state:
                 await engine.destroy(state)
@@ -243,10 +306,66 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
                 left = [s.name for s in await engine.status(state) if s.state == "running"]
                 if left:
                     raise RuntimeError(f"Still running: {', '.join(left)}")
+        if save and state:
+            # The replaced save's images (no longer used by any container).
+            kept = set(saved_state.refs(saved))
+            await engine.remove_images([r for r in saved_state.refs(previous) if r not in kept])
         _set_topology(runner, topology_id, status="idle", engine_state=None)
     except Exception:
-        _set_topology(runner, topology_id, status="error")
+        with runner.session_factory() as db:
+            topo = db.get(Topology, topology_id)
+            if topo and topo.status == "destroying":
+                topo.status = "error"
+                db.commit()
         raise
+
+
+async def _save_state(
+    runner: JobRunner, job_id: str, topology_id: str, state: EngineState
+) -> dict[str, Any]:
+    """Commit every node; return the new ``Topology.saved_state`` record."""
+    now = datetime.now(UTC)
+    base_images = dict(state.base_images)
+    if not base_images:  # a lab deployed before base images were recorded
+        with runner.session_factory() as db:
+            plan = topologies.plan_for(db.get(Topology, topology_id))
+        base_images = {n.id: n.image for n in plan.nodes}
+    refs = await runner.engine.snapshot_nodes(
+        state,
+        saved_state.repository(topology_id),
+        saved_state.tag_suffix(now),
+        lambda m, jid=job_id: runner.progress(jid, "save", m),
+    )
+    runner.progress(job_id, "save", f"Saved {len(refs)} node(s)")
+    runner.event(
+        job_id,
+        "destroy.saved_state",
+        f"Saved the state of {len(refs)} node(s)",
+        data={"nodes": sorted(refs)},
+    )
+    return saved_state.make(refs, base_images, deployed_version=state.deployed_version, now=now)
+
+
+def discard_saved_state_refs(db: Session, topo: Topology) -> list[str]:
+    """Clear a topology's saved state; return the images to remove.
+
+    Not while a job runs or a lab is up (its containers may run those images).
+    """
+    if jobs.active_job(db, topo.id):
+        raise Conflict("A job is already running for this topology", code="job_active")
+    if topo.status not in ("idle", "error"):
+        raise Conflict(
+            "Destroy the deployment before discarding its saved state",
+            code="bad_state",
+            status=topo.status,
+        )
+    refs = saved_state.refs(topo.saved_state)
+    topo.saved_state = None
+    events.record(
+        db, type="saved_state.discarded", message="Saved state discarded", topology_id=topo.id
+    )
+    db.commit()
+    return refs
 
 
 def register_handlers(runner: JobRunner) -> None:
@@ -277,6 +396,7 @@ async def runtime_view(db: Session, engine: DeploymentEngine, topo: Topology) ->
         "active_job": jobs.job_to_dict(job) if job else None,
         "activity": activity.active_for_topology(db, topo.id),
         "nodes": nodes,
+        "saved": saved_state.summary(topo.saved_state),
     }
 
 

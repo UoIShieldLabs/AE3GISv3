@@ -18,6 +18,7 @@ function applyRecord(rec: api.TopologyRecord) {
   const st = useAppStore.getState();
   st.setBackendInfo({ id: rec.id, name: rec.name, status: rec.status, version: rec.version });
   st.setDiagnostics(rec.diagnostics ?? []);
+  st.setSavedState(rec.saved ?? null);
 }
 
 /** Save the current topology; returns its backend id (assigned on first save) or null on failure. */
@@ -99,13 +100,19 @@ export async function deployTopology(): Promise<void> {
   });
 }
 
-export async function destroyTopology(): Promise<void> {
+/** Ask how to stop the lab: keep it running, save & destroy, or destroy. */
+export function requestDestroy(): void {
+  useAppStore.getState().setDestroyDialogOpen(true);
+}
+
+/** `save`: commit every node first so the next deploy resumes where it left off. */
+export async function destroyTopology(opts: { save?: boolean } = {}): Promise<void> {
   const s = useAppStore.getState();
   if (!s.backendId) return;
   const id = s.backendId;
   await withBusy(async () => {
     try {
-      const job = await api.destroyTopology(id);
+      const job = await api.destroyTopology(id, opts);
       const st = useAppStore.getState();
       st.setDeployStatus('destroying');
       st.setActiveJob(job);
@@ -114,6 +121,28 @@ export async function destroyTopology(): Promise<void> {
       toast.error('Destroy failed', { description: api.errorMessage(err) });
     }
   });
+}
+
+/** Forget the saved lab state (removes its images). */
+export async function discardSavedState(): Promise<boolean> {
+  const s = useAppStore.getState();
+  if (!s.backendId) return false;
+  const id = s.backendId;
+  return withBusy(async () => {
+    try {
+      await api.discardSavedState(id);
+      useAppStore.getState().setSavedState(null);
+      return true;
+    } catch (err) {
+      toast.error('Could not discard the saved state', { description: api.errorMessage(err) });
+      return false;
+    }
+  });
+}
+
+/** Deploy from the catalog images, discarding the saved state first. */
+export async function deployFresh(): Promise<void> {
+  if (await discardSavedState()) await deployTopology();
 }
 
 /** Start an unsaved draft in the editor. */

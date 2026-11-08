@@ -309,6 +309,11 @@ class FakeEngine:
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail
         self.unstarted_clients = 0  # a run's last clients the fake driver never starts
         self._pids: dict[tuple[str, str], int] = {}
+        # Saved state: snapshots committed (ref -> node id), images removed, and
+        # a failure to raise from ``snapshot_nodes``.
+        self.snapshots: dict[str, str] = {}
+        self.removed_images: list[str] = []
+        self.fail_snapshot: Exception | None = None
 
     @staticmethod
     def _hash(state: EngineState) -> str:
@@ -442,6 +447,30 @@ class FakeEngine:
         on_progress(f"{image}: Pull complete")
         if self.present_images is not None:
             self.present_images.add(image)
+
+    # ── saved state ──
+    async def snapshot_nodes(
+        self, state: EngineState, repository: str, tag_suffix: str, on_progress: Progress
+    ) -> dict[str, str]:
+        if self.fail_snapshot:
+            raise self.fail_snapshot
+        lab = self.labs.get(self._hash(state))
+        if lab is None:
+            return {}
+        out: dict[str, str] = {}
+        for nid, mname in lab.state.nodes.items():
+            ref = f"{repository}:{mname}-{tag_suffix}"
+            self.snapshots[ref] = nid
+            self.built[normalize_ref(ref)] = ImageInfo(ref=ref, id=f"sha256:{abs(hash(ref)):x}")
+            on_progress(f"Saved {mname}")
+            out[nid] = ref
+        return out
+
+    async def remove_images(self, refs: list[str]) -> None:
+        for ref in refs:
+            self.removed_images.append(ref)
+            self.snapshots.pop(ref, None)
+            self.built.pop(normalize_ref(ref), None)
 
     # ── sidecars ──
     def _lab_for(self, state: EngineState) -> _Lab:

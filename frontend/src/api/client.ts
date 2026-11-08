@@ -15,6 +15,7 @@ export type JobStep = S['JobStep'];
 export type Job = S['JobOut'];
 export type NodeState = S['NodeState'];
 export type Runtime = S['RuntimeOut'];
+export type SavedState = S['SavedStateOut'];
 export type TopologyEvent = S['EventOut'];
 export type PlanOut = S['PlanOut'];
 export type LabsReport = S['LabsReport'];
@@ -194,8 +195,14 @@ export function downloadExport(id: string, format: ExportFormat): Promise<void> 
 export function deployTopology(id: string): Promise<Job> {
   return request(`${V1}/topologies/${encodeURIComponent(id)}/deploy`, { method: 'POST' });
 }
-export function destroyTopology(id: string): Promise<Job> {
-  return request(`${V1}/topologies/${encodeURIComponent(id)}/destroy`, { method: 'POST' });
+/** `save`: commit every node's filesystem first; the next deploy resumes from it. */
+export function destroyTopology(id: string, opts: { save?: boolean } = {}): Promise<Job> {
+  const q = opts.save ? '?save=true' : '';
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/destroy${q}`, { method: 'POST' });
+}
+/** Forget a topology's saved lab state: the next deploy starts fresh. */
+export function discardSavedState(id: string): Promise<void> {
+  return request(`${V1}/topologies/${encodeURIComponent(id)}/saved-state`, { method: 'DELETE' });
 }
 export function getRuntime(id: string): Promise<Runtime> {
   return request(`${V1}/topologies/${encodeURIComponent(id)}/runtime`);

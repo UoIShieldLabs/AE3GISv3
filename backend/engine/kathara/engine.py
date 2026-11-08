@@ -26,6 +26,7 @@ from typing import Any
 
 from domain.images import LABEL_FINGERPRINT
 from domain.plan import LabPlan
+from domain.saved_state import PREPARE_SCRIPT
 from engine.base import (
     BuildSpec,
     BuildSupport,
@@ -62,6 +63,11 @@ from engine.kathara.naming import machine_name
 log = logging.getLogger(__name__)
 
 _KATHARA_LABEL = "app=kathara"
+
+# A snapshot image's config is its base image's: these keys of it, plus a label
+# naming the lab it was saved from.
+_COMMIT_CONF_KEYS = ("Cmd", "Entrypoint", "Env", "WorkingDir", "User", "ExposedPorts", "Labels")
+_LABEL_SNAPSHOT = "io.ae3gis.snapshot.lab_hash"
 
 # Docker reports the daemon's machine; images are built for linux/<arch>.
 _ARCH = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
@@ -379,6 +385,59 @@ class KatharaEngine:
                     on_progress(f"{image}: {status}")
 
         await asyncio.to_thread(_pull)
+
+    # ── saved state ──
+    async def snapshot_nodes(
+        self, state: EngineState, repository: str, tag_suffix: str, on_progress: Progress
+    ) -> dict[str, str]:
+        lab_hash = self._hash(state)
+
+        def _snapshot() -> dict[str, str]:
+            client = self._docker()
+            by_machine = {_labels(c).get("name", ""): c for c in self._lab_summaries(lab_hash)}
+            todo = [(nid, m, by_machine[m]) for nid, m in state.nodes.items() if m in by_machine]
+
+            def one(item: tuple[str, str, dict[str, Any]]) -> tuple[str, str]:
+                nid, mname, summary = item
+                c = client.containers.get(summary["Id"])
+                if c.status == "running":
+                    with contextlib.suppress(Exception):
+                        c.exec_run(["sh", "-c", PREPARE_SCRIPT])
+                # Keep the image's own config, not the container's (Kathara's
+                # runtime env and command must not become the next deploy's).
+                conf = (client.api.inspect_image(c.attrs["Image"]).get("Config")) or {}
+                keep = {k: conf[k] for k in _COMMIT_CONF_KEYS if conf.get(k) is not None}
+                keep["Labels"] = {**(conf.get("Labels") or {}), _LABEL_SNAPSHOT: lab_hash}
+                tag = f"{mname}-{tag_suffix}"
+                c.commit(repository=repository, tag=tag, conf=keep, pause=True)
+                on_progress(f"Saved {mname}")
+                return nid, f"{repository}:{tag}"
+
+            done: dict[str, str] = {}
+            errors: list[str] = []
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                for fut in [pool.submit(one, item) for item in todo]:
+                    try:
+                        nid, ref = fut.result()
+                        done[nid] = ref
+                    except Exception as exc:
+                        errors.append(f"{type(exc).__name__}: {exc}")
+            if errors:
+                self._remove_images_sync(list(done.values()))
+                raise RuntimeError(f"Could not save {len(errors)} node(s): {errors[0]}")
+            return done
+
+        return await asyncio.to_thread(_snapshot)
+
+    def _remove_images_sync(self, refs: list[str]) -> None:
+        client = self._docker()
+        for ref in refs:
+            with contextlib.suppress(Exception):
+                client.images.remove(ref)
+
+    async def remove_images(self, refs: list[str]) -> None:
+        if refs:
+            await asyncio.to_thread(self._remove_images_sync, refs)
 
     # ── sidecars ──
     def _node_container(self, state: EngineState, node_id: str) -> Any:

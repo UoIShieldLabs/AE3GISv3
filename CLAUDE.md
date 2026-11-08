@@ -70,7 +70,9 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
   **jobs** with steps validate → images → plan → deploy → verify; a provisional
   `engine_state` is saved before the engine runs so failures clean up and leave
-  `status=error`), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
+  `status=error`; `destroy?save=true` first commits every node to
+  `ae3gis.local/snapshot/…` (`domain/saved_state.py`, `Topology.saved_state`) and
+  the next deploy resumes nodes from those images, see ARCHITECTURE §5.5a), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
   **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
   `registry:<id>`, `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
   `scenario:<topo>`, `benchmark` — at a time; steps on the
@@ -121,7 +123,8 @@ containerd image store, and the deploy's `images` step has already ensured them.
 resolve_container/node_logs/list_labs/purge/images_present/pull_image/
 inspect_images/build_support/build_image, plus node_interfaces/start_sidecar/
 list_sidecars/remove_sidecars/node_runtime_info/environment for captures, and
-start_helper/node_pids/list_containers for monitors, traffic and benchmarks).
+start_helper/node_pids/list_containers for monitors, traffic and benchmarks,
+snapshot_nodes/remove_images for saved lab state).
 Routers never
 import an engine; services get it from `app.state`. Re-homing a deferred
 feature (exec/script runner, packet capture, telemetry) = extend this
@@ -224,7 +227,8 @@ reintroduce a Pydantic mirror of the topology.
 
 **DB:** SQLite via Alembic. `Topology.data` (JSON) holds the topology,
 `Topology.engine_state` the engine's bookkeeping, `Topology.version` the
-revision. Status lifecycle: `idle → deploying → deployed → destroying → idle`,
+revision, `Topology.saved_state` the per-node snapshot images of a "save &
+destroy" (filesystem + iptables rules; never processes or hand-typed `ip` state). Status lifecycle: `idle → deploying → deployed → destroying → idle`,
 any failure → `error` (destroy from `error` cleans up). `jobs` and `events`
 tables record every long operation.
 
@@ -342,7 +346,8 @@ tables record every long operation.
 - `topologies` — CRUD (+`version`), `import-json`, `validate` (body or stored),
   `plan`, `export?format=labspec|kathara|containerlab`, `runtime`, `events`,
   `context` (everything in one call: record, diagnostics, plan, runtime, events).
-- `topologies/{id}/deploy|destroy` → 202 with a job; `jobs/{id}`,
+- `topologies/{id}/deploy|destroy[?save=true]` → 202 with a job;
+  `DELETE topologies/{id}/saved-state`; `jobs/{id}`,
   `jobs/{id}/log?offset=`, `jobs/{id}/cancel`, `jobs/{id}/stop`,
   `jobs/{id}/artifacts[/{name}]`; `topologies/{id}/jobs`, `topologies/{id}/interfaces`;
   WebSocket `topologies/ws/{id}/exec/{container}`.
