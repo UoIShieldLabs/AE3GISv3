@@ -35,12 +35,33 @@ describe('layering', () => {
         />
       </Dialog>,
     );
+    const dialog = screen.getByRole('dialog', { name: 'Add device' });
     fireEvent.click(screen.getByRole('combobox'));
     const option = screen.getByText('FireHOL');
     const list = option.closest(`.${CSS.escape(LAYER.floating)}`);
-    const dialog = screen.getByRole('dialog', { name: 'Add device' });
     expect(list).not.toBeNull();
     expect(dialog.className).toContain(LAYER.modal);
     expect(value(LAYER.floating)).toBeGreaterThan(value(LAYER.modal));
+  });
+
+  // The bug this guards: the dialog blocks wheel/touch scrolling outside its
+  // content, and the list is portalled out of it, so the list only scrolled by
+  // dragging its scrollbar. A modal list takes over the scroll lock; being
+  // modal, it also hides the rest of the page (the dialog) from assistive tech.
+  it('opens a combobox list inside a dialog as modal, so it scrolls', () => {
+    render(
+      <Dialog open onOpenChange={() => {}} title="Add device">
+        <Combobox
+          value="a"
+          onValueChange={() => {}}
+          options={[{ value: 'a', label: 'FRRouting' }, { value: 'b', label: 'FireHOL' }]}
+        />
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Add device' });
+    expect(dialog.closest('[aria-hidden="true"]')).toBeNull();
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByText('FireHOL')).toBeInTheDocument();
+    expect(dialog.closest('[aria-hidden="true"]')).not.toBeNull();
   });
 });

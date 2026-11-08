@@ -38,8 +38,9 @@ export function MultiSelect<T extends string = string>({
   const toggle = (v: T) => onValueChange(chosen.has(v) ? value.filter((x) => x !== v) : [...value, v]);
   const summary = picked.length === 0 ? placeholder : picked.length <= 2 ? picked.map((o) => o.label).join(', ') : `${picked.length} selected`;
 
+  // Modal for the same reason as Combobox: it must scroll inside a Dialog.
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <button
           type="button"

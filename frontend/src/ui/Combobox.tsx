@@ -33,7 +33,12 @@ export interface ComboboxProps<T extends string = string> {
   'aria-describedby'?: string;
 }
 
-/** Searchable select built from Popover + cmdk. */
+/** Searchable select built from Popover + cmdk.
+ *
+ *  The popover is modal, like Radix Select: a Dialog or Sheet blocks wheel and
+ *  touch scrolling outside its own content, and the popover is portalled out
+ *  of it, so a non-modal list only scrolls by dragging its scrollbar. A modal
+ *  popover takes over the scroll lock while it is open. */
 export function Combobox<T extends string = string>({
   value, onValueChange, options, placeholder = 'Select…', searchPlaceholder = 'Search…', emptyText = 'No results.',
   disabled, id, className, mono, renderValue, ...aria
@@ -48,7 +53,7 @@ export function Combobox<T extends string = string>({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <button
           type="button"
