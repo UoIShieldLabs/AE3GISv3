@@ -438,7 +438,8 @@ keeping the *base image's* config (CMD, entrypoint, env, labels), not
 Kathara's runtime container config. `Topology.saved_state` records
 `{created_at, deployed_version, nodes: {id: {ref, base_image}}}`
 ([`domain/saved_state.py`](../backend/domain/saved_state.py)); the previous
-save's images are removed once the lab is gone. A failed save leaves the lab
+save's images are removed once the lab is gone, and a plain destroy discards
+the save (only an explicit save can be resumed). A failed save leaves the lab
 deployed and the old save in place.
 
 The next deploy's `plan` step swaps each node's image for its snapshot
@@ -456,7 +457,7 @@ checkpoint (CRIU is experimental and unavailable on Docker Desktop). A snapshot
 costs only its diff layer (~100 kB for a lightly edited node). Saves are per
 topology, not per student. `DELETE /topologies/{id}/saved-state` (idle/error
 only) and deleting the topology remove the images. The UI's Destroy opens a
-dialog (keep running / save & destroy / destroy without saving); Deploy becomes
+dialog (Save & stop / Keep running / Delete); Deploy becomes
 **Resume** with a "Deploy fresh" option while a save exists.
 
 ### 5.6 Node images built from Dockerfiles

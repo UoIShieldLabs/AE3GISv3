@@ -306,11 +306,14 @@ async def run_destroy(runner: JobRunner, job_id: str) -> None:
                 left = [s.name for s in await engine.status(state) if s.state == "running"]
                 if left:
                     raise RuntimeError(f"Still running: {', '.join(left)}")
-        if save and state:
-            # The replaced save's images (no longer used by any container).
-            kept = set(saved_state.refs(saved))
-            await engine.remove_images([r for r in saved_state.refs(previous) if r not in kept])
-        _set_topology(runner, topology_id, status="idle", engine_state=None)
+        # A save replaces the previous one; a plain destroy discards it, so only
+        # an explicit save can be resumed. Either way the old images are unused now.
+        kept = set(saved_state.refs(saved)) if save and state else set()
+        await engine.remove_images([r for r in saved_state.refs(previous) if r not in kept])
+        patch: dict[str, Any] = {"status": "idle", "engine_state": None}
+        if not kept:
+            patch["saved_state"] = None
+        _set_topology(runner, topology_id, **patch)
     except Exception:
         with runner.session_factory() as db:
             topo = db.get(Topology, topology_id)

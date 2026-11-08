@@ -119,16 +119,20 @@ def test_saving_again_replaces_the_previous_images(
     assert all(r.endswith("-later") for r in fake_engine.snapshots)
 
 
-def test_destroy_without_saving_keeps_the_earlier_save(client, topology, wait_jobs, fake_engine):
+def test_destroy_without_saving_discards_the_earlier_save(client, topology, wait_jobs, fake_engine):
     tid = topology["id"]
     _deploy(client, wait_jobs, tid)
     client.post(f"/api/v1/topologies/{tid}/destroy?save=true")
     wait_jobs()
+    refs = set(fake_engine.snapshots)
     _deploy(client, wait_jobs, tid)
     client.post(f"/api/v1/topologies/{tid}/destroy")
     wait_jobs()
-    assert client.get(f"/api/v1/topologies/{tid}").json()["saved"]["nodes"] == 6
-    assert fake_engine.removed_images == []
+    assert client.get(f"/api/v1/topologies/{tid}").json()["saved"] is None
+    assert set(fake_engine.removed_images) == refs
+    _deploy(client, wait_jobs, tid)
+    lab = next(iter(fake_engine.labs.values()))
+    assert not any(n.image.startswith(saved_state.REPO_PREFIX) for n in lab.plan.nodes)
 
 
 def test_a_failed_save_leaves_the_lab_deployed(client, topology, wait_jobs, fake_engine):

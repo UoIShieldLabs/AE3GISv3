@@ -32,17 +32,17 @@ describe('DestroyDialog', () => {
   it('saves before destroying', async () => {
     const destroy = vi.spyOn(api, 'destroyTopology').mockResolvedValue(JOB);
     open();
-    fireEvent.click(screen.getByRole('button', { name: /Save & destroy/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save & stop/ }));
     await vi.waitFor(() => expect(destroy).toHaveBeenCalledWith('t1', { save: true }));
     await vi.waitFor(() => expect(useAppStore.getState().deployStatus).toBe('destroying'));
   });
 
-  it('destroys without saving, and says an earlier save is kept', async () => {
+  it('deletes the lab, and says an earlier save goes too', async () => {
     const destroy = vi.spyOn(api, 'destroyTopology').mockResolvedValue(JOB);
     useAppStore.getState().setSavedState({ created_at: '2026-11-08T10:00:00Z', nodes: 3 });
     open();
-    expect(screen.getByText(/earlier saved state is kept/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Destroy without saving/ }));
+    expect(screen.getByText(/including your save/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Delete/ }));
     await vi.waitFor(() => expect(destroy).toHaveBeenCalledWith('t1', { save: false }));
   });
 });
