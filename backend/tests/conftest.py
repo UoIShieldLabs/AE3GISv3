@@ -105,3 +105,69 @@ def topology(client) -> dict:
     r = client.post("/api/v1/topologies", json={"name": "demo", "data": TWO_SUBNETS})
     assert r.status_code == 201, r.text
     return r.json()
+
+
+# ── classroom mode (accounts on) ────────────────────────────────────
+
+INSTRUCTOR_PASSWORD = "teach-me-please"
+STUDENT_PASSWORD = "student-pass-1"
+
+
+def bearer(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+class Classroom:
+    """A TestClient on an accounts-on app, signed in as the instructor, that
+    signs students up on demand (``student("alice")`` → their auth headers)."""
+
+    def __init__(self, client: TestClient, app) -> None:
+        self.client = client
+        self.app = app
+        r = client.post(
+            "/api/v1/auth/login",
+            json={"username": "instructor", "password": INSTRUCTOR_PASSWORD},
+        )
+        assert r.status_code == 200, r.text
+        self.instructor = bearer(r.json()["token"])
+        self._students: dict[str, dict[str, str]] = {}
+
+    def open_signup(self) -> str:
+        r = self.client.put("/api/v1/class", json={"signup_open": True}, headers=self.instructor)
+        assert r.status_code == 200, r.text
+        return r.json()["join_code"]
+
+    def student(self, name: str) -> dict[str, str]:
+        if name not in self._students:
+            r = self.client.post(
+                "/api/v1/auth/signup",
+                json={
+                    "username": name,
+                    "password": STUDENT_PASSWORD,
+                    "join_code": self.open_signup(),
+                },
+            )
+            assert r.status_code == 201, r.text
+            self._students[name] = bearer(r.json()["token"])
+        return self._students[name]
+
+    def create(self, headers: dict[str, str], name: str = "lab", data: dict | None = None) -> dict:
+        r = self.client.post(
+            "/api/v1/topologies", json={"name": name, "data": data or TWO_SUBNETS}, headers=headers
+        )
+        assert r.status_code == 201, r.text
+        return r.json()
+
+    def wait(self) -> None:
+        self.client.portal.call(self.app.state.runner.wait_idle)
+
+
+@pytest.fixture
+def classroom_app(tmp_path: Path, fake_engine: FakeEngine):
+    return create_app(make_settings(tmp_path, instructor_password=INSTRUCTOR_PASSWORD), fake_engine)
+
+
+@pytest.fixture
+def classroom(classroom_app):
+    with TestClient(classroom_app) as c:
+        yield Classroom(c, classroom_app)

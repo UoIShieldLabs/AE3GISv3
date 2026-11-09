@@ -3,6 +3,7 @@ import { AlertTriangle, Hammer, Info, Layers, RefreshCw, X } from 'lucide-react'
 import { effectiveImage } from '@/catalog/catalog';
 import { cn } from '@/lib/cn';
 import { useAppStore } from '@/store';
+import { useCan } from '@/lib/permissions';
 import { Button, IconButton, Spinner } from '@/ui';
 import { buildImages } from './actions';
 import { classifyRequired, nameList, requiredImageRefs } from './required';
@@ -17,6 +18,9 @@ export function RequiredImagesBanner() {
   const catalog = useAppStore((s) => s.catalog);
   const openImages = useAppStore((s) => s.openImages);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  // Students see what will happen; building is the instructor's (a deploy
+  // still builds what it is missing).
+  const manage = useCan('manageImages');
 
   const req = useMemo(() => {
     void catalog; // default images resolve through the catalog
@@ -30,7 +34,7 @@ export function RequiredImagesBanner() {
   if (req.failed.length) {
     rows.push({
       key: 'failed', tone: 'danger', icon: <AlertTriangle />, text: `${nameList(req.failed)} failed to build`,
-      action: <Button size="xs" variant="ghost" onClick={() => void buildImages(req.failed.map((i) => i.ref))}><RefreshCw /> Retry</Button>,
+      action: manage ? <Button size="xs" variant="ghost" onClick={() => void buildImages(req.failed.map((i) => i.ref))}><RefreshCw /> Retry</Button> : undefined,
     });
   }
   if (req.building.length) {
@@ -40,13 +44,13 @@ export function RequiredImagesBanner() {
     const n = req.toBuild.length;
     rows.push({
       key: 'build', tone: 'info', icon: <Info />, text: `${n} image${n === 1 ? '' : 's'} will be built on first deploy: ${nameList(req.toBuild)}`,
-      action: <Button size="xs" variant="ghost" onClick={() => void buildImages(req.toBuild.map((i) => i.ref))}><Hammer /> Build now</Button>,
+      action: manage ? <Button size="xs" variant="ghost" onClick={() => void buildImages(req.toBuild.map((i) => i.ref))}><Hammer /> Build now</Button> : undefined,
     });
   }
   if (req.stale.length) {
     rows.push({
       key: 'stale', tone: 'warning', icon: <RefreshCw />, text: `${nameList(req.stale)} ${req.stale.length === 1 ? 'has' : 'have'} source changes since last built`,
-      action: <Button size="xs" variant="ghost" onClick={() => void buildImages(req.stale.map((i) => i.ref))}><RefreshCw /> Rebuild</Button>,
+      action: manage ? <Button size="xs" variant="ghost" onClick={() => void buildImages(req.stale.map((i) => i.ref))}><RefreshCw /> Rebuild</Button> : undefined,
     });
   }
 
@@ -64,7 +68,7 @@ export function RequiredImagesBanner() {
         ))}
       </div>
       <div className="flex items-center gap-0.5 pt-0.5">
-        <Button size="xs" variant="ghost" onClick={() => openImages()}><Layers /> Images</Button>
+        {manage ? <Button size="xs" variant="ghost" onClick={() => openImages()}><Layers /> Images</Button> : null}
         <IconButton label="Dismiss" size="icon-xs" onClick={() => setDismissed(signature)}><X /></IconButton>
       </div>
     </div>

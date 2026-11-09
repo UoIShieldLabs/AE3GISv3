@@ -85,7 +85,10 @@ export function LabsDialog({ open, onOpenChange, onChanged }: LabsDialogProps) {
                       <Badge tone={lab.classification === 'tracked' ? 'success' : 'warning'}>{lab.classification}</Badge>
                       <div className="mt-1 font-mono text-2xs text-fg-subtle">{lab.lab_hash}</div>
                     </td>
-                    <td className="py-2 pr-2">{lab.topology_name ?? <span className="text-fg-subtle">—</span>}</td>
+                    <td className="py-2 pr-2">
+                      {lab.topology_name ?? <span className="text-fg-subtle">—</span>}
+                      {lab.owner ? <div className="mt-0.5 text-2xs text-fg-muted">{lab.owner.username}</div> : null}
+                    </td>
                     <td className="py-2 pr-2 font-mono text-2xs text-fg-muted">{lab.machines.join(', ')}</td>
                     <td className="py-2 text-right tabular">{lab.running}/{lab.total}</td>
                     <td className="py-2 pl-2 text-right">

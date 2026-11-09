@@ -13,12 +13,12 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from api.access import owned_topology, readable_job, ws_guard
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import NotFound
 from api.live_ws import ClientGone, forward, unless_disconnected
 from api.schemas import TrafficRunOut, TrafficRunRequest, TrafficSamplesOut
-from auth import require_any_auth, require_instructor, valid_ws_token
-from db.models import Job
+from db.models import Job, Topology
 from services import jobs, live, topologies, traffic
 from services.artifacts import ArtifactStore
 from services.jobs import JobRunner
@@ -78,7 +78,7 @@ def start_run(
     body: TrafficRunRequest,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Topology = Depends(owned_topology),
 ):
     """Start generating traffic between deployed nodes. One run at a time per
     topology (409 ``traffic_active``). Results and samples are kept."""
@@ -91,7 +91,7 @@ def list_runs(
     topology_id: str,
     limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
-    _=Depends(require_any_auth),
+    _: Topology = Depends(owned_topology),
 ):
     topologies.get_or_404(db, topology_id)
     return [
@@ -101,7 +101,7 @@ def list_runs(
 
 
 @router.get("/traffic/runs/{job_id}", response_model=TrafficRunOut)
-def get_run(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_run(job_id: str, db: Session = Depends(get_db), _: Job = Depends(readable_job)):
     return run_out(_get_run(db, job_id))
 
 
@@ -113,7 +113,7 @@ async def get_samples(
     totals_only: bool = Query(default=False, description="Leave out per-flow samples"),
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """A run's flow samples and its all-flow totals (live or finished). Runs of
     many flows: ask for ``totals_only`` or a few ``flows``."""
@@ -133,7 +133,7 @@ def export_run(
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_any_auth),
+    _: Job = Depends(readable_job),
 ):
     """The run as a zip: run.json (request, environment, summary), the samples
     and totals, the driver's raw output and the job log."""
@@ -169,8 +169,7 @@ async def traffic_live(
     ``flow`` {samples} (runs of up to 16 flows), ``status`` {elapsed, total:
     {delivered_bps, offered_bps, active}, flows: {id: {fwd, rev}} (the busiest
     200)}, ``end`` {result}."""
-    if not valid_ws_token(websocket, token):
-        await websocket.close(code=4003, reason="Forbidden")
+    if not await ws_guard(websocket, token, topology_id):
         return
     hub: LiveHub = websocket.app.state.live
     store: ArtifactStore = websocket.app.state.artifacts

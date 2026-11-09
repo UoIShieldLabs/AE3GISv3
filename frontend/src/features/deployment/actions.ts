@@ -19,6 +19,19 @@ function applyRecord(rec: api.TopologyRecord) {
   st.setBackendInfo({ id: rec.id, name: rec.name, status: rec.status, version: rec.version });
   st.setDiagnostics(rec.diagnostics ?? []);
   st.setSavedState(rec.saved ?? null);
+  st.setRecordMeta({
+    owner: rec.owner ?? null,
+    published: rec.published ?? false,
+    sourceId: rec.source_id ?? null,
+    updateAvailable: rec.update_available ?? false,
+  });
+}
+
+/** A student opening someone else's (published) topology works on their own
+ *  copy of it; everyone else opens the topology itself. */
+function isOthersForStudent(rec: api.TopologyRecord): boolean {
+  const user = useAppStore.getState().user;
+  return user?.role === 'student' && rec.owner?.id !== user.id;
 }
 
 /** Save the current topology; returns its backend id (assigned on first save) or null on failure. */
@@ -53,10 +66,13 @@ export async function saveTopology(name?: string): Promise<string | null> {
   });
 }
 
-export async function loadTopology(id: string): Promise<boolean> {
+/** Load a topology into the editor; returns the id actually loaded (a student
+ *  opening a published topology gets their copy's), or null on failure. */
+export async function loadTopology(id: string): Promise<string | null> {
   return withBusy(async () => {
     try {
-      const rec = await api.getTopology(id);
+      let rec = await api.getTopology(id);
+      if (isOthersForStudent(rec)) rec = await api.copyTopology(rec.id);
       const s = useAppStore.getState();
       stopPolling();
       s.clearSelection();
@@ -67,10 +83,10 @@ export async function loadTopology(id: string): Promise<boolean> {
       s.clearContainerStatuses();
       s.setActiveJob(null);
       if (rec.status !== 'idle') startPolling(rec.id);
-      return true;
+      return rec.id;
     } catch (err) {
       toast.error('Could not load topology', { description: api.errorMessage(err) });
-      return false;
+      return null;
     }
   });
 }
@@ -95,7 +111,34 @@ export async function deployTopology(): Promise<void> {
         toast.error('Fix the design first', { description: `${errors} error${errors === 1 ? '' : 's'} listed under Issues in the inspector.` });
         return;
       }
+      if (err instanceof api.ApiError && err.code === 'lab_limit') {
+        toast.error('Lab limit reached', { description: err.message, duration: 10000 });
+        return;
+      }
       toast.error('Deploy failed', { description: api.errorMessage(err) });
+    }
+  });
+}
+
+/** Replace this copy's design with its source's latest (classroom mode). The
+ *  lab must be down; edits made to the copy are lost. */
+export async function resetToSource(): Promise<boolean> {
+  const s = useAppStore.getState();
+  if (!s.backendId) return false;
+  const id = s.backendId;
+  return withBusy(async () => {
+    try {
+      const rec = await api.resetTopology(id);
+      const st = useAppStore.getState();
+      stopPolling();
+      st.clearSelection();
+      st.loadTopology(rec.data);
+      applyRecord(rec);
+      toast.success('Reset to the latest version', { description: rec.name });
+      return true;
+    } catch (err) {
+      toast.error('Could not reset', { description: api.errorMessage(err) });
+      return false;
     }
   });
 }

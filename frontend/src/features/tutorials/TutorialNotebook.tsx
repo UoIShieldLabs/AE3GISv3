@@ -6,6 +6,7 @@ import type { Tutorial, TutorialCell } from '@/types/topology';
 import { nodesOf } from '@/features/monitor/selection';
 import { CommitInput } from '@/shell/inspector/CommitInput';
 import { cn } from '@/lib/cn';
+import { useCan } from '@/lib/permissions';
 import { MOD } from '@/lib/keyboard';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EmptyState, IconButton, Kbd, toast,
@@ -17,13 +18,16 @@ import { isTutorialUnsaved, nextCell, progressOf } from './model';
 
 /** One tutorial: notes and commands, stepped through on the deployed lab. */
 export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onSave: () => void }) {
-  const { editing, runs, blocked, unsaved, topology } = useAppShallow((s) => ({
+  // Students step through tutorials; writing them is the instructor's.
+  const author = useCan('authorTutorials');
+  const { editing: editToggle, runs, blocked, unsaved, topology } = useAppShallow((s) => ({
     editing: !!s.editingTutorials[tutorial.id],
     runs: s.tutorialProgress[tutorial.id],
     blocked: s.deployStatus === 'deployed' && s.backendId ? null : 'Deploy the topology to run steps',
     unsaved: isTutorialUnsaved(tutorial.id, s.topology, s.savedTopology),
     topology: s.topology,
   }));
+  const editing = author && editToggle;
   const nodes = useMemo(() => new Map<string, NodeRef>(nodesOf(topology).map((n) => [n.id, n])), [topology]);
   const nodeOptions = useMemo(
     () => [...nodes.values()].map((n) => ({ value: n.id, label: n.ip ? `${n.name} · ${n.ip}` : n.name })),
@@ -102,18 +106,24 @@ export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onS
           ) : (
             <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-fg" title={tutorial.title}>{tutorial.title}</h2>
           )}
-          <Button size="xs" variant={editing ? 'primary' : 'ghost'} onClick={() => { setOpenNote(null); st().setTutorialEditing(tutorial.id, !editing); }}>
-            {editing ? <><Check /> Done</> : <><Pencil /> Edit</>}
-          </Button>
+          {author ? (
+            <Button size="xs" variant={editing ? 'primary' : 'ghost'} onClick={() => { setOpenNote(null); st().setTutorialEditing(tutorial.id, !editing); }}>
+              {editing ? <><Check /> Done</> : <><Pencil /> Edit</>}
+            </Button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <IconButton label="More" size="icon-xs"><Ellipsis /></IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => { const id = st().duplicateTutorial(tutorial.id); if (id) st().openTutorial(id); }}><Copy /> Duplicate</DropdownMenuItem>
+              {author ? <DropdownMenuItem onSelect={() => { const id = st().duplicateTutorial(tutorial.id); if (id) st().openTutorial(id); }}><Copy /> Duplicate</DropdownMenuItem> : null}
               <DropdownMenuItem onSelect={() => st().resetTutorialProgress(tutorial.id)} disabled={!progress.run}><RotateCcw /> Reset progress</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="danger" onSelect={remove}><Trash2 /> Delete tutorial</DropdownMenuItem>
+              {author ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="danger" onSelect={remove}><Trash2 /> Delete tutorial</DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -154,8 +164,8 @@ export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onS
           <EmptyState
             icon={<BookOpen />}
             title="Nothing here yet"
-            description="Add notes and commands. Each command runs in its node's terminal, one step at a time."
-            action={<Button size="sm" onClick={() => st().setTutorialEditing(tutorial.id, true)}><Pencil /> Edit tutorial</Button>}
+            description={author ? "Add notes and commands. Each command runs in its node's terminal, one step at a time." : 'This tutorial has no steps yet.'}
+            action={author ? <Button size="sm" onClick={() => st().setTutorialEditing(tutorial.id, true)}><Pencil /> Edit tutorial</Button> : undefined}
           />
         ) : (
           <div className={cn('flex flex-col', !editing && 'gap-3')}>

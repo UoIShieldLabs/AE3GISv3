@@ -6,6 +6,7 @@ import { openMonitorPanel } from '@/features/monitor/actions';
 import { openScenarioPanel } from '@/features/scenario/actions';
 import { openTutorialsPanel } from '@/features/tutorials/actions';
 import { useAppStore } from '@/store';
+import { useCan } from '@/lib/permissions';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
@@ -29,6 +30,7 @@ export interface CommandPaletteProps {
 
 /** ⌘K: jump to any entity or run an editor action. */
 export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProps) {
+  const manageImages = useCan('manageImages');
   const { open, topology, deployStatus, backendId, savedState, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
     open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId, savedState: s.savedState,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, layoutMode: s.layoutMode, selection: s.selection,
@@ -71,7 +73,7 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 <CommandItem onSelect={run(() => void exportLab('kathara'))} disabled={!backendId}><Download /> Export Kathara lab (zip)</CommandItem>
                 <CommandItem onSelect={run(() => void exportLab('containerlab'))} disabled={!backendId}><Download /> Export ContainerLab topology (zip)</CommandItem>
                 <CommandItem onSelect={run(() => st().setPurdueOpen(true))}><Layers3 /> Purdue model view</CommandItem>
-                <CommandItem onSelect={run(() => st().openImages())} keywords={['images', 'build', 'dockerfile', 'containers']}><Boxes /> Images</CommandItem>
+                {manageImages ? <CommandItem onSelect={run(() => st().openImages())} keywords={['images', 'build', 'dockerfile', 'containers']}><Boxes /> Images</CommandItem> : null}
                 <CommandItem onSelect={run(() => openTrafficPanel())} disabled={deployStatus !== 'deployed'} keywords={['iperf', 'traffic', 'load', 'throughput', 'performance']}><Activity /> New traffic run…</CommandItem>
                 <CommandItem onSelect={run(() => openMonitorPanel())} disabled={deployStatus !== 'deployed'} keywords={['monitor', 'cpu', 'memory', 'resources', 'benchmark', 'stats']}><Gauge /> Start monitor…</CommandItem>
                 <CommandItem onSelect={run(() => openScenarioPanel())} keywords={['scenario', 'steps', 'walkthrough', 'runbook', 'demo', 'phases', 'script']}><ListChecks /> Scenario runner…</CommandItem>

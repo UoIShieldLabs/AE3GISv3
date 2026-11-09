@@ -185,6 +185,9 @@ class JobRunner:
         self._stop_codes: dict[str, str] = {}
         self._locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._tasks: dict[str, asyncio.Task] = {}
+        # Follow-up work that is not a job (e.g. services.lessons settling a
+        # retired copy); ``wait_idle`` waits for it too.
+        self._background: set[asyncio.Task] = set()
         self._pending = 0
         self._pending_lock = threading.Lock()
         self._in_handler: set[str] = set()
@@ -227,6 +230,13 @@ class JobRunner:
         self._tasks[job_id] = task
         task.add_done_callback(lambda _t, jid=job_id: self._tasks.pop(jid, None))
 
+    def spawn(self, coro, name: str) -> asyncio.Task:
+        """Run a coroutine in the background on the app loop (call from it)."""
+        task = asyncio.get_running_loop().create_task(coro, name=name)
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+        return task
+
     def _spawn_pending(self, job_id: str) -> None:
         try:
             self._spawn(job_id)
@@ -235,9 +245,9 @@ class JobRunner:
                 self._pending -= 1
 
     async def wait_idle(self) -> None:
-        """Await every scheduled job (tests and shutdown)."""
-        while self._tasks or self._pending:
-            running = [t for t in self._tasks.values() if not t.done()]
+        """Await every scheduled job and background task (tests and shutdown)."""
+        while self._tasks or self._pending or self._background:
+            running = [t for t in [*self._tasks.values(), *self._background] if not t.done()]
             if running:
                 await asyncio.gather(*running, return_exceptions=True)
             else:

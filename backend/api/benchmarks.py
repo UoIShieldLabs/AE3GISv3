@@ -16,10 +16,11 @@ from sqlalchemy.orm import Session
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import NotFound
 from api.schemas import BenchmarkOut, BenchmarkRequest
-from auth import require_any_auth, require_instructor
+from auth import require_instructor
 from db.models import Job
 from domain import benchmark as bm
 from services import benchmark, jobs
+from services.accounts import Identity
 from services.artifacts import ArtifactStore
 from services.jobs import JobRunner
 
@@ -57,7 +58,7 @@ def start_benchmark(
     body: BenchmarkRequest,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_instructor),
+    _: Identity = Depends(require_instructor),
 ):
     """Start a sweep. One benchmark at a time (409 ``benchmark_active``); it
     fails at its first step if other labs or jobs load the host, unless
@@ -69,13 +70,15 @@ def start_benchmark(
 def list_benchmarks(
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _=Depends(require_any_auth),
+    _: Identity = Depends(require_instructor),
 ):
     return [benchmark_out(j) for j in benchmark.list_benchmarks(db, limit)]
 
 
 @router.get("/{job_id}", response_model=BenchmarkOut)
-def get_benchmark(job_id: str, db: Session = Depends(get_db), _=Depends(require_any_auth)):
+def get_benchmark(
+    job_id: str, db: Session = Depends(get_db), _: Identity = Depends(require_instructor)
+):
     return benchmark_out(_get(db, job_id))
 
 
@@ -84,7 +87,7 @@ def get_report(
     job_id: str,
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _=Depends(require_any_auth),
+    _: Identity = Depends(require_instructor),
 ):
     """The results as Markdown (so far, while it runs)."""
     job = _get(db, job_id)
@@ -110,7 +113,7 @@ def export_benchmark(
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     runner: JobRunner = Depends(get_runner),
-    _=Depends(require_any_auth),
+    _: Identity = Depends(require_instructor),
 ):
     """Everything: benchmark.json, results.csv, report.md, the monitor's CSVs,
     each step's topology, and the job log."""

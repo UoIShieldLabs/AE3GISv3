@@ -15,6 +15,10 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
   busy: false,
   savedState: null,
   destroyDialogOpen: false,
+  owner: null,
+  published: false,
+  sourceId: null,
+  updateAvailable: false,
 
   setBackendInfo: ({ id, name, status, version }) =>
     set((s) => {
@@ -48,6 +52,8 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
 
   setDestroyDialogOpen: (destroyDialogOpen) => set({ destroyDialogOpen }, false, 'setDestroyDialogOpen'),
 
+  setRecordMeta: (meta) => set({ ...meta }, false, 'setRecordMeta'),
+
   clearBackend: () =>
     set((s) => {
       s.backendId = null;
@@ -61,5 +67,9 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
       s.lastError = null;
       s.savedState = null;
       s.destroyDialogOpen = false;
+      s.owner = null;
+      s.published = false;
+      s.sourceId = null;
+      s.updateAvailable = false;
     }, false, 'clearBackend'),
 });

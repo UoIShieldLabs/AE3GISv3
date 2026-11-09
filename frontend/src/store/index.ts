@@ -11,6 +11,7 @@ import { createTutorialSlice } from './slices/tutorialSlice';
 import { createActivitySlice } from './slices/activitySlice';
 import { createCatalogSlice } from './slices/catalogSlice';
 import { createImagesSlice } from './slices/imagesSlice';
+import { createAuthSlice } from './slices/authSlice';
 
 export type { AppState } from './types';
 export * from './types';
@@ -31,6 +32,7 @@ export const useAppStore = create<AppState>()(
           ...createActivitySlice(...a),
           ...createCatalogSlice(...a),
           ...createImagesSlice(...a),
+          ...createAuthSlice(...a),
         })),
         {
           partialize: (s): Tracked => ({ topology: s.topology }),

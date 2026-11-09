@@ -46,6 +46,13 @@ class ValidateBody(BaseModel):
     data: dict[str, Any]
 
 
+class OwnerOut(BaseModel):
+    """The student who owns a topology (None on a topology: the instructor's)."""
+
+    id: str
+    username: str
+
+
 class TopologySummary(BaseModel):
     id: str
     name: str
@@ -53,6 +60,13 @@ class TopologySummary(BaseModel):
     version: int
     created_at: datetime
     updated_at: datetime
+    # Accounts (classroom mode): the owning student (None: the instructor's),
+    # whether students can see it, and for a student's copy of a published
+    # topology the source and whether it changed since the copy was taken.
+    owner: OwnerOut | None = None
+    published: bool = False
+    source_id: str | None = None
+    update_available: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -321,6 +335,8 @@ class LabOut(BaseModel):
     classification: Literal["tracked", "orphan"]
     topology_id: str | None = None
     topology_name: str | None = None
+    # The student whose topology it is (None: the instructor's, or an orphan).
+    owner: OwnerOut | None = None
 
 
 class StaleOut(BaseModel):
@@ -351,6 +367,8 @@ class HealthOut(BaseModel):
     engine_ok: bool
     engine_detail: str
     auth_required: bool
+    # Whether students can sign up now (classroom mode, instructor opened it).
+    signup_open: bool = False
     topologies: int
 
 
@@ -1057,3 +1075,84 @@ class BenchmarkOut(BaseModel):
     # The running step and what it is doing.
     current: str | None = None
     job: JobOut
+
+
+# ── accounts ────────────────────────────────────────────────────────
+
+
+class UserOut(BaseModel):
+    # None for the instructor while accounts are off.
+    id: str | None = None
+    username: str
+    role: Literal["instructor", "student"]
+
+
+class MeOut(BaseModel):
+    user: UserOut
+    auth_required: bool
+
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class SignupIn(BaseModel):
+    username: str
+    password: str
+    join_code: str
+
+
+class SessionOut(BaseModel):
+    """A sign-in: send ``token`` as ``Authorization: Bearer`` (``?token=`` on
+    GET and WebSocket URLs)."""
+
+    token: str
+    expires_at: datetime
+    user: UserOut
+
+
+class PasswordChangeIn(BaseModel):
+    current: str
+    new: str
+
+
+class ClassSettingsOut(BaseModel):
+    signup_open: bool
+    # Students type this to sign up; None until sign-up is first opened.
+    join_code: str | None = None
+
+
+class ClassSettingsIn(BaseModel):
+    signup_open: bool | None = None
+    rotate_join_code: bool = False
+
+
+class StudentLabOut(BaseModel):
+    id: str
+    name: str
+    status: str
+
+
+class StudentOut(BaseModel):
+    id: str
+    username: str
+    created_at: datetime
+    last_seen_at: datetime | None = None
+    topology_count: int
+    # Their topologies that hold (or may hold) containers on this host.
+    labs: list[StudentLabOut]
+
+
+class StudentsOut(BaseModel):
+    students: list[StudentOut]
+    # Labs one student may have deployed at once (0 = no limit).
+    max_labs: int
+
+
+class TemporaryPasswordOut(BaseModel):
+    password: str
+
+
+class PublishIn(BaseModel):
+    published: bool

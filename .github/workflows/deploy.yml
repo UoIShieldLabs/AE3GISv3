@@ -14,7 +14,11 @@ jobs:
       - name: Gitleaks secret scan
         run: |
           VER=8.18.4
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          # Download to a file with retries: a transient 504 from the release
+          # host must not fail the scan (piping a cut-off stream into tar did).
+          curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors -o gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tgz gitleaks && rm gitleaks.tgz
           ./gitleaks detect --no-git --redact --exit-code 1 --source .
 
   backend-tests:

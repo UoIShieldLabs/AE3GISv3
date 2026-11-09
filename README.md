@@ -58,7 +58,7 @@ frontend/src/
   app/                      # routes (login, library, editor), providers, theme registry
   canvas/                   # TopologyCanvas, projection.ts (pure), layout/, nodes/, edges/
   shell/                    # top bar, sidebar (palette/explorer), inspector, status bar, ⌘K
-  features/                 # topology dialogs, deployment actions, terminal dock, purdue, auth
+  features/                 # topology dialogs, deployment actions, terminal dock, purdue, auth, class
   store/                    # zustand slices + undo (zundo) + normalize.ts
   ui/                       # design-system primitives (Tailwind + Radix)
   styles/                   # themes/ (one token file per theme), index.css, reactflow.css
@@ -78,15 +78,37 @@ development outside Docker.
 ./start.sh          # builds and starts frontend (:3000) and backend (:8000)
 ```
 
-Open http://localhost:3000. There is no sign-in screen: the API is open by
-default. Tear down with `docker compose down`.
+Open http://localhost:3000. By default there is no sign-in: the API is open
+and everyone is the instructor, which suits a lab on your own machine. Tear
+down with `docker compose down`.
 
-To require a token instead, set it for both services and rebuild — the frontend
-bakes it in at build time:
+### Accounts (classroom mode)
+
+To run a class from your machine, set an instructor password:
 
 ```bash
-AE3GIS_INSTRUCTOR_TOKEN=your-token docker compose up --build
+AE3GIS_INSTRUCTOR_PASSWORD='choose-one' ./start.sh
 ```
+
+- You sign in as `instructor` (`AE3GIS_INSTRUCTOR_USERNAME` to change it) with
+  full access. In the library's **Class** sheet, turn sign-up on and share the
+  join code; students open `http://<your-ip>:3000/login` → **Join class**.
+- **Publish** a topology from the library: its tutorials and scenarios go with
+  it. Students see it under *Lessons*; opening it gives each student their own
+  copy to deploy and edit (and to reset when you update it). Unpublishing or
+  deleting it removes those copies (running labs are destroyed); republishing
+  starts students afresh. Students keep what they *Duplicate to My topologies*.
+- Students also create, import and export their own topologies. They run
+  tutorials and scenarios but don't author them, and can't manage images, the
+  host's labs or the class.
+- Every lab runs on **your** Docker. `AE3GIS_STUDENT_MAX_LABS` (default 1)
+  caps how many each student can run at once; the Class sheet lists and
+  destroys them.
+- `AE3GIS_INSTRUCTOR_TOKEN` is an optional static bearer for scripts
+  (`./bench.sh --token`).
+
+Plain HTTP on a LAN carries passwords in the clear: fine for a classroom
+network, not for the internet.
 
 ## Develop
 
@@ -108,10 +130,10 @@ AE3GIS_ENGINE=fake python -m uvicorn main:create_app --factory --port 8000   # n
 ## Deferred features
 
 Removed from the wired app in this foundation pass, to be re-added on the engine
-abstraction later: firewall rule editor, classroom
-mode (sessions/student slots), container web-UI proxy,
-and the AI assistant. (Packet capture and the scenario runner — a classroom
-step-through of commands on lab nodes — have since shipped.)
+abstraction later: firewall rule editor, live classroom sessions (an
+instructor pushing to students' terminals), container web-UI proxy,
+and the AI assistant. (Packet capture, the scenario runner, and accounts with
+published topologies — see *Accounts* above — have since shipped.)
 
 ## Deployment images
 

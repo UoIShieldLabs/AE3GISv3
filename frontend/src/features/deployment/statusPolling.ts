@@ -61,7 +61,18 @@ async function tick(topologyId: string) {
       }
     }
     if (!job && rt.status !== 'deployed') { stopPolling(); return; }
-  } catch {
+  } catch (err) {
+    // The topology is gone: e.g. a student's lesson copy, removed when the
+    // instructor unpublished the lesson. Stop, and say so once.
+    if (err instanceof api.ApiError && err.status === 404) {
+      stopPolling();
+      toast.info('This topology is no longer available', {
+        description: 'If it was a lesson, your instructor may have unpublished it.',
+        duration: 15000,
+        action: { label: 'Library', onClick: () => window.location.assign('/') },
+      });
+      return;
+    }
     delay = SLOW_MS; // transient; keep trying
   }
   if (current === topologyId) timer = setTimeout(() => void tick(topologyId), delay);

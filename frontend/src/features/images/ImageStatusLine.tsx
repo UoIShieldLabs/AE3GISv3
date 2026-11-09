@@ -1,6 +1,7 @@
 import { Hammer, Layers, RefreshCw } from 'lucide-react';
 import { effectiveImage } from '@/catalog/catalog';
 import { useAppStore } from '@/store';
+import { useCan } from '@/lib/permissions';
 import { Button } from '@/ui';
 import { buildImages } from './actions';
 import { ImageStatusBadge } from './ImageStatusBadge';
@@ -11,9 +12,11 @@ export function ImageStatusLine({ container }: { container: { type: string; imag
   const ref = effectiveImage(container);
   const img = useImageStatus(ref);
   const openImages = useAppStore((s) => s.openImages);
+  const manage = useCan('manageImages');
   if (!img || img.kind !== 'build') return null;
-  const action =
-    img.status === 'missing' || img.status === 'failed'
+  const action = !manage
+    ? null
+    : img.status === 'missing' || img.status === 'failed'
       ? { label: 'Build now', icon: <Hammer />, run: () => void buildImages([ref]) }
       : img.status === 'stale' || img.status === 'unmanaged'
         ? { label: 'Rebuild', icon: <RefreshCw />, run: () => void buildImages([ref]) }
@@ -24,7 +27,7 @@ export function ImageStatusLine({ container }: { container: { type: string; imag
         <ImageStatusBadge image={img} />
         <div className="ml-auto flex items-center gap-1">
           {action ? <Button size="xs" variant="secondary" onClick={action.run}>{action.icon} {action.label}</Button> : null}
-          <Button size="xs" variant="ghost" onClick={() => openImages(ref)}><Layers /> Images</Button>
+          {manage ? <Button size="xs" variant="ghost" onClick={() => openImages(ref)}><Layers /> Images</Button> : null}
         </div>
       </div>
       <p className="text-2xs text-fg-subtle">{img.reason}</p>

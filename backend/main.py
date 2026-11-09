@@ -14,10 +14,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import catalog as node_catalog
+from api import accounts as accounts_api
 from api import (
     benchmarks,
     captures,
     catalog,
+    classroom,
     deployment,
     images,
     jobs,
@@ -36,8 +38,8 @@ from db.migrations import run_migrations
 from db.session import make_engine, make_session_factory
 from engine.base import DeploymentEngine
 from engine.fake import make_engine as make_deployment_engine
+from services import accounts, capture, lessons, reconcile
 from services import benchmark as benchmark_service
-from services import capture, reconcile
 from services import monitor as monitor_service
 from services import scenario as scenario_service
 from services import traffic as traffic_service
@@ -67,6 +69,9 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
 
     run_migrations(settings.database_url)
     session_factory = make_session_factory(make_engine(settings.database_url))
+    with session_factory() as db:
+        accounts.bootstrap_instructor(db, settings)
+        accounts.purge_expired_sessions(db)
     engine = engine or make_deployment_engine(
         settings.engine, docker_timeout_s=settings.docker_timeout_s
     )
@@ -118,6 +123,9 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
                     log.warning("Reconcile: %s", summary)
             except Exception as exc:  # pragma: no cover - environment dependent
                 log.warning("Startup reconcile skipped: %s", exc)
+            # Lesson copies retired before a restart: destroy and delete them.
+            if retired := lessons.resume(runner, engine):
+                log.info("Settling %d retired lesson cop(ies)", retired)
         yield
         # Long builds are cancelled rather than awaited, so a restart (or a dev
         # reload) does not hang on them; everything else finishes.
@@ -139,6 +147,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     app.state.registries = registry_manager
     app.state.artifacts = artifacts
     app.state.live = runner.live
+    app.state.login_limiter = accounts.LoginLimiter()
 
     app.add_middleware(
         CORSMiddleware,
@@ -149,6 +158,8 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     )
     install_error_handlers(app)
     for r in (
+        accounts_api.router,
+        classroom.router,
         topologies.router,
         deployment.router,
         jobs.router,

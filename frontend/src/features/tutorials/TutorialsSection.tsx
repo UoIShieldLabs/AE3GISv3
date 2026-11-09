@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { hasMod } from '@/lib/keyboard';
 import { IconButton } from '@/ui';
 import { createTutorial } from './actions';
+import { useCan } from '@/lib/permissions';
 import { isTutorialUnsaved } from './model';
 import { TutorialHome } from './TutorialHome';
 import { TutorialNotebook } from './TutorialNotebook';
@@ -17,6 +18,7 @@ const NO_TUTORIALS: Tutorial[] = [];
 
 /** The Tutorials section of the right column: a tab per open tutorial, plus the list. */
 export function TutorialsSection({ onSave }: { onSave: () => void }) {
+  const author = useCan('authorTutorials');
   const { stored, openIds, activeId, topology, saved } = useAppShallow((s) => ({
     stored: (s.topology as TopologyData).tutorials,
     openIds: s.openTutorialIds,
@@ -54,7 +56,7 @@ export function TutorialsSection({ onSave }: { onSave: () => void }) {
           ))}
         </div>
         <div className="flex shrink-0 items-center gap-0.5 px-1">
-          <IconButton label="New tutorial" size="icon-xs" onClick={() => createTutorial()}><Plus /></IconButton>
+          {author ? <IconButton label="New tutorial" size="icon-xs" onClick={() => createTutorial()}><Plus /></IconButton> : null}
           <IconButton label="Close tutorials" size="icon-xs" onClick={() => st().setTutorialsOpen(false)}><X /></IconButton>
         </div>
       </div>

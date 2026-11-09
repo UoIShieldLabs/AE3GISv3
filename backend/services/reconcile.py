@@ -16,6 +16,7 @@ from db.models import Topology
 from engine.base import DeploymentEngine, EngineState
 from engine.kathara.naming import lab_hash as hash_for_name
 from services import events
+from services.accounts import owner_names
 
 
 def _state_hash(topo: Topology) -> str | None:
@@ -34,17 +35,24 @@ async def report(db: Session, engine: DeploymentEngine) -> dict[str, Any]:
         if h:
             by_hash[h] = t
 
+    names = owner_names(db, {t.owner_id for t in by_hash.values() if t.owner_id})
     lab_rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for lab in labs:
         seen.add(lab.lab_hash)
         t = by_hash.get(lab.lab_hash)
+        owner = (
+            {"id": t.owner_id, "username": names.get(t.owner_id, "unknown")}
+            if t and t.owner_id
+            else None
+        )
         lab_rows.append(
             {
                 **lab.to_dict(),
                 "classification": "tracked" if t else "orphan",
                 "topology_id": t.id if t else None,
                 "topology_name": t.name if t else None,
+                "owner": owner,
             }
         )
 

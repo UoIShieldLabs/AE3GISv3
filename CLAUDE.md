@@ -17,6 +17,7 @@ Developer onboarding and the full architecture rationale live in
 
 ```bash
 ./start.sh                                   # docker compose up (frontend :3000, backend :8000)
+AE3GIS_INSTRUCTOR_PASSWORD=pw ./start.sh     # classroom mode: instructor + student accounts (see Auth)
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
@@ -44,7 +45,9 @@ with `--factory`; tests build their own app with a temp SQLite file and a
 - `config.py` — `Settings` (pydantic-settings, `AE3GIS_*` env). `api/deps.py`
   resolves settings, DB session, engine and job runner from `app.state`.
 - `api/` — thin routers, **all under `/api/v1`**, one error envelope
-  `{detail, code, …}` (`api/errors.py`). `openapi.json` at the backend root is
+  `{detail, code, …}` (`api/errors.py`). Every route resolves the caller
+  (`auth.current_identity`) and checks what it may touch through
+  `api/access.py` (see Auth); `tests/test_route_auth.py` enforces it. `openapi.json` at the backend root is
   generated from the app (`scripts/export_openapi.py`, checked in CI) and the
   frontend's TypeScript API types are generated from that file. Change an
   endpoint → regenerate both.
@@ -66,8 +69,11 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `benchmark.py` (step metrics, stop criteria, adaptive next scale and
   retries, census table, matrix cells, report per kind),
   `environment.py` (run environment + fingerprint).
-- `services/` — orchestration: `topologies` (CRUD, `version` bump, optimistic
-  concurrency → 409 `version_conflict`), `deployment` (deploy/destroy as
+- `services/` — orchestration: `accounts` (the instructor from the
+  environment, student sign-up with the join code, sessions, the class, the
+  per-student lab cap), `topologies` (CRUD, `version` bump, optimistic
+  concurrency → 409 `version_conflict`; visibility, a student's copy of a
+  published topology and its reset, publishing), `deployment` (deploy/destroy as
   **jobs** with steps validate → images → plan → deploy → verify; a provisional
   `engine_state` is saved before the engine runs so failures clean up and leave
   `status=error`; `destroy?save=true` first commits every node to
@@ -94,7 +100,8 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   first), `environment` (run
   metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
   purge by lab hash), `events` (append-only log per topology).
-- `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`) and **Alembic**
+- `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`, `Registry`, `User`,
+  `UserSession`, `AppSetting`) and **Alembic**
   migrations run at startup (`db/migrations`). Add a migration for any schema
   change; `0001` is a baseline that tolerates pre-migration databases.
 - `engine/` — the seam. `DeploymentEngine` takes a `LabPlan` and returns an
@@ -228,7 +235,9 @@ reintroduce a Pydantic mirror of the topology.
 **DB:** SQLite via Alembic. `Topology.data` (JSON) holds the topology,
 `Topology.engine_state` the engine's bookkeeping, `Topology.version` the
 revision, `Topology.saved_state` the per-node snapshot images of a "save &
-destroy" (filesystem + iptables rules; never processes or hand-typed `ip` state). Status lifecycle: `idle → deploying → deployed → destroying → idle`,
+destroy" (filesystem + iptables rules; never processes or hand-typed `ip` state), and the
+account columns `owner_id` (the owning student, NULL = the instructor's),
+`published`, `source_id`/`source_version` (a student's copy). Status lifecycle: `idle → deploying → deployed → destroying → idle`,
 any failure → `error` (destroy from `error` cleans up). `jobs` and `events`
 tables record every long operation.
 
@@ -261,7 +270,10 @@ tables record every long operation.
   status lives here, never in the saved data**, `busy`), `view` (selection,
   `expanded`, theme, icon style, tool, panels, zoom, collapsed palette categories),
   `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario | webui;
-  `openTerminal` wraps it), `tutorial` (Tutorials section open, open tabs, Edit
+  `openTerminal` wraps it), `auth` (accounts on/off, sign-up open, the signed-in
+  user, status; flows in `features/auth/actions.ts`, the token per tab in
+  `api/session.ts`; `document` also holds the record's owner / published /
+  source / update_available), `tutorial` (Tutorials section open, open tabs, Edit
   toggles, steps run this session; not saved, not undoable), `activity` (running
   captures/traffic runs/monitors from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
@@ -272,10 +284,18 @@ tables record every long operation.
   load/import: fills connection ids and node positions so old JSON keeps working;
   a load that had to fill connection ids starts dirty (deployed links are
   addressed by id).
-- **Routing.** react-router: `/login`, `/` (library), `/t/draft`,
+- **Routing.** react-router: `/login` (sign in / join class), then behind the
+  `app/RequireAuth` layout route `/` (library), `/t/draft`,
   `/t/:id`, `/t/:id/site/:siteId`, `/t/:id/site/:siteId/subnet/:subnetId`. The
   URL is the single source of truth for the drill-down **scope**
-  (`lib/topology.ts: Scope`). `RequireAuth` restores the sessionStorage token.
+  (`lib/topology.ts: Scope`). `RequireAuth` asks `/health` + `/auth/me` who the
+  tab is and only then starts the image refresher. A student opening a
+  published topology's URL is moved to their copy.
+- **Permissions.** Components check a capability from `lib/permissions.ts`
+  (`useCan('authorTutorials' | 'manageImages' | 'publish' | …)`), never a role.
+  The instructor (and accounts-off) has all; students none: no tutorial or
+  scenario authoring (`ScenarioForm readOnly`), image management, labs dialog,
+  class or publishing. The backend enforces the rest.
 - **Canvas** (`canvas/`). One `TopologyCanvas` for every level. `projection.ts`
   is a pure function `project({topology, scope, expanded, containerStatus,
   selection}) → {nodes, edges}`: it renders the children of the scope, draws
@@ -333,6 +353,10 @@ tables record every long operation.
   have no UI on main: run and read them headless (`./bench.sh`).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
+  Accounts: `app/routes/LoginRoute` (sign in / join class), `shell/UserMenu`
+  (who, change password, sign out), `features/class/ClassSheet` (instructor:
+  sign-up, join code, students and their labs), `features/topology/SourceBanner`
+  (a copy's "reset to latest", whose topology the instructor is viewing).
   The canvas badges captured links / busy nodes from the `activity` slice via
   `project({… activity})`.
 - **Data model** (`types/topology.ts`) is frontend-owned; keep the index
@@ -343,9 +367,15 @@ tables record every long operation.
   unit tests; add one when touching `projection.ts` or a slice.
 
 ### API surface (`/api/v1`, see `backend/openapi.json`)
+- `auth` — `login`, `signup` (join code), `logout`, `me`, `password`,
+  `webui-cookie`; `class` (instructor) — sign-up + join code, `students`,
+  `students/{id}/reset-password`, `DELETE students/{id}`.
 - `topologies` — CRUD (+`version`), `import-json`, `validate` (body or stored),
   `plan`, `export?format=labspec|kathara|containerlab`, `runtime`, `events`,
-  `context` (everything in one call: record, diagnostics, plan, runtime, events).
+  `context` (everything in one call: record, diagnostics, plan, runtime, events);
+  `{id}/copy` (a student's copy of a published topology, else a duplicate),
+  `{id}/reset` (copy ← its source's latest), `PUT {id}/published`. Summaries carry
+  `owner`, `published`, `source_id`, `update_available`.
 - `topologies/{id}/deploy|destroy[?save=true]` → 202 with a job;
   `DELETE topologies/{id}/saved-state`; `jobs/{id}`,
   `jobs/{id}/log?offset=`, `jobs/{id}/cancel`, `jobs/{id}/stop`,
@@ -377,17 +407,36 @@ tables record every long operation.
 - `catalog`, `presets` as before.
 
 ## Auth
-**Opt-in, and off by default.** There is no sign-in screen. `AE3GIS_INSTRUCTOR_TOKEN`
-unset or empty (the compose default) leaves the API open — fine for a local lab,
-unsafe on a shared or reachable host, since the API creates and destroys
-containers. Setting it re-enables the bearer check on every REST route and on the
-exec WebSocket (which takes the token as `?token=`); the frontend then needs a
-matching `VITE_INSTRUCTOR_TOKEN` at build time (a compose build arg). `auth.py`
-reads the token from `app.state.settings`, so a test app carries its own.
-Student/classroom auth is still deferred.
+**Accounts are opt-in, and off by default.** With neither
+`AE3GIS_INSTRUCTOR_PASSWORD` nor `AE3GIS_INSTRUCTOR_TOKEN` set (the compose
+default) the API is open, there is no login page, and every caller is the
+instructor (`services.accounts.OPEN_INSTRUCTOR`) — fine for a local lab, unsafe
+on a reachable host. `start.sh` warns.
+
+**Classroom mode** (`AE3GIS_INSTRUCTOR_PASSWORD`): one instructor
+(`AE3GIS_INSTRUCTOR_USERNAME`, default `instructor`; the row is synced from the
+environment at every start), students who sign up with the join code while the
+instructor has sign-up open (Class sheet), scrypt passwords (`domain/passwords.py`,
+stdlib), opaque session tokens stored as sha256 (`sessions`). A request
+authenticates with `Authorization: Bearer`, `?token=` on GET and WebSockets
+only, or the web-UI cookie on the relay only (`auth.py`). `AE3GIS_INSTRUCTOR_TOKEN`
+is a static instructor bearer for scripts (alone, it is also the password).
+
+Access (`api/access.py`): `owner_id` NULL = the instructor's. *View* (record,
+export, copy) = owner, instructor, or published; *own* (everything else,
+WebSockets included) = owner or instructor; others' topologies are 404, own-level
+calls on a published one 403 `not_owner`. Jobs follow their topology. Host-wide
+routes (images builds/syncs, registries writes, labs, reconcile, purge,
+benchmarks, generate, class, publishing) are `require_instructor`. Students
+open a published topology (a lesson) as their lesson copy (one lab per record;
+removed, lab destroyed, when the lesson is unpublished or deleted:
+`services/lessons.py`; `?duplicate=true` makes an unlinked one), and run at
+most `AE3GIS_STUDENT_MAX_LABS` labs (default 1, checked under the admission
+lock). Tests: `classroom` fixture in `tests/conftest.py`. New routes must
+resolve the caller (`tests/test_route_auth.py`).
 
 ## Deferred (rebuild on the engine abstraction later)
-Firewall editor, classroom mode, a full web-UI proxy (node web UIs are
+Firewall editor, live classroom sessions (pushing steps to every student's terminal), a full web-UI proxy (node web UIs are
 viewable via an exec relay, see ARCHITECTURE §5.9; a port-publishing proxy for
 complex apps is still deferred), AI assistant,
 more traffic generators (Locust, Modbus, pcap replay), comparison views over
