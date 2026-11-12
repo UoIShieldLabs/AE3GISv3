@@ -6,6 +6,7 @@ import type { TopologyData, Tutorial } from '@/types/topology';
 import { cn } from '@/lib/cn';
 import { hasMod } from '@/lib/keyboard';
 import { IconButton } from '@/ui';
+import { useLabPulse } from '@/features/pulse/useLabPulse';
 import { createTutorial } from './actions';
 import { useCan } from '@/lib/permissions';
 import { isTutorialUnsaved } from './model';
@@ -19,6 +20,9 @@ const NO_TUTORIALS: Tutorial[] = [];
 /** The Tutorials section of the right column: a tab per open tutorial, plus the list. */
 export function TutorialsSection({ onSave }: { onSave: () => void }) {
   const author = useCan('authorTutorials');
+  // While the panel is open the canvas shows the lab live: links carrying
+  // traffic, nodes with something running.
+  useLabPulse();
   const { stored, openIds, activeId, topology, saved } = useAppShallow((s) => ({
     stored: (s.topology as TopologyData).tutorials,
     openIds: s.openTutorialIds,

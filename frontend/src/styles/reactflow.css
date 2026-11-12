@@ -91,15 +91,19 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Live links (both endpoints running) crawl slowly. */
+/* A link is solid; one carrying traffic is dashed and crawls the way the
+   traffic flows (the live lab view). Reduced motion keeps the dashes, still. */
 @keyframes ae-dash {
   to { stroke-dashoffset: -20; }
 }
-.react-flow__edge-path.edge-active {
+.react-flow__edge-path.edge-traffic {
   animation: ae-dash 1.2s linear infinite;
 }
+.react-flow__edge-path.edge-traffic-rev {
+  animation-direction: reverse;
+}
 @media (prefers-reduced-motion: reduce) {
-  .react-flow__edge-path.edge-active { animation: none; }
+  .react-flow__edge-path.edge-traffic { animation: none; }
 }
 
 /* Group (expanded) nodes sit under their children and edges. */

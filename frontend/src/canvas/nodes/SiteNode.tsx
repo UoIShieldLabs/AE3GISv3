@@ -10,9 +10,10 @@ import { useCanvasActions } from '../CanvasContext';
 import { nodeCardClass } from './nodeStyles';
 import { NodeHandles } from './NodeHandles';
 import { NodeActions } from './NodeActions';
+import { BusyDots } from './BusyDots';
 
 export const SiteNode = memo(function SiteNode({ id, data, selected, dragging }: NodeProps<SiteNodeType>) {
-  const { site, subnetCount, containerCount } = data;
+  const { site, subnetCount, containerCount, busy } = data;
   const zoom = useZoomLevel();
   const a = useCanvasActions();
   const compact = zoom !== 'full';
@@ -36,6 +37,7 @@ export const SiteNode = memo(function SiteNode({ id, data, selected, dragging }:
           </div>
           {!compact ? <div className="truncate text-2xs text-fg-muted">{site.location || 'No location'}</div> : null}
         </div>
+        {busy ? <BusyDots colors={busy} /> : null}
         {!compact ? (
           <Tooltip content="Expand in place" shortcut="E" side="top">
             <button

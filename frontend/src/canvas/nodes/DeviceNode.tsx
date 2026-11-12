@@ -22,7 +22,7 @@ const STATUS_CLASS = {
 } as const;
 
 export const DeviceNode = memo(function DeviceNode({ id, data, selected, dragging }: NodeProps<DeviceNodeType>) {
-  const { container, status, isGateway, captureJobId, traffic, legs, guest } = data;
+  const { container, status, isGateway, captureJobId, traffic, legs, guest, busy } = data;
   // colorFor/labelFor read the catalog's lookup maps: re-render when it changes
   // (a registry sync can add the type a placed node uses).
   useAppStore((s) => s.catalog);
@@ -37,10 +37,17 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
   return (
     <div
       className={nodeCardClass(selected, cn('items-center gap-2.5 px-2.5', dragging && 'shadow-lg', guest && 'border-dashed opacity-80'))}
-      style={{ width: NODE_SIZE.device.width, height: NODE_SIZE.device.height }}
+      style={{
+        width: NODE_SIZE.device.width,
+        height: NODE_SIZE.device.height,
+        // Something runs here: a steady ring in the node's tutorial colour
+        // (selection keeps its own ring).
+        ...(busy && !selected ? { borderColor: busy.color, boxShadow: `0 0 0 2px color-mix(in srgb, ${busy.color} 30%, transparent)` } : null),
+      }}
       data-testid={`node-${id}`}
       data-node-type={container.type}
       data-capturing={captureJobId ? '' : undefined}
+      data-busy={busy ? '' : undefined}
     >
       {/* A guest is edited (or deleted) in its own subnet, not from here. */}
       <NodeActions id={id} visible={!!selected && !dragging && !guest} container={container} />
@@ -83,6 +90,17 @@ export const DeviceNode = memo(function DeviceNode({ id, data, selected, draggin
         ) : null}
       </div>
 
+      {busy && !compact ? (
+        <Tooltip content={<span className="flex max-w-80 flex-col gap-0.5 font-mono text-2xs">{busy.detail.map((line, i) => <span key={i} className="truncate">{line}</span>)}</span>} side="bottom">
+          <span
+            className="ae-node-busy absolute -bottom-2 left-2 flex max-w-[70%] items-center gap-1 rounded-sm border border-border bg-surface px-1 text-2xs leading-4 text-fg-muted"
+            aria-label={`running: ${busy.detail.join('; ')}`}
+          >
+            <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: busy.color }} aria-hidden />
+            <span className="truncate">{busy.label}</span>
+          </span>
+        </Tooltip>
+      ) : null}
       {captureJobId || traffic ? (
         <div className="absolute bottom-1 right-1.5 flex items-center gap-1">
           {captureJobId ? (

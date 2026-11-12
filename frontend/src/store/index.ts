@@ -9,6 +9,7 @@ import { createViewSlice } from './slices/viewSlice';
 import { createDockSlice } from './slices/dockSlice';
 import { createTutorialSlice } from './slices/tutorialSlice';
 import { createActivitySlice } from './slices/activitySlice';
+import { createPulseSlice } from './slices/pulseSlice';
 import { createCatalogSlice } from './slices/catalogSlice';
 import { createImagesSlice } from './slices/imagesSlice';
 import { createAuthSlice } from './slices/authSlice';
@@ -29,6 +30,7 @@ export const useAppStore = create<AppState>()(
           ...createViewSlice(...a),
           ...createDockSlice(...a),
           ...createTutorialSlice(...a),
+          ...createPulseSlice(...a),
           ...createActivitySlice(...a),
           ...createCatalogSlice(...a),
           ...createImagesSlice(...a),

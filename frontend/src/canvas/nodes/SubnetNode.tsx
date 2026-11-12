@@ -10,9 +10,10 @@ import { useCanvasActions } from '../CanvasContext';
 import { nodeCardClass } from './nodeStyles';
 import { NodeHandles } from './NodeHandles';
 import { NodeActions } from './NodeActions';
+import { BusyDots } from './BusyDots';
 
 export const SubnetNode = memo(function SubnetNode({ id, data, selected, dragging }: NodeProps<SubnetNodeType>) {
-  const { subnet, containerCount, gateway, running } = data;
+  const { subnet, containerCount, gateway, running, busy } = data;
   const zoom = useZoomLevel();
   const a = useCanvasActions();
   const compact = zoom !== 'full';
@@ -36,6 +37,7 @@ export const SubnetNode = memo(function SubnetNode({ id, data, selected, draggin
           </div>
           {!compact ? <div className="truncate font-mono text-2xs text-fg-muted">{subnet.cidr}</div> : null}
         </div>
+        {busy ? <BusyDots colors={busy} /> : null}
         {!compact ? (
           <Tooltip content="Expand in place" shortcut="E" side="top">
             <button
