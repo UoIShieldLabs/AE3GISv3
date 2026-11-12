@@ -278,3 +278,45 @@ def test_exec_output_refuses_a_stopped_node(client, wait_jobs, topology, fake_en
 
     with pytest.raises(LookupError):
         client.portal.call(run)
+
+
+def test_long_stream_pumps_leave_the_default_executor_free():
+    """50 commands that run for as long as a background run lasts must not take
+    every thread of asyncio's default executor (the backend would stop answering)."""
+    import concurrent.futures
+    import threading
+
+    from engine.docker_sidecar import DockerExec
+
+    release = threading.Event()
+
+    class Blocking:
+        def __iter__(self):
+            release.wait(10)
+            return iter(())
+
+        def close(self):
+            pass
+
+    class Api:
+        def exec_inspect(self, _id):
+            return {"ExitCode": 0}
+
+    class Client:
+        api = Api()
+
+    async def main():
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=2))
+        execs = [
+            DockerExec(Client(), f"e{i}", Blocking(), "n", f"x{i}", "c", "/tmp/p")
+            for i in range(50)
+        ]
+        pumps = [asyncio.ensure_future(e.pump(lambda _d: None, lambda _d: None)) for e in execs]
+        await asyncio.sleep(0.05)
+        # Something else needing a worker thread still gets one at once.
+        assert await asyncio.wait_for(asyncio.to_thread(lambda: "free"), timeout=2) == "free"
+        release.set()
+        assert await asyncio.wait_for(asyncio.gather(*pumps), timeout=5) == [0] * 50
+
+    asyncio.run(main())
