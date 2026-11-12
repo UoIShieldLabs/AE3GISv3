@@ -127,6 +127,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/background/runs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run
+         * @description A run with every item's state: live while it runs, final afterwards.
+         */
+        get: operations["get_run_api_v1_background_runs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/benchmarks": {
         parameters: {
             query?: never;
@@ -982,6 +1002,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/background/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_v1_topologies__topology_id__background_runs_get"];
+        put?: never;
+        /**
+         * Start Run
+         * @description Start commands that keep running in their nodes until the run is stopped
+         *     (``POST /jobs/{id}/stop``). One run at a time per topology (409
+         *     ``background_active``); the topology must be deployed (409 ``bad_state``).
+         */
+        post: operations["start_run_api_v1_topologies__topology_id__background_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/captures": {
         parameters: {
             query?: never;
@@ -1312,6 +1355,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/topologies/{topology_id}/scenario/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Steps
+         * @description Run several commands in order as one run (a tutorial's lab setup). The
+         *     run keeps ``tag``; with ``stop_on_failure`` it ends at the first step that
+         *     does not exit 0. Same limits and errors as a single step.
+         */
+        post: operations["run_steps_api_v1_topologies__topology_id__scenario_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/topologies/{topology_id}/scenario/runs": {
         parameters: {
             query?: never;
@@ -1495,7 +1560,7 @@ export interface components {
     schemas: {
         /**
          * ActivityOut
-         * @description A capture or traffic run in progress on the topology.
+         * @description An open-ended job in progress on the topology.
          */
         ActivityOut: {
             /**
@@ -1537,6 +1602,89 @@ export interface components {
             name: string;
             /** Size */
             size: number;
+        };
+        /** BackgroundItemOut */
+        BackgroundItemOut: {
+            /** Command */
+            command: string;
+            /** Container Id */
+            container_id: string;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Exit Code */
+            exit_code?: number | null;
+            /** Id */
+            id: string;
+            /**
+             * Output
+             * @default
+             */
+            output: string;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "starting" | "running" | "exited" | "error" | "stopped";
+        };
+        /**
+         * BackgroundItemRequest
+         * @description One command kept running on a node until the run is stopped.
+         */
+        BackgroundItemRequest: {
+            /** Command */
+            command: string;
+            /** Containerid */
+            containerId: string;
+            /** Id */
+            id: string;
+        };
+        /** BackgroundRunOut */
+        BackgroundRunOut: {
+            /** Id */
+            id: string;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["BackgroundItemOut"][];
+            job: components["schemas"]["JobOut"];
+            /** Label */
+            label: string;
+            /** Live */
+            live: boolean;
+            /**
+             * Node Ids
+             * @default []
+             */
+            node_ids: string[];
+            /** Status */
+            status: string;
+            /** Stopped By */
+            stopped_by?: string | null;
+            /**
+             * Tag
+             * @default
+             */
+            tag: string;
+            /** Topology Id */
+            topology_id: string;
+        };
+        /** BackgroundRunRequest */
+        BackgroundRunRequest: {
+            /** Items */
+            items: components["schemas"]["BackgroundItemRequest"][];
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Tag
+             * @default
+             */
+            tag: string;
         };
         /**
          * BenchmarkAdaptive
@@ -3106,6 +3254,8 @@ export interface components {
              * @default []
              */
             activity: components["schemas"]["ActivityOut"][];
+            /** Deployed At */
+            deployed_at?: string | null;
             /** Nodes */
             nodes: components["schemas"]["NodeState"][];
             saved?: components["schemas"]["SavedStateOut"] | null;
@@ -3163,10 +3313,38 @@ export interface components {
             steps: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Tag
+             * @default
+             */
+            tag: string;
             /** Topology Id */
             topology_id: string;
             /** Ws Path */
             ws_path: string;
+        };
+        /**
+         * ScenarioRunRequest
+         * @description Several ad-hoc steps, run in order as one run (a tutorial's lab setup).
+         */
+        ScenarioRunRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Steps */
+            steps: components["schemas"]["ScenarioStepRequest"][];
+            /**
+             * Stop On Failure
+             * @default false
+             */
+            stop_on_failure: boolean;
+            /**
+             * Tag
+             * @default
+             */
+            tag: string;
         };
         /** ScenarioSamplesOut */
         ScenarioSamplesOut: {
@@ -3817,6 +3995,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_background_runs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackgroundRunOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -5432,6 +5643,78 @@ export interface operations {
             };
         };
     };
+    list_runs_api_v1_topologies__topology_id__background_runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackgroundRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_run_api_v1_topologies__topology_id__background_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackgroundRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackgroundRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_captures_api_v1_topologies__topology_id__captures_get: {
         parameters: {
             query?: {
@@ -6042,6 +6325,43 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["ScenarioPhaseRunRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_steps_api_v1_topologies__topology_id__scenario_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                topology_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioRunRequest"];
             };
         };
         responses: {

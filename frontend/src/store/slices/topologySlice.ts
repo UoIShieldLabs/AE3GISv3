@@ -546,6 +546,10 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
     copy.id = id;
     copy.title = `${source.title} (copy)`;
     copy.cells = (copy.cells ?? []).map((c) => ({ ...c, id: generateId('cell') }));
+    if (copy.setup) {
+      copy.setup.steps = (copy.setup.steps ?? []).map((s) => ({ ...s, id: generateId('setup') }));
+      copy.setup.traffic = (copy.setup.traffic ?? []).map((r) => ({ ...r, id: generateId('traffic') }));
+    }
     set((s) => {
       const tutorials = (s.topology as TopologyData).tutorials ?? [];
       const at = tutorials.findIndex((x) => x.id === tutorialId);
@@ -554,6 +558,19 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
     }, false, 'duplicateTutorial');
     return id;
   },
+
+  updateTutorialSetup: (tutorialId, recipe) =>
+    set((s) => {
+      const tutorial = findTutorial(s.topology as TopologyData, tutorialId);
+      if (!tutorial) return;
+      const setup = (tutorial.setup ??= { steps: [], traffic: [] });
+      setup.steps ??= [];
+      setup.traffic ??= [];
+      recipe(setup);
+      // An emptied setup is no setup: the tutorial reads as it did before.
+      if (!setup.steps.length && !setup.traffic.length) delete tutorial.setup;
+      s.dirty = true;
+    }, false, 'updateTutorialSetup'),
 
   addTutorialCell: (tutorialId, kind, index, init) => {
     const cell = makeCell(kind, init);
