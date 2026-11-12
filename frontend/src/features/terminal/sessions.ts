@@ -12,6 +12,16 @@ import { useAppStore } from '@/store';
 const READY_QUIET_MS = 300;
 /** …or this long after the socket opened, whichever comes first. */
 const READY_MAX_MS = 5000;
+/** A prompt counts as "the command is over" once no next command starts within
+ *  this long (the lines of a multi-line command start one right after another). */
+const IDLE_SETTLE_MS = 150;
+/** The prompt markers our shells print (OSC 133): `C` = a command started,
+ *  `D[;exit]` = the prompt is back. See `engine/terminal.py`. */
+const OSC_SHELL = 133;
+
+/** How a command typed by `runTracked` ended: its exit code (null when the shell
+ *  doesn't report one), or null when the session lost track of it (it closed). */
+export type RunEnd = { exit: number | null } | null;
 
 /** xterm draws its own cells, so it takes the theme's --terminal-* tokens as values. */
 function terminalLook(): { theme: ITheme; fontFamily: string; fontSize: number } {
@@ -74,6 +84,14 @@ export class TerminalSessionHandle {
   private waiters = new Set<(ok: boolean) => void>();
   private lookToken = 0;
   private disposed = false;
+  /** The shell prints prompt markers (seen at least one). */
+  private integrated = false;
+  /** A command holds the shell (between a start and the prompt coming back). */
+  private busy = false;
+  private lastExit: number | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The tracked run waiting for the prompt, if any. */
+  private onRunEnd: ((end: RunEnd) => void) | null = null;
 
   constructor(tabId: string, containerId: string) {
     this.tabId = tabId;
@@ -86,6 +104,8 @@ export class TerminalSessionHandle {
     this.wrapper.style.width = '100%';
     this.term.onData((d) => { if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(d); });
     this.term.onResize(() => this.sendResize());
+    // Consumed here, so the markers are never drawn.
+    this.term.parser?.registerOscHandler(OSC_SHELL, (data) => { this.onMarker(data); return true; });
     this.sync();
   }
 
@@ -136,6 +156,34 @@ export class TerminalSessionHandle {
     return true;
   }
 
+  /** `runCommand`, and tell `onEnd` when the prompt is back. 'tracked' when the
+   *  shell will report it; 'sent' when it can't (no prompt markers, or the
+   *  command went to whatever already holds the shell, e.g. an open ssh);
+   *  'offline' when not connected. `onEnd` is only called for 'tracked'. */
+  runTracked(text: string, onEnd: (end: RunEnd) => void): 'tracked' | 'sent' | 'offline' {
+    // The prompt is already back from the last command: don't wait out the settle.
+    if (this.idleTimer) this.settleIdle();
+    const tracked = this.integrated && !this.busy;
+    if (!this.runCommand(text)) return 'offline';
+    if (!tracked) return 'sent';
+    this.clearIdleTimer();
+    this.onRunEnd = onEnd;
+    this.setBusy(true);
+    return 'tracked';
+  }
+
+  /** Press Ctrl-C in the shell. False when not connected. */
+  interrupt(): boolean {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.ws.send('\x03');
+    return true;
+  }
+
+  /** A command holds the shell right now (as far as the prompt markers tell). */
+  isBusy(): boolean {
+    return this.busy;
+  }
+
   /** Resolves true once the shell can take input: immediately for a running
    *  session, after its first output settles for a new one. A closed session
    *  (e.g. after `exit`) is reopened first. False when there is no shell to reach. */
@@ -167,6 +215,44 @@ export class TerminalSessionHandle {
     this.close();
     this.wrapper.remove();
     this.term.dispose();
+  }
+
+  private onMarker(data: string): void {
+    const [kind, code] = data.split(';');
+    if (kind === 'C') {
+      this.integrated = true;
+      this.clearIdleTimer();
+      this.setBusy(true);
+    } else if (kind === 'D') {
+      this.integrated = true;
+      const exit = code === undefined || code === '' ? null : Number(code);
+      this.lastExit = exit !== null && Number.isFinite(exit) ? exit : null;
+      this.clearIdleTimer();
+      this.idleTimer = setTimeout(() => this.settleIdle(), IDLE_SETTLE_MS);
+    }
+  }
+
+  private settleIdle(): void {
+    this.clearIdleTimer();
+    this.setBusy(false);
+    this.endRun({ exit: this.lastExit });
+  }
+
+  private setBusy(busy: boolean): void {
+    if (this.busy === busy) return;
+    this.busy = busy;
+    useAppStore.getState().setTerminalBusy(this.containerId, busy);
+  }
+
+  private endRun(end: RunEnd): void {
+    const cb = this.onRunEnd;
+    this.onRunEnd = null;
+    cb?.(end);
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
   }
 
   private deployedKey(): string | null {
@@ -204,6 +290,7 @@ export class TerminalSessionHandle {
       this.ws = null;
       this.clearTimers();
       this.ready = false;
+      this.shellGone();
       this.term.writeln(`\r\n\x1b[90m[connection closed] code=${ev.code}\x1b[0m`);
       this.settle(false);
     };
@@ -215,11 +302,21 @@ export class TerminalSessionHandle {
     this.ws = null;
     this.clearTimers();
     this.ready = false;
+    this.shellGone();
     if (ws) {
       ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
       ws.close();
     }
     this.settle(false);
+  }
+
+  /** The shell ended: nothing runs in it any more, and a tracked run is lost. */
+  private shellGone(): void {
+    this.clearIdleTimer();
+    this.integrated = false;
+    this.lastExit = null;
+    this.setBusy(false);
+    this.endRun(null);
   }
 
   private markReady(): void {

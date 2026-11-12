@@ -49,12 +49,36 @@ export async function runTutorialCell(tutorialId: string, cellId: string): Promi
   // xterm loads with the first terminal, not with the editor.
   const { acquireSession } = await import('@/features/terminal/sessions');
   const session = acquireSession(terminalTabId(node.id), node.id);
-  if (!(await session.whenReady()) || !session.runCommand(cell.command)) {
+  const sent = (await session.whenReady())
+    ? session.runTracked(cell.command, (end) => {
+        // Back at the prompt (or the shell closed, and with it our view of the run).
+        const key = `${tutorialId}:${cellId}`;
+        const stopped = stopping.delete(key);
+        useAppStore.getState().setCellStatus(tutorialId, cellId, end ? { state: 'done', exit: end.exit, ...(stopped ? { stopped } : {}) } : { state: 'sent' });
+      })
+    : 'offline';
+  if (sent === 'offline') {
     toast.error(`Couldn't reach ${node.name}'s shell`, { description: 'Check the terminal tab for details.' });
     return false;
   }
-  useAppStore.getState().markCellRun(tutorialId, cellId);
+  const after = useAppStore.getState();
+  after.markCellRun(tutorialId, cellId);
+  after.setCellStatus(tutorialId, cellId, { state: sent === 'tracked' ? 'running' : 'sent' });
   return true;
+}
+
+/** Cells whose Stop was pressed and whose run hasn't ended yet. */
+const stopping = new Set<string>();
+
+/** Press Ctrl-C in the terminal a running cell was typed into. */
+export async function stopTutorialCell(tutorialId: string, cellId: string): Promise<boolean> {
+  const st = useAppStore.getState();
+  const cell = (st.topology as TopologyData).tutorials?.find((t) => t.id === tutorialId)?.cells.find((c) => c.id === cellId);
+  if (cell?.kind !== 'command') return false;
+  const { getSession } = await import('@/features/terminal/sessions');
+  const sent = getSession(terminalTabId(cell.containerId))?.interrupt() ?? false;
+  if (sent) stopping.add(`${tutorialId}:${cellId}`);
+  return sent;
 }
 
 /** Run the step after the one run last (the first, if none has). */

@@ -6,14 +6,26 @@ import { TooltipProvider } from '@/ui';
 import { CATALOG } from '@/test/catalogFixture';
 import { TutorialsSection } from '../TutorialsSection';
 
-// The terminal is a seam: assert what would be typed into it.
+// The terminal is a seam: assert what would be typed into it. `shell` says what
+// the fake shell reports back, and holds the last tracked run so a test can end it.
+type RunEnd = { exit: number | null } | null;
 const typed: { tabId: string; text: string }[] = [];
+const shell: { tracking: boolean; end: ((end: RunEnd) => void) | null; interrupts: string[] } = { tracking: false, end: null, interrupts: [] };
 vi.mock('@/features/terminal/sessions', () => ({
   acquireSession: (tabId: string) => ({
     whenReady: async () => true,
-    runCommand: (text: string) => { typed.push({ tabId, text }); return true; },
+    runTracked: (text: string, onEnd: (end: RunEnd) => void) => {
+      typed.push({ tabId, text });
+      if (!shell.tracking) return 'sent';
+      shell.end = onEnd;
+      return 'tracked';
+    },
   }),
+  getSession: (tabId: string) => ({ interrupt: () => { shell.interrupts.push(tabId); return true; } }),
 }));
+
+// The panel turns the live lab view on; no backend to connect to here.
+vi.mock('@/features/pulse/useLabPulse', () => ({ useLabPulse: () => {} }));
 
 const S = () => useAppStore.getState();
 
@@ -42,6 +54,7 @@ const deploy = () => act(() => { useAppStore.setState({ deployStatus: 'deployed'
 
 beforeEach(() => {
   typed.length = 0;
+  Object.assign(shell, { tracking: false, end: null, interrupts: [] });
   applyCatalog(CATALOG);
   useAppStore.setState({ catalog: CATALOG, catalogStatus: 'ready', dockTabs: [], activeDockTabId: null });
   S().newTopology('Test');
@@ -153,3 +166,48 @@ describe('TutorialsSection for a student', () => {
     expect(screen.getByRole('button', { name: /Next step/ })).toBeEnabled();
   });
 });
+
+describe('command cell status', () => {
+  it('shows a tracked run as running with Stop, then how it ended', async () => {
+    const { id, attacker, c1 } = setup();
+    S().openTutorial(id);
+    renderSection();
+    deploy();
+    shell.tracking = true;
+    fireEvent.click(screen.getAllByRole('button', { name: 'Run on attacker' })[0]);
+    await waitFor(() => expect(screen.getByText('running')).toBeInTheDocument());
+    expect(S().cellStatus[id][c1]).toEqual({ state: 'running' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop on attacker' }));
+    await waitFor(() => expect(shell.interrupts).toEqual([`term:${attacker}`]));
+
+    act(() => shell.end!({ exit: 130 }));
+    expect(screen.getByText('stopped')).toBeInTheDocument(); // Ctrl-C after Stop is not a failure
+    expect(screen.queryByText('exit 130')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stop on attacker' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Run on attacker' })).toHaveLength(2);
+  });
+
+  it('says "sent" when the shell cannot report the run, and forgets status on reset', async () => {
+    const { id, c1 } = setup();
+    S().openTutorial(id);
+    renderSection();
+    deploy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Run on attacker' })[0]);
+    await waitFor(() => expect(screen.getByText(/^sent /)).toBeInTheDocument());
+    expect(S().cellStatus[id][c1]).toEqual({ state: 'sent' });
+    act(() => S().resetTutorialProgress(id));
+    expect(S().cellStatus[id]).toBeUndefined();
+    expect(screen.queryByText(/^sent /)).toBeNull();
+  });
+
+  it('gives each node one colour, shared by its cells', () => {
+    const { id } = setup();
+    S().openTutorial(id);
+    renderSection();
+    const cells = [...document.querySelectorAll<HTMLElement>('[data-cell-id]')].filter((el) => el.style.boxShadow);
+    expect(cells).toHaveLength(2); // both steps on the attacker; the removed node's step has none
+    expect(new Set(cells.map((el) => el.style.boxShadow))).toEqual(new Set(['inset 3px 0 0 var(--chart-1)']));
+  });
+});
+
