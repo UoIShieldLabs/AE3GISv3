@@ -1,5 +1,5 @@
 """Open-ended jobs running against a deployed topology (captures, traffic,
-monitors).
+monitors, scenario and background runs).
 
 They serialise on their own subjects, so they never block deploy or destroy
 and never show up as the topology's ``active_job``. The runtime view lists
@@ -20,7 +20,7 @@ from db.models import Job
 from services import jobs
 from services.jobs import JobRunner
 
-LIVE_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor", "scenario")
+LIVE_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor", "scenario", "background")
 
 
 def activity_dict(job: Job) -> dict[str, Any]:

@@ -221,3 +221,61 @@ def test_scenario_appears_in_runtime_activity(client, topology, wait_jobs, fake_
     finally:
         client.post(f"/api/v1/jobs/{run['id']}/stop")
         wait_jobs()
+
+
+def test_run_several_steps_as_one_tagged_run(client, topology, wait_jobs, fake_engine):
+    _deploy(client, wait_jobs, topology)
+    fake_engine.exec_results["nft add rule x"] = (0, "")
+    fake_engine.exec_results["zeek -i eth0"] = (0, "listening\n")
+    r = client.post(
+        f"/api/v1/topologies/{topology['id']}/scenario/run",
+        json={
+            "steps": [
+                {"containerId": "rA", "script": "nft add rule x"},
+                {"containerId": "hB", "script": "zeek -i eth0"},
+            ],
+            "label": "Lab setup",
+            "tag": "tutorial-setup:t1",
+        },
+    )
+    assert r.status_code == 202, r.text
+    run = r.json()
+    assert run["step_count"] == 2 and run["tag"] == "tutorial-setup:t1"
+    wait_jobs()
+    done = client.get(f"/api/v1/scenario/runs/{run['id']}").json()
+    assert [s["status"] for s in done["result"]["steps"]] == ["ok", "ok"]
+    assert done["result"]["stopped_by"] == "completed"
+    [listed] = client.get(f"/api/v1/topologies/{topology['id']}/scenario/runs").json()
+    assert listed["tag"] == "tutorial-setup:t1" and listed["label"] == "Lab setup"
+    # The run is newer than the lab it ran in; a redeploy makes it an earlier lab's.
+    runtime = client.get(f"/api/v1/topologies/{topology['id']}/runtime").json()
+    assert runtime["deployed_at"] < listed["job"]["created_at"]
+    client.post(f"/api/v1/topologies/{topology['id']}/destroy")
+    wait_jobs()
+    assert client.get(f"/api/v1/topologies/{topology['id']}/runtime").json()["deployed_at"] is None
+    _deploy(client, wait_jobs, topology)
+    runtime = client.get(f"/api/v1/topologies/{topology['id']}/runtime").json()
+    assert runtime["deployed_at"] > listed["job"]["created_at"]
+
+
+def test_stop_on_failure_ends_the_run_at_the_failed_step(client, topology, wait_jobs, fake_engine):
+    _deploy(client, wait_jobs, topology)
+    fake_engine.exec_results["false"] = (1, "")
+    body = {
+        "steps": [
+            {"containerId": "hA", "script": "false"},
+            {"containerId": "hB", "script": "echo never"},
+        ]
+    }
+    url = f"/api/v1/topologies/{topology['id']}/scenario/run"
+    run = client.post(url, json={**body, "stop_on_failure": True}).json()
+    wait_jobs()
+    result = client.get(f"/api/v1/scenario/runs/{run['id']}").json()["result"]
+    assert [s["status"] for s in result["steps"]] == ["failed"]
+    assert result["stopped_by"] == "failed_step" and result["ran"] == 1
+    # Without it every step runs, as a phase does.
+    run = client.post(url, json=body).json()
+    wait_jobs()
+    result = client.get(f"/api/v1/scenario/runs/{run['id']}").json()["result"]
+    assert [s["status"] for s in result["steps"]] == ["failed", "ok"]
+    assert client.post(url, json={"steps": []}).status_code == 422

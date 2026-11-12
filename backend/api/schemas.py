@@ -236,10 +236,10 @@ class NodeState(BaseModel):
 
 
 class ActivityOut(BaseModel):
-    """A capture or traffic run in progress on the topology."""
+    """An open-ended job in progress on the topology."""
 
     job_id: str
-    kind: str  # capture | traffic
+    kind: str  # capture | traffic | monitor | scenario | background
     status: str
     label: str = ""
     node_ids: list[str] = []
@@ -259,6 +259,9 @@ class RuntimeOut(BaseModel):
     nodes: list[NodeState]
     # Set when the next deploy resumes nodes from a saved state.
     saved: SavedStateOut | None = None
+    # While deployed: when the running lab's deploy finished. Anything run in
+    # the lab before it (a tutorial's setup) was run in an earlier lab.
+    deployed_at: datetime | None = None
 
 
 class LinkEndpointOut(BaseModel):
@@ -667,6 +670,17 @@ class ScenarioStepRequest(BaseModel):
     label: str = Field(default="", max_length=80)
 
 
+class ScenarioRunRequest(BaseModel):
+    """Several ad-hoc steps, run in order as one run (a tutorial's lab setup)."""
+
+    steps: list[ScenarioStepRequest] = Field(min_length=1, max_length=200)
+    label: str = Field(default="", max_length=80)
+    # The caller's own marker (e.g. ``tutorial-setup:<id>``), returned on the run.
+    tag: str = Field(default="", max_length=120)
+    # End the run at the first step that does not exit 0 (``stopped_by: failed_step``).
+    stop_on_failure: bool = False
+
+
 class ScenarioPhaseRunRequest(BaseModel):
     label: str = Field(default="", max_length=80)
 
@@ -688,6 +702,7 @@ class ScenarioRunOut(BaseModel):
     id: str  # the run's job id
     topology_id: str
     label: str
+    tag: str = ""
     status: str
     live: bool
     step_count: int
@@ -702,6 +717,59 @@ class ScenarioRunOut(BaseModel):
 
 class ScenarioSamplesOut(BaseModel):
     steps: list[ScenarioStepResult]
+
+
+# ── background runs (a tutorial's background traffic) ─────────────────────
+
+
+class BackgroundItemRequest(BaseModel):
+    """One command kept running on a node until the run is stopped."""
+
+    id: str = Field(pattern=r"^[A-Za-z0-9_.:-]{1,80}$")
+    containerId: str = Field(min_length=1, max_length=200)
+    command: str = Field(min_length=1, max_length=4000)
+
+
+class BackgroundRunRequest(BaseModel):
+    items: list[BackgroundItemRequest] = Field(min_length=1, max_length=64)
+    label: str = Field(default="", max_length=80)
+    # The caller's own marker (e.g. ``tutorial-traffic:<id>``), returned on the run.
+    tag: str = Field(default="", max_length=120)
+
+    @field_validator("items")
+    @classmethod
+    def _unique_items(cls, v: list[BackgroundItemRequest]) -> list[BackgroundItemRequest]:
+        ids = [i.id for i in v]
+        if len(ids) != len(set(ids)):
+            raise ValueError("item ids must be unique")
+        return v
+
+
+class BackgroundItemOut(BaseModel):
+    id: str
+    container_id: str
+    command: str
+    # starting: not launched yet; exited: it ended on its own (see exit_code).
+    status: Literal["starting", "running", "exited", "error", "stopped"]
+    exit_code: int | None = None
+    # The last of what it printed (stdout and stderr together).
+    output: str = ""
+    started_at: str | None = None
+    ended_at: str | None = None
+
+
+class BackgroundRunOut(BaseModel):
+    id: str  # the run's job id
+    topology_id: str
+    label: str
+    tag: str = ""
+    status: str
+    live: bool
+    node_ids: list[str] = []
+    # Every item and how it is doing (live while running); empty in listings.
+    items: list[BackgroundItemOut] = []
+    stopped_by: str | None = None
+    job: JobOut
 
 
 # ── monitors ──────────────────────────────────────────────────────────

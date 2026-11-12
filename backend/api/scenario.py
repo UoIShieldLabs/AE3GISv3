@@ -20,6 +20,7 @@ from api.live_ws import ClientGone, forward, unless_disconnected
 from api.schemas import (
     ScenarioPhaseRunRequest,
     ScenarioRunOut,
+    ScenarioRunRequest,
     ScenarioSamplesOut,
     ScenarioStepRequest,
 )
@@ -52,6 +53,7 @@ def run_out(job: Job, *, full: bool = True) -> dict[str, Any]:
         "id": job.id,
         "topology_id": job.topology_id,
         "label": params.get("label") or "",
+        "tag": params.get("tag") or "",
         "status": job.status,
         "live": job.is_active,
         "step_count": params.get("step_count") or len(steps),
@@ -87,6 +89,33 @@ def run_step(
     topo = topologies.get_or_404(db, topology_id)
     step = {"containerId": body.containerId, "script": body.script, "args": body.args}
     return run_out(scenario.start_step(db, runner, topo, step, body.label))
+
+
+@router.post(
+    "/topologies/{topology_id}/scenario/run", response_model=ScenarioRunOut, status_code=202
+)
+def run_steps(
+    topology_id: str,
+    body: ScenarioRunRequest,
+    db: Session = Depends(get_db),
+    runner: JobRunner = Depends(get_runner),
+    _: Topology = Depends(owned_topology),
+):
+    """Run several commands in order as one run (a tutorial's lab setup). The
+    run keeps ``tag``; with ``stop_on_failure`` it ends at the first step that
+    does not exit 0. Same limits and errors as a single step."""
+    topo = topologies.get_or_404(db, topology_id)
+    steps = [{"containerId": s.containerId, "script": s.script, "args": s.args} for s in body.steps]
+    job = scenario.start_steps(
+        db,
+        runner,
+        topo,
+        steps,
+        label=body.label,
+        tag=body.tag,
+        stop_on_failure=body.stop_on_failure,
+    )
+    return run_out(job)
 
 
 @router.post(

@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "ActivityOut": {
-        "description": "A capture or traffic run in progress on the topology.",
+        "description": "An open-ended job in progress on the topology.",
         "properties": {
           "connection_ids": {
             "default": [],
@@ -96,6 +96,207 @@
           "content_type"
         ],
         "title": "ArtifactOut",
+        "type": "object"
+      },
+      "BackgroundItemOut": {
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "container_id": {
+            "title": "Container Id",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "output": {
+            "default": "",
+            "title": "Output",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "starting",
+              "running",
+              "exited",
+              "error",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "container_id",
+          "command",
+          "status"
+        ],
+        "title": "BackgroundItemOut",
+        "type": "object"
+      },
+      "BackgroundItemRequest": {
+        "description": "One command kept running on a node until the run is stopped.",
+        "properties": {
+          "command": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Command",
+            "type": "string"
+          },
+          "containerId": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Containerid",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,80}$",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "containerId",
+          "command"
+        ],
+        "title": "BackgroundItemRequest",
+        "type": "object"
+      },
+      "BackgroundRunOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BackgroundItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "node_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stopped_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped By"
+          },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
+          "topology_id": {
+            "title": "Topology Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topology_id",
+          "label",
+          "status",
+          "live",
+          "job"
+        ],
+        "title": "BackgroundRunOut",
+        "type": "object"
+      },
+      "BackgroundRunRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackgroundItemRequest"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "tag": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BackgroundRunRequest",
         "type": "object"
       },
       "BenchmarkAdaptive": {
@@ -4089,6 +4290,18 @@
             "title": "Activity",
             "type": "array"
           },
+          "deployed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployed At"
+          },
           "nodes": {
             "items": {
               "$ref": "#/components/schemas/NodeState"
@@ -4213,6 +4426,11 @@
             "title": "Steps",
             "type": "array"
           },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
           "topology_id": {
             "title": "Topology Id",
             "type": "string"
@@ -4233,6 +4451,42 @@
           "ws_path"
         ],
         "title": "ScenarioRunOut",
+        "type": "object"
+      },
+      "ScenarioRunRequest": {
+        "description": "Several ad-hoc steps, run in order as one run (a tutorial's lab setup).",
+        "properties": {
+          "label": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Label",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioStepRequest"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          },
+          "stop_on_failure": {
+            "default": false,
+            "title": "Stop On Failure",
+            "type": "boolean"
+          },
+          "tag": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "title": "ScenarioRunRequest",
         "type": "object"
       },
       "ScenarioSamplesOut": {
@@ -5701,6 +5955,65 @@
         "summary": "Webui Cookie",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/background/runs/{job_id}": {
+      "get": {
+        "description": "A run with every item's state: live while it runs, final afterwards.",
+        "operationId": "get_run_api_v1_background_runs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackgroundRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "background"
         ]
       }
     },
@@ -8540,6 +8853,147 @@
         ]
       }
     },
+    "/api/v1/topologies/{topology_id}/background/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_topologies__topology_id__background_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BackgroundRunOut"
+                  },
+                  "title": "Response List Runs Api V1 Topologies  Topology Id  Background Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "background"
+        ]
+      },
+      "post": {
+        "description": "Start commands that keep running in their nodes until the run is stopped\n(``POST /jobs/{id}/stop``). One run at a time per topology (409\n``background_active``); the topology must be deployed (409 ``bad_state``).",
+        "operationId": "start_run_api_v1_topologies__topology_id__background_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackgroundRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackgroundRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Run",
+        "tags": [
+          "background"
+        ]
+      }
+    },
     "/api/v1/topologies/{topology_id}/captures": {
       "get": {
         "operationId": "list_captures_api_v1_topologies__topology_id__captures_get",
@@ -9743,6 +10197,75 @@
           }
         },
         "summary": "Run Phase",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/api/v1/topologies/{topology_id}/scenario/run": {
+      "post": {
+        "description": "Run several commands in order as one run (a tutorial's lab setup). The\nrun keeps ``tag``; with ``stop_on_failure`` it ends at the first step that\ndoes not exit 0. Same limits and errors as a single step.",
+        "operationId": "run_steps_api_v1_topologies__topology_id__scenario_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topology_id",
+            "required": true,
+            "schema": {
+              "title": "Topology Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Steps",
         "tags": [
           "scenario"
         ]

@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import catalog as node_catalog
 from api import accounts as accounts_api
 from api import (
+    background,
     benchmarks,
     captures,
     catalog,
@@ -32,6 +33,7 @@ from api import (
     traffic,
     webui,
 )
+from api import pulse as pulse_api
 from api.errors import install_error_handlers
 from config import API_VERSION, Settings, get_settings
 from db.migrations import run_migrations
@@ -39,8 +41,10 @@ from db.session import make_engine, make_session_factory
 from engine.base import DeploymentEngine
 from engine.fake import make_engine as make_deployment_engine
 from services import accounts, capture, lessons, reconcile
+from services import background as background_service
 from services import benchmark as benchmark_service
 from services import monitor as monitor_service
+from services import pulse as pulse_service
 from services import scenario as scenario_service
 from services import traffic as traffic_service
 from services.artifacts import ArtifactStore
@@ -56,7 +60,14 @@ from services.sources import Sources
 SHUTDOWN_CANCEL_KINDS: tuple[str, ...] = ("build", "sync_source", "sync_registry", "benchmark")
 # Open-ended job kinds stopped at shutdown: they keep what they recorded, and a
 # restart (or a dev reload) does not wait on a capture that runs for hours.
-SHUTDOWN_STOP_KINDS: tuple[str, ...] = ("capture", "traffic", "monitor", "scenario")
+SHUTDOWN_STOP_KINDS: tuple[str, ...] = (
+    "capture",
+    "traffic",
+    "monitor",
+    "scenario",
+    "background",
+    "pulse",
+)
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +98,8 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     monitor_service.register(runner)
     benchmark_service.register(runner)
     scenario_service.register(runner)
+    background_service.register(runner)
+    pulse = pulse_service.register(runner)
     image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
     image_manager.register()
     runner.images = image_manager
@@ -147,6 +160,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     app.state.registries = registry_manager
     app.state.artifacts = artifacts
     app.state.live = runner.live
+    app.state.pulse = pulse
     app.state.login_limiter = accounts.LoginLimiter()
 
     app.add_middleware(
@@ -166,6 +180,8 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         captures.router,
         traffic.router,
         scenario.router,
+        background.router,
+        pulse_api.router,
         webui.router,
         monitors.router,
         benchmarks.router,
