@@ -551,6 +551,12 @@ like any node image, named by the catalog's `tools` map: `capture`,
 
 - a **sidecar** (`engine.start_sidecar`): `network_mode=container:<node>`, so
   `tcpdump` sees that node's interfaces. One node, one tool.
+- **Every long-lived stream gets a thread of its own** (`in_own_thread` in
+  `engine/docker_sidecar.py`, for sidecar, helper and `exec_stream` pumps),
+  never one of asyncio's default executor: that pool has `min(32, cpus + 4)`
+  threads shared by every `to_thread` in the app (12 on an 8-core Docker
+  Desktop), and a background run of 50 commands once took all of them, so
+  health, runtime and every Docker call queued forever.
 - a **helper** (`engine.start_helper`, `HelperSpec`): no network of its own,
   host namespaces as needed, specs written in as files. One helper serves the
   whole lab, however many nodes it has:
@@ -624,6 +630,24 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   images are rebuilt when stale before a tool job (`rebuild_stale`): the
   scripts must match the code that reads their output.
 
+- **Live lab view** (`services/pulse.py`, kind `pulse`, subject `pulse`: one
+  for the whole host). While someone has a lab's live view open (the Tutorials
+  panel), one collector runs with `--procs` and every sweep becomes, per
+  watched topology, the links carrying traffic and what runs in each node
+  (`domain/pulse.py`, pure). A link counts once its packet rate passed
+  `ON_PPS` in two sweeps within five seconds (a lone ARP exchange does not; an
+  HMI polling its RTU every two seconds does) and holds five seconds after it
+  last did; its direction is where most of the bytes go. Interface legs are
+  keyed `leg:<device>:<subnet>`, as the editor draws them. A node's processes
+  are those started after the deploy finished: what a terminal or a
+  `docker exec` started shows at once; a child of one of the node's own
+  services (an sshd session) shows once it lived ten seconds and never
+  respawned (a switch's own `sleep 5` loop never shows); idle terminal shells
+  and the children of a listed process are left out. Viewers subscribe over
+  `topologies/ws/{id}/pulse`; a message goes out only when the picture
+  changes, and the collector stops ten seconds after the last viewer left.
+  One sweep serves every viewer, so a class costs what one student does.
+
 ### 5.7a Scenario runner (classroom step-through)
 
 An instructor's saved, ordered list of steps — each an ordinary admin/client
@@ -646,6 +670,23 @@ new backend capability is `engine.exec_stream` (see §5.7 intro).
   + command field, undo-tracked like the rest of the topology) and runs a step
   or phase (deploy-gated; the backend runs from what was deployed, so running
   needs a saved, deployed lab), showing each step's command and streamed output.
+- **Several steps as one run** (`POST …/scenario/run`): ad-hoc steps sent
+  inline, kept under the caller's `tag`, optionally ending at the first step
+  that does not exit 0 (`stop_on_failure`). This is how a tutorial's lab setup
+  runs (§6.6): nothing about tutorials is known to the backend.
+- **Background runs** (`services/background.py`, kind `background`, subject
+  `background:<topology>`, stoppable, listed in `/runtime`'s activity, stopped
+  by destroy): commands kept running in their nodes until stopped, each through
+  `engine.exec_stream`, with per-item state and the last of its output on the
+  job (`GET /background/runs/{id}`). Stopping kills every command's process
+  tree at once (one `docker exec` each, in parallel). Every command starts as
+  `env AE3GIS_BG=<job> sh -lc …`, so the shell itself carries the marker in
+  its `/proc/<pid>/environ` (an `export` inside the command would reach only
+  its children, and a loop would outlive its `sleep`): whatever detached
+  itself, or outlived a backend restart, is found by that marker and killed at
+  the end of a run and before the next one (verified on Kathará: an orphaned
+  loop died when the next run started). A tutorial's background traffic is one
+  such run (plus an ordinary traffic run for its iperf3 rows).
 
 ### 5.8 Benchmarks
 
@@ -930,10 +971,41 @@ keystrokes — so a later step runs inside whatever an earlier one started: `ssh
 in one cell, `ls` on the remote host in the next. This is the difference from
 the scenario runner (§5.7a), which runs each step as its own background exec.
 It is step-by-step only (a cell's ▶ or **Next step**, the command after the one
-run last): nothing waits for a command to finish, since an interactive shell
-can't report that. The only wait is for a freshly opened shell to print its
-prompt. Running needs a deployed lab but not a save: the text comes from the
+run last). Running needs a deployed lab but not a save: the text comes from the
 editor.
+
+**Cell status.** The shells AE3GIS opens print prompt markers (§7.3), so a
+session knows when a typed command starts and when the prompt is back. A cell
+shows *running* (with a Stop that sends Ctrl-C), then ✓ or `exit N`. A command
+typed into something that already holds the shell (the `ls` after an `ssh`), or
+on an image that prints no markers, is only *sent*: nothing is claimed about how
+it went. BusyBox ash has no start marker, so a multi-line cell there counts as
+done at its first prompt.
+
+**The lab, live.** While the Tutorials panel is open on a deployed lab the
+canvas follows the lab (§5.7 "Live lab view", `features/pulse`): a link is a
+solid line, and dashed and moving, in the direction of the traffic, only while
+it carries any; a device with something running wears a steady ring and a small
+chip naming it (`zeek +1`), and a collapsed subnet or site card shows one dot
+per busy device inside. Each node a tutorial names has one colour
+(`features/tutorials/colors.ts`, the theme's `--chart-N`, in order of first
+use): the bar on its cells and its ring on the canvas match. Busy nodes the
+tutorial does not name use the accent. Dashes mean traffic and nothing else, so
+edge variants differ by colour and width only.
+
+**Lab setup** (`tutorial.setup`, `features/tutorials/setup`): what the lab needs
+before the first step. *Steps* (`{containerId, command}`) run headless, in
+order, when the student clicks **Configure lab**: one scenario run tagged
+`tutorial-setup:<id>`, ending at the first failure. *Background traffic* rows
+(`{kind, from[], to[], …}`: every sender to every destination) start after it
+and by one switch: a `command` row runs its command on each sender (once per
+destination when it names `{to}`, replaced by the destination's IP) as a
+background run tagged `tutorial-traffic:<id>`; an `iperf3` row becomes a
+`clients_to_servers` pattern of an ordinary traffic run. Nothing is kept in the
+browser: "configured" is a tagged run newer than `/runtime`'s `deployed_at`,
+and the traffic state is `/runtime`'s activity, so a reload keeps both and a
+redeploy starts them over. The block is one row until opened (it opens itself
+when a step fails); the author edits it in the notebook's Edit mode.
 
 - **UI** `features/tutorials` (lazy-loaded with `react-markdown` + `remark-gfm`;
   raw HTML is never rendered, so an imported tutorial can't inject markup):
@@ -941,9 +1013,9 @@ editor.
   topology's list; an Edit toggle (off: a clean read/run view); a ● on a tab
   whose tutorial differs from the last save (identity check against
   `savedTopology` — immer copies only what an edit touches).
-- **Progress** (which steps ran, when) is per browser session in the `tutorial`
-  slice: terminals don't survive a reload either. It resets when another
-  topology is opened.
+- **Progress** (which steps ran, when, and each cell's status) is per browser
+  session in the `tutorial` slice: terminals don't survive a reload either. It
+  resets when another topology is opened.
 
 ## 7. From topology to running containers
 
@@ -1031,11 +1103,28 @@ topology or its deploy status changes. Sessions are also what tutorials type
 into (§6.6). PTY output is written to xterm as bytes, so UTF-8 split across
 chunks decodes correctly.
 
+**Prompt markers.** The shell is started with the OSC 133 sequences terminals
+share for shell integration: bash gets `PROMPT_COMMAND` (prints `D;<exit>` when
+the prompt is back) and `PS0` (prints `C` when a command starts) from its
+environment; BusyBox ash gets a `PS1` prefix (`D`, no exit code, no start)
+through `ENV`. The session consumes them (`registerOscHandler`, never drawn)
+and tracks whether a command holds the shell; a prompt counts as "over" only
+when no next command starts within 150 ms, which keeps a multi-line paste one
+run. An image whose rc files replace these prints nothing and nothing is
+claimed. A shell reached from inside (`ssh`) prints none either, so the outer
+command stays "running" for as long as the session is open, which is true.
+
 ---
 
 ## 8. Invariants and gotchas
 
 Things that will bite if you do not know them:
+
+- **Never hold a default-executor thread for long.** `asyncio.to_thread` shares
+  one small pool (12 threads on 8 cores) across the whole app. A blocking read
+  that lasts as long as a command runs (a stream pump) goes on its own thread
+  (`in_own_thread`); otherwise enough of them starve every other request, and
+  even a reload hangs, since stopping a job needs a thread too.
 
 - **Runtime status never goes into `Topology.data`.** It belongs to
   `document.containerStatus` on the frontend and the engine on the backend.

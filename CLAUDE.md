@@ -81,7 +81,7 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   the next deploy resumes nodes from those images, see ARCHITECTURE §5.5a), `jobs` (`JobRunner`: in-process asyncio tasks, one per job
   **subject** — `topology:<id>`, `image:<ref>`, `source:<name>`,
   `registry:<id>`, `capture:<topo>:<node>:<iface>`, `traffic:<topo>`, `monitor:<topo>`,
-  `scenario:<topo>`, `benchmark` — at a time; steps on the
+  `scenario:<topo>`, `background:<topo>`, `pulse`, `benchmark` — at a time; steps on the
   job row mirrored to events; per-job log files via `joblogs`; `wait`/`cancel`,
   and `request_stop` for `stoppable` kinds (winds down, keeps output, ends
   `succeeded`); `set_result` → `Job.result`; bulk output in `artifacts`
@@ -92,11 +92,21 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   `traffic` (+ `traffic_generators`; flows/patterns through the netns driver),
   `netns_driver` (the driver helper: iperf3 runs, readiness pings),
   `scenario` (classroom step-through: run a step or a stored phase in order via
-  `engine.exec_stream`, streaming each command's output; stoppable, one per topology),
+  `engine.exec_stream`, streaming each command's output; stoppable, one per topology;
+  `scenario/run` takes several inline steps under a caller's `tag`, optionally
+  `stop_on_failure`: a tutorial's lab setup),
+  `background` (commands kept running in nodes until stopped, per-item state and
+  output tail on the job; each starts as `env AE3GIS_BG=<job> sh -lc …` so the shell
+  itself is marked and leftovers are found and killed; stopped in parallel; a
+  tutorial's background traffic),
+  `pulse` (the live lab view: ONE host-wide collector `--procs` shared by every
+  viewer, started with the first WebSocket subscriber and stopped 10 s after the
+  last; `domain/pulse.py` turns sweeps into links carrying traffic (+ direction)
+  and what was started in each node since the deploy),
   `benchmark` (kinds sweep | adaptive | census | matrix; a step is place →
   reference → deploy → ready → settle → hold → destroy, helpers shared by all
   kinds; a matrix deploys once and runs its cells; see `docs/benchmarks/`); `live` (per-job WebSocket
-  fan-out), `activity` (running captures/runs/monitors; destroy stops them
+  fan-out), `activity` (running captures/runs/monitors/scenario and background runs; destroy stops them
   first), `environment` (run
   metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
   purge by lab hash), `events` (append-only log per topology).
@@ -143,7 +153,10 @@ only where needed, in parallel — at a few hundred nodes per-container calls
 would slow every poll and load the daemon being measured.
 
 - `engine/terminal.py` — engine-agnostic PTY↔WebSocket bridge (`docker exec`, no sudo).
-- `engine/docker_sidecar.py` — sidecars (containers in a node's netns,
+- `engine/docker_sidecar.py` — every long-lived stream pump runs on its own
+  thread (`in_own_thread`), never `asyncio.to_thread`: the default executor is
+  ~12 threads shared app-wide, and 50 long reads starved the backend (verified).
+  Sidecars (containers in a node's netns,
   `network_mode=container:`) and **helpers** (`HelperSpec`: no network, host
   namespaces as asked, spec files written in before start): log driver `none`,
   attached **before** start, labelled `ae3gis.sidecar/owner/lab_hash/node/job/purpose`
@@ -260,7 +273,10 @@ tables record every long operation.
   `data-node-type`…, listed in `themes/base.css`); those flourishes follow
   `<html>`'s theme only. Never hardcode colors; catalog colors are only used
   as device accents. No CSS filters or per-node continuous animation on canvas
-  nodes/edges (zoom re-rasterizes them; a few selected/attacker nodes are fine). `styles/reactflow.css`
+  nodes/edges (zoom re-rasterizes them; a few selected/attacker nodes are fine).
+  **An edge is solid; dashes (moving) mean it carries traffic right now** and
+  nothing else, so edge variants differ by colour and width only; a busy node
+  gets a steady ring, never a pulse. `styles/reactflow.css`
   themes React Flow through its `--xy-*` variables. A DEV-only `/_gallery` route
   shows every primitive, and each theme side by side.
 - **State.** One Zustand store (`store/index.ts`) composed of slices
@@ -274,7 +290,10 @@ tables record every long operation.
   user, status; flows in `features/auth/actions.ts`, the token per tab in
   `api/session.ts`; `document` also holds the record's owner / published /
   source / update_available), `tutorial` (Tutorials section open, open tabs, Edit
-  toggles, steps run this session; not saved, not undoable), `activity` (running
+  toggles, steps run this session and each cell's status, which terminals are
+  busy; not saved, not undoable), `pulse` (the live lab view: `linkTraffic`,
+  `nodeProcesses`, fed by `features/pulse/pulse.ts` while the Tutorials panel is
+  open on a deployed lab), `activity` (running
   captures/traffic runs/monitors from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
   `features/images/imagePolling` singleton).
@@ -348,8 +367,19 @@ tables record every long operation.
   `features/tutorials` (Jupyter-like notebooks in `topology.tutorials`: Markdown
   notes via `react-markdown` (no raw HTML) + command cells; Run / Next step types
   the command into the node's normal terminal session, so later steps run inside
-  what earlier ones started, e.g. an ssh; step-by-step only, no completion
-  detection; deploy-gated, no save needed; More → Tutorials… / ⌘K). Benchmarks
+  what earlier ones started, e.g. an ssh; step-by-step only; deploy-gated, no
+  save needed; More → Tutorials… / ⌘K. The shells print OSC 133 prompt markers
+  (`engine/terminal.py`), so a cell shows running (Stop = Ctrl-C) / ✓ / `exit N`,
+  or just "sent" when the shell can't tell (typed into an ssh, no markers).
+  While the panel is open the canvas shows the lab live (`features/pulse`):
+  links dashed and moving only with traffic, busy devices ringed in their
+  tutorial colour (`tutorials/colors.ts`: one `--chart-N` per node, shared with
+  its cells) with a chip naming what runs, dots on collapsed subnet/site cards.
+  `tutorial.setup` (`tutorials/setup/`): steps run headless by "Configure lab"
+  (one tagged scenario run) and background traffic rows (from nodes → to nodes;
+  a command with `{to}` = each destination's IP, or iperf3) behind one switch;
+  state is read back from tagged runs + `/runtime` (`deployed_at`, activity),
+  never kept in the browser). Benchmarks
   have no UI on main: run and read them headless (`./bench.sh`).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
@@ -385,11 +415,15 @@ tables record every long operation.
   (whole-record pcap, live for `curl … | wireshark -k -i -`), `captures/{id}/packets`;
   `topologies/{id}/traffic/runs` (flows and/or patterns), `traffic/runs/{id}[/samples|/export]`;
   `topologies/{id}/monitors`, `monitors/{id}[/samples|/export]`;
-  `topologies/{id}/scenario/steps/run` and `…/scenario/phases/{phaseId}/run` (202 + a
+  `topologies/{id}/scenario/steps/run`, `…/scenario/run` (several inline steps, `tag`,
+  `stop_on_failure`) and `…/scenario/phases/{phaseId}/run` (202 + a
   run job), `scenario/runs/{id}[/samples|/export]`;
+  `topologies/{id}/background/runs` (202 + a run of commands kept running; stop via
+  `jobs/{id}/stop`), `background/runs/{id}`;
   `topologies/{id}/webui/{node}/{path}` (GET/POST: relay a node's own web UI, §ARCHITECTURE 5.9);
   WebSockets `topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`,
-  `…/monitors/{job}` and `…/scenario/{job}` (under the WS prefix so nginx/vite upgrade them; handlers
+  `…/monitors/{job}`, `…/scenario/{job}` and `topologies/ws/{id}/pulse` (the live lab
+  view, no job id) (under the WS prefix so nginx/vite upgrade them; handlers
   race every wait against client disconnect, see `api/live_ws.py`).
 - `topologies/generate` (a parametric topology), `benchmarks` (202 + a
   sweep, climb, census or matrix job), `benchmarks/{id}[/report.md|/export]`;
