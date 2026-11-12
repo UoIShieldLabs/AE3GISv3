@@ -67,6 +67,10 @@ class Sweep:
     host: dict[str, Any]
     infra: dict[str, list[int]]
     containers: dict[str, RawStats]  # short (12-char) container id -> counters
+    # ``--procs`` sweeps only: the host's boot time (unix s) and, per container,
+    # (parent of its first process, [[pid, ppid, start_ticks, comm, cmdline], …]).
+    btime: float | None = None
+    procs: dict[str, tuple[int, list[list[Any]]]] = field(default_factory=dict)
 
 
 def parse_line(line: str | bytes) -> Sweep | None:
@@ -80,8 +84,11 @@ def parse_line(line: str | bytes) -> Sweep | None:
     t = float(raw["t"])
     ncpu = int(raw.get("ncpu") or 1)
     containers: dict[str, RawStats] = {}
+    procs: dict[str, tuple[int, list[list[Any]]]] = {}
     for cid, v in (raw.get("c") or {}).items():
-        usage, mem, inactive, mem_max, pids, oom, ifaces = v
+        usage, mem, inactive, mem_max, pids, oom, ifaces = v[:7]
+        if len(v) > 7 and v[7]:
+            procs[cid] = (int(v[7][0] or 0), list(v[7][1] or []))
         containers[cid] = RawStats(
             target=cid,
             kind="other",
@@ -116,6 +123,8 @@ def parse_line(line: str | bytes) -> Sweep | None:
         host=raw.get("host") or {},
         infra=raw.get("infra") or {},
         containers=containers,
+        btime=raw.get("btime"),
+        procs=procs,
     )
 
 

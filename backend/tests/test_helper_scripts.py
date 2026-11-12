@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -154,6 +155,40 @@ def test_full_sweep_over_a_fake_host(tmp_path):
         "dockerd": [1, 1000 * page, 150],
         "containerd-shim": [2, 2000 * page, 300],
     }
+
+
+def test_procs_sweep_lists_what_started_after_a_containers_boot(tmp_path):
+    proc, cg = tmp_path / "proc", tmp_path / "cgroup"
+    proc.mkdir()
+    (proc / "stat").write_text(PROC_STAT + "btime 1700000000\n")
+
+    def process(pid, comm, ppid, start, cmdline):
+        fields = ["S", str(ppid)] + ["0"] * 17 + [str(start)] + ["0"] * 20
+        (proc / str(pid)).mkdir()
+        (proc / str(pid) / "stat").write_text(f"{pid} ({comm}) " + " ".join(fields))
+        (proc / str(pid) / "cmdline").write_bytes(cmdline)
+
+    tck = os.sysconf("SC_CLK_TCK")
+    process(11, "bash", 7, 1000, b"/bin/bash\0/startup.sh\0")  # the container's first
+    process(12, "sshd", 11, 1000 + tck, b"sshd\0")  # part of its boot
+    process(30, "bash", 7, 1000 + 60 * tck, b"bash\0-il\0")  # a terminal, later
+    process(31, "zeek", 30, 1000 + 70 * tck, b"zeek\0-i\0eth0\0" + b"x" * 400)
+    a = "a" * 64
+    _cgroup(cg, f"docker/{a}", 11, 5000, 2_000_000)
+    (cg / "docker" / a / "cgroup.procs").write_text("11\n12\n30\n31\n99\n")  # 99 just exited
+
+    assert len(collect.sweep(str(cg), str(proc), infra=False)["c"]["a" * 12]) == 7
+    line = collect.sweep(str(cg), str(proc), infra=False, procs=True)
+    json.dumps(line)
+    assert line["btime"] == 1700000000
+    parent, rows = line["c"]["a" * 12][7]
+    assert parent == 7
+    assert [r[:4] for r in rows] == [
+        [30, 7, 1000 + 60 * tck, "bash"],
+        [31, 30, 1000 + 70 * tck, "zeek"],
+    ]
+    assert rows[0][4] == "bash -il"
+    assert rows[1][4].startswith("zeek -i eth0 x") and len(rows[1][4]) == collect.CMDLINE_MAX
 
 
 @pytest.mark.parametrize("missing", ["docker", "system.slice"])

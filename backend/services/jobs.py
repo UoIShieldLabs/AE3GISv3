@@ -24,7 +24,7 @@ from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -87,6 +87,17 @@ def active_job(db: Session, topology_id: str) -> Job | None:
 
 def last_for_subject(db: Session, subject: str) -> Job | None:
     stmt = select(Job).where(Job.subject == subject).order_by(Job.created_at.desc())
+    return db.scalars(stmt).first()
+
+
+def last_deploy_finished(db: Session, topology_id: str) -> datetime | None:
+    """When the topology's latest successful deploy finished (the running lab's
+    age, while it is deployed)."""
+    stmt = (
+        select(Job.finished_at)
+        .where(Job.topology_id == topology_id, Job.kind == "deploy", Job.status == "succeeded")
+        .order_by(Job.created_at.desc())
+    )
     return db.scalars(stmt).first()
 
 
@@ -178,6 +189,8 @@ class JobRunner:
         self.artifacts: ArtifactStore | None = None
         self.settings: Settings | None = None
         self.live: LiveHub | None = None
+        # The live lab view (services.pulse.PulseService), set by its ``register``.
+        self.pulse: Any = None
         self._handlers: dict[str, Handler] = {}
         self._cancellable_kinds: set[str] = set()
         self._stoppable_kinds: set[str] = set()

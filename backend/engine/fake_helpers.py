@@ -136,6 +136,12 @@ class FakeCollector(FakeHelper):
         self.psi_total = 0
         self.oom: dict[str, int] = {}  # node -> OOM kills so far (grows while in oom_nodes)
         self.last = time.monotonic()
+        # --procs (the live lab view): counters move only where there is traffic.
+        self.procs_mode = "--procs" in spec.command
+        self.btime = int(time.time()) - 3600
+        self.pid_seq = 1000
+        self.flow: dict[tuple[str, str], int] = {}  # (node, iface) -> packets so far
+        self.pids: dict[tuple[str, str], tuple[int, int]] = {}  # (node, cmdline) -> pid, start
 
     async def run(self) -> None:
         interval = self.engine.monitor_interval or float(arg(self.spec.command, "--interval", "1"))
@@ -170,7 +176,20 @@ class FakeCollector(FakeHelper):
         total = 8 * GiB
         links = sum(len(lab.plan.collision_domains) if lab.plan else 0 for lab in eng.labs.values())
         containers: dict[str, list[Any]] = {}
+        moving = self._busy_nodes() if self.procs_mode else set()
         for lab, nid, i in nodes:
+            if self.procs_mode:
+                containers[eng.node_container_id(lab.state.lab_hash, nid)[:12]] = [
+                    0,
+                    1_500_000,
+                    0,
+                    None,
+                    1,
+                    0,
+                    self._pulse_ifaces(lab, nid, moving, dt),
+                    [1, self._pulse_procs(nid)],
+                ]
+                continue
             age = now - lab.started
             ifaces = {
                 iface.name: [int(age * 1000 * (1 + i % 4))] * 2
@@ -197,6 +216,7 @@ class FakeCollector(FakeHelper):
             containers[tool.id[:12]] = [int(now * 1e4) % 10**9, 5_000_000, 0, None, 2, 0, {}]
         n_containers = len(nodes) + len(tools)
         return {
+            **({"btime": self.btime} if self.procs_mode else {}),
             "v": 1,
             "t": round(time.time(), 3),
             "sweep_ms": round(0.5 + 0.01 * n_containers, 1),
@@ -226,6 +246,53 @@ class FakeCollector(FakeHelper):
             },
             "c": containers,
         }
+
+    # ── --procs ──
+    def _busy_nodes(self) -> set[str]:
+        return set(self.engine.fake_traffic_nodes) | {e.node_id for e in self.engine.running_execs}
+
+    def _pulse_ifaces(self, lab: Any, nid: str, busy: set[str], dt: float) -> dict[str, list[int]]:
+        """A link moves (10 packets/s each way) while either of its ends is busy."""
+        out: dict[str, list[int]] = {}
+        for link in lab.plan.links() if lab.plan else []:
+            moving = any(ep["node"] in busy for ep in link["endpoints"])
+            for ep in link["endpoints"]:
+                if ep["node"] != nid:
+                    continue
+                key = (nid, ep["interface"])
+                self.flow[key] = self.flow.get(key, 0) + (max(1, round(10 * dt)) if moving else 0)
+                packets = self.flow[key]
+                out[ep["interface"]] = [
+                    packets * 1000,
+                    packets,
+                    0,
+                    0,
+                    packets * 1000,
+                    packets,
+                    0,
+                    0,
+                ]
+        return out
+
+    def _next_pid(self) -> int:
+        self.pid_seq += 1
+        return self.pid_seq
+
+    def _pulse_procs(self, nid: str) -> list[list[Any]]:
+        running = list(self.engine.fake_procs.get(nid, []))
+        running += [
+            ("sh", f"sh -lc {e.command}") for e in self.engine.running_execs if e.node_id == nid
+        ]
+        ticks = int((time.time() - self.btime) * self.CLK_TCK)
+        keep: dict[tuple[str, str], tuple[int, int]] = {}
+        rows: list[list[Any]] = []
+        for name, cmdline in running:
+            key = (nid, cmdline)
+            keep[key] = self.pids.get(key) or (self._next_pid(), ticks)
+            pid, start = keep[key]
+            rows.append([pid, 1, start, name, cmdline])
+        self.pids = {k: v for k, v in self.pids.items() if k[0] != nid} | keep
+        return rows
 
 
 class FakeDriver(FakeHelper):
