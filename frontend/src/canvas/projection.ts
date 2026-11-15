@@ -4,7 +4,7 @@ import type { Edge, Node } from '@xyflow/react';
 import type { Connection, Container, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { roleFor, type NodeRole } from '@/catalog/catalog';
 import { countContainers, gatewayOf, subnetGateway, type ConnectionKind, type Scope } from '@/lib/topology';
-import type { RuntimeStatus, Selection } from '@/store/types';
+import type { NodeProcess, RuntimeStatus, Selection, TrafficDir } from '@/store/types';
 import type { Activity } from '@/api/client';
 import { GROUP_HEADER, GROUP_PADDING, LAYOUT_SPACING, NODE_SIZE } from './constants';
 import { boundsOf, groupSize, relativeSide, subnetRect, type Rect, type Side } from './layout/placement';
@@ -16,6 +16,18 @@ export interface SiteNodeData extends Record<string, unknown> {
   site: Site;
   subnetCount: number;
   containerCount: number;
+  /** Devices inside with something running: one colour each (see `NodeBusy`). */
+  busy?: string[];
+}
+
+/** Something runs in a device right now (the live lab view). */
+export interface NodeBusy {
+  /** The node's colour in the open tutorial; the theme accent outside it. */
+  color: string;
+  /** Short text for the card: the first process and how many more. */
+  label: string;
+  /** One line per thing running, for the tooltip. */
+  detail: string[];
 }
 
 export interface SubnetNodeData extends Record<string, unknown> {
@@ -27,6 +39,8 @@ export interface SubnetNodeData extends Record<string, unknown> {
   gateway?: { id: string; name: string; ip: string };
   /** Runtime state summary for the badge: running / total. */
   running?: number;
+  /** Devices inside with something running: one colour each. */
+  busy?: string[];
 }
 
 export interface DeviceNodeData extends Record<string, unknown> {
@@ -41,6 +55,8 @@ export interface DeviceNodeData extends Record<string, unknown> {
   captureJobId?: string;
   /** It sends or receives generated traffic right now. */
   traffic?: boolean;
+  /** Something runs in it right now (the live lab view). */
+  busy?: NodeBusy;
   /** Its extra interface legs, by subnet name (multi-homing). */
   legs?: { subnet: string; ip: string }[];
   /** Drawn in another subnet's view because it joins that subnet through a leg:
@@ -74,8 +90,11 @@ export interface CanvasEdgeData extends Record<string, unknown> {
   kind: ConnectionKind;
   connectionId: string;
   label?: string;
-  /** Both endpoint containers are running (drives the animated style). */
+  /** Both endpoint containers are running. */
   active: boolean;
+  /** It carries traffic right now, and which way along the drawn edge
+   *  (source → target is `fwd`). Drives the moving dashes. */
+  traffic?: TrafficDir;
   /** The capture watching this link (its job id). */
   captureJobId?: string;
 }
@@ -90,6 +109,41 @@ export interface ProjectionInput {
   selection?: Selection;
   /** Captures and traffic runs in progress (see `activityIndex`). */
   activity?: CanvasActivity;
+  /** The live lab view (see `liveIndex`). */
+  live?: CanvasLive;
+}
+
+/** The live lab view indexed for the canvas. */
+export interface CanvasLive {
+  /** Connection id (or `leg:<device>:<subnet>`) → which way its traffic flows. */
+  linkTraffic: ReadonlyMap<string, TrafficDir>;
+  /** Device id → what runs there. */
+  busyNodes: ReadonlyMap<string, NodeBusy>;
+}
+
+/** The colour of a busy node no tutorial names. */
+export const BUSY_FALLBACK_COLOR = 'var(--accent)';
+
+/** Index the live view: a node is busy when the collector lists processes for
+ *  it or its terminal is running a command; it wears its tutorial colour. */
+export function liveIndex(input: {
+  linkTraffic: Readonly<Record<string, TrafficDir>>;
+  nodeProcesses: Readonly<Record<string, readonly NodeProcess[]>>;
+  busyTerminals: Readonly<Record<string, true>>;
+  colors?: ReadonlyMap<string, string>;
+}): CanvasLive {
+  const busyNodes = new Map<string, NodeBusy>();
+  for (const id of new Set([...Object.keys(input.nodeProcesses), ...Object.keys(input.busyTerminals)])) {
+    const procs = input.nodeProcesses[id] ?? [];
+    const names = [...new Set(procs.map((p) => p.name))];
+    if (!names.length && !input.busyTerminals[id]) continue;
+    busyNodes.set(id, {
+      color: input.colors?.get(id) ?? BUSY_FALLBACK_COLOR,
+      label: names.length ? (names.length > 1 ? `${names[0]} +${names.length - 1}` : names[0]) : 'running',
+      detail: procs.length ? procs.map((p) => p.args || p.name) : ['A command is running in its terminal'],
+    });
+  }
+  return { linkTraffic: new Map(Object.entries(input.linkTraffic)), busyNodes };
 }
 
 /** Runtime activity indexed for the canvas. */
@@ -112,6 +166,9 @@ export function activityIndex(activity: readonly Activity[]): CanvasActivity {
       // node_ids = [the capturing node, its peer on the link]
       if (a.node_ids?.[0]) captureNodes.set(a.node_ids[0], a.job_id);
     } else if (a.kind === 'traffic') {
+      for (const id of a.node_ids ?? []) trafficNodes.add(id);
+    } else if (a.kind === 'background') {
+      // A tutorial's background traffic: the same icon as a traffic run.
       for (const id of a.node_ids ?? []) trafficNodes.add(id);
     }
   }
@@ -199,9 +256,18 @@ class Projector {
         connectionId: conn.id,
         label: conn.label,
         active,
+        traffic: this.input.live?.linkTraffic.get(conn.id),
         captureJobId: this.input.activity?.captureConnections.get(conn.id),
       },
     });
+  }
+
+  /** Colours of the busy devices among `containers`, for a collapsed card. */
+  private busyIn(containers: Container[]): string[] | undefined {
+    const busy = this.input.live?.busyNodes;
+    if (!busy?.size) return undefined;
+    const colors = containers.flatMap((c) => { const b = busy.get(c.id); return b ? [b.color] : []; });
+    return colors.length ? colors : undefined;
   }
 
   // ── Devices ──
@@ -225,6 +291,7 @@ class Projector {
         status: this.status(c.id),
         captureJobId: this.input.activity?.captureNodes.get(c.id),
         traffic: this.input.activity?.trafficNodes.has(c.id) || undefined,
+        busy: this.input.live?.busyNodes.get(c.id),
         legs: c.interfaces?.length
           ? c.interfaces.map((l) => ({ subnet: this.subnetsById.get(l.subnetId)?.name ?? l.subnetId, ip: l.ip }))
           : undefined,
@@ -309,6 +376,7 @@ class Projector {
         containerCount: countContainers(subnet, { userOnly: true }),
         gateway: subnetGateway(this.input.topology, subnet),
         running: known > 0 ? running : undefined,
+        busy: this.busyIn(subnet.containers),
       },
     });
     return NODE_SIZE.subnet;
@@ -385,7 +453,13 @@ class Projector {
       position: pos(site.position),
       width: NODE_SIZE.site.width,
       height: NODE_SIZE.site.height,
-      data: { kind: 'site', site, subnetCount: site.subnets.length, containerCount: countContainers(site, { userOnly: true }) },
+      data: {
+        kind: 'site',
+        site,
+        subnetCount: site.subnets.length,
+        containerCount: countContainers(site, { userOnly: true }),
+        busy: this.busyIn(site.subnets.flatMap((s) => s.containers)),
+      },
     });
     return NODE_SIZE.site;
   }
@@ -444,7 +518,7 @@ class Projector {
     }
   }
 
-  private pushLeg(id: string, source: string, target: string, label?: string) {
+  private pushLeg(id: string, source: string, target: string, label?: string, traffic?: TrafficDir) {
     if (!this.visible.has(source) || !this.visible.has(target) || source === target) return;
     this.edges.push({
       id,
@@ -452,7 +526,8 @@ class Projector {
       target,
       type: 'topology',
       selectable: false,
-      data: { variant: 'attachment', kind: 'container', connectionId: id, active: false, label },
+      // A device's own leg is keyed like the collector reports it; merged legs pass theirs.
+      data: { variant: 'attachment', kind: 'container', connectionId: id, active: false, label, traffic: traffic ?? this.input.live?.linkTraffic.get(id) },
     });
   }
 
@@ -463,7 +538,7 @@ class Projector {
   private legEdges() {
     const t = this.input.topology;
     const siteOf = new Map(t.sites.flatMap((s) => s.subnets.map((n) => [n.id, s.id] as const)));
-    const merged = new Map<string, { source: string; target: string; names: string[] }>();
+    const merged = new Map<string, { source: string; target: string; names: string[]; traffic?: TrafficDir }>();
     for (const site of t.sites) {
       for (const subnet of site.subnets) {
         for (const c of subnet.containers) {
@@ -479,14 +554,17 @@ class Projector {
             const source = [subnet.id, site.id].find((id) => this.visible.has(id));
             if (!source || !target || source === target) continue;
             const key = `leg:${source}:${target}`;
-            const m = merged.get(key) ?? { source, target, names: [] };
+            const m = merged.get(key) ?? { source, target, names: [] as string[], traffic: undefined as TrafficDir | undefined };
             m.names.push(c.name);
+            // Moving when any leg it stands for carries traffic (they all run source → target).
+            const dir = this.input.live?.linkTraffic.get(`leg:${c.id}:${into.id}`);
+            if (dir) m.traffic = m.traffic && m.traffic !== dir ? 'both' : dir;
             merged.set(key, m);
           }
         }
       }
     }
-    for (const [id, m] of merged) this.pushLeg(id, m.source, m.target, m.names.join(', '));
+    for (const [id, m] of merged) this.pushLeg(id, m.source, m.target, m.names.join(', '), m.traffic);
   }
 
   // ── Entry ──

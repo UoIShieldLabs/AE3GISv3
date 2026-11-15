@@ -10,14 +10,18 @@ reports running. Test hooks:
 - ``fail_build``: image ref -> error message.
 - ``fail_sidecar``: sidecar purpose -> stderr text; that sidecar exits 1 at once.
 - ``exec_results``: command line -> (exit code, stdout) for ``exec_stream`` (the
-  scenario runner); unknown commands echo themselves and exit 0, a ``None`` exit
-  code models a command that runs until the step is stopped.
+  scenario runner); unknown commands echo themselves and exit 0 (a background
+  run's, which carry its marker, keep running), a ``None`` exit code models a
+  command that runs until the step is stopped.
 - ``capture_packets``: frames every capture sidecar emits (default: pings at
   ``capture_pps``).
 - ``fail_helper``: helper purpose -> stderr text; that helper exits 1 at once.
 - ``monitor_interval``: seconds between collector sweeps (default: its
   ``--interval``); ``fake_mem_per_node``: host memory each running node takes;
   ``oom_nodes``: nodes whose cgroup reports an OOM kill.
+- ``fake_traffic_nodes`` / ``fake_procs``: the live lab view (collector
+  ``--procs``): nodes whose links carry traffic, and node id -> [(name,
+  command line)] it runs. A long-running ``exec_stream`` shows up as both.
 - ``traffic_interval``: seconds between iperf3 intervals of the fake driver;
   ``fail_listen``: nodes whose traffic servers never listen; ``unreachable``:
   nodes whose readiness probes fail; ``unstarted_clients``: how many of a
@@ -208,11 +212,25 @@ class FakeExec:
         self.exit_code: int | None = None
 
     @property
+    def env(self) -> dict[str, str]:
+        """Variables set by a leading ``env NAME=value …``."""
+        out: dict[str, str] = {}
+        if self.argv[:1] == ["env"]:
+            for word in self.argv[1:]:
+                if "=" not in word:
+                    break
+                name, _, value = word.partition("=")
+                out[name] = value
+        return out
+
+    @property
     def command(self) -> str:
-        """The command line: ``["sh", "-lc", line]`` -> ``line``, else the argv."""
-        if len(self.argv) >= 3 and self.argv[0] in ("sh", "bash") and self.argv[1] in ("-lc", "-c"):
-            return self.argv[2]
-        return " ".join(self.argv)
+        """The command line: ``["sh", "-lc", line]`` -> ``line`` (after any
+        leading ``env NAME=value``), else the argv."""
+        argv = self.argv[1 + len(self.env) :] if self.argv[:1] == ["env"] else self.argv
+        if len(argv) >= 3 and argv[0] in ("sh", "bash") and argv[1] in ("-lc", "-c"):
+            return argv[2]
+        return " ".join(argv)
 
     def emit(self, stream: str, data: bytes) -> None:
         self._out.put_nowait((stream, data))
@@ -228,15 +246,23 @@ class FakeExec:
     async def _run(self) -> None:
         try:
             self.engine.calls.append(("exec", self.command))
-            code, output = self.engine.exec_results.get(self.command, (0, self.command + "\n"))
+            # A background run's command (it carries the run's marker) keeps
+            # running, as the loops and pollers it stands for do; anything else
+            # echoes itself and exits 0.
+            default = (None, "") if "AE3GIS_BG" in self.env else (0, self.command + "\n")
+            code, output = self.engine.exec_results.get(self.command, default)
             if output:
                 self.emit("stdout", output if isinstance(output, bytes) else output.encode())
             if code is None:  # runs until stopped
+                self.engine.running_execs.append(self)
                 await self.signalled.wait()
                 code = -1
             self.exit(code)
         except asyncio.CancelledError:
             self.exit(-1)
+        finally:
+            if self in self.engine.running_execs:
+                self.engine.running_execs.remove(self)
 
     async def pump(
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
@@ -305,6 +331,11 @@ class FakeEngine:
         # flow delivers its share. None: everything gets through.
         self.traffic_capacity_bps: float | None = None
         self.oom_nodes: set[str] = set()
+        # The live lab view: see the module docstring. ``running_execs`` is kept
+        # by FakeExec (the long-running ones count as traffic and as a process).
+        self.fake_traffic_nodes: set[str] = set()
+        self.fake_procs: dict[str, list[tuple[str, str]]] = {}
+        self.running_execs: list[FakeExec] = []
         self.fail_listen: set[str] = set()  # nodes whose traffic servers never listen
         self.unreachable: set[str] = set()  # nodes whose readiness probes fail
         self.unstarted_clients = 0  # a run's last clients the fake driver never starts

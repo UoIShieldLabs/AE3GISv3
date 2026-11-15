@@ -47,6 +47,10 @@ export type TrafficTotals = S['TrafficTotalsOut'];
 export type TrafficPattern = S['TrafficPattern'];
 export type TrafficSamples = S['TrafficSamplesOut'];
 export type ScenarioStepRequest = S['ScenarioStepRequest'];
+export type ScenarioRunRequest = S['ScenarioRunRequest'];
+export type BackgroundRunRequest = S['BackgroundRunRequest'];
+export type BackgroundRun = S['BackgroundRunOut'];
+export type BackgroundItem = S['BackgroundItemOut'];
 export type ScenarioRun = S['ScenarioRunOut'];
 export type ScenarioStepResult = S['ScenarioStepResult'];
 export type ScenarioSamples = S['ScenarioSamplesOut'];
@@ -402,6 +406,10 @@ export function trafficExportUrl(jobId: string): string {
 export function runScenarioStep(topologyId: string, body: ScenarioStepRequest): Promise<ScenarioRun> {
   return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/steps/run`, json(body));
 }
+/** Several commands in order as one run (a tutorial's lab setup). */
+export function runScenarioSteps(topologyId: string, body: ScenarioRunRequest): Promise<ScenarioRun> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/run`, json(body));
+}
 export function runScenarioPhase(topologyId: string, phaseId: string, label = ''): Promise<ScenarioRun> {
   return request(
     `${V1}/topologies/${encodeURIComponent(topologyId)}/scenario/phases/${encodeURIComponent(phaseId)}/run`,
@@ -417,6 +425,15 @@ export function getScenarioRun(jobId: string): Promise<ScenarioRun> {
 export function scenarioSamples(jobId: string): Promise<ScenarioSamples> {
   return request(`${V1}/scenario/runs/${encodeURIComponent(jobId)}/samples`);
 }
+// ── Background runs (a tutorial's background traffic) ──────────────
+/** Start commands that keep running in their nodes until stopped (`stopJob`). */
+export function startBackgroundRun(topologyId: string, body: BackgroundRunRequest): Promise<BackgroundRun> {
+  return request(`${V1}/topologies/${encodeURIComponent(topologyId)}/background/runs`, json(body));
+}
+export function getBackgroundRun(jobId: string): Promise<BackgroundRun> {
+  return request(`${V1}/background/runs/${encodeURIComponent(jobId)}`);
+}
+
 export function scenarioExportUrl(jobId: string): string {
   return `${V1}/scenario/runs/${encodeURIComponent(jobId)}/export`;
 }
@@ -459,6 +476,10 @@ export function monitorWsPath(topologyId: string, jobId: string): string {
  *  /api proxy, so it works in dev and prod without a host port. */
 export function webUiUrl(topologyId: string, nodeId: string): string {
   return `${V1}/topologies/${encodeURIComponent(topologyId)}/webui/${encodeURIComponent(nodeId)}/`;
+}
+/** The live lab view: links carrying traffic and what runs in each node. */
+export function pulseWsPath(topologyId: string): string {
+  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/pulse`;
 }
 export function scenarioWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/scenario/${encodeURIComponent(jobId)}`;

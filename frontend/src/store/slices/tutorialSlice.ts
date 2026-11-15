@@ -7,6 +7,8 @@ export const createTutorialSlice: SliceCreator<TutorialSlice> = (set) => ({
   activeTutorialId: null,
   editingTutorials: {},
   tutorialProgress: {},
+  cellStatus: {},
+  busyTerminals: {},
 
   setTutorialsOpen: (tutorialsOpen) => set({ tutorialsOpen }, false, 'setTutorialsOpen'),
 
@@ -41,9 +43,24 @@ export const createTutorialSlice: SliceCreator<TutorialSlice> = (set) => ({
       (s.tutorialProgress[tutorialId] ??= {})[cellId] = at;
     }, false, 'markCellRun'),
 
-  resetTutorialProgress: (tutorialId) =>
-    set((s) => { delete s.tutorialProgress[tutorialId]; }, false, 'resetTutorialProgress'),
+  setCellStatus: (tutorialId, cellId, status) =>
+    set((s) => {
+      (s.cellStatus[tutorialId] ??= {})[cellId] = status;
+    }, false, 'setCellStatus'),
 
+  setTerminalBusy: (containerId, busy) =>
+    set((s) => {
+      if (busy) s.busyTerminals[containerId] = true;
+      else delete s.busyTerminals[containerId];
+    }, false, 'setTerminalBusy'),
+
+  resetTutorialProgress: (tutorialId) =>
+    set((s) => {
+      delete s.tutorialProgress[tutorialId];
+      delete s.cellStatus[tutorialId];
+    }, false, 'resetTutorialProgress'),
+
+  // `busyTerminals` follows the terminal sessions, which outlive this reset.
   resetTutorialSession: () =>
-    set({ openTutorialIds: [], activeTutorialId: null, editingTutorials: {}, tutorialProgress: {} }, false, 'resetTutorialSession'),
+    set({ openTutorialIds: [], activeTutorialId: null, editingTutorials: {}, tutorialProgress: {}, cellStatus: {} }, false, 'resetTutorialSession'),
 });

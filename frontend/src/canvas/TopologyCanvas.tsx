@@ -18,7 +18,8 @@ import { Button, EmptyState, toast } from '@/ui';
 import { openCaptureTab, stopCapture } from '@/features/capture/actions';
 import { openTrafficPanel } from '@/features/traffic/actions';
 import { openMonitorPanel } from '@/features/monitor/actions';
-import { activityIndex, project, expandableIds, toStoredPosition, type CanvasEdge, type CanvasNode, type GroupNodeData } from './projection';
+import { activityIndex, liveIndex, project, expandableIds, toStoredPosition, type CanvasEdge, type CanvasNode, type GroupNodeData } from './projection';
+import { nodeColors } from '@/features/tutorials/colors';
 import { nodeTypes } from './nodes';
 import { edgeTypes, ConnectionLine } from './edges';
 import { CanvasActionsContext, type CanvasActions } from './CanvasContext';
@@ -64,10 +65,27 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const activity = useMemo(() => activityIndex(activityList), [activityKey]);
 
+  // The live lab view, while the Tutorials panel is open: links carrying
+  // traffic, and nodes with something running in the open tutorial's colours.
+  const { tutorialsOpen, activeTutorialId, linkTraffic, nodeProcesses, busyTerminals } = useAppShallow((s) => ({
+    tutorialsOpen: s.tutorialsOpen,
+    activeTutorialId: s.activeTutorialId,
+    linkTraffic: s.linkTraffic,
+    nodeProcesses: s.nodeProcesses,
+    busyTerminals: s.busyTerminals,
+  }));
+  const activeTutorial = useMemo(() => topology.tutorials?.find((t) => t.id === activeTutorialId), [topology.tutorials, activeTutorialId]);
+  const live = useMemo(
+    () => (tutorialsOpen && deployStatus === 'deployed'
+      ? liveIndex({ linkTraffic, nodeProcesses, busyTerminals, colors: nodeColors(activeTutorial) })
+      : undefined),
+    [tutorialsOpen, deployStatus, linkTraffic, nodeProcesses, busyTerminals, activeTutorial],
+  );
+
   // ── Projection → local React Flow state (local keeps in-flight drags) ──
   const projection = useMemo(
-    () => project({ topology, scope, expanded, containerStatus, selection, activity }),
-    [topology, scope, expanded, containerStatus, selection, activity],
+    () => project({ topology, scope, expanded, containerStatus, selection, activity, live }),
+    [topology, scope, expanded, containerStatus, selection, activity, live],
   );
   const [nodes, setNodes] = useState<CanvasNode[]>(projection.nodes);
   const [edges, setEdges] = useState<CanvasEdge[]>(projection.edges);

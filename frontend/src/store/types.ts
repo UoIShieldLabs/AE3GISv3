@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData, Tutorial, TutorialCell } from '@/types/topology';
+import type { AttackPhase, Connection, Container, Position, SavedFlow, Scenario, ScriptExecution, Site, Subnet, TopologyData, Tutorial, TutorialCell, TutorialSetup } from '@/types/topology';
 import type { Catalog } from '@/catalog/catalog';
 import type { Activity, Diagnostic, ImagesReport, Job, Owner, SavedState, SessionUser } from '@/api/client';
 import type { LayoutMode } from '@/canvas/layout';
@@ -95,6 +95,8 @@ export interface TopologySlice {
   removeTutorial: (tutorialId: string) => void;
   /** Copy a tutorial (new ids) right after it; returns the copy's id. */
   duplicateTutorial: (tutorialId: string) => string | null;
+  /** Edit a tutorial's lab setup in place (created on first use; one undo step). */
+  updateTutorialSetup: (tutorialId: string, recipe: (setup: TutorialSetup) => void) => void;
   /** Insert a cell at `index` (default: the end); returns its id. */
   addTutorialCell: (tutorialId: string, kind: TutorialCell['kind'], index?: number, init?: TutorialCellPatch) => string | null;
   updateTutorialCell: (tutorialId: string, cellId: string, updates: TutorialCellPatch) => void;
@@ -121,6 +123,8 @@ export interface DocumentSlice {
   busy: boolean;
   /** The lab state saved by "save & destroy": the next deploy resumes it. */
   savedState: SavedState | null;
+  /** While deployed: when the running lab's deploy finished (ISO, from /runtime). */
+  deployedAt: string | null;
   /** The destroy dialog (keep running / save & destroy / destroy) is open. */
   destroyDialogOpen: boolean;
   /** Classroom mode: the student who owns the loaded topology (null: the instructor's). */
@@ -143,6 +147,7 @@ export interface DocumentSlice {
   clearBackend: () => void;
   setBusy: (busy: boolean) => void;
   setSavedState: (saved: SavedState | null) => void;
+  setDeployedAt: (deployedAt: string | null) => void;
   setDestroyDialogOpen: (open: boolean) => void;
   setRecordMeta: (meta: RecordMeta) => void;
 }
@@ -251,6 +256,17 @@ export interface DockSlice {
   closeTerminal: (containerId: string) => void;
 }
 
+/** A command cell's last run. `running` and `done` come from the shell's prompt
+ *  markers; `sent` means it was typed but the shell can't say how it went (no
+ *  markers, or it went into something already running there, e.g. an ssh). */
+export interface CellStatus {
+  state: 'sent' | 'running' | 'done';
+  /** `done` only: the exit code, null when the shell doesn't report one. */
+  exit?: number | null;
+  /** `done` only: it ended because Stop was pressed (so its exit code is no failure). */
+  stopped?: boolean;
+}
+
 /** Tutorials UI: which are open as tabs, and which commands ran this session.
  *  Not saved and not undoable; reset when another topology is opened. */
 export interface TutorialSlice {
@@ -264,6 +280,10 @@ export interface TutorialSlice {
   editingTutorials: Record<string, true>;
   /** Commands run this session: tutorial id → cell id → when (epoch ms). */
   tutorialProgress: Record<string, Record<string, number>>;
+  /** How each command run this session is doing: tutorial id → cell id → status. */
+  cellStatus: Record<string, Record<string, CellStatus>>;
+  /** Nodes whose terminal is running a command right now (by container id). */
+  busyTerminals: Record<string, true>;
   setTutorialsOpen: (open: boolean) => void;
   /** Show a tutorial's tab (opening the section), optionally in edit mode. */
   openTutorial: (tutorialId: string, options?: { edit?: boolean }) => void;
@@ -271,9 +291,33 @@ export interface TutorialSlice {
   setActiveTutorial: (tutorialId: string | null) => void;
   setTutorialEditing: (tutorialId: string, editing: boolean) => void;
   markCellRun: (tutorialId: string, cellId: string, at?: number) => void;
+  setCellStatus: (tutorialId: string, cellId: string, status: CellStatus) => void;
+  setTerminalBusy: (containerId: string, busy: boolean) => void;
   resetTutorialProgress: (tutorialId: string) => void;
   /** Close every tab and forget progress (another topology was opened). */
   resetTutorialSession: () => void;
+}
+
+/** Which way a link's traffic flows, relative to its connection's from → to. */
+export type TrafficDir = 'fwd' | 'rev' | 'both';
+
+/** Something running in a node (started since the lab was deployed). */
+export interface NodeProcess {
+  name: string;
+  args: string;
+}
+
+/** The live lab view, from the backend's collector (`features/pulse`). */
+export interface PulseSlice {
+  /** off: not watching; unavailable: the collector cannot run on this host. */
+  pulseState: 'off' | 'connecting' | 'live' | 'unavailable';
+  /** Connections carrying traffic right now (others are absent). Interface
+   *  legs are keyed like their canvas edge: `leg:<device>:<subnet>`. */
+  linkTraffic: Record<string, TrafficDir>;
+  /** Nodes with something running, and what. */
+  nodeProcesses: Record<string, NodeProcess[]>;
+  setPulseState: (state: PulseSlice['pulseState']) => void;
+  setPulse: (links: Record<string, TrafficDir>, nodes: Record<string, NodeProcess[]>) => void;
 }
 
 export interface ActivitySlice {
@@ -298,7 +342,7 @@ export interface ImagesSlice {
   setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & ActivitySlice & CatalogSlice & ImagesSlice & AuthSlice;
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & PulseSlice & ActivitySlice & CatalogSlice & ImagesSlice & AuthSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 

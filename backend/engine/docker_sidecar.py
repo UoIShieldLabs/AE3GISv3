@@ -16,6 +16,12 @@ Details that matter (verified against Docker Desktop + Kathara's VDE plugin):
 - No ``hostname``: Docker rejects it with ``network_mode=container:``.
 - Undeploying a lab under a sidecar works, but leaves the sidecar ``Exited``;
   callers remove sidecars before the lab, and by label afterwards.
+- A stream is read for as long as its command runs (a capture, a collector, a
+  background command: hours). Each pump gets a thread of its own
+  (``in_own_thread``), never one of asyncio's default executor: that pool has
+  ``min(32, cpus + 4)`` threads shared by every ``to_thread`` in the app, and
+  50 long reads would leave none for anything else (verified: the backend
+  stopped answering).
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ import contextlib
 import io
 import logging
 import tarfile
+import threading
 import uuid
 from collections.abc import Callable
 from pathlib import PurePosixPath
@@ -33,6 +40,38 @@ from typing import Any
 from engine.base import HelperSpec, SidecarSpec
 
 log = logging.getLogger(__name__)
+
+
+async def in_own_thread[T](fn: Callable[..., T], *args: Any, name: str = "ae3gis-pump") -> T:
+    """``await fn(*args)`` on a new daemon thread, not the default executor.
+
+    For blocking calls that last as long as a command runs. If the awaiting
+    task is cancelled the thread keeps going until ``fn`` returns (callers
+    close the stream so it does); its result is then dropped."""
+    loop = asyncio.get_running_loop()
+    fut: asyncio.Future[T] = loop.create_future()
+
+    def settle(result: Any, exc: BaseException | None) -> None:
+        if fut.done():
+            return
+        if exc is not None:
+            fut.set_exception(exc)
+        else:
+            fut.set_result(result)
+
+    def run() -> None:
+        try:
+            result = fn(*args)
+        except BaseException as exc:  # noqa: BLE001 - handed to the awaiting task
+            with contextlib.suppress(RuntimeError):  # the loop closed
+                loop.call_soon_threadsafe(settle, None, exc)
+        else:
+            with contextlib.suppress(RuntimeError):
+                loop.call_soon_threadsafe(settle, result, None)
+
+    threading.Thread(target=run, name=name, daemon=True).start()
+    return await fut
+
 
 LABEL_SIDECAR = "ae3gis.sidecar"
 LABEL_OWNER = "ae3gis.owner"
@@ -215,7 +254,9 @@ class DockerSidecar:
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
     ) -> int:
         try:
-            return await asyncio.to_thread(self._pump_sync, on_stdout, on_stderr)
+            return await in_own_thread(
+                self._pump_sync, on_stdout, on_stderr, name=f"pump-{self.name}"
+            )
         except asyncio.CancelledError:
             await self.remove()
             raise
@@ -325,7 +366,9 @@ class DockerExec:
         self, on_stdout: Callable[[bytes], None], on_stderr: Callable[[bytes], None]
     ) -> int:
         try:
-            return await asyncio.to_thread(self._pump_sync, on_stdout, on_stderr)
+            return await in_own_thread(
+                self._pump_sync, on_stdout, on_stderr, name=f"pump-{self.name}"
+            )
         except asyncio.CancelledError:
             await self.remove()
             raise

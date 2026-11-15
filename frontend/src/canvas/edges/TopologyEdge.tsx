@@ -7,13 +7,17 @@ import { openCaptureTab } from '@/features/capture/actions';
 import type { CanvasEdge, EdgeVariant } from '../projection';
 import { floatingEdgeParams } from './geometry';
 
-const VARIANT: Record<EdgeVariant, { className: string; width: number; dash?: string }> = {
+// A line is solid unless it carries traffic: dashes are kept for that, so a
+// variant shows through colour and width only.
+const VARIANT: Record<EdgeVariant, { className: string; width: number }> = {
   link: { className: 'stroke-fg-subtle', width: 1.5 },
-  uplink: { className: 'stroke-fg-subtle', width: 1.5, dash: '6 4' },
+  uplink: { className: 'stroke-fg-muted', width: 1.75 },
   wan: { className: 'stroke-accent', width: 1.75 },
-  site: { className: 'stroke-accent', width: 1.75, dash: '9 5' },
-  attachment: { className: 'stroke-warning', width: 1.5, dash: '2 3' },
+  site: { className: 'stroke-accent', width: 2.25 },
+  attachment: { className: 'stroke-warning', width: 1.5 },
 };
+/** Dashes of a link carrying traffic; `ae-dash` moves them by two periods. */
+const TRAFFIC_DASH = '6 4';
 
 export const TopologyEdge = memo(function TopologyEdge({ id, source, target, data, selected }: EdgeProps<CanvasEdge>) {
   const sourceNode = useInternalNode(source);
@@ -23,7 +27,7 @@ export const TopologyEdge = memo(function TopologyEdge({ id, source, target, dat
   const { sx, sy, tx, ty } = floatingEdgeParams(sourceNode, targetNode);
   const [path, labelX, labelY] = getStraightPath({ sourceX: sx, sourceY: sy, targetX: tx, targetY: ty });
   const variant = VARIANT[data?.variant ?? 'link'];
-  const active = !!data?.active;
+  const traffic = data?.traffic;
 
   return (
     <>
@@ -31,10 +35,16 @@ export const TopologyEdge = memo(function TopologyEdge({ id, source, target, dat
       <BaseEdge
         id={id}
         path={path}
-        className={cn('transition-[stroke] duration-100', selected ? '!stroke-accent' : variant.className, active && 'edge-active')}
+        className={cn(
+          'transition-[stroke] duration-100',
+          selected ? '!stroke-accent' : variant.className,
+          // The dashes crawl the way the traffic flows (both ways: along the edge).
+          traffic && 'edge-traffic',
+          traffic === 'rev' && 'edge-traffic-rev',
+        )}
         style={{
           strokeWidth: selected ? variant.width + 0.75 : variant.width,
-          strokeDasharray: active ? '6 4' : variant.dash,
+          strokeDasharray: traffic ? TRAFFIC_DASH : undefined,
         }}
         interactionWidth={16}
       />

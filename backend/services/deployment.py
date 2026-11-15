@@ -407,6 +407,9 @@ async def runtime_view(db: Session, engine: DeploymentEngine, topo: Topology) ->
         "activity": activity.active_for_topology(db, topo.id),
         "nodes": nodes,
         "saved": saved_state.summary(topo.saved_state),
+        "deployed_at": (
+            jobs.last_deploy_finished(db, topo.id) if topo.status == "deployed" else None
+        ),
     }
 
 

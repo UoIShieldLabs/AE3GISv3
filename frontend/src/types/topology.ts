@@ -144,12 +144,46 @@ export interface TutorialCommandCell {
 
 export type TutorialCell = TutorialMarkdownCell | TutorialCommandCell;
 
+/** A command the lab needs before a tutorial starts (run headless, in order). */
+export interface TutorialSetupStep {
+  id: string;
+  containerId: string;
+  command: string;
+  [key: string]: unknown;
+}
+
+/** Background traffic a tutorial keeps running: every `from` node sends to
+ *  every `to` node. `command` rows run a command line on each `from` node (once
+ *  per destination, with `{to}` replaced by its IP; once in all when `to` is
+ *  empty); `iperf3` rows are throughput flows. */
+export interface TutorialTraffic {
+  id: string;
+  label?: string;
+  kind: 'command' | 'iperf3';
+  from: string[];
+  to: string[];
+  command?: string;
+  protocol?: 'tcp' | 'udp';
+  /** iperf3 target rate per flow, e.g. "1M". */
+  bitrate?: string;
+  [key: string]: unknown;
+}
+
+/** What "Configure lab" does for a tutorial. */
+export interface TutorialSetup {
+  steps: TutorialSetupStep[];
+  traffic: TutorialTraffic[];
+  [key: string]: unknown;
+}
+
 /** A notebook of notes and commands, stepped through on the deployed lab.
- *  Editor-only: the backend never reads it; commands run in the browser's terminals. */
+ *  Editor-only: the backend never reads it; commands run in the browser's terminals
+ *  (its setup runs through the scenario and background-run APIs, sent inline). */
 export interface Tutorial {
   id: string;
   title: string;
   cells: TutorialCell[];
+  setup?: TutorialSetup;
   [key: string]: unknown;
 }
 

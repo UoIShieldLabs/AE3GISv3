@@ -24,6 +24,23 @@ from fastapi import WebSocket, WebSocketDisconnect
 log = logging.getLogger(__name__)
 
 
+# Prompt markers (OSC 133, the "shell integration" sequences terminals share):
+# ``C`` when a command starts, ``D;<exit>`` when the prompt is back. The browser's
+# terminal consumes them (never drawn) to tell whether a typed command is still
+# running. bash takes both from its environment; BusyBox ash only has a prompt,
+# so it reports ``D`` (through ``ENV``, read by interactive shells). An image
+# whose rc files replace these just reports nothing.
+_BASH_MARKERS = (
+    r"""export PROMPT_COMMAND='printf "\033]133;D;%s\007" "$?"'"""
+    r""""${PROMPT_COMMAND:+;$PROMPT_COMMAND}"; """
+    r"""export PS0='\e]133;C\a'; """
+)
+_ASH_MARKERS = (
+    r"""printf '%s\n' 'PS1="\\[\\033]133;D\\007\\]${PS1:-\\w \\\$ }"' """
+    r""">/tmp/ae3gis.shrc 2>/dev/null && export ENV=/tmp/ae3gis.shrc; """
+)
+
+
 def _interactive_shell_command() -> list[str]:
     return [
         "sh",
@@ -32,8 +49,8 @@ def _interactive_shell_command() -> list[str]:
             "mkdir -p /tmp; "
             "printf 'set horizontal-scroll-mode Off\\nset enable-bracketed-paste Off\\n' >/tmp/ae3gis.inputrc 2>/dev/null || true; "
             "export INPUTRC=/tmp/ae3gis.inputrc; "
-            "if command -v bash >/dev/null 2>&1; then exec bash -il; "
-            "elif command -v ash >/dev/null 2>&1; then exec ash -l; "
+            f"if command -v bash >/dev/null 2>&1; then {_BASH_MARKERS}exec bash -il; "
+            f"elif command -v ash >/dev/null 2>&1; then {_ASH_MARKERS}exec ash -l; "
             "else exec sh -l; fi"
         ),
     ]

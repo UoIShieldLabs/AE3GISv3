@@ -96,6 +96,8 @@ class Settings(BaseSettings):
     scenario_step_max_seconds: int = 600
     # Steps one scenario phase may run.
     scenario_max_steps: int = 200
+    # A background run (a tutorial's background traffic) is stopped after this long.
+    background_max_seconds: int = 4 * 3600
     # Monitors (resource sampling) stop themselves after this long.
     monitor_max_seconds: int = 24 * 3600
     # The Docker host's cgroup v2 tree, bound read-only into the monitor's

@@ -35,6 +35,7 @@ async function tick(topologyId: string) {
     st.setActiveJob(rt.active_job ?? null);
     st.setActivity(rt.activity ?? []);
     st.setSavedState(rt.saved ?? null);
+    if ((rt.deployed_at ?? null) !== st.deployedAt) st.setDeployedAt(rt.deployed_at ?? null);
     // Captures and traffic runs: poll briskly so their badges come and go on time.
     if (rt.activity?.length) delay = FAST_MS;
     if (rt.version !== st.version) st.setVersion(rt.version);

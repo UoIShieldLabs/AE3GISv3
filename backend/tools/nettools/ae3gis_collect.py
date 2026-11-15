@@ -27,6 +27,15 @@ Line format (compact on purpose, ~120 bytes per container)::
      "c": {"<id12>": [usage_usec, mem_current, inactive_file, mem_max|null,
                       pids|null, oom_kills|null, {"eth0": [rx_bytes, rx_packets,
                       rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop]}]}}
+
+With ``--procs`` (the live lab view) the line also carries ``btime`` (the
+host's boot, unix s) and every container gets an eighth item, its processes::
+
+    [<parent of its first process>, [[pid, ppid, start_ticks, comm, cmdline], ...]]
+
+without the ones started in the container's first seconds (its own boot).
+A process's start is ``btime + start_ticks / clk_tck``; one whose parent is the
+first item was started from outside the container (a ``docker exec``).
 """
 
 from __future__ import annotations
@@ -52,6 +61,9 @@ INFRA = {
     "vde_switch": "vde_switch",
 }
 MEM_KEYS = ("MemTotal", "MemFree", "MemAvailable", "Cached", "Slab", "SwapTotal", "SwapFree")
+# --procs: processes started this soon after the container's first are its boot.
+BOOT_S = 2.0
+CMDLINE_MAX = 160
 _ID = re.compile(r"^[0-9a-f]{64}$")
 _SCOPE = re.compile(r"^docker-([0-9a-f]{64})\.scope$")
 
@@ -124,6 +136,36 @@ def parse_proc_stat(text: str) -> tuple[str, int, int]:
     rest = text[rp + 2 :].split()
     # rest[0] is field 3 (state): utime = field 14, stime = 15, rss = 24.
     return comm, int(rest[11]) + int(rest[12]), int(rest[21])
+
+
+def parse_proc_ids(text: str) -> tuple[str, int, int]:
+    """/proc/<pid>/stat → (comm, parent pid, start time in ticks since boot)."""
+    lp, rp = text.find("("), text.rfind(")")
+    rest = text[rp + 2 :].split()
+    # rest[0] is field 3 (state): ppid = field 4, starttime = field 22.
+    return text[lp + 1 : rp], int(rest[1]), int(rest[19])
+
+
+def parse_btime(text: str) -> int | None:
+    """The ``btime`` line of /proc/stat: when the host booted (unix seconds)."""
+    for line in text.splitlines():
+        if line.startswith("btime "):
+            return int(line.split()[1])
+    return None
+
+
+def later_processes(rows: list[tuple[int, str, int, int]], boot_ticks: float) -> tuple[int, list]:
+    """``rows`` = (pid, comm, ppid, start) of one container → the parent of its
+    first process, and the processes started more than ``boot_ticks`` after it
+    as ``[pid, ppid, start, comm]``, oldest first."""
+    if not rows:
+        return 0, []
+    first = min(rows, key=lambda r: (r[3], r[0]))
+    later = [
+        [pid, ppid, start, comm] for pid, comm, ppid, start in rows if start - first[3] > boot_ticks
+    ]
+    later.sort(key=lambda r: (r[2], r[0]))
+    return first[2], later
 
 
 def container_dirs(root: str) -> dict[str, str]:
@@ -231,17 +273,35 @@ def read_infra(proc: str) -> tuple[dict[str, list[int]], int]:
     return out, procs
 
 
-def read_container(path: str, proc: str) -> list:
+def read_procs(pids: list[str], proc: str) -> list:
+    """The ``--procs`` item of one container (see the module docstring)."""
+    rows: list[tuple[int, str, int, int]] = []
+    for pid in pids:
+        text = _read(f"{proc}/{pid}/stat")
+        if not text:
+            continue
+        try:
+            comm, ppid, start = parse_proc_ids(text)
+        except (ValueError, IndexError):
+            continue
+        rows.append((int(pid), comm, ppid, start))
+    parent, later = later_processes(rows, BOOT_S * os.sysconf("SC_CLK_TCK"))
+    for row in later:
+        raw = _read(f"{proc}/{row[0]}/cmdline") or ""
+        row.append(" ".join(raw.split("\0")).strip()[:CMDLINE_MAX])
+    return [parent, later]
+
+
+def read_container(path: str, proc: str, *, procs_too: bool = False) -> list:
     cpu = parse_flat_keyed(_read(f"{path}/cpu.stat") or "")
     mstat = parse_flat_keyed(_read(f"{path}/memory.stat") or "")
     events = parse_flat_keyed(_read(f"{path}/memory.events") or "")
     ifaces: dict[str, list[int]] = {}
     procs = _read(f"{path}/cgroup.procs")
-    if procs:
-        first = procs.split("\n", 1)[0].strip()
-        if first:
-            ifaces = parse_net_dev(_read(f"{proc}/{first}/net/dev") or "")
-    return [
+    pids = [p for p in (procs or "").split() if p.isdigit()]
+    if pids:
+        ifaces = parse_net_dev(_read(f"{proc}/{pids[0]}/net/dev") or "")
+    out = [
         cpu.get("usage_usec", 0),
         _int(_read(f"{path}/memory.current")) or 0,
         mstat.get("inactive_file"),
@@ -250,9 +310,12 @@ def read_container(path: str, proc: str) -> list:
         events.get("oom_kill"),
         ifaces,
     ]
+    if procs_too:
+        out.append(read_procs(pids, proc))
+    return out
 
 
-def sweep(root: str, proc: str, *, infra: bool = True) -> dict:
+def sweep(root: str, proc: str, *, infra: bool = True, procs: bool = False) -> dict:
     started = time.monotonic()
     line: dict = {
         "v": 1,
@@ -264,8 +327,10 @@ def sweep(root: str, proc: str, *, infra: bool = True) -> dict:
         "infra": {},
         "c": {},
     }
+    if procs:
+        line["btime"] = parse_btime(_read(f"{proc}/stat") or "")
     for cid, path in container_dirs(root).items():
-        line["c"][cid[:12]] = read_container(path, proc)
+        line["c"][cid[:12]] = read_container(path, proc, procs_too=procs)
     if infra:
         line["infra"], line["host"]["procs"] = read_infra(proc)
     line["sweep_ms"] = round((time.monotonic() - started) * 1000, 1)
@@ -277,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--interval", type=float, default=1.0)
     ap.add_argument("--root", default="/host/cgroup", help="the host's cgroup v2 tree")
     ap.add_argument("--proc", default="/proc")
+    ap.add_argument("--procs", action="store_true", help="also list each container's processes")
     args = ap.parse_args(argv)
     stop = False
 
@@ -292,7 +358,7 @@ def main(argv: list[str] | None = None) -> int:
     interval = max(args.interval, 0.1)
     next_at = time.monotonic()
     while not stop:
-        line = sweep(args.root, args.proc)
+        line = sweep(args.root, args.proc, procs=args.procs)
         sys.stdout.write(json.dumps(line, separators=(",", ":")) + "\n")
         sys.stdout.flush()
         # Fixed rate: a slow sweep eats into the wait, never shifts the schedule;

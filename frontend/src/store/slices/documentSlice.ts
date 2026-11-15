@@ -14,6 +14,7 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
   lastError: null,
   busy: false,
   savedState: null,
+  deployedAt: null,
   destroyDialogOpen: false,
   owner: null,
   published: false,
@@ -50,6 +51,8 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
 
   setSavedState: (savedState) => set({ savedState }, false, 'setSavedState'),
 
+  setDeployedAt: (deployedAt) => set({ deployedAt }, false, 'setDeployedAt'),
+
   setDestroyDialogOpen: (destroyDialogOpen) => set({ destroyDialogOpen }, false, 'setDestroyDialogOpen'),
 
   setRecordMeta: (meta) => set({ ...meta }, false, 'setRecordMeta'),
@@ -66,6 +69,7 @@ export const createDocumentSlice: SliceCreator<DocumentSlice> = (set) => ({
       s.diagnostics = [];
       s.lastError = null;
       s.savedState = null;
+      s.deployedAt = null;
       s.destroyDialogOpen = false;
       s.owner = null;
       s.published = false;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { activityIndex, project, toStoredPosition } from '../projection';
+import { activityIndex, BUSY_FALLBACK_COLOR, liveIndex, project, toStoredPosition } from '../projection';
 import type { TopologyData } from '@/types/topology';
 
 function fixture(): TopologyData {
@@ -145,7 +145,7 @@ describe('project() — interface legs (multi-homing)', () => {
     return t;
   }
 
-  it('draws a dashed attachment edge when both ends are visible', () => {
+  it('draws an attachment edge when both ends are visible', () => {
     const { edges } = project({ topology: withLeg(), scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true } });
     const leg = edges.find((e) => e.id === 'leg:h1:sub-2');
     expect(leg).toMatchObject({ source: 'h1', target: 'sub-2', selectable: false, data: { variant: 'attachment' } });
@@ -233,5 +233,65 @@ describe('project() — interface legs (multi-homing)', () => {
     const { nodes } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: {} });
     const card = nodes.find((n) => n.id === 'sub-2')!;
     expect(card.data).toMatchObject({ gateway: { id: 'r1', ip: '10.0.2.1' } });
+  });
+});
+
+describe('project() — the live lab view', () => {
+  const live = () => liveIndex({
+    linkTraffic: { 'c-h': 'rev', 'c-wan': 'fwd', 'leg:h1:sub-2': 'both' },
+    nodeProcesses: { h1: [{ name: 'zeek', args: 'zeek -i eth0' }, { name: 'curl', args: 'while sleep 1; do curl x; done' }, { name: 'zeek', args: 'zeek -i eth1' }] },
+    busyTerminals: { r2: true },
+    colors: new Map([['h1', 'var(--chart-2)']]),
+  });
+
+  it('indexes busy nodes: processes or a running terminal, in the tutorial colour', () => {
+    const { busyNodes, linkTraffic } = live();
+    expect(busyNodes.get('h1')).toEqual({
+      color: 'var(--chart-2)',
+      label: 'zeek +1',
+      detail: ['zeek -i eth0', 'while sleep 1; do curl x; done', 'zeek -i eth1'],
+    });
+    expect(busyNodes.get('r2')).toEqual({ color: BUSY_FALLBACK_COLOR, label: 'running', detail: ['A command is running in its terminal'] });
+    expect(linkTraffic.get('c-h')).toBe('rev');
+    expect(liveIndex({ linkTraffic: {}, nodeProcesses: { h1: [] }, busyTerminals: {} }).busyNodes.size).toBe(0);
+  });
+
+  it('marks links carrying traffic and busy devices; the rest stay plain', () => {
+    const { nodes, edges } = project({ topology: fixture(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {}, live: live() });
+    expect(edges.find((e) => e.id === 'c-h')!.data!.traffic).toBe('rev');
+    expect(edges.find((e) => e.id === 'c-up')!.data!.traffic).toBeUndefined();
+    expect(nodes.find((n) => n.id === 'h1')!.data).toMatchObject({ busy: { label: 'zeek +1', color: 'var(--chart-2)' } });
+    expect(nodes.find((n) => n.id === 'sw1')!.data.busy).toBeUndefined();
+  });
+
+  it('a collapsed subnet or site card carries the colours of its busy devices', () => {
+    const atSite = project({ topology: fixture(), scope: { level: 'site', siteId: 'site-a' }, expanded: {}, live: live() });
+    expect(atSite.nodes.find((n) => n.id === 'sub-1')!.data.busy).toEqual(['var(--chart-2)']);
+    expect(atSite.nodes.find((n) => n.id === 'sub-2')!.data.busy).toEqual([BUSY_FALLBACK_COLOR]);
+    expect(atSite.edges.find((e) => e.id === 'c-wan')!.data!.traffic).toBe('fwd');
+    const atRoot = project({ topology: fixture(), scope: { level: 'root' }, expanded: {}, live: live() });
+    expect(atRoot.nodes.find((n) => n.id === 'site-a')!.data.busy).toEqual(['var(--chart-2)', BUSY_FALLBACK_COLOR]);
+    expect(atRoot.nodes.find((n) => n.id === 'site-b')!.data.busy).toBeUndefined();
+  });
+
+  it("a device's own leg edge shows its traffic", () => {
+    const t = fixture();
+    t.sites[0].subnets[0].containers[2].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.9' }];
+    const { edges } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: { 'sub-1': true }, live: live() });
+    expect(edges.find((e) => e.id === 'leg:h1:sub-2')!.data!.traffic).toBe('both');
+  });
+
+  it('legs merged onto two cards move when any of them carries traffic', () => {
+    const t = fixture();
+    t.sites[0].subnets[0].containers[2].interfaces = [{ subnetId: 'sub-2', ip: '10.0.2.9' }];
+    const { edges } = project({ topology: t, scope: { level: 'site', siteId: 'site-a' }, expanded: {}, live: live() });
+    const merged = edges.find((e) => e.id === 'leg:sub-1:sub-2')!;
+    expect(merged.data).toMatchObject({ label: 'H1', traffic: 'both' });
+  });
+
+  it('without the live view nothing is marked', () => {
+    const { nodes, edges } = project({ topology: fixture(), scope: { level: 'subnet', siteId: 'site-a', subnetId: 'sub-1' }, expanded: {} });
+    expect(edges.every((e) => e.data!.traffic === undefined)).toBe(true);
+    expect(nodes.every((n) => n.data.busy === undefined)).toBe(true);
   });
 });

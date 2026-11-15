@@ -14,15 +14,20 @@ import {
 import { CommandCell, type NodeRef } from './CommandCell';
 import { MarkdownCell } from './MarkdownCell';
 import { runNextStep } from './actions';
+import { nodeColors } from './colors';
+import { LabSetup } from './setup/LabSetup';
+import { LabSetupEditor } from './setup/LabSetupEditor';
+import { hasSetup } from './setup/model';
 import { isTutorialUnsaved, nextCell, progressOf } from './model';
 
 /** One tutorial: notes and commands, stepped through on the deployed lab. */
 export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onSave: () => void }) {
   // Students step through tutorials; writing them is the instructor's.
   const author = useCan('authorTutorials');
-  const { editing: editToggle, runs, blocked, unsaved, topology } = useAppShallow((s) => ({
+  const { editing: editToggle, runs, statuses, blocked, unsaved, topology } = useAppShallow((s) => ({
     editing: !!s.editingTutorials[tutorial.id],
     runs: s.tutorialProgress[tutorial.id],
+    statuses: s.cellStatus[tutorial.id],
     blocked: s.deployStatus === 'deployed' && s.backendId ? null : 'Deploy the topology to run steps',
     unsaved: isTutorialUnsaved(tutorial.id, s.topology, s.savedTopology),
     topology: s.topology,
@@ -33,6 +38,7 @@ export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onS
     () => [...nodes.values()].map((n) => ({ value: n.id, label: n.ip ? `${n.name} · ${n.ip}` : n.name })),
     [nodes],
   );
+  const colors = useMemo(() => nodeColors(tutorial), [tutorial]);
   const cells = tutorial.cells ?? [];
   const next = nextCell(tutorial, runs);
   const progress = progressOf(tutorial, runs);
@@ -159,7 +165,10 @@ export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onS
         ) : null}
       </header>
 
+      {!editing && hasSetup(tutorial) ? <LabSetup tutorial={tutorial} nodes={nodes} colors={colors} /> : null}
+
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-3">
+        {editing ? <LabSetupEditor tutorial={tutorial} nodes={nodes} nodeOptions={nodeOptions} /> : null}
         {cells.length === 0 && !editing ? (
           <EmptyState
             icon={<BookOpen />}
@@ -191,6 +200,8 @@ export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onS
                     editing={editing}
                     isNext={next?.id === cell.id}
                     ranAt={runs?.[cell.id]}
+                    status={statuses?.[cell.id]}
+                    color={colors.get(cell.containerId)}
                     blocked={blocked}
                     tools={editing ? <span className="flex opacity-0 transition-opacity group-hover/cell:opacity-100 group-focus-within/cell:opacity-100">{tools(cell, i)}</span> : undefined}
                     onRan={() => focusAfter(cell.id)}
