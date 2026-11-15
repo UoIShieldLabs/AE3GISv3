@@ -29,7 +29,8 @@ cd frontend && npm run api:types                 # regenerate src/api/schema.d.t
 ```
 
 Backend runs unprivileged with only the Docker socket mounted (no `sudo`, no
-`privileged`, no host netns). Push to `main` → SSH deploy via `.github/workflows/deploy.yml`.
+`privileged`, no host netns). Push to `main` → SSH deploy via `.github/workflows/deploy.yml`,
+skipped unless the repo variable `DEPLOY_ENABLED` is `true` (off: no deploy server yet).
 
 **Asked to run the benchmarks on a machine?** Follow `docs/benchmarks/RUNNING.md`
 (the `random` idle and `traffic` suites), including its section for Claude:
