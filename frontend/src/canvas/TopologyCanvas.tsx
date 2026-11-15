@@ -424,8 +424,10 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
             nodesConnectable={!readOnly}
             selectionOnDrag={tool === 'select'}
             selectionMode={SelectionMode.Partial}
+            // The wheel zooms (toward the pointer); pan by dragging with the
+            // middle button, or the left one with the Pan tool.
             panOnDrag={tool === 'select' ? [1] : true}
-            panOnScroll
+            zoomOnScroll
             zoomOnDoubleClick={false}
             snapToGrid={snapToGrid}
             snapGrid={[GRID, GRID]}
