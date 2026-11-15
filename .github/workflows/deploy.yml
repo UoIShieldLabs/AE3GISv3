@@ -69,9 +69,13 @@ jobs:
         working-directory: frontend
         run: npm run test
 
+  # Off until there is a server to deploy to: set the repository variable
+  # DEPLOY_ENABLED to "true" (Settings → Secrets and variables → Actions →
+  # Variables) once the DEPLOY_* secrets below are in place. Without it the
+  # job is skipped rather than failing on empty secrets.
   deploy:
     needs: [secret-scan, backend-tests, frontend-checks]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH

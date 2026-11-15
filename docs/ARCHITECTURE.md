@@ -1257,7 +1257,10 @@ runs in about a second without Docker.
 `.github/workflows/deploy.yml` runs on pushes and pull requests to `main`: a gitleaks
 secret scan, backend (`ruff check`, `ruff format --check`, `pytest`, OpenAPI
 freshness), and frontend (`eslint`, build, `vitest`). All three gate the deploy
-job, which ships over SSH on merge to `main`.
+job, which ships over SSH on merge to `main` once it is switched on: it runs
+only while the repository variable `DEPLOY_ENABLED` is `true`, and needs the
+secrets `DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` and
+`DEPLOY_PATH` (the server's clone of this repo). Until then it is skipped.
 
 ---
 
