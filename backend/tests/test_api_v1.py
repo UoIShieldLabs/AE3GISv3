@@ -223,22 +223,79 @@ def test_ics_scenario_b2_purdue_preset_loads_and_is_valid(client):
     containers = {
         c["id"]: c for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]
     }
-    # Four Purdue zones, two boundary firewalls, the full DMZ-crossing cast.
+    # Internet edge + four Purdue zones, two boundary firewalls, the external
+    # adversary and the full DMZ-crossing cast.
     subnet_ids = {sn["id"] for site in data["sites"] for sn in site["subnets"]}
-    assert subnet_ids == {"it-lan", "dmz-lan", "ot-lan", "process"}
-    assert {"fw-it", "fw-ot", "iot", "it-fileserver", "gateway", "historian", "ew", "rtu"} <= set(
-        containers
-    )
+    assert subnet_ids == {"edge", "it-lan", "dmz-lan", "ot-lan", "process"}
+    assert {
+        "external",
+        "fw-it",
+        "fw-ot",
+        "iot",
+        "it-fileserver",
+        "gateway",
+        "historian",
+        "ew",
+        "rtu",
+    } <= set(containers)
     assert containers["process-sim"]["webUiPort"] == 8000
     assert containers["hmi"]["webUiPort"] == 8080
     # It ships the tutorial, and every command cell targets a real node.
     titles = {t["title"] for t in data["tutorials"]}
-    assert "Industroyer across the Purdue model" in titles
+    assert "Industroyer — an ICS kill-chain case study" in titles
     for tutorial in data["tutorials"]:
         assert tutorial["cells"], "tutorial has cells"
         for cell in tutorial["cells"]:
             if cell["kind"] == "command":
                 assert cell["containerId"] in containers, cell["containerId"]
+        # The lab-setup block (headless steps + background traffic) targets real nodes too.
+        setup = tutorial.get("setup") or {}
+        for step in setup.get("steps", []):
+            assert step["containerId"] in containers, step["containerId"]
+        for row in setup.get("traffic", []):
+            for node_id in [*row.get("from", []), *row.get("to", [])]:
+                assert node_id in containers, node_id
     # It validates with no blocking errors (the mirror-before-sync warning is expected).
+    v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
+    assert not any(d["severity"] == "error" for d in v["diagnostics"])
+
+
+def test_ics_scenario_b3_preset_loads_and_is_valid(client):
+    # The simplified, diversified-intrusion scenario loads cleanly.
+    r = client.post("/api/v1/presets/ics-scenario-b3-industroyer/load")
+    assert r.status_code == 201, r.text
+    data = r.json()["data"]
+    containers = {
+        c["id"]: c for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]
+    }
+    # Four Purdue zones (no internet edge: the attacker starts on iot).
+    subnet_ids = {sn["id"] for site in data["sites"] for sn in site["subnets"]}
+    assert subnet_ids == {"it-lan", "dmz-lan", "ot-lan", "process"}
+    assert "external" not in containers
+    assert {
+        "fw-it",
+        "fw-ot",
+        "iot",
+        "it-fileserver",
+        "gateway",
+        "historian",
+        "ew",
+        "rtu",
+    } <= set(containers)
+    assert containers["process-sim"]["webUiPort"] == 8000
+    assert containers["hmi"]["webUiPort"] == 8080
+    titles = {t["title"] for t in data["tutorials"]}
+    assert "Industroyer — five ways into the plant" in titles
+    for tutorial in data["tutorials"]:
+        assert tutorial["cells"], "tutorial has cells"
+        for cell in tutorial["cells"]:
+            if cell["kind"] == "command":
+                assert cell["containerId"] in containers, cell["containerId"]
+        setup = tutorial.get("setup") or {}
+        for step in setup.get("steps", []):
+            assert step["containerId"] in containers, step["containerId"]
+        for row in setup.get("traffic", []):
+            for node_id in [*row.get("from", []), *row.get("to", [])]:
+                assert node_id in containers, node_id
     v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
     assert not any(d["severity"] == "error" for d in v["diagnostics"])
