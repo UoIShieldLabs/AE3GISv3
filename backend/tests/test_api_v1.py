@@ -213,3 +213,32 @@ def test_ics_scenario_b_preset_loads_and_is_valid(client):
     # It validates with no blocking errors (warnings like mirror-before-sync are fine).
     v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
     assert not any(d["severity"] == "error" for d in v["diagnostics"])
+
+
+def test_ics_scenario_b2_purdue_preset_loads_and_is_valid(client):
+    # The revised Purdue/DMZ Industroyer scenario loads cleanly.
+    r = client.post("/api/v1/presets/ics-scenario-b2-industroyer-purdue/load")
+    assert r.status_code == 201, r.text
+    data = r.json()["data"]
+    containers = {
+        c["id"]: c for site in data["sites"] for sn in site["subnets"] for c in sn["containers"]
+    }
+    # Four Purdue zones, two boundary firewalls, the full DMZ-crossing cast.
+    subnet_ids = {sn["id"] for site in data["sites"] for sn in site["subnets"]}
+    assert subnet_ids == {"it-lan", "dmz-lan", "ot-lan", "process"}
+    assert {"fw-it", "fw-ot", "iot", "it-fileserver", "gateway", "historian", "ew", "rtu"} <= set(
+        containers
+    )
+    assert containers["process-sim"]["webUiPort"] == 8000
+    assert containers["hmi"]["webUiPort"] == 8080
+    # It ships the tutorial, and every command cell targets a real node.
+    titles = {t["title"] for t in data["tutorials"]}
+    assert "Industroyer across the Purdue model" in titles
+    for tutorial in data["tutorials"]:
+        assert tutorial["cells"], "tutorial has cells"
+        for cell in tutorial["cells"]:
+            if cell["kind"] == "command":
+                assert cell["containerId"] in containers, cell["containerId"]
+    # It validates with no blocking errors (the mirror-before-sync warning is expected).
+    v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
+    assert not any(d["severity"] == "error" for d in v["diagnostics"])
