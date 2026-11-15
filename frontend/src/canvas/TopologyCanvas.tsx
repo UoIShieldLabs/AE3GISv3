@@ -113,17 +113,21 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   // next render, so a node that was already selected would stay deselected.
   // Mirror each change into them right away, as React Flow does for nodes
   // itself ("the onNodesChange callback comes too late here").
+  //
+  // A select change is a gesture on this canvas, so the result keeps only what
+  // the canvas draws: a click on a device selects that device alone, not also
+  // the subnet that was selected before drilling into it.
   const flowStore = useStoreApi<CanvasNode, CanvasEdge>();
   const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
     const select = changes.filter((c) => c.type === 'select');
     if (select.length) {
-      const { nodeLookup } = flowStore.getState();
+      const { nodeLookup, edgeLookup } = flowStore.getState();
       for (const c of select) {
         const n = nodeLookup.get(c.id);
         if (n) n.selected = c.selected;
       }
       const st = useAppStore.getState();
-      st.setSelection(applySelectChanges(st.selection, 'nodeIds', select));
+      st.setSelection(applySelectChanges(st.selection, 'nodeIds', select, { nodes: nodeLookup, edges: edgeLookup }));
     }
     const rest = changes.filter((c) => c.type !== 'remove' && c.type !== 'select');
     if (rest.length) setNodes((nds) => applyNodeChanges(rest, nds));
@@ -131,13 +135,13 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
   const onEdgesChange = useCallback((changes: EdgeChange<CanvasEdge>[]) => {
     const select = changes.filter((c) => c.type === 'select');
     if (select.length) {
-      const { edgeLookup } = flowStore.getState();
+      const { nodeLookup, edgeLookup } = flowStore.getState();
       for (const c of select) {
         const e = edgeLookup.get(c.id);
         if (e) e.selected = c.selected;
       }
       const st = useAppStore.getState();
-      st.setSelection(applySelectChanges(st.selection, 'edgeIds', select));
+      st.setSelection(applySelectChanges(st.selection, 'edgeIds', select, { nodes: nodeLookup, edges: edgeLookup }));
     }
     const rest = changes.filter((c) => c.type !== 'remove' && c.type !== 'select');
     if (rest.length) setEdges((eds) => applyEdgeChanges(rest, eds));
@@ -323,6 +327,10 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
     }
   }, [deployStatus, actions, drillInto]);
 
+  // React Flow deselects only what it draws; a click on empty canvas also
+  // clears what is selected elsewhere (e.g. the subnet this view opened).
+  const onPaneClick = useCallback(() => useAppStore.getState().clearSelection(), []);
+
   const [ctxTarget, setCtxTarget] = useState<ContextTarget | null>(null);
   const onPaneContextMenu = useCallback((e: MouseEvent | React.MouseEvent) => {
     setCtxTarget({ kind: 'pane', flowPosition: rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }) });
@@ -400,6 +408,7 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
             onConnect={onConnect}
             onNodeDragStop={onNodeDragStop}
             onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={onPaneClick}
             onPaneContextMenu={onPaneContextMenu}
             onNodeContextMenu={onNodeContextMenu}
             onEdgeContextMenu={onEdgeContextMenu}
