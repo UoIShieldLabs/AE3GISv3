@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Check, ChevronRight, CircleDashed, TriangleAlert, X } from 'lucide-react';
 import type { Tutorial } from '@/types/topology';
 import { cn } from '@/lib/cn';
@@ -20,11 +20,17 @@ export function LabSetup({ tutorial, nodes, colors }: {
   const steps = (tutorial.setup?.steps ?? []).filter((s) => s.containerId && s.command.trim());
   const traffic = tutorial.setup?.traffic ?? [];
   const { setup, traffic: live, blocked } = view;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(setup.state === 'failed');
   const [shown, setShown] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
-  // A failed setup is the one thing worth opening by itself.
-  useEffect(() => { if (setup.state === 'failed') setOpen(true); }, [setup.state]);
+  // A failed setup is the one thing worth opening by itself, in the render that
+  // shows it failed (an effect opened it a render later: a moment of "step 1
+  // failed" over a closed block, and a flaky test).
+  const [lastState, setLastState] = useState(setup.state);
+  if (lastState !== setup.state) {
+    setLastState(setup.state);
+    if (setup.state === 'failed') setOpen(true);
+  }
 
   const configure = async () => {
     setWorking(true);
