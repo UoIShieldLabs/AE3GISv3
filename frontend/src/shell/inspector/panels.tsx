@@ -70,6 +70,7 @@ export function TopologyPanel() {
           <li>Drag device types from the palette onto a subnet.</li>
           <li>Drag from a node's edge to link it; hosts link within a subnet, routers link subnets and sites.</li>
           <li>Press <kbd className="font-mono">E</kbd> on a subnet to expand it in place.</li>
+          <li>Scroll to zoom. Pan by dragging with the middle mouse button, or with the Pan tool (<kbd className="font-mono">H</kbd>).</li>
         </ul>
       </Section>
     </>
