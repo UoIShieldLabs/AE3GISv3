@@ -157,3 +157,25 @@ def test_live_websocket(client, topology, wait_jobs, fast):
         with client.websocket_connect(f"/api/v1/topologies/ws/{tid}/monitors/nope") as ws:
             ws.receive_json()
     assert exc.value.code == 4004
+
+
+def test_live_websocket_over_the_node_limit(client, topology, wait_jobs, fast, monkeypatch):
+    """Above the live limit a sweep is ``partial``: the busiest rows plus the
+    viewer's pins, and never the channel's full row list."""
+    from services import monitor as monitor_service
+
+    monkeypatch.setattr(monitor_service, "LIVE_NODE_LIMIT", 1)
+    _deploy(client, wait_jobs, topology)
+    mon = _start(client, topology["id"]).json()
+    _until(lambda: client.get(f"/api/v1/monitors/{mon['id']}/samples").json()["nodes"])
+    with client.websocket_connect(f"{mon['ws_path']}?pins=hB") as ws:
+        hello = ws.receive_json()
+        assert all(monitor_service.ALL_ROWS not in m for m in hello["backlog"])
+        sweep = ws.receive_json()
+        assert sweep["type"] == "sweep" and sweep["partial"] is True
+        assert monitor_service.ALL_ROWS not in sweep
+        assert "hB" in {n["target"] for n in sweep["nodes"]}
+        client.post(f"/api/v1/jobs/{mon['id']}/stop")
+        while ws.receive_json()["type"] != "end":
+            pass
+    wait_jobs()

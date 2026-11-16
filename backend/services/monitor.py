@@ -67,7 +67,11 @@ CSV_NAMES = (HOST_NAME, NODES_NAME, IFACES_NAME, MARKERS_NAME)
 REFRESH_S = 10.0  # re-read container labels at least this often
 UNKNOWN_REFRESH_S = 2.0  # …and sooner when an unknown container shows up
 FIRST_SWEEP_TIMEOUT_S = 30.0
-LIVE_NODE_LIMIT = 50  # per-node rows in live messages up to this many nodes
+LIVE_NODE_LIMIT = 50  # every node's row in live messages up to this many nodes
+# Above it a live message carries the busiest nodes' rows (``partial``); the
+# channel's copy also holds every row under this key, for ``live_view`` to add
+# what one viewer pinned. It never reaches a client, the ring or callbacks.
+ALL_ROWS = "_all_nodes"
 RING = 120  # live messages kept for late subscribers
 
 HOST_COLUMNS = [
@@ -375,11 +379,12 @@ class MonitorSession:
             except Exception as exc:  # pragma: no cover - never let one bad sweep stop the monitor
                 log.warning("Monitor sweep failed: %s", exc)
                 continue
-            payload = self._payload(result)
+            payload, every_row = self._payload(result)
             self.latest = payload
             self.ring.append(payload)
             if self.channel is not None:
-                self.channel.publish(payload, replay=False)
+                live_msg = payload if every_row is None else {**payload, ALL_ROWS: every_row}
+                self.channel.publish(live_msg, replay=False)
             for cb in list(self.on_sweep):
                 try:
                     cb(result, payload)
@@ -415,20 +420,26 @@ class MonitorSession:
         self._seen_ever |= result.seen_nodes
         return result
 
-    def _payload(self, r: m.SweepResult) -> dict[str, Any]:
+    def _payload(self, r: m.SweepResult) -> tuple[dict[str, Any], list[dict[str, Any]] | None]:
+        """The live message, and every node's row when the message holds only
+        the busiest (``partial``), else None."""
         nodes = [row for row in r.nodes if row["kind"] == "node"]
-        return {
+        selection = m.selection_summary(r.nodes)
+        partial = len(nodes) > LIVE_NODE_LIMIT
+        payload = {
             "type": "sweep",
             "t": r.t,
             "step": self.scope.step,
             "host": r.host,
             "groups": r.groups,
-            "selection": m.selection_summary(r.nodes),
-            "nodes": nodes if len(nodes) <= LIVE_NODE_LIMIT else None,
+            "selection": selection,
+            "nodes": m.busiest_rows(nodes, selection) if partial else nodes,
+            "partial": partial,
             "tools": [row for row in r.nodes if row["kind"] == "tool"],
             "oom": r.oom,
             "missing": sorted(self._missing),
         }
+        return payload, nodes if partial else None
 
     # ── results ──
     def host_series(self, key: str, since: float = 0.0, until: float | None = None) -> list[float]:
@@ -456,6 +467,22 @@ class MonitorSession:
             "missing": sorted(self._missing),
             "error": self.error,
         }
+
+
+def live_view(msg: dict[str, Any], pins: set[str]) -> dict[str, Any]:
+    """A channel message as one viewer gets it: without the full row list, and
+    with the rows of the nodes it pinned added to a partial message."""
+    rows = msg.get(ALL_ROWS)
+    if rows is None:
+        return msg
+    out = {k: v for k, v in msg.items() if k != ALL_ROWS}
+    if pins:
+        have = {row["target"] for row in out["nodes"]}
+        out["nodes"] = [
+            *out["nodes"],
+            *(row for row in rows if row["target"] in pins and row["target"] not in have),
+        ]
+    return out
 
 
 # ── reading recorded samples ──────────────────────────────────────────

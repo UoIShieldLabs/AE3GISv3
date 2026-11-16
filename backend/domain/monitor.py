@@ -389,6 +389,13 @@ def selection_summary(rows: list[dict[str, Any]], top: int = 5) -> dict[str, Any
     }
 
 
+def busiest_rows(nodes: list[dict[str, Any]], selection: dict[str, Any]) -> list[dict[str, Any]]:
+    """The rows of the nodes in a sweep's top lists (CPU, memory, network), in
+    the order given: what a live message carries when it can't carry all."""
+    wanted = {target for ranked in selection["top"].values() for target, _ in ranked}
+    return [row for row in nodes if row["target"] in wanted]
+
+
 class RunningStats:
     """Count / mean / max of one metric without keeping the values."""
 
