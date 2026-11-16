@@ -1,15 +1,16 @@
-import { useMemo } from 'react';
-import { AlertTriangle, Download, Gauge, Plus, Square } from 'lucide-react';
-import { useAppStore } from '@/store';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, ChevronDown, ChevronRight, Download, Gauge, Pin, PinOff, Plus, Square, X } from 'lucide-react';
+import { useAppShallow } from '@/store/selectors';
 import { locate } from '@/lib/topology';
-import { Badge, Button } from '@/ui';
+import { Badge, Button, IconButton, MultiSelect, Select } from '@/ui';
 import { TimeSeriesChart } from '@/ui/charts/TimeSeriesChart';
 import { formatBps, formatBytes } from '@/features/capture/packetBuffer';
 import { EnvironmentDetails } from '@/features/traffic/EnvironmentDetails';
-import { useMonitorStream } from './useMonitorStream';
+import { NODE_ROWS_LIMIT, useMonitorStream } from './useMonitorStream';
 import {
   cpuByGroupChart,
   dockerRss,
+  groupRows,
   hostCpuChart,
   latestByNode,
   memoryChart,
@@ -18,7 +19,10 @@ import {
   selectionCpuChart,
   selectionNetChart,
   type HostRow,
+  type NodeRow,
 } from './model';
+import { GROUP_BY, grouping, type GroupBy } from './grouping';
+import { nodesOf } from './selection';
 import { exportMonitor, openMonitorPanel, stopMonitor } from './actions';
 
 const STOPPED_BY: Record<string, string> = {
@@ -28,6 +32,10 @@ const STOPPED_BY: Record<string, string> = {
   shutdown: 'Stopped: the server shut down',
   'limit:time': 'Stopped at the time limit',
 };
+
+/** Lines per device chart (one per --chart-N colour). */
+const SHOWN = 6;
+const MACHINE_OPEN_KEY = 'ae3gis.monitor.machineOpen';
 
 interface Summary { mean: number | null; p95: number | null; max: number | null }
 interface MonitorResult {
@@ -40,6 +48,13 @@ interface MonitorResult {
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const pct = (v: unknown) => (num(v) === null ? '–' : `${num(v)!.toFixed(num(v)! < 10 ? 1 : 0)}%`);
+
+function readMachineOpen(): boolean {
+  try { return localStorage.getItem(MACHINE_OPEN_KEY) === '1'; } catch { return false; }
+}
+function writeMachineOpen(open: boolean) {
+  try { localStorage.setItem(MACHINE_OPEN_KEY, open ? '1' : '0'); } catch { /* per-viewer convenience only */ }
+}
 
 function HostLine({ row }: { row: HostRow | undefined }) {
   if (!row) return null;
@@ -61,40 +76,81 @@ function HostLine({ row }: { row: HostRow | undefined }) {
   return <div className="truncate text-2xs text-fg-muted tabular-nums">{parts.join(' · ')}</div>;
 }
 
-/** A monitor in the dock: the host, Docker and the chosen nodes over time. */
-export function MonitorView({ jobId }: { jobId: string }) {
-  const backendId = useAppStore((s) => s.backendId);
-  const topology = useAppStore((s) => s.topology);
-  const { monitor, host, agg, nodes, markers, latest, oom, missing, ended } = useMonitorStream(backendId, jobId);
+/** A monitor in the dock: every device of the lab (pinned, busiest or grouped)
+ *  over time, then the machine running it. ``seed`` pins devices (a device's
+ *  "Monitor…" while this monitor runs). */
+export function MonitorView({ jobId, seed }: { jobId: string; seed?: { nodes?: string[]; nonce: number } }) {
+  const { backendId, topology, selection } = useAppShallow((s) => ({ backendId: s.backendId, topology: s.topology, selection: s.selection }));
+  const [pins, setPins] = useState<string[]>(() => seed?.nodes ?? []);
+  const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  const [machineOpen, setMachineOpen] = useState(readMachineOpen);
+  const { monitor, host, agg, nodes, markers, latest, partial, oom, missing, ended } = useMonitorStream(backendId, jobId, pins);
   const live = !!monitor?.live && !ended;
   const failed = monitor?.status === 'failed';
   const result = monitor?.result as MonitorResult | null | undefined;
 
+  // "Monitor…" on a device while this runs: pin it, once per request (adjusting state while rendering).
+  const [appliedSeed, setAppliedSeed] = useState<number | undefined>(seed?.nonce);
+  if (seed?.nodes?.length && seed.nonce !== appliedSeed) {
+    setAppliedSeed(seed.nonce);
+    setPins((p) => [...new Set([...p, ...seed.nodes!])]);
+    setGroupBy('none');
+  }
+
+  const devices = useMemo(() => nodesOf(topology), [topology]);
+  const deviceIds = useMemo(() => new Set(devices.map((d) => d.id)), [devices]);
   const nameOf = (id: string) => {
     const hit = locate(topology, id);
     return hit?.kind === 'container' ? hit.container.name : id;
   };
   const order = useMemo(() => monitor?.monitored ?? [], [monitor]);
-  const perNode = nodes.length > 0;
+  const count = monitor?.monitored.length ?? 0;
+  const grouped = groupBy !== 'none' && !partial;
+  const pinned = new Set(pins);
+  /** New pins mean "show me these": back to one line per device. */
+  const changePins = (next: string[]) => {
+    if (next.some((id) => !pinned.has(id))) setGroupBy('none');
+    setPins(next);
+  };
+  const togglePin = (id: string) => changePins(pinned.has(id) ? pins.filter((x) => x !== id) : [...pins, id]);
+  const selectedUnpinned = selection.nodeIds.filter((id) => deviceIds.has(id) && !pinned.has(id));
 
-  const charts = useMemo(
+  const deviceCharts = useMemo(() => {
+    const metric = (key: 'cpu_pct' | 'mem_used' | 'rx_bps' | 'tx_bps') => {
+      if (grouped) {
+        const g = grouping(topology, groupBy as Exclude<GroupBy, 'none'>);
+        return perNodeChart(groupRows(nodes, g.groupOf), key, g.labelOf, g.order, SHOWN);
+      }
+      return perNodeChart(nodes, key, nameOf, order, SHOWN, pins.length ? pins : undefined);
+    };
+    return { cpu: metric('cpu_pct'), mem: metric('mem_used'), rx: metric('rx_bps'), tx: metric('tx_bps') };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, order, topology, grouped, groupBy, pins]);
+
+  const machineCharts = useMemo(
     () => ({
       cpu: hostCpuChart(host),
       groups: cpuByGroupChart(host),
       mem: memoryChart(host),
       psi: pressureChart(host),
-      selCpu: selectionCpuChart(agg),
-      selNet: selectionNetChart(agg),
+      labCpu: selectionCpuChart(agg),
+      labNet: selectionNetChart(agg),
     }),
     [host, agg],
   );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const nodeCharts = useMemo(() => (perNode ? { cpu: perNodeChart(nodes, 'cpu_pct', nameOf, order), mem: perNodeChart(nodes, 'mem_used', nameOf, order), rx: perNodeChart(nodes, 'rx_bps', nameOf, order) } : null), [nodes, order, topology]);
-  const table = useMemo(() => latestByNode(nodes.filter((r) => r.kind === 'node')), [nodes]);
+
+  const table = useMemo(() => latestByNode(nodes.filter((r): r is NodeRow => r.kind === 'node')), [nodes]);
   const tools = latest?.tools ?? [];
-  const note = (hidden: number) => (hidden ? `busiest 6 of ${hidden + 6}` : undefined);
-  const count = monitor?.monitored.length ?? 0;
   const lastT = host.length ? host[host.length - 1].t : null;
+  const hidden = deviceCharts.cpu.hidden;
+  const showing = grouped
+    ? `one line per ${groupBy === 'subnet' ? 'subnet' : 'device type'}${hidden ? ` · busiest ${SHOWN} of ${hidden + SHOWN}` : ''}`
+    : pins.length
+      ? `${Math.min(pins.length, SHOWN)} pinned${pins.length > SHOWN ? ` · the first ${SHOWN} of ${pins.length}` : ''}`
+      : `the busiest ${Math.min(SHOWN, count)} of ${count}`;
+  // A partial sweep carries only the busiest devices: "of N" would count those, not the lab.
+  const note = !grouped && !pins.length && hidden ? (partial ? `busiest ${SHOWN}` : `busiest ${SHOWN} of ${hidden + SHOWN}`) : undefined;
+  const deviceOptions = devices.map((d) => ({ value: d.id, label: d.name, description: d.ip, keywords: [d.type] }));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -102,7 +158,7 @@ export function MonitorView({ jobId }: { jobId: string }) {
         <Gauge className="size-3.5 text-fg-muted" aria-hidden />
         <span className="font-medium text-fg">{monitor?.label || 'Monitor'}</span>
         {live ? <Badge tone="success" dot="pulse">Recording</Badge> : failed ? <Badge tone="danger">Failed</Badge> : monitor ? <Badge>{STOPPED_BY[result?.stopped_by ?? ''] ?? 'Done'}</Badge> : null}
-        {monitor ? <span className="text-fg-muted tabular-nums">{count} node{count === 1 ? '' : 's'} · every {monitor.interval_s}s{lastT !== null ? ` · ${lastT.toFixed(0)}s` : ''}</span> : null}
+        {monitor ? <span className="text-fg-muted tabular-nums">{count} device{count === 1 ? '' : 's'} · every {monitor.interval_s}s{lastT !== null ? ` · ${lastT.toFixed(0)}s` : ''}</span> : null}
         <div className="ml-auto flex items-center gap-1.5">
           {monitor ? <Button size="sm" variant="ghost" onClick={() => exportMonitor(jobId)}><Download /> Export</Button> : null}
           {!live && monitor ? <Button size="sm" variant="ghost" onClick={() => openMonitorPanel()}><Plus /> New monitor</Button> : null}
@@ -121,44 +177,50 @@ export function MonitorView({ jobId }: { jobId: string }) {
             </div>
           </div>
         ) : null}
-        <HostLine row={host[host.length - 1]} />
 
-        <h3 className="mb-1 mt-3 text-xs font-medium text-fg">Host</h3>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-x-5 gap-y-4">
-          <TimeSeriesChart title="Host CPU" unit="%" data={charts.cpu} />
-          <TimeSeriesChart title="CPU by group" unit="cores" data={charts.groups} />
-          <TimeSeriesChart title="Memory" unit="GB" data={charts.mem} note="host used vs. what containers and Docker account for" />
-          <TimeSeriesChart title="Pressure (stalled time)" unit="%" data={charts.psi} />
-        </div>
-
-        <h3 className="mb-1 mt-5 text-xs font-medium text-fg">
-          Monitored nodes <span className="font-normal text-fg-subtle">· {count}</span>
-        </h3>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-x-5 gap-y-4">
-          <TimeSeriesChart title="CPU per node" unit="%" data={charts.selCpu} note="100% = one core" />
-          <TimeSeriesChart title="Network (all monitored nodes)" unit="Mb/s" data={charts.selNet} />
-          {nodeCharts ? (
-            <>
-              <TimeSeriesChart title="CPU" unit="%" data={nodeCharts.cpu} note={note(nodeCharts.cpu.hidden)} />
-              <TimeSeriesChart title="Memory" unit="MB" data={nodeCharts.mem} note={note(nodeCharts.mem.hidden)} />
-              <TimeSeriesChart title="Receive" unit="Mb/s" data={nodeCharts.rx} note={note(nodeCharts.rx.hidden)} />
-            </>
+        {/* ── Devices ── */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <h3 className="mr-1 font-medium text-fg">Devices</h3>
+          <MultiSelect size="sm" className="w-52" value={pins} onValueChange={changePins} options={deviceOptions} placeholder="Pin devices…" searchPlaceholder="Find a device…" aria-label="Pinned devices" />
+          {selectedUnpinned.length ? (
+            <Button size="sm" variant="ghost" onClick={() => changePins([...pins, ...selectedUnpinned])} title="Pin the devices selected on the canvas">
+              <Pin /> Pin selected ({selectedUnpinned.length})
+            </Button>
           ) : null}
+          {pins.length ? <Button size="sm" variant="ghost" onClick={() => setPins([])}><X /> Clear pins</Button> : null}
+          <span title={partial ? `Grouping needs every device's data, sent for labs up to ${NODE_ROWS_LIMIT} devices` : undefined}>
+            <Select size="sm" className="w-36" value={partial ? 'none' : groupBy} onValueChange={setGroupBy} options={GROUP_BY} disabled={partial} />
+          </span>
+          <span className="text-fg-subtle">Showing {showing}{grouped && pins.length ? ' · pins show under Each device' : ''}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-x-5 gap-y-4">
+          <TimeSeriesChart title="CPU" unit="%" data={deviceCharts.cpu} note={note ? `${note} · 100% = one core` : '100% = one core'} />
+          <TimeSeriesChart title="Memory" unit="MB" data={deviceCharts.mem} note={note} />
+          <TimeSeriesChart title="Receive" unit="Mb/s" data={deviceCharts.rx} note={note} />
+          <TimeSeriesChart title="Send" unit="Mb/s" data={deviceCharts.tx} note={note} />
         </div>
 
         {table.length ? (
           <section className="mt-5">
-            <h3 className="mb-1.5 text-xs font-medium text-fg">Latest</h3>
+            <h3 className="mb-1.5 text-xs font-medium text-fg">
+              Now{partial ? <span className="font-normal text-fg-subtle"> · the busiest and pinned devices of {count}</span> : null}
+            </h3>
             <table className="w-full text-left text-2xs tabular-nums">
               <thead className="text-fg-muted">
                 <tr className="border-b border-border">
-                  <th className="py-1 font-medium">Node</th><th className="text-right font-medium">CPU %</th><th className="text-right font-medium">Memory</th><th className="text-right font-medium">Processes</th>
+                  <th className="w-7" aria-label="Pinned" />
+                  <th className="py-1 font-medium">Device</th><th className="text-right font-medium">CPU %</th><th className="text-right font-medium">Memory</th><th className="text-right font-medium">Processes</th>
                   <th className="text-right font-medium">Receive</th><th className="text-right font-medium">Send</th><th className="text-right font-medium">Drops</th>
                 </tr>
               </thead>
               <tbody>
                 {table.map((r) => (
                   <tr key={r.target} className="border-b border-border/60 text-fg">
+                    <td>
+                      <IconButton size="icon-xs" label={pinned.has(r.target) ? `Unpin ${nameOf(r.target)}` : `Pin ${nameOf(r.target)}`} onClick={() => togglePin(r.target)} className={pinned.has(r.target) ? 'text-accent' : 'text-fg-subtle'}>
+                        {pinned.has(r.target) ? <PinOff /> : <Pin />}
+                      </IconButton>
+                    </td>
                     <td className="py-1">{nameOf(r.target)}</td>
                     <td className="text-right">{r.cpu_pct?.toFixed(1) ?? '–'}</td>
                     <td className="text-right">{formatBytes(r.mem_used)}</td>
@@ -171,29 +233,40 @@ export function MonitorView({ jobId }: { jobId: string }) {
               </tbody>
             </table>
           </section>
-        ) : latest ? (
-          <section className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4 text-2xs">
-            {(['cpu_pct', 'mem_used', 'net_bps'] as const).map((k) => (
-              <div key={k}>
-                <h3 className="mb-1 text-xs font-medium text-fg">Top by {k === 'cpu_pct' ? 'CPU' : k === 'mem_used' ? 'memory' : 'network'}</h3>
-                <ol className="space-y-0.5 tabular-nums">
-                  {latest.selection.top[k].map(([node, v]) => (
-                    <li key={node} className="flex justify-between gap-2 text-fg">
-                      <span className="truncate">{nameOf(node)}</span>
-                      <span className="text-fg-muted">{k === 'cpu_pct' ? `${v.toFixed(1)}%` : k === 'mem_used' ? formatBytes(v) : formatBps(v)}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </section>
         ) : null}
 
-        {tools.length ? (
-          <p className="mt-3 text-2xs text-fg-subtle">
-            AE3GIS tools now: {tools.map((t) => `${t.purpose || t.target} ${t.cpu_pct?.toFixed(1) ?? '–'}% CPU, ${formatBytes(t.mem_used)}`).join(' · ')}. Tool load is counted apart from the nodes.
-          </p>
-        ) : null}
+        {/* ── The machine ── */}
+        <section className="mt-5 border-t border-border pt-3">
+          <button
+            type="button"
+            className="flex w-full items-center gap-1.5 text-left text-xs font-medium text-fg"
+            aria-expanded={machineOpen}
+            onClick={() => { setMachineOpen((o) => { writeMachineOpen(!o); return !o; }); }}
+          >
+            {machineOpen ? <ChevronDown className="size-3.5" aria-hidden /> : <ChevronRight className="size-3.5" aria-hidden />}
+            Machine &amp; overhead
+            <span className="font-normal text-fg-subtle">· the host running the lab, Docker and AE3GIS's own tools</span>
+          </button>
+          {!machineOpen ? <div className="mt-1 pl-5"><HostLine row={host[host.length - 1]} /></div> : null}
+          {machineOpen ? (
+            <>
+              <div className="mt-2"><HostLine row={host[host.length - 1]} /></div>
+              <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] gap-x-5 gap-y-4">
+                <TimeSeriesChart title="Host CPU" unit="%" data={machineCharts.cpu} />
+                <TimeSeriesChart title="CPU by group" unit="cores" data={machineCharts.groups} />
+                <TimeSeriesChart title="Memory" unit="GB" data={machineCharts.mem} note="host used vs. what containers and Docker account for" />
+                <TimeSeriesChart title="Pressure (stalled time)" unit="%" data={machineCharts.psi} />
+                <TimeSeriesChart title="Lab devices CPU" unit="%" data={machineCharts.labCpu} note="across every device · 100% = one core" />
+                <TimeSeriesChart title="Lab network" unit="Mb/s" data={machineCharts.labNet} note="all devices together" />
+              </div>
+              {tools.length ? (
+                <p className="mt-3 text-2xs text-fg-subtle">
+                  AE3GIS tools now: {tools.map((t) => `${t.purpose || t.target} ${t.cpu_pct?.toFixed(1) ?? '–'}% CPU, ${formatBytes(t.mem_used)}`).join(' · ')}. Tool load is counted apart from the devices.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </section>
 
         {markers.length ? (
           <section className="mt-5">

@@ -13,11 +13,13 @@ import {
   mergeRows,
   nodeRowsFromSweep,
   percentile,
+  groupRows,
   perNodeChart,
   type NodeRow,
   type SweepMessage,
 } from '../model';
 import { nodesOf, preview, toRequest } from '../selection';
+import { grouping } from '../grouping';
 
 const stats = (v: number) => ({ sum: v * 2, mean: v, p50: v, p95: v, max: v });
 
@@ -80,6 +82,20 @@ describe('recorded rows', () => {
     expect(latestByNode(rows).map((r) => [r.target, r.t])).toEqual([['b', 2], ['c', 1], ['a', 2]]);
   });
 
+  it('charts pinned nodes in pin order, even before they report', () => {
+    const rows = [row(1, 'a', 1), row(1, 'b', 50), row(1, 'c', 20)];
+    const data = perNodeChart(rows, 'cpu_pct', (t) => t.toUpperCase(), ['a', 'b', 'c'], 2, ['c', 'a', 'z']);
+    expect(data.series.map((s) => [s.label, s.values])).toEqual([['C', [20]], ['A', [1]]]);
+    expect(data.hidden).toBe(1);
+  });
+
+  it('sums node rows per group and sweep', () => {
+    const rows = [row(1, 'a', 10), row(1, 'b', 5), row(1, 'c', 1), row(2, 'a', 20)];
+    const group = (id: string) => (id === 'c' ? 'g2' : id === 'x' ? null : 'g1');
+    const out = groupRows([...rows, row(1, 'x', 99)], group);
+    expect(out.map((r) => [r.t, r.target, r.cpu_pct])).toEqual([[1, 'g1', 15], [1, 'g2', 1], [2, 'g1', 20]]);
+  });
+
   it('downsamples long histories', () => {
     expect(everyFor(60, 1)).toBe(1);
     expect(everyFor(3600, 1)).toBe(4);
@@ -118,5 +134,15 @@ describe('selection', () => {
     expect(toRequest({ mode: 'hosts', picks: [] })).toEqual({ roles: ['host'] });
     expect(toRequest({ mode: 'subnets', picks: ['n1'] })).toEqual({ subnets: ['n1'] });
     expect(toRequest({ mode: 'nodes', picks: ['h1'] })).toEqual(['h1']);
+  });
+
+  it('groups devices by home subnet or by type', () => {
+    const bySubnet = grouping(topology, 'subnet');
+    expect(['r', 'h1', 'h2', 'gone'].map(bySubnet.groupOf)).toEqual(['n1', 'n1', 'n2', null]);
+    expect(bySubnet.order).toEqual(['n1', 'n2']);
+    expect(bySubnet.labelOf('n2')).toBe('N2');
+    const byType = grouping(topology, 'type');
+    expect(['r', 'h2'].map(byType.groupOf)).toEqual(['router', 'gizmo']);
+    expect(byType.order).toEqual(['router', 'gizmo']);
   });
 });

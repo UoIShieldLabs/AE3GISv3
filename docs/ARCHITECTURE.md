@@ -599,8 +599,12 @@ browser ──WS──► api/traffic  ◄── RunRecorder    ◄── ae3gis
   rates (`domain/monitor.py` over `domain/telemetry.py`), classifies containers
   by label into groups (the lab's `node`s, AE3GIS `tool`s, `other_lab`,
   `other`), records the selected nodes one by one (`domain/selectors.py`:
-  all, ids, or `{types, subnets, roles}`) and the rest as group totals, and
-  keeps only a short ring in memory. Artifacts: `host.csv`, `nodes.csv`,
+  all, ids, or `{types, subnets, roles}`; the UI always asks for all and
+  chooses what to show afterwards) and the rest as group totals, and keeps
+  only a short ring in memory. A live sweep carries every node's row up to
+  `LIVE_NODE_LIMIT` (50) nodes; above it (`partial`) the busiest (the sweep's
+  top lists) plus what each viewer pinned (`?pins=` on the WebSocket, added
+  per connection by `live_view`; pinned history comes from `/samples?nodes=`). Artifacts: `host.csv`, `nodes.csv`,
   `ifaces.csv`, `markers.csv` (gzipped at the end) and `monitor.json`. Other
   jobs mark events on it (`monitor.mark`: traffic started, a benchmark step…).
 - **Traffic** (`services/traffic.py`, kind `traffic`, one run per topology):

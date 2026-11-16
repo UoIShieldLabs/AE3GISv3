@@ -8,5 +8,5 @@ export function MonitorPanel({ tabId, jobId }: { tabId: string; jobId: string | 
     const t = s.dockTabs.find((x) => x.id === tabId);
     return t?.kind === 'monitor' ? t.seed : undefined;
   });
-  return jobId ? <MonitorView jobId={jobId} /> : <MonitorForm tabId={tabId} seed={seed} />;
+  return jobId ? <MonitorView jobId={jobId} seed={seed} /> : <MonitorForm tabId={tabId} seed={seed} />;
 }

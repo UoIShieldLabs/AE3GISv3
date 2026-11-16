@@ -100,7 +100,7 @@ export function wsUrl(path: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const base = `${protocol}//${window.location.host}${path}`;
   const token = getToken();
-  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  return token ? `${base}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : base;
 }
 
 // ── Transport ──────────────────────────────────────────────────────
@@ -469,8 +469,10 @@ export function captureWsPath(topologyId: string, jobId: string): string {
 export function trafficWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/traffic/${encodeURIComponent(jobId)}`;
 }
-export function monitorWsPath(topologyId: string, jobId: string): string {
-  return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/monitors/${encodeURIComponent(jobId)}`;
+/** ``pins``: nodes whose rows a partial sweep (a lab over the live limit) should carry too. */
+export function monitorWsPath(topologyId: string, jobId: string, pins: readonly string[] = []): string {
+  const path = `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/monitors/${encodeURIComponent(jobId)}`;
+  return pins.length ? `${path}?pins=${encodeURIComponent(pins.join(','))}` : path;
 }
 /** Relay URL for a node's own web UI (an iframe src). Served through the same
  *  /api proxy, so it works in dev and prod without a host port. */

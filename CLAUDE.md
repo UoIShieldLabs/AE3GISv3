@@ -360,8 +360,12 @@ tables record every long operation.
   `features/traffic` (explicit flows saved in `topology.traffic.flows`, or a
   pattern: clients → servers / mesh; live totals and per-flow charts via
   `ui/charts/TimeSeriesChart` on uPlot with `--chart-N` tokens, run summary +
-  environment). Monitor: `features/monitor` (node selection form, host / group /
-  per-node charts; history from `/samples`, then live sweeps). Scenario runner:
+  environment). Monitor: `features/monitor` (one click records every device,
+  nothing to pick up front; the view pins devices (picker, canvas selection,
+  table, or a device's "Monitor…", which joins the running monitor) or groups
+  them by subnet / type, the machine & overhead charts folded below; history
+  from `/samples`, then live sweeps; over 50 devices a sweep carries the
+  busiest + the viewer's pins). Scenario runner:
   `features/scenario` (author phases/steps with a node picker + command field,
   undo-tracked; Run step / Run phase buttons, deploy-gated; live per-step output
   over the scenario WS, mirroring the traffic panel). Tutorials:

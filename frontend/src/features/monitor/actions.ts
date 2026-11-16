@@ -5,22 +5,46 @@ import { monitorTabId } from '@/store/slices/dockSlice';
 import { startPolling } from '@/features/deployment/statusPolling';
 import { toast } from '@/ui';
 
-/** Open the "new monitor" form (optionally with nodes picked). */
+/** The topology's running monitor (one at a time), from /runtime's activity. */
+function runningMonitorId(): string | null {
+  return useAppStore.getState().activity.find((a) => a.kind === 'monitor')?.job_id ?? null;
+}
+
+/** Monitor the lab, with ``nodes`` pinned: opens the running monitor (pinning
+ *  them) when there is one, else the "new monitor" form. */
 export function openMonitorPanel(seed: { nodes?: string[] } = {}) {
+  const running = runningMonitorId();
+  if (running) {
+    openMonitor(running, undefined, seed.nodes);
+    return;
+  }
   useAppStore.getState().openDockTab({ kind: 'monitor', id: monitorTabId(null), jobId: null, title: 'New monitor', seed: { ...seed, nonce: Date.now() } });
 }
 
-export function openMonitor(jobId: string, title = 'Monitor') {
-  useAppStore.getState().openDockTab({ kind: 'monitor', id: monitorTabId(jobId), jobId, title });
+/** Open a monitor's view; ``pin`` adds devices to its pins. */
+export function openMonitor(jobId: string, title?: string, pin?: string[]) {
+  const s = useAppStore.getState();
+  const id = monitorTabId(jobId);
+  const tab = s.dockTabs.find((t) => t.id === id);
+  const open = tab?.kind === 'monitor' ? tab : undefined;
+  const seed = pin?.length ? { nodes: pin, nonce: Date.now() } : open?.seed;
+  s.openDockTab({ kind: 'monitor', id, jobId, title: title ?? open?.title ?? 'Monitor', seed });
 }
 
-/** Start a monitor; the form's tab becomes its live view. */
-export async function startMonitor(fromTabId: string, body: api.MonitorRequest): Promise<api.Monitor | null> {
+/** Start a monitor of the whole lab; the form's tab becomes its live view,
+ *  with ``pins`` pinned. */
+export async function startMonitor(fromTabId: string, body: api.MonitorRequest, pins: string[] = []): Promise<api.Monitor | null> {
   const id = useAppStore.getState().backendId;
   if (!id) return null;
   try {
     const mon = await api.startMonitor(id, body);
-    useAppStore.getState().replaceDockTab(fromTabId, { kind: 'monitor', id: monitorTabId(mon.id), jobId: mon.id, title: mon.label || 'Monitor' });
+    useAppStore.getState().replaceDockTab(fromTabId, {
+      kind: 'monitor',
+      id: monitorTabId(mon.id),
+      jobId: mon.id,
+      title: mon.label || 'Monitor',
+      seed: pins.length ? { nodes: pins, nonce: Date.now() } : undefined,
+    });
     startPolling(id);
     return mon;
   } catch (err) {
