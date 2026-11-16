@@ -126,17 +126,3 @@ python -m pytest && ruff check .                # domain, jobs, reconcile, API t
 python -m uvicorn main:create_app --factory --reload --port 8000
 AE3GIS_ENGINE=fake python -m uvicorn main:create_app --factory --port 8000   # no Docker needed
 ```
-
-## Deferred features
-
-Removed from the wired app in this foundation pass, to be re-added on the engine
-abstraction later: firewall rule editor, live classroom sessions (an
-instructor pushing to students' terminals), container web-UI proxy,
-and the AI assistant. (Packet capture, the scenario runner, and accounts with
-published topologies — see *Accounts* above — have since shipped.)
-
-## Deployment images
-
-The catalog ships multi-arch defaults (`kathara/frr` for routers, `kathara/base` for
-hosts/switches) that run natively on arm64. Swap in your own images by
-editing `backend/catalog/node_types.json`, or per-container from the editor.
