@@ -1,4 +1,4 @@
-# Scenario B3 — classroom walkthrough (Industroyer, five ways in)
+# Scenario B3 — classroom walkthrough (Industroyer, four ways in)
 
 A shorter, more intuitive companion to the detailed B2 case study. B3 keeps B2's faithful Stage-2
 (IEC-104 trip / M_ME collapse / wiper / manual recovery) but rebuilds **Stage 1** so every IT→OT hop is
@@ -54,14 +54,14 @@ scripts/publish.sh smb ftp-server mariadb malicious-client benign-client
 ## Part 1–3 — Start, load, deploy
 
 1. `./start.sh`, open the UI.
-2. **Presets → Use preset** *ICS Scenario B3 — Industroyer (five ways in)* → **Add & sync** `tollan`
+2. **Presets → Use preset** *ICS Scenario B3 — Industroyer (four ways in)* → **Add & sync** `tollan`
    (required for the OT SPAN) → **Deploy**. Four subnets, 15 nodes; all cards green.
 3. **CHECK** (optional): from `iot`, `nmap -Pn -p22 10.0.4.20` and `-p2404 10.0.3.50` are both **filtered**
    — only the fileserver crosses into the DMZ.
 
 ## Part 4 — Run the tutorial
 
-Open **More → Tutorials… → Industroyer — five ways into the plant**. Press **Configure lab** once (arms the
+Open **More → Tutorials… → Industroyer — four ways into the plant**. Press **Configure lab** once (arms the
 two firewalls, starts Zeek + the background telemetry and nightly file push), then walk with **Next step**.
 Every command has a one-line explainer right above it; the single `iot` terminal walks the chain, and the
 recovery/detection cells run on `rtu`/`ids`.

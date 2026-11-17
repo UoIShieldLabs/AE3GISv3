@@ -285,7 +285,7 @@ def test_ics_scenario_b3_preset_loads_and_is_valid(client):
     assert containers["process-sim"]["webUiPort"] == 8000
     assert containers["hmi"]["webUiPort"] == 8080
     titles = {t["title"] for t in data["tutorials"]}
-    assert "Industroyer — five ways into the plant" in titles
+    assert "Industroyer — four ways into the plant" in titles
     for tutorial in data["tutorials"]:
         assert tutorial["cells"], "tutorial has cells"
         for cell in tutorial["cells"]:
