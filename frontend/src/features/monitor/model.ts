@@ -44,7 +44,10 @@ export interface SweepMessage {
     tx_bps: Stats;
     top: Record<'cpu_pct' | 'mem_used' | 'net_bps', [string, number][]>;
   };
+  /** Every node's row, or (``partial``, a lab over the live limit) the busiest
+   *  nodes' and this viewer's pinned ones. ``null`` from servers before ``partial``. */
   nodes: Omit<NodeRow, 't'>[] | null;
+  partial?: boolean;
   tools: Omit<NodeRow, 't'>[];
   oom: string[];
   missing: string[];
@@ -238,14 +241,39 @@ export const selectionNetChart = (rows: readonly AggRow[]) =>
 export type NodeMetric = 'cpu_pct' | 'mem_used' | 'rx_bps' | 'tx_bps';
 const NODE_SCALE: Record<NodeMetric, number> = { cpu_pct: 1, mem_used: 1e6, rx_bps: 1e6, tx_bps: 1e6 };
 
-/** One metric for the ``limit`` busiest nodes (by peak), in a stable order so a
- *  node keeps its colour; ``hidden`` counts the rest. */
+/** Node rows summed per group and sweep (``groupOf`` → a group key, or null to
+ *  leave the node out): rows whose ``target`` is the group, for ``perNodeChart``. */
+export function groupRows(rows: readonly NodeRow[], groupOf: (target: string) => string | null): NodeRow[] {
+  const out = new Map<string, NodeRow>();
+  const add = (a: Num | undefined, b: Num | undefined): Num => (a === null || a === undefined ? (b ?? null) : b === null || b === undefined ? a : a + b);
+  for (const r of rows) {
+    if (r.kind !== 'node') continue;
+    const g = groupOf(r.target);
+    if (g === null) continue;
+    const key = `${r.t}:${g}`;
+    const acc = out.get(key);
+    if (!acc) {
+      out.set(key, { t: r.t, target: g, kind: 'node', cpu_pct: r.cpu_pct, mem_used: r.mem_used, rx_bps: r.rx_bps, tx_bps: r.tx_bps });
+      continue;
+    }
+    acc.cpu_pct = add(acc.cpu_pct, r.cpu_pct);
+    acc.mem_used = add(acc.mem_used, r.mem_used);
+    acc.rx_bps = add(acc.rx_bps, r.rx_bps);
+    acc.tx_bps = add(acc.tx_bps, r.tx_bps);
+  }
+  return [...out.values()].sort((a, b) => a.t - b.t);
+}
+
+/** One metric per node: the ``only`` nodes when given (pinned, in that order),
+ *  else the ``limit`` busiest (by peak) in a stable order so a node keeps its
+ *  colour; at most ``limit`` either way, ``hidden`` counts the rest. */
 export function perNodeChart(
   rows: readonly NodeRow[],
   metric: NodeMetric,
   labelOf: (target: string) => string,
   order: readonly string[],
   limit = 6,
+  only?: readonly string[],
 ): ChartData & { hidden: number } {
   const byTarget = new Map<string, Map<number, number>>();
   for (const r of rows) {
@@ -257,12 +285,20 @@ export function perNodeChart(
     m.set(r.t, v / NODE_SCALE[metric]);
   }
   const peak = (m: Map<number, number>) => Math.max(0, ...m.values());
-  const ranked = [...byTarget.entries()].sort((a, b) => peak(b[1]) - peak(a[1]));
   const pos = (t: string) => {
     const i = order.indexOf(t);
     return i === -1 ? Number.MAX_SAFE_INTEGER : i;
   };
-  const shown = ranked.slice(0, limit).sort((a, b) => pos(a[0]) - pos(b[0]));
+  let ranked: [string, Map<number, number>][];
+  let shown: [string, Map<number, number>][];
+  if (only?.length) {
+    // Pinned: in pin order, a pinned node with no rows yet still holds its place.
+    ranked = only.map((t) => [t, byTarget.get(t) ?? new Map<number, number>()]);
+    shown = ranked.slice(0, limit);
+  } else {
+    ranked = [...byTarget.entries()].sort((a, b) => peak(b[1]) - peak(a[1]));
+    shown = ranked.slice(0, limit).sort((a, b) => pos(a[0]) - pos(b[0]));
+  }
   const xs = new Set<number>();
   for (const [, m] of shown) for (const t of m.keys()) xs.add(t);
   const x = [...xs].sort((a, b) => a - b);

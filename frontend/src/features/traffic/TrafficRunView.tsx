@@ -115,7 +115,7 @@ export function TrafficRunView({ jobId }: { jobId: string }) {
           </div>
         ) : null}
         <div className="ml-auto flex items-center gap-1.5">
-          {run && endpoints.length ? <Button size="sm" variant="ghost" onClick={() => openMonitorPanel({ nodes: endpoints })} title="Record CPU, memory and network of the run's nodes"><Gauge /> Monitor…</Button> : null}
+          {run && endpoints.length ? <Button size="sm" variant="ghost" onClick={() => openMonitorPanel({ nodes: endpoints })} title="Monitor the lab with the run's devices pinned"><Gauge /> Monitor…</Button> : null}
           {!live && run ? <Button size="sm" variant="ghost" onClick={() => exportTrafficRun(jobId)}><Download /> Export</Button> : null}
           {!live && run ? <Button size="sm" variant="ghost" onClick={() => openTrafficPanel()}><Plus /> New run</Button> : null}
           {live ? <Button size="sm" variant="danger-soft" onClick={() => void stopTrafficRun(jobId)}><Square /> Stop</Button> : null}

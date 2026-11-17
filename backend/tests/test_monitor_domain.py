@@ -174,3 +174,22 @@ def test_selectors():
     assert selectors.resolve(TWO_SUBNETS, ["hA"], {"ids": ["hA", "hB"]}) == ["hA"]
     index = selectors.node_index(TWO_SUBNETS)
     assert index["hA"]["ip"] == "10.0.1.5" and index["rA"]["role"] == "router"
+
+
+def test_busiest_rows_keeps_the_nodes_in_the_top_lists():
+    rows = [{"target": t, "cpu_pct": c} for t, c in (("a", 1.0), ("b", 9.0), ("c", 5.0))]
+    selection = {"top": {"cpu_pct": [["b", 9.0]], "mem_used": [["c", 1]], "net_bps": []}}
+    assert [r["target"] for r in m.busiest_rows(rows, selection)] == ["b", "c"]
+
+
+def test_live_view_adds_pins_and_drops_the_full_list():
+    from services.monitor import ALL_ROWS, live_view
+
+    every = [{"target": t} for t in ("a", "b", "c")]
+    msg = {"type": "sweep", "nodes": [every[1]], "partial": True, ALL_ROWS: every}
+    assert live_view(msg, set()) == {"type": "sweep", "nodes": [every[1]], "partial": True}
+    pinned = live_view(msg, {"a", "b"})
+    assert [r["target"] for r in pinned["nodes"]] == ["b", "a"] and ALL_ROWS not in pinned
+    assert msg[ALL_ROWS] is every and msg["nodes"] == [every[1]]  # shared message untouched
+    plain = {"type": "marker", "text": "x"}
+    assert live_view(plain, {"a"}) is plain

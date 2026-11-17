@@ -189,10 +189,15 @@ async def monitor_live(
     topology_id: str,
     job_id: str,
     token: str | None = Query(default=None),
+    pins: str | None = Query(default=None, description="Comma-separated node ids to stream"),
 ):
     """Live sweeps. Messages (JSON): ``hello`` {monitor, backlog: [sweep…]},
-    ``sweep`` {t, host, groups, selection, nodes (≤ 50 nodes, else null), tools,
-    oom, missing}, ``marker`` {t, source, text}, ``end`` {result}."""
+    ``sweep`` {t, host, groups, selection, nodes, partial, tools, oom, missing},
+    ``marker`` {t, source, text}, ``end`` {result}. ``nodes`` holds every node's
+    row up to 50 nodes; above that (``partial``) the busiest nodes' rows plus
+    those of the ``pins`` (reconnect to change them; the backlog holds no
+    pinned rows, ``/samples?nodes=`` has their history)."""
+    pinned = {n for n in (pins or "").split(",") if n}
     if not await ws_guard(websocket, token, topology_id):
         return
     hub: LiveHub = websocket.app.state.live
@@ -231,7 +236,7 @@ async def monitor_live(
             await websocket.close()
             return
         try:
-            await forward(websocket, sub)
+            await forward(websocket, sub, lambda msg: monitor_service.live_view(msg, pinned))
         finally:
             channel.unsubscribe(sub)
         with contextlib.suppress(Exception):
