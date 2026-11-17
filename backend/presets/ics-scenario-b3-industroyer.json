@@ -1,8 +1,8 @@
 {
-  "name": "ICS Scenario B3 — Industroyer (five ways in)",
+  "name": "ICS Scenario B3 — Industroyer (four ways in)",
   "description": "A simpler, more intuitive Industroyer lab focused on a realistic IT→OT intrusion where every hop is a DIFFERENT technique (a failed default-cred spray → an SMB key-drop → a sanctioned SFTP service account → a database credential dump → SSH key theft), ending in the IEC-104 breaker trip, wiper and manual recovery from Scenario B2. The attacker starts on a compromised IoT sensor and crosses iot → fileserver → gateway → historian → ew. Short per-command explanations, clean commands. Uses the tollan Docker Hub registry (you'll be prompted to add it). The detailed case-study narrative lives in B2. Classroom guide: docs/ics-scenarios/scenario-b3-classroom-walkthrough.md.",
   "topology": {
-    "name": "ICS Scenario B3 — Industroyer (five ways in)",
+    "name": "ICS Scenario B3 — Industroyer (four ways in)",
     "description": "Four Purdue zones (IT 10.0.5.0/24 → DMZ 10.0.4.0/24 → OT 10.0.3.0/24 → PROCESS 10.0.1.0/24), two nftables firewalls flanking the DMZ, a dual-homed IEC-104 RTU with measured current/voltage, and an OVS SPAN to the IDS. Each IT→OT hop uses a distinct access technique and a distinct credential. Import after syncing the `tollan` registry.",
     "sites": [
       {
@@ -192,7 +192,7 @@
     "tutorials": [
       {
         "id": "tutorial-ics-industroyer-b3",
-        "title": "Industroyer — five ways into the plant",
+        "title": "Industroyer — four ways into the plant",
         "setup": {
           "steps": [
             {
@@ -234,7 +234,7 @@
           {
             "id": "b3-intro",
             "kind": "markdown",
-            "source": "# Industroyer — five ways into the plant\n\nYou start with a shell on **`iot`**, a hacked internet-facing sensor on the office LAN. Your goal is the **substation RTU** deep in the plant — but there's a DMZ and two firewalls in the way. You'll cross `iot → fileserver → gateway → historian → ew`, and **every hop is a different weakness** (a failed password spray, an SMB misconfig, a reused service account, secrets in a database, a stolen SSH key). Then one IEC-104 command trips the breaker.\n\nEach command has a one-line explanation right above it. Run with **Next step**. The terminal walks the chain: once a cell SSHes onward, the next cells run on that host.\n\n> Keep the **`hmi`** and **`process-sim`** web UIs open (select the node → *Open web UI*) to watch the breaker and the physical feeder."
+            "source": "# Industroyer — four ways into the plant\n\nYou start with a shell on **`iot`**, a hacked internet-facing sensor on the office LAN. Your goal is the **substation RTU** deep in the plant — but there's a DMZ and two firewalls in the way. You'll cross `iot → fileserver → gateway → historian → ew`, and **every hop is a different weakness** (a failed password spray, an SMB misconfig, a reused service account, secrets in a database, a stolen SSH key). Then one IEC-104 command trips the breaker.\n\nEach command has a one-line explanation right above it. Run with **Next step**. The terminal walks the chain: once a cell SSHes onward, the next cells run on that host.\n\n> Keep the **`hmi`** and **`process-sim`** web UIs open (select the node → *Open web UI*) to watch the breaker and the physical feeder."
           },
           {
             "id": "b3-setup-md",
@@ -371,7 +371,7 @@
           {
             "id": "b3-recap-chain-md",
             "kind": "markdown",
-            "source": "**Five hops, five different weaknesses, five different credentials** — none of them guessed. That's a *chain* of failures, not one reused password. Now the physical attack."
+            "source": "**Four hops, four different weaknesses, four different credentials** — none of them guessed. That's a *chain* of failures, not one reused password. Now the physical attack."
           },
           {
             "id": "b3-reach-md",
