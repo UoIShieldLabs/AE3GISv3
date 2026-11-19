@@ -67,6 +67,9 @@ class TopologySummary(BaseModel):
     published: bool = False
     source_id: str | None = None
     update_available: bool = False
+    # Whether it holds (or may hold) containers on this host: deploying,
+    # deployed, destroying, or a failed deploy that got as far as the engine.
+    holds_lab: bool = False
 
     model_config = {"from_attributes": True}
 

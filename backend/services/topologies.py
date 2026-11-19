@@ -70,6 +70,7 @@ def summary_meta(db: Session, topos: list[Topology]) -> dict[str, dict[str, Any]
             "source_id": t.source_id,
             "update_available": source_version is not None
             and source_version > (t.source_version or 0),
+            "holds_lab": holds_lab(t),
         }
     return meta
 

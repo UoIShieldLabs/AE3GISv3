@@ -299,3 +299,19 @@ def test_ics_scenario_b3_preset_loads_and_is_valid(client):
                 assert node_id in containers, node_id
     v = client.post("/api/v1/topologies/validate", json={"data": data}).json()
     assert not any(d["severity"] == "error" for d in v["diagnostics"])
+
+
+def test_summaries_say_which_topologies_hold_a_lab(client, topology, wait_jobs, fake_engine):
+    """The library's Running section: a deployed lab holds containers; a deploy
+    that failed (status error, cleaned up: no engine state) does not."""
+    client.post(f"/api/v1/topologies/{topology['id']}/deploy")
+    wait_jobs()
+    other = client.post(
+        "/api/v1/topologies", json={"name": "Other", "data": copy.deepcopy(TWO_SUBNETS)}
+    ).json()
+    fake_engine.fail_deploy = True
+    client.post(f"/api/v1/topologies/{other['id']}/deploy")
+    wait_jobs()
+    rows = {t["id"]: t for t in client.get("/api/v1/topologies").json()}
+    assert (rows[topology["id"]]["status"], rows[topology["id"]]["holds_lab"]) == ("deployed", True)
+    assert (rows[other["id"]]["status"], rows[other["id"]]["holds_lab"]) == ("error", False)

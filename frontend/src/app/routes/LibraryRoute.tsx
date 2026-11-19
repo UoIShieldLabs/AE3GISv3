@@ -24,7 +24,7 @@ import { PresetsSection } from '@/features/library/PresetsSection';
 import { Flag, type TopologyItem } from '@/features/library/TopologyCard';
 import { TopologyCollection } from '@/features/library/TopologyCollection';
 import {
-  buildLibrary, lessonCopy, presetMatches, sectionCounts, sectionsFor, studentMatches, viewTopologies,
+  buildLibrary, holdsLab, lessonCopy, presetMatches, sectionCounts, sectionsFor, studentMatches, viewTopologies,
   type LibraryMode, type SectionId,
 } from '@/features/library/model';
 import { SECTION_ICON, sectionDescription, sectionLabel } from '@/features/library/sections';
@@ -36,8 +36,8 @@ import { useAppStore } from '@/store';
 const POLL_MS = 5000;
 const EMPTY = 'rounded-xl border border-dashed border-border-strong';
 
-/** Destroy from the library: a lab that is up (or failed on the way). */
-const canDestroy = (t: api.TopologySummary) => t.status === 'deployed' || t.status === 'error';
+/** Destroy from the library: a lab that is up, or a failed deploy that still holds one. */
+const canDestroy = (t: api.TopologySummary) => t.status === 'deployed' || (t.status === 'error' && holdsLab(t));
 
 function SectionHeader({ section, mode, aside }: { section: SectionId; mode: LibraryMode; aside?: React.ReactNode }) {
   const Icon = SECTION_ICON[section];
@@ -355,15 +355,16 @@ export function LibraryRoute() {
   const collection = (
     items: api.TopologySummary[],
     toItem: (t: api.TopologySummary) => TopologyItem,
-    { empty, statusOf, showOwner, runningFilter = true }: {
+    { empty, statusOf, labOf, showOwner, runningFilter = true }: {
       empty: React.ReactNode;
       statusOf?: (t: api.TopologySummary) => string;
+      labOf?: (t: api.TopologySummary) => api.TopologySummary | undefined;
       showOwner?: boolean;
       runningFilter?: boolean;
     },
   ) => {
     if (items.length === 0) return empty;
-    const shown = viewTopologies(items, { q: loc.q, sort, runningOnly: runningFilter && loc.runningOnly, statusOf });
+    const shown = viewTopologies(items, { q: loc.q, sort, runningOnly: runningFilter && loc.runningOnly, statusOf, labOf });
     return <TopologyCollection items={shown.map(toItem)} layout={layout} showOwner={showOwner} empty={noMatches} />;
   };
 
@@ -465,6 +466,7 @@ export function LibraryRoute() {
             {mode === 'student'
               ? collection(lib.lessons, studentLessonItem, {
                 statusOf: (t) => lib.copies.get(t.id)?.status ?? 'idle',
+                labOf: (t) => lib.copies.get(t.id),
                 empty: <EmptyState icon={<GraduationCap />} title="No lessons yet" description="Your instructor’s lessons show up here." className={EMPTY} />,
               })
               : collection(lib.lessons, lessonItem, {

@@ -19,7 +19,7 @@ vi.mock('@/api/client', async (importOriginal) => {
 const api = await import('@/api/client');
 
 const topo = (id: string, name: string, extra: Partial<TopologySummary> = {}): TopologySummary => ({
-  id, name, status: 'idle', version: 1, published: false, update_available: false,
+  id, name, status: 'idle', version: 1, published: false, update_available: false, holds_lab: false,
   created_at: '2026-11-01T00:00:00Z', updated_at: '2026-11-01T00:00:00Z', ...extra,
 });
 const student = (id: string): Student => ({
@@ -27,7 +27,7 @@ const student = (id: string): Student => ({
 });
 
 const LESSON = topo('l1', 'ICS lesson', { published: true });
-const DRAFT = topo('d1', 'Draft', { status: 'deployed', updated_at: '2026-11-02T00:00:00Z' });
+const DRAFT = topo('d1', 'Draft', { status: 'deployed', holds_lab: true, updated_at: '2026-11-02T00:00:00Z' });
 const ALICE = topo('a1', 'Firewall test', { owner: { id: 'alice', username: 'alice' } });
 const PRESETS: PresetSummary[] = [{ id: 'two-subnet-demo', name: 'Two-Subnet Demo', description: 'Two LANs', scenario_count: 0, site_count: 1 }];
 
