@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { Panel, useReactFlow } from '@xyflow/react';
-import { Cable, ChevronDown, Grid3X3, Hand, LayoutGrid, ListPlus, Map as MapIcon, Maximize, Maximize2, Minimize2, MousePointer2, Plus, Sparkles } from 'lucide-react';
+import { Cable, ChevronDown, Grid3X3, Hand, LayoutGrid, ListPlus, Map as MapIcon, Maximize, Maximize2, Minimize2, MousePointer2, Plus } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { useAppShallow } from '@/store/selectors';
-import { LAYOUT_MODES } from './layout';
+import { LAYOUT_MODES, currentLayout, lastLayout, type LayoutMode } from './layout';
 import { colorFor } from '@/catalog/catalog';
 import { useCatalogTree } from '@/catalog/useCatalogTree';
 import { NodeGlyph } from '@/catalog/icons';
@@ -20,20 +21,24 @@ export interface CanvasToolbarProps {
   onAdd: (item: PaletteItem) => void;
   onBulkDevices?: () => void;
   onBulkConnections?: () => void;
-  onAutoLayout: () => void;
+  /** Lay the scope out with this algorithm (picking a layout applies it). */
+  onApplyLayout: (mode: LayoutMode) => void;
   expandableCount: number;
   expandedCount: number;
   onExpandAll: () => void;
   onCollapseAll: () => void;
 }
 
-export function CanvasToolbar({ scope, readOnly, onAdd, onBulkDevices, onBulkConnections, onAutoLayout, expandableCount, expandedCount, onExpandAll, onCollapseAll }: CanvasToolbarProps) {
+export function CanvasToolbar({ scope, readOnly, onAdd, onBulkDevices, onBulkConnections, onApplyLayout, expandableCount, expandedCount, onExpandAll, onCollapseAll }: CanvasToolbarProps) {
   const { fitView } = useReactFlow();
   const tree = useCatalogTree();
-  const { tool, snapToGrid, showMinimap, layoutMode } = useAppShallow((s) => ({
-    tool: s.tool, snapToGrid: s.snapToGrid, showMinimap: s.showMinimap, layoutMode: s.layoutMode,
+  const { tool, snapToGrid, showMinimap, layoutMode, topology } = useAppShallow((s) => ({
+    tool: s.tool, snapToGrid: s.snapToGrid, showMinimap: s.showMinimap, layoutMode: s.layoutMode, topology: s.topology,
   }));
-  const { setTool, setSnapToGrid, setShowMinimap, setLayoutMode } = useAppStore.getState();
+  const layout = useMemo(() => currentLayout(topology, scope), [topology, scope]);
+  const relayout = lastLayout(topology, scope) ?? layoutMode;
+  const { setTool, setSnapToGrid, setShowMinimap } = useAppStore.getState();
+  const layoutLabel = LAYOUT_MODES.find((m) => m.value === layout)?.label ?? 'Custom';
 
   const addLabel = scope.level === 'root' ? 'Site' : scope.level === 'site' ? 'Subnet' : 'Device';
 
@@ -94,19 +99,23 @@ export function CanvasToolbar({ scope, readOnly, onAdd, onBulkDevices, onBulkCon
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
-              <LayoutGrid /> Layout <ChevronDown className="-mr-1 opacity-70" />
+              <LayoutGrid /> Layout: <span className="text-fg-muted">{layoutLabel}</span> <ChevronDown className="-mr-1 opacity-70" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuRadioGroup value={layoutMode} onValueChange={(v) => setLayoutMode(v as typeof layoutMode)}>
+            {/* Picking a layout applies it; picking the current one tidies the scope up again. */}
+            <DropdownMenuRadioGroup value={layout}>
               {LAYOUT_MODES.map((m) => (
-                <DropdownMenuRadioItem key={m.value} value={m.value}>{m.label}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem key={m.value} value={m.value} disabled={readOnly} onSelect={() => onApplyLayout(m.value)} shortcut={m.value === relayout && !readOnly ? 'L' : undefined}>
+                  {m.label}
+                </DropdownMenuRadioItem>
               ))}
+              <DropdownMenuSeparator />
+              {/* A status, not an action: a scope reads as Custom once anything in it is moved by hand. */}
+              <DropdownMenuRadioItem value="custom" disabled className="data-[state=checked]:opacity-100">
+                Custom
+              </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onAutoLayout} shortcut="L" disabled={readOnly}>
-              <Sparkles /> Apply layout
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
