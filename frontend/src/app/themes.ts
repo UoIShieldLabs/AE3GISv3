@@ -18,6 +18,8 @@ export interface ThemeDef {
 
 export const THEMES = [
   { id: 'light', label: 'Light', scheme: 'light' },
+  { id: 'stone', label: 'Stone', scheme: 'light', description: 'Soft light' },
+  { id: 'dusk', label: 'Dusk', scheme: 'dark', description: 'Mid-tone' },
   { id: 'dark', label: 'Dark', scheme: 'dark' },
   { id: 'neon', label: 'Neon', scheme: 'dark' },
   { id: 'hacknet', label: 'Hacknet', scheme: 'dark', effects: { decrypt: true } },

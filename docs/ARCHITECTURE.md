@@ -935,6 +935,8 @@ picked in the top bar's Appearance menu or <kbd>⌘K</kbd>:
   `data-capturing`, `ae-deploy-status` with `data-deploy-status`, and
   `data-variant` on every Button. Those flourishes follow `<html>`'s theme
   only (a nested preview takes the tokens, not the flourishes).
+  **Stone** (warm-gray light) and **Dusk** (mid-tone slate) are
+  token-only, low-glare themes between Light and Dark.
   **Neon**: cyan-on-black glow, monospace, square, title-bar strips, faint
   scanlines. **Hacknet**: Neon's panels with phosphor-green highlights, VT323
   text (scaled with `font-size-adjust`, which `.xterm` resets: xterm sizes its
