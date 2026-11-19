@@ -24,7 +24,7 @@ export interface LibraryRailProps {
 export function LibraryRail({ mode, sections, counts, current, student, students, q, onGo }: LibraryRailProps) {
   const nested = current === 'students' ? students.filter((s) => studentMatches(s, q)) : [];
   return (
-    <nav aria-label="Library sections" className="flex min-w-0 gap-0.5 overflow-x-auto text-xs md:flex-col md:overflow-x-visible">
+    <nav aria-label="Library sections" className="flex min-w-0 gap-0.5 overflow-x-auto text-xs [scrollbar-width:none] md:flex-col md:overflow-x-visible [&::-webkit-scrollbar]:hidden">
       {sections.map((id) => {
         const Icon = SECTION_ICON[id];
         const running = id === 'running' && !!counts?.running;
