@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Activity, LayoutGrid, List, Search, X } from 'lucide-react';
-import { Button, IconButton, Input, Select } from '@/ui';
+import { Button, IconButton, Input, Kbd, Select } from '@/ui';
 import { cn } from '@/lib/cn';
 import type { LibraryLayout, LibrarySort } from './model';
 
@@ -40,8 +40,9 @@ export function LibraryToolbar({ q, onQuery, placeholder = 'Search', runningOnly
   }, []);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="w-full sm:w-64">
+    // Sticky: search and filters stay in reach down a long section.
+    <div className="sticky top-0 z-10 -my-2 flex flex-wrap items-center gap-2 bg-app py-2">
+      <div className="w-full sm:w-72">
         <Input
           ref={searchRef}
           value={q}
@@ -50,7 +51,17 @@ export function LibraryToolbar({ q, onQuery, placeholder = 'Search', runningOnly
           placeholder={placeholder}
           aria-label="Search the library"
           leading={<Search />}
-          trailing={q ? <IconButton label="Clear search" size="icon-xs" onClick={() => onQuery('')}><X /></IconButton> : null}
+          trailing={q
+            ? <IconButton label="Clear search" size="icon-xs" onClick={() => onQuery('')}><X /></IconButton>
+            : (
+              <Kbd
+                title="Press / to search"
+                className="mr-0.5 hidden cursor-text sm:inline-flex"
+                onMouseDown={(e) => { e.preventDefault(); searchRef.current?.focus(); }}
+              >
+                /
+              </Kbd>
+            )}
         />
       </div>
       {children}

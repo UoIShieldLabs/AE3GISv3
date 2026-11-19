@@ -2,8 +2,10 @@ import { formatDate } from '@/lib/time';
 import type { LibraryLayout } from './model';
 import { ItemMenu, OwnerLabel, StatusBadge, TopologyCard, type TopologyItem } from './TopologyCard';
 
+/** As many ~18rem columns as the content area fits (it sits beside the rail,
+ *  so viewport breakpoints would guess wrong): 1 on a phone, 5 on a wide screen. */
 export function CardGrid({ children }: { children: React.ReactNode }) {
-  return <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</ul>;
+  return <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-3">{children}</ul>;
 }
 
 /** The dense layout: one row per topology, the card's actions on the right. */

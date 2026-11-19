@@ -30,7 +30,7 @@ export function NewTopologyMenu({ presets, busy, onBlank, onPreset, onImport, on
             <ChevronDown />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="end" className="min-w-52">
           <DropdownMenuItem onSelect={onBlank}><FilePlus2 /> Blank topology</DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger disabled={presets.length === 0}><LayoutTemplate /> From preset</DropdownMenuSubTrigger>

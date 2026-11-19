@@ -409,7 +409,7 @@ export function LibraryRoute() {
               value={lesson?.id ?? 'all'}
               onValueChange={(v) => loc.setLesson(v === 'all' ? null : v)}
               options={[{ value: 'all', label: 'All students' }, ...lib.lessons.map((t) => ({ value: t.id, label: t.name, group: 'Who started a lesson' }))]}
-              className="w-56"
+              className="w-auto max-w-80 min-w-44"
             />
           ) : null}
           {lesson ? <span className="text-xs text-fg-muted">{started} of {lib.students.length} started · {lessonRunning} running</span> : null}
@@ -543,7 +543,9 @@ export function LibraryRoute() {
         </aside>
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-          <div className="flex w-full max-w-6xl flex-col gap-4 p-4 md:p-6">
+          {/* Fills the space beside the rail; centred past 1600px so a very
+              wide screen does not stretch rows into long lines. */}
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 p-4 md:p-6 xl:px-8">
             {topologies === null && loc.section !== 'presets' ? <div className="flex justify-center py-10"><Spinner /></div> : section()}
           </div>
         </main>
