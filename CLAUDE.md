@@ -261,7 +261,7 @@ tables record every long operation.
   one file per theme in `styles/themes/` (`[data-theme='<id>']`, no `:root`
   qualifier so any element can wear a theme; shared non-color tokens — fonts,
   radii, glow — in `base.css`), mapped to utilities via `@theme inline` in
-  `styles/index.css`. Themes: Light, Dark, Neon (cyan glow, monospace, square,
+  `styles/index.css`. Themes: Light, Stone (warm-gray light, low glare), Dusk (mid-tone slate), Dark, Neon (cyan glow, monospace, square,
   scanlines), Hacknet (VT323 + Press Start 2P, Share Tech Mono terminal, phosphor green, CRT, shell-prompt
   chrome, deploy trace, target-locked nodes), named in `app/themes.ts` (id,
   label, light/dark `scheme`, optional `effects` for what CSS can't do, e.g.
