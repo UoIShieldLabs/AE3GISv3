@@ -28,6 +28,7 @@ import { CanvasContextMenu, type ContextTarget } from './CanvasContextMenu';
 import { useCanvasHotkeys } from './interactions/useCanvasHotkeys';
 import { readDragPayload, type PaletteItem } from './interactions/dnd';
 import { GRID, NODE_SIZE } from './constants';
+import { lastLayout, type LayoutMode } from './layout';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
 
 export interface TopologyCanvasProps {
@@ -234,14 +235,15 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
     readOnly,
   }), [drillInto, removeItems, deployStatus, readOnly, toggleExpand]);
 
-  /** Lay out the scope's top-level nodes using their rendered sizes (expanded groups included). */
-  const autoLayout = useCallback((expandedOverride?: Record<string, true>) => {
+  /** Lay out the scope's top-level nodes using their rendered sizes (expanded
+   *  groups included). Without a mode: the scope's last layout, else the last one used anywhere. */
+  const autoLayout = useCallback((expandedOverride?: Record<string, true>, mode?: LayoutMode) => {
     if (readOnly) return;
     const st = useAppStore.getState();
     const expanded = expandedOverride ?? st.expanded;
     const top = project({ topology: st.topology, scope, expanded }).nodes.filter((n) => !n.parentId);
     const sizes = new Map(top.map((n) => [n.id, { width: n.width ?? 0, height: n.height ?? 0 }]));
-    st.applyLayout(scope, st.layoutMode, sizes, expanded);
+    st.applyLayout(scope, mode ?? lastLayout(st.topology, scope) ?? st.layoutMode, sizes, expanded);
     window.setTimeout(() => void rf.fitView({ padding: 0.2, maxZoom: 1.25, duration: 200 }), 30);
   }, [scope, rf, readOnly]);
 
@@ -457,7 +459,7 @@ function CanvasInner({ scope, onNavigate, onSave, readOnly = false }: TopologyCa
               onAdd={(item) => handleAdd(item)}
               onBulkDevices={scope.level === 'subnet' ? () => requestBulkDevices(scope.subnetId) : undefined}
               onBulkConnections={() => requestBulkConnections(scope)}
-              onAutoLayout={() => autoLayout()}
+              onApplyLayout={(mode) => autoLayout(undefined, mode)}
               expandableCount={expandable.length}
               expandedCount={expandedCount}
               onExpandAll={() => {

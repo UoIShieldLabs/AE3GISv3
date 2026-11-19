@@ -51,13 +51,14 @@ export function DropdownMenuCheckboxItem({ className, children, ...props }: Reac
   );
 }
 
-export function DropdownMenuRadioItem({ className, children, ...props }: React.ComponentProps<typeof R.RadioItem>) {
+export function DropdownMenuRadioItem({ className, shortcut, children, ...props }: React.ComponentProps<typeof R.RadioItem> & { shortcut?: string }) {
   return (
     <R.RadioItem className={cn(menuItemClass, menuIndentClass, className)} {...props}>
       <span className="absolute left-2 flex size-3.5 items-center justify-center">
         <R.ItemIndicator><Circle className="size-2 fill-current" /></R.ItemIndicator>
       </span>
       {children}
+      {shortcut ? <span className={menuShortcutClass}>{shortcut}</span> : null}
     </R.RadioItem>
   );
 }

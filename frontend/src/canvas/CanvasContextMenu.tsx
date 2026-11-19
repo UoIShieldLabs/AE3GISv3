@@ -94,7 +94,7 @@ export function CanvasContextMenu({
         {!readOnly ? <ContextMenuSeparator /> : null}
         <ContextMenuItem onSelect={onSelectAll} shortcut="⌘A"><MousePointerSquareDashed /> Select all</ContextMenuItem>
         <ContextMenuItem onSelect={() => void fitView({ padding: 0.2, maxZoom: 1.25, duration: 200 })} shortcut="F"><Maximize /> Fit to view</ContextMenuItem>
-        {!readOnly ? <ContextMenuItem onSelect={onAutoLayout} shortcut="L"><Sparkles /> Apply layout</ContextMenuItem> : null}
+        {!readOnly ? <ContextMenuItem onSelect={onAutoLayout} shortcut="L"><Sparkles /> Re-apply layout</ContextMenuItem> : null}
       </>
     );
   } else if (target?.kind === 'node') {

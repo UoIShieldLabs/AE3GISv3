@@ -15,6 +15,7 @@ import { THEMES } from '@/app/themes';
 import { ThemeSwatch } from './AppearanceMenu';
 import { MOD } from '@/lib/keyboard';
 import type { Scope } from '@/lib/topology';
+import { LAYOUT_MODES, lastLayout } from '@/canvas/layout';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/ui';
 import { createNewTopology, deployFresh, deployTopology, exportLab, exportTopologyJson, requestDestroy } from '@/features/deployment/actions';
 import { useAddEntity } from '@/features/topology/AddEntityContext';
@@ -38,6 +39,7 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
     open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId, savedState: s.savedState,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, layoutMode: s.layoutMode, selection: s.selection,
   }));
+  const relayout = lastLayout(topology, scope) ?? layoutMode;
   const navigate = useNavigate();
   const { requestAdd } = useAddEntity();
   const st = useAppStore.getState;
@@ -68,7 +70,11 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 {deployStatus !== 'deployed' && savedState ? (
                   <CommandItem onSelect={run(() => void deployFresh())} disabled={!backendId || deployStatus === 'deploying'} keywords={['fresh', 'reset', 'discard', 'saved']}><RotateCcw /> Deploy fresh (discard saved state)</CommandItem>
                 ) : null}
-                <CommandItem onSelect={run(() => st().applyLayout(scope, layoutMode))} shortcut="L"><Sparkles /> Apply {layoutMode} layout</CommandItem>
+                {LAYOUT_MODES.map((m) => (
+                  <CommandItem key={m.value} value={`layout ${m.label}`} keywords={['arrange', 'auto layout', 'tidy']} onSelect={run(() => st().applyLayout(scope, m.value))} shortcut={m.value === relayout ? 'L' : undefined}>
+                    <Sparkles /> {m.value === relayout ? 'Re-apply' : 'Apply'} {m.label} layout
+                  </CommandItem>
+                ))}
                 {scope.level === 'root' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'site' }, {}))}><Plus /> Add site…</CommandItem> : null}
                 {scope.level !== 'subnet' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'subnet' }, { siteId: targetSiteFor(scope, selection.nodeIds) }))}><Plus /> Add subnet…</CommandItem> : null}
                 {scope.level !== 'root' ? <CommandItem onSelect={run(() => requestAdd({ kind: 'device', type: 'workstation' }, { subnetId: targetSubnetFor(scope, selection.nodeIds) }))}><Plus /> Add device…</CommandItem> : null}
