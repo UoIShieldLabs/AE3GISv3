@@ -3542,6 +3542,11 @@ export interface components {
             engine_state?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Holds Lab
+             * @default false
+             */
+            holds_lab: boolean;
             /** Id */
             id: string;
             /** Name */
@@ -3577,6 +3582,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Holds Lab
+             * @default false
+             */
+            holds_lab: boolean;
             /** Id */
             id: string;
             /** Name */

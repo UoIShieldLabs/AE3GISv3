@@ -9,10 +9,13 @@ export type SectionId = 'running' | 'mine' | 'lessons' | 'students' | 'presets';
 export type LibrarySort = 'recent' | 'name' | 'status';
 export type LibraryLayout = 'grid' | 'list';
 
-/** Statuses that hold a lab, are about to, or failed on the way (a failed
- *  deploy may still hold containers: destroy cleans it up). */
-export const RUNNING_STATUSES: ReadonlySet<string> = new Set(['deployed', 'deploying', 'destroying', 'error']);
-export const isRunning = (status: string | null | undefined): boolean => !!status && RUNNING_STATUSES.has(status);
+const LAB_STATUSES: ReadonlySet<string> = new Set(['deployed', 'deploying', 'destroying']);
+
+/** It holds (or may hold) containers on this host: the backend says so
+ *  (`holds_lab`, which counts a failed deploy only while it still has engine
+ *  state); without it, by status. */
+export const holdsLab = (t: TopologySummary | null | undefined): boolean =>
+  !!t && (t.holds_lab ?? LAB_STATUSES.has(t.status));
 
 /** The rail, in order. Students run one lab at most: no Running section. */
 export function sectionsFor(mode: LibraryMode): SectionId[] {
@@ -72,7 +75,7 @@ export function buildLibrary({ topologies, students, userId, mode }: {
   const lessons = student
     ? all.filter((t) => t.published && t.owner?.id !== userId)
     : mode === 'instructor' ? all.filter((t) => t.published && !t.owner) : [];
-  const running = student ? [] : all.filter((t) => isRunning(t.status));
+  const running = student ? [] : all.filter((t) => holdsLab(t));
 
   const copies = new Map<string, TopologySummary>();
   const lessonStats = new Map<string, LessonStats>();
@@ -93,11 +96,11 @@ export function buildLibrary({ topologies, students, userId, mode }: {
         rows.set(t.owner.id, row);
       }
       row.topologies.push(t);
-      if (isRunning(t.status)) row.running.push(t);
+      if (holdsLab(t)) row.running.push(t);
       if (t.source_id) {
         const stats = lessonStats.get(t.source_id) ?? { started: 0, running: 0 };
         stats.started += 1;
-        if (isRunning(t.status)) stats.running += 1;
+        if (holdsLab(t)) stats.running += 1;
         lessonStats.set(t.source_id, stats);
       }
     }
@@ -148,14 +151,16 @@ export function sortTopologies(
 }
 
 /** What a topology section shows: matching the search, running only if asked, sorted. */
-export function viewTopologies(items: TopologySummary[], { q, sort, runningOnly = false, statusOf = (t) => t.status }: {
+export function viewTopologies(items: TopologySummary[], { q, sort, runningOnly = false, statusOf = (t) => t.status, labOf = (t) => t }: {
   q: string;
   sort: LibrarySort;
   runningOnly?: boolean;
   /** The status shown (a student's lesson shows their copy's). */
   statusOf?: (t: TopologySummary) => string;
+  /** The topology whose lab counts (a student's lesson: their copy). */
+  labOf?: (t: TopologySummary) => TopologySummary | null | undefined;
 }): TopologySummary[] {
-  const shown = items.filter((t) => topologyMatches(t, q) && (!runningOnly || isRunning(statusOf(t))));
+  const shown = items.filter((t) => topologyMatches(t, q) && (!runningOnly || holdsLab(labOf(t))));
   return sortTopologies(shown, sort, statusOf);
 }
 
