@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 import { useAppStore } from '@/store';
 import {
   Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  IconButton, Input, Sheet, Spinner,
+  IconButton, Input, NavGroup, NavItem, Sheet, Spinner,
 } from '@/ui';
 import { JobLog } from '@/features/jobs/JobLog';
 import { buildImages, cancelJob, syncSource } from './actions';
@@ -116,12 +116,12 @@ function SourceNav({ entries, selected, onSelect }: { entries: SourceEntry[]; se
   const pub = entries.find((e) => e.group === 'public');
   return (
     <nav aria-label="Image sources" className="flex min-h-0 flex-col gap-3 overflow-auto border-r border-border bg-surface-2/40 p-2 text-xs">
-      {all ? <NavItem entry={all} icon={<Layers />} selected={selected === all.key} onSelect={onSelect} /> : null}
+      {all ? <SourceItem entry={all} icon={<Layers />} selected={selected === all.key} onSelect={onSelect} /> : null}
       <NavGroup
         title="Docker Hub"
         action={<IconButton label="Add registry" size="icon-xs" onClick={() => onSelect('add-registry')}><Plus /></IconButton>}
       >
-        {registries.map((e) => <NavItem key={e.key} entry={e} icon={<Boxes />} selected={selected === e.key} onSelect={onSelect} />)}
+        {registries.map((e) => <SourceItem key={e.key} entry={e} icon={<Boxes />} selected={selected === e.key} onSelect={onSelect} />)}
         {registries.length === 0 ? (
           <button type="button" onClick={() => onSelect('add-registry')} className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-fg-muted hover:bg-hover', selected === 'add-registry' && 'bg-active text-fg')}>
             <Plus className="size-3.5" /> Add a registry
@@ -130,44 +130,29 @@ function SourceNav({ entries, selected, onSelect }: { entries: SourceEntry[]; se
       </NavGroup>
       {builds.length ? (
         <NavGroup title="Built on this host">
-          {builds.map((e) => <NavItem key={e.key} entry={e} icon={<GitBranch />} selected={selected === e.key} onSelect={onSelect} />)}
+          {builds.map((e) => <SourceItem key={e.key} entry={e} icon={<GitBranch />} selected={selected === e.key} onSelect={onSelect} />)}
         </NavGroup>
       ) : null}
       {pub ? (
         <NavGroup title="Public">
-          <NavItem entry={pub} icon={<Globe />} selected={selected === pub.key} onSelect={onSelect} />
+          <SourceItem entry={pub} icon={<Globe />} selected={selected === pub.key} onSelect={onSelect} />
         </NavGroup>
       ) : null}
     </nav>
   );
 }
 
-function NavGroup({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex h-6 items-center justify-between px-2 text-2xs font-medium uppercase tracking-wide text-fg-subtle">
-        {title}
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function NavItem({ entry, icon, selected, onSelect }: { entry: SourceEntry; icon: React.ReactNode; selected: boolean; onSelect: (key: SourceKey) => void }) {
+function SourceItem({ entry, icon, selected, onSelect }: { entry: SourceEntry; icon: React.ReactNode; selected: boolean; onSelect: (key: SourceKey) => void }) {
   const flag = entry.warning ? 'has problems' : entry.attention ? `${entry.attention} need a build` : null;
   return (
-    <button
-      type="button"
+    <NavItem
+      icon={icon}
+      label={entry.label}
+      count={entry.count}
+      selected={selected}
       onClick={() => onSelect(entry.key)}
-      aria-current={selected ? 'true' : undefined}
-      className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-hover [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-subtle', selected && 'bg-active')}
-    >
-      {icon}
-      <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-      {entry.busy ? <Spinner className="size-3" /> : flag ? <span title={flag} aria-label={flag} className="size-1.5 shrink-0 rounded-full bg-warning" /> : null}
-      <span className="tabular text-2xs text-fg-subtle">{entry.count}</span>
-    </button>
+      adornment={entry.busy ? <Spinner className="size-3" /> : flag ? <span title={flag} aria-label={flag} className="size-1.5 shrink-0 rounded-full bg-warning" /> : null}
+    />
   );
 }
 

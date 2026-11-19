@@ -779,7 +779,7 @@ turns them on.
 - **Who.** One instructor, kept in step with the environment at every start
   (`bootstrap_instructor`; a changed password signs them out everywhere), and
   students who sign themselves up with the class join code while the instructor
-  has sign-up open (Class sheet → `PUT /class`). Passwords are scrypt
+  has sign-up open (library → Students → `PUT /class`). Passwords are scrypt
   (`domain/passwords.py`, stdlib); a sign-in is an opaque token whose sha256 is
   a `sessions` row (7-day TTL). Repeated failed sign-ins get 429 for a while
   (`LoginLimiter`, in memory). `AE3GIS_INSTRUCTOR_TOKEN` stays a static
@@ -819,7 +819,8 @@ turns them on.
 - **Capacity.** Every lab runs on the instructor's Docker.
   `AE3GIS_STUDENT_MAX_LABS` (default 1) caps a student's labs that hold
   containers; the deploy checks it under the runner's admission lock, so it
-  cannot race. The Class sheet lists every student's labs and destroys them.
+  cannot race. The library's Students section (and Running) lists every student's labs
+  and destroys them.
 - **The UI** (`lib/permissions.ts`): components ask for a capability
   (`authorTutorials`, `manageImages`, `publish`…), never a role. Students get
   none, so they run tutorials and scenarios without authoring them — a UI

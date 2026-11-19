@@ -23,6 +23,8 @@ export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
   jobDetailsOpen: false,
   captureDialog: null,
   runsOpen: false,
+  libraryLayout: 'grid',
+  librarySort: 'recent',
 
   setZoom: (zoom) => set((s) => { if (Math.abs(s.zoom - zoom) > 0.004) s.zoom = zoom; }, false, 'setZoom'),
   setPurdueOpen: (purdueOpen) => set({ purdueOpen }, false, 'setPurdueOpen'),
@@ -33,6 +35,8 @@ export const createViewSlice: SliceCreator<ViewSlice> = (set) => ({
   openCaptureDialog: (captureDialog) => set({ captureDialog }, false, 'openCaptureDialog'),
   closeCaptureDialog: () => set({ captureDialog: null }, false, 'closeCaptureDialog'),
   setRunsOpen: (runsOpen) => set({ runsOpen }, false, 'setRunsOpen'),
+  setLibraryLayout: (libraryLayout) => set({ libraryLayout }, false, 'setLibraryLayout'),
+  setLibrarySort: (librarySort) => set({ librarySort }, false, 'setLibrarySort'),
   toggleCategory: (id) =>
     set((s) => {
       s.collapsedCategories = s.collapsedCategories.includes(id)

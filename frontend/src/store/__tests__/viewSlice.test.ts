@@ -20,3 +20,12 @@ describe('view slice: appearance', () => {
     expect(st().iconStyle).toBe('netmap');
   });
 });
+
+describe('view slice: library', () => {
+  it('defaults to recent cards, and persists layout and sort', () => {
+    expect(useAppStore.getInitialState()).toMatchObject({ libraryLayout: 'grid', librarySort: 'recent' });
+    st().setLibraryLayout('list');
+    st().setLibrarySort('name');
+    expect(persisted()).toMatchObject({ libraryLayout: 'list', librarySort: 'name' });
+  });
+});
