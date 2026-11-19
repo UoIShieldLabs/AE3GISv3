@@ -3,7 +3,7 @@
 // every node has a position. Unknown fields are preserved.
 import type { Connection, NetworkInterface, Position, Site, Subnet, TopologyData } from '@/types/topology';
 import { generateId } from '@/lib/ids';
-import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
+import { layoutFootprint, layoutOwner, layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
 import type { Scope } from '@/lib/topology';
 
@@ -46,6 +46,9 @@ function fillPositions(topology: TopologyData, scope: Scope, items: { position?:
     items.forEach((item, i) => {
       item.position = layout.get(ids[i]) ?? { x: 0, y: 0 };
     });
+    // Laid out from scratch: the scope reads as Tree until someone moves something.
+    const owner = layoutOwner(topology, scope);
+    if (owner) owner.layout = { mode: 'tree', footprint: layoutFootprint(topology, scope, 'tree') };
     return;
   }
   const size = NODE_SIZE[kind];

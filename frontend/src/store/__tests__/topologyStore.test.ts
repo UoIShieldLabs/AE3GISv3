@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore, undo, redo, clearHistory } from '../index';
 import { findSite, findSubnet, locate, locateConnection } from '@/lib/topology';
+import { currentLayout, lastLayout } from '@/canvas/layout';
 import type { TopologyData } from '@/types/topology';
 
 const store = useAppStore;
@@ -189,6 +190,33 @@ describe('topology store — load, dirty, undo', () => {
     S().applyLayout({ level: 'subnet', siteId, subnetId }, 'grid');
     const positions = findSubnet(S().topology, siteId, subnetId)!.containers.map((c) => `${c.position!.x},${c.position!.y}`);
     expect(new Set(positions).size).toBe(positions.length);
+  });
+
+  it('applyLayout records the mode until something in the scope moves (one undo step)', () => {
+    const siteId = S().addSite({ name: 'S1' });
+    const subnetId = S().addSubnet({ siteId, name: 'LAN', cidr: '10.0.1.0/24' })!;
+    const scope = { level: 'subnet', siteId, subnetId } as const;
+    expect(currentLayout(S().topology, scope)).toBe('custom');
+
+    S().applyLayout(scope, 'grid');
+    expect(currentLayout(S().topology, scope)).toBe('grid');
+    expect(S().layoutMode).toBe('grid');
+
+    const [first] = findSubnet(S().topology, siteId, subnetId)!.containers;
+    S().moveNodes([{ id: first.id, position: { x: first.position!.x + 40, y: first.position!.y } }]);
+    expect(currentLayout(S().topology, scope)).toBe('custom');
+    expect(lastLayout(S().topology, scope)).toBe('grid');
+
+    undo();
+    expect(currentLayout(S().topology, scope)).toBe('grid');
+    undo();
+    expect(currentLayout(S().topology, scope)).toBe('custom');
+    redo();
+
+    S().addContainer({ subnetId, type: 'workstation' });
+    expect(currentLayout(S().topology, scope)).toBe('custom');
+    S().applyLayout(scope, 'grid');
+    expect(currentLayout(S().topology, scope)).toBe('grid');
   });
 });
 

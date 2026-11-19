@@ -20,6 +20,16 @@ export interface Position {
   y: number;
 }
 
+/** The auto-layout last applied to a scope's children (editor-only), with a
+ *  fingerprint of the positions it produced: once anything there moves, is
+ *  added or removed, the fingerprint no longer matches and the scope reads as
+ *  a custom layout (`canvas/layout/applied.ts`). */
+export interface AppliedLayout {
+  mode: string;
+  footprint: string;
+  [key: string]: unknown;
+}
+
 /** An extra network interface leg on a container (multi-homing): the node
  *  attaches to another subnet beyond its home, with its own IP there. */
 export interface NetworkInterface {
@@ -88,6 +98,8 @@ export interface Subnet {
   /** Purdue level override (5, 4, 3.5 = DMZ, 3…0) for the Purdue layout;
    *  unset = inferred from its devices (`lib/purdue.ts`). */
   purdueLevel?: number;
+  /** Auto-layout last applied to its devices. */
+  layout?: AppliedLayout;
   [key: string]: unknown;
 }
 
@@ -98,6 +110,8 @@ export interface Site {
   position: Position;
   subnets: Subnet[];
   subnetConnections: Connection[];
+  /** Auto-layout last applied to its subnets. */
+  layout?: AppliedLayout;
   [key: string]: unknown;
 }
 
@@ -217,6 +231,8 @@ export interface TopologyData {
   view?: TopologyView;
   /** Traffic flows kept with the design (run from the Traffic panel). */
   traffic?: { flows?: SavedFlow[]; [key: string]: unknown };
+  /** Auto-layout last applied to its sites. */
+  layout?: AppliedLayout;
   [key: string]: unknown;
 }
 

@@ -6,7 +6,7 @@ import { displayNameFor } from '@/catalog/catalog';
 import {
   canTakeInterfaceLegs, gatewayOf, hasConnection, isRouterType, locate, locateConnection, nextName, siteRouter, usedIpsInSubnet,
 } from '@/lib/topology';
-import { layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
+import { layoutFootprint, layoutOwner, layoutScope, nextFreePosition, type Rect } from '@/canvas/layout';
 import { NODE_SIZE } from '@/canvas/constants';
 import { cloneTopology, normalizeTopology, type NormalizeReport } from '../normalize';
 import type { SliceCreator, TopologySlice, TutorialCellPatch } from '../types';
@@ -154,6 +154,21 @@ function findPhase(top: TopologyData, phaseId: string): AttackPhase | undefined 
     if (p) return p;
   }
   return undefined;
+}
+
+/** Set entity positions (rounded); true if any changed. */
+function placeNodes(top: TopologyData, moves: { id: string; position: Position }[]): boolean {
+  let changed = false;
+  for (const { id, position } of moves) {
+    const hit = locate(top, id);
+    if (!hit) continue;
+    const target = hit.kind === 'site' ? hit.site : hit.kind === 'subnet' ? hit.subnet : hit.container;
+    const next = { x: Math.round(position.x), y: Math.round(position.y) };
+    if (target.position?.x === next.x && target.position?.y === next.y) continue;
+    target.position = next;
+    changed = true;
+  }
+  return changed;
 }
 
 export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
@@ -701,21 +716,23 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
 
   moveNodes: (moves) =>
     set((s) => {
-      const top = s.topology as TopologyData;
-      let changed = false;
-      for (const { id, position } of moves) {
-        const hit = locate(top, id);
-        if (!hit) continue;
-        const target = hit.kind === 'site' ? hit.site : hit.kind === 'subnet' ? hit.subnet : hit.container;
-        if (target.position?.x === position.x && target.position?.y === position.y) continue;
-        target.position = { x: Math.round(position.x), y: Math.round(position.y) };
-        changed = true;
-      }
-      if (changed) s.dirty = true;
+      if (placeNodes(s.topology as TopologyData, moves)) s.dirty = true;
     }, false, 'moveNodes'),
 
   applyLayout: (scope, mode, sizes, expanded) => {
     const positions = layoutScope(get().topology, scope, mode, { sizes, expanded: expanded ?? get().expanded });
-    get().moveNodes([...positions.entries()].map(([id, position]) => ({ id, position })));
+    // One `set`: the moves and the layout record are a single undo step.
+    set((s) => {
+      const top = s.topology as TopologyData;
+      let changed = placeNodes(top, [...positions.entries()].map(([id, position]) => ({ id, position })));
+      const owner = layoutOwner(top, scope);
+      const footprint = layoutFootprint(top, scope, mode);
+      if (owner && (owner.layout?.mode !== mode || owner.layout.footprint !== footprint)) {
+        owner.layout = { mode, footprint };
+        changed = true;
+      }
+      if (changed) s.dirty = true;
+      s.layoutMode = mode;
+    }, false, 'applyLayout');
   },
 });
