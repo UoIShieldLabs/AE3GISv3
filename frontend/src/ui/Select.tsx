@@ -22,6 +22,7 @@ export interface SelectProps<T extends string = string> {
   className?: string;
   size?: 'sm' | 'md';
   mono?: boolean;
+  'aria-label'?: string;
   'aria-invalid'?: boolean;
   'aria-describedby'?: string;
 }

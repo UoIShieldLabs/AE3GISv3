@@ -55,6 +55,8 @@ export const useAppStore = create<AppState>()(
           sidebarOpen: s.sidebarOpen,
           inspectorOpen: s.inspectorOpen,
           collapsedCategories: s.collapsedCategories,
+          libraryLayout: s.libraryLayout,
+          librarySort: s.librarySort,
         }),
       },
     ),

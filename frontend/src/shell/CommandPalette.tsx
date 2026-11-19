@@ -1,12 +1,12 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Activity, BookOpen, Gauge, Boxes, Building2, Download, Layers3, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, RotateCcw, Save, Sparkles, Square } from 'lucide-react';
+import { Activity, BookOpen, Gauge, Boxes, Building2, Download, GraduationCap, Layers3, LayoutTemplate, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, RotateCcw, Save, Sparkles, Square, Users } from 'lucide-react';
 import { openTrafficPanel } from '@/features/traffic/actions';
 import { openMonitorPanel } from '@/features/monitor/actions';
 import { openScenarioPanel } from '@/features/scenario/actions';
 import { openTutorialsPanel } from '@/features/tutorials/actions';
 import { useAppStore } from '@/store';
-import { useCan } from '@/lib/permissions';
+import { useCan, useIsStudent } from '@/lib/permissions';
 import { useAppShallow } from '@/store/selectors';
 import { colorFor } from '@/catalog/catalog';
 import { NodeGlyph } from '@/catalog/icons';
@@ -31,6 +31,9 @@ export interface CommandPaletteProps {
 /** ⌘K: jump to any entity or run an editor action. */
 export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProps) {
   const manageImages = useCan('manageImages');
+  const manageClass = useCan('manageClass');
+  const isStudent = useIsStudent();
+  const accounts = useAppStore((s) => !!s.authRequired);
   const { open, topology, deployStatus, backendId, savedState, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
     open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId, savedState: s.savedState,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, layoutMode: s.layoutMode, selection: s.selection,
@@ -119,6 +122,10 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
               <CommandSeparator />
               <CommandGroup heading="Topologies">
                 <CommandItem onSelect={run(() => void navigate('/'))}><Library /> Open library</CommandItem>
+                {!isStudent ? <CommandItem value="library running labs" onSelect={run(() => void navigate('/?s=running'))}><Activity /> Running labs</CommandItem> : null}
+                {accounts ? <CommandItem value="library lessons" onSelect={run(() => void navigate(isStudent ? '/' : '/?s=lessons'))}><GraduationCap /> Lessons</CommandItem> : null}
+                {accounts && manageClass ? <CommandItem value="library students class" onSelect={run(() => void navigate('/?s=students'))}><Users /> Students</CommandItem> : null}
+                <CommandItem value="library presets templates" onSelect={run(() => void navigate('/?s=presets'))}><LayoutTemplate /> Presets</CommandItem>
                 <CommandItem onSelect={run(() => { createNewTopology(); void navigate('/t/draft'); })}><Plus /> New topology</CommandItem>
               </CommandGroup>
             </CommandList>

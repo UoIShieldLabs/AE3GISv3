@@ -6,6 +6,7 @@ import type { LayoutMode } from '@/canvas/layout';
 import type { Scope } from '@/lib/topology';
 import type { ThemePref } from '@/app/themes';
 import type { IconStyleId } from '@/catalog/icons/registry';
+import type { LibraryLayout, LibrarySort } from '@/features/library/model';
 
 export type DeployStatus = 'idle' | 'deploying' | 'deployed' | 'destroying' | 'error';
 export type RuntimeStatus = 'running' | 'stopped' | 'paused';
@@ -204,6 +205,10 @@ export interface ViewSlice {
   captureDialog: CaptureDialogTarget | null;
   /** The captures & traffic runs sheet. */
   runsOpen: boolean;
+  /** The library's cards or dense list (persisted). */
+  libraryLayout: LibraryLayout;
+  /** How library sections are ordered (persisted). */
+  librarySort: LibrarySort;
 
   setZoom: (zoom: number) => void;
   setPurdueOpen: (open: boolean) => void;
@@ -215,6 +220,8 @@ export interface ViewSlice {
   openCaptureDialog: (target: CaptureDialogTarget) => void;
   closeCaptureDialog: () => void;
   setRunsOpen: (open: boolean) => void;
+  setLibraryLayout: (layout: LibraryLayout) => void;
+  setLibrarySort: (sort: LibrarySort) => void;
   setTheme: (theme: ThemePref) => void;
   setIconStyle: (iconStyle: IconStyleId) => void;
   setTool: (tool: Tool) => void;

@@ -19,6 +19,7 @@ export * from './Select';
 export * from './Command';
 export * from './Combobox';
 export * from './MultiSelect';
+export * from './NavList';
 export * from './ScrollArea';
 export * from './Toaster';
 export * from './Resizable';

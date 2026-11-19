@@ -285,7 +285,8 @@ tables record every long operation.
   like `updateContainer`, `addConnection`, `deleteItems`, `moveNodes`,
   `applyLayout`), `document` (backend id, deploy status, **runtime container
   status lives here, never in the saved data**, `busy`), `view` (selection,
-  `expanded`, theme, icon style, tool, panels, zoom, collapsed palette categories),
+  `expanded`, theme, icon style, tool, panels, zoom, collapsed palette categories,
+  the library's grid/list layout and sort),
   `dock` (typed dock tabs: terminal | capture | traffic | monitor | scenario | webui;
   `openTerminal` wraps it), `auth` (accounts on/off, sign-up open, the signed-in
   user, status; flows in `features/auth/actions.ts`, the token per tab in
@@ -308,7 +309,9 @@ tables record every long operation.
   `app/RequireAuth` layout route `/` (library), `/t/draft`,
   `/t/:id`, `/t/:id/site/:siteId`, `/t/:id/site/:siteId/subnet/:subnetId`. The
   URL is the single source of truth for the drill-down **scope**
-  (`lib/topology.ts: Scope`). `RequireAuth` asks `/health` + `/auth/me` who the
+  (`lib/topology.ts: Scope`), and for the library's view
+  (`?s=running|mine|lessons|students|presets&u=<student>&lesson=&q=&running=1`,
+  `features/library/useLibraryParams`). `RequireAuth` asks `/health` + `/auth/me` who the
   tab is and only then starts the image refresher. A student opening a
   published topology's URL is moved to their copy.
 - **Permissions.** Components check a capability from `lib/permissions.ts`
@@ -388,9 +391,16 @@ tables record every long operation.
   have no UI on main: run and read them headless (`./bench.sh`).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
+  Library (`app/routes/LibraryRoute`, `features/library`): a rail of sections
+  (Running · My topologies · Lessons · Students · Presets for the instructor;
+  Lessons · My topologies · Presets for a student; `model.ts` builds them, pure
+  and tested), each with search, sort, running-only and grid/list; "New
+  topology" also starts from a preset or an import.
   Accounts: `app/routes/LoginRoute` (sign in / join class), `shell/UserMenu`
-  (who, change password, sign out), `features/class/ClassSheet` (instructor:
-  sign-up, join code, students and their labs), `features/topology/SourceBanner`
+  (who, change password, sign out), `features/class` (the library's Students
+  section, instructor: sign-up, join code, a table of students, each student's
+  page with their topologies and labs; `useClass` polls while it is open),
+  `features/topology/SourceBanner`
   (a copy's "reset to latest", whose topology the instructor is viewing).
   The canvas badges captured links / busy nodes from the `activity` slice via
   `project({… activity})`.
@@ -455,7 +465,7 @@ on a reachable host. `start.sh` warns.
 **Classroom mode** (`AE3GIS_INSTRUCTOR_PASSWORD`): one instructor
 (`AE3GIS_INSTRUCTOR_USERNAME`, default `instructor`; the row is synced from the
 environment at every start), students who sign up with the join code while the
-instructor has sign-up open (Class sheet), scrypt passwords (`domain/passwords.py`,
+instructor has sign-up open (library → Students), scrypt passwords (`domain/passwords.py`,
 stdlib), opaque session tokens stored as sha256 (`sessions`). A request
 authenticates with `Authorization: Bearer`, `?token=` on GET and WebSockets
 only, or the web-UI cookie on the relay only (`auth.py`). `AE3GIS_INSTRUCTOR_TOKEN`
