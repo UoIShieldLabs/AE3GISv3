@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Boxes, ChevronDown, ChevronRight, ExternalLink, MoreHorizontal, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import type { Registry } from '@/api/client';
 import { Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconButton, Input } from '@/ui';
+import { useCan } from '@/lib/permissions';
 import { addRegistry, removeRegistry, syncRegistry } from './actions';
 import { registrySummary } from './imagePolling';
 
@@ -52,6 +53,8 @@ export function AddRegistry({ onAdded }: { onAdded?: (namespace: string) => void
 /** The selected registry: what its last sync loaded, Sync / Remove, and its problems on demand. */
 export function RegistryHeader({ registry: reg }: { registry: Registry }) {
   const [open, setOpen] = useState(false);
+  // Syncing or removing changes everyone's catalog: admins only.
+  const manage = useCan('manageRegistries');
   const syncing = !!reg.active_job;
   const failed = reg.last_job?.status === 'failed' ? reg.last_job.error : null;
   const rejected = reg.rejected ?? [];
@@ -90,19 +93,23 @@ export function RegistryHeader({ registry: reg }: { registry: Registry }) {
             </button>
           ) : null}
         </div>
-        <Button size="sm" variant="secondary" loading={syncing} onClick={() => void syncRegistry(reg)} title="Re-read the namespace">
-          <RefreshCw /> Sync
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <IconButton label="More" size="icon-xs"><MoreHorizontal /></IconButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={syncing} onSelect={() => void removeRegistry(reg)} className="text-danger">
-              <Trash2 /> Remove registry
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {manage ? (
+          <>
+            <Button size="sm" variant="secondary" loading={syncing} onClick={() => void syncRegistry(reg)} title="Re-read the namespace">
+              <RefreshCw /> Sync
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconButton label="More" size="icon-xs"><MoreHorizontal /></IconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={syncing} onSelect={() => void removeRegistry(reg)} className="text-danger">
+                  <Trash2 /> Remove registry
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : null}
       </div>
 
       {open ? (

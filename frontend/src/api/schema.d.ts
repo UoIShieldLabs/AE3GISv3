@@ -73,8 +73,9 @@ export interface paths {
         put?: never;
         /**
          * Change Password
-         * @description Change your own password; your other sign-ins end. The instructor's is
-         *     set by the environment (409 ``managed_by_env``).
+         * @description Change your own password (a temporary one included); your other
+         *     sign-ins end. The environment's admin's is set by the environment (409
+         *     ``managed_by_env``).
          */
         post: operations["change_password_api_v1_auth_password_post"];
         delete?: never;
@@ -94,9 +95,10 @@ export interface paths {
         put?: never;
         /**
          * Signup
-         * @description Create a student account with the class join code, and sign in.
-         *     403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;
-         *     422 ``invalid_username`` / ``weak_password``.
+         * @description Create a student account in the class whose join code this is, and sign
+         *     in. 403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;
+         *     422 ``invalid_username`` / ``weak_password``; 429 ``too_many_attempts``
+         *     after repeated wrong codes.
          */
         post: operations["signup_api_v1_auth_signup_post"];
         delete?: never;
@@ -317,8 +319,9 @@ export interface paths {
         get: operations["get_class_api_v1_class_get"];
         /**
          * Update Class
-         * @description Open or close sign-up (opening the first time makes a join code), or
-         *     rotate the join code (students already signed up are unaffected).
+         * @description Open or close sign-up to your class (opening it the first time makes a
+         *     join code), or rotate its join code (students already signed up are
+         *     unaffected).
          */
         put: operations["update_class_api_v1_class_put"];
         post?: never;
@@ -335,7 +338,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Students */
+        /**
+         * List Students
+         * @description Your students (an admin: every student, with their instructor).
+         */
         get: operations["list_students_api_v1_class_students_get"];
         put?: never;
         post?: never;
@@ -377,8 +383,8 @@ export interface paths {
         put?: never;
         /**
          * Reset Password
-         * @description A temporary password (shown once) for a student who forgot theirs;
-         *     their current sign-ins end.
+         * @description A temporary password (shown once) for a student who forgot theirs: their
+         *     current sign-ins end, and they choose a new one when they next sign in.
          */
         post: operations["reset_password_api_v1_class_students__user_id__reset_password_post"];
         delete?: never;
@@ -1082,8 +1088,8 @@ export interface paths {
          * Copy Topology
          * @description A copy for the caller. A student opening a published topology (a
          *     lesson) gets their lesson copy (200 with the one they started, 201 when
-         *     new), which goes when the lesson is unpublished. ``duplicate``, or copying
-         *     your own topology (the instructor: any), makes an unlinked duplicate (201).
+         *     new), which goes when the lesson is unpublished. ``duplicate``, or anyone
+         *     else copying, makes an unlinked duplicate the caller owns (201).
          */
         post: operations["copy_topology_api_v1_topologies__topology_id__copy_post"];
         delete?: never;
@@ -1258,11 +1264,12 @@ export interface paths {
         get?: never;
         /**
          * Publish Topology
-         * @description Publish a topology to students as a lesson (or stop): they see it in
-         *     their library and open it as their own copy. Unpublishing removes those
-         *     copies (their labs are destroyed in the background); a republished lesson
-         *     starts students afresh, and what they duplicated stays. Does not change the
-         *     topology's version.
+         * @description Publish a topology to its owner's students as a lesson (or stop): they
+         *     see it in their library and open it as their own copy. Unpublishing
+         *     removes those copies (their labs are destroyed in the background); a
+         *     republished lesson starts students afresh, and what they duplicated stays.
+         *     Does not change the topology's version. 409 ``not_publishable`` for a
+         *     student's topology.
          */
         put: operations["publish_topology_api_v1_topologies__topology_id__published_put"];
         post?: never;
@@ -1548,6 +1555,76 @@ export interface paths {
         get: operations["get_samples_api_v1_traffic_runs__job_id__samples_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Staff */
+        get: operations["list_staff_api_v1_users_get"];
+        put?: never;
+        /**
+         * Create Staff
+         * @description A new admin or instructor. 409 ``username_taken``; 422
+         *     ``invalid_username``.
+         */
+        post: operations["create_staff_api_v1_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Staff
+         * @description Remove a staff member. Their topologies and students go to
+         *     ``transfer_to`` (default: you). 409 ``cannot_delete_self``,
+         *     ``managed_by_env``, ``last_admin``; 422 ``bad_transfer``.
+         */
+        delete: operations["delete_staff_api_v1_users__user_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Set Role
+         * @description Make a staff member an admin or an instructor. 409 ``last_admin``,
+         *     ``managed_by_env`` (the environment's admin), ``cannot_change_self``.
+         */
+        patch: operations["set_role_api_v1_users__user_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description A temporary password (shown once): their sign-ins end, and they choose a
+         *     new one when they next sign in.
+         */
+        post: operations["reset_password_api_v1_users__user_id__reset_password_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3006,11 +3083,17 @@ export interface components {
         };
         /**
          * OwnerOut
-         * @description The student who owns a topology (None on a topology: the instructor's).
+         * @description The user who owns a topology (None on a topology only with accounts off).
          */
         OwnerOut: {
             /** Id */
             id: string;
+            /**
+             * Role
+             * @default student
+             * @enum {string}
+             */
+            role: "admin" | "instructor" | "student";
             /** Username */
             username: string;
         };
@@ -3077,6 +3160,13 @@ export interface components {
             kind: "path";
             /** Path */
             path: string;
+        };
+        /** PersonOut */
+        PersonOut: {
+            /** Id */
+            id: string;
+            /** Username */
+            username: string;
         };
         /** PlanOut */
         PlanOut: {
@@ -3245,6 +3335,14 @@ export interface components {
             kind: "registry";
             /** Registry */
             registry?: string | null;
+        };
+        /** RoleIn */
+        RoleIn: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "instructor";
         };
         /** RuntimeOut */
         RuntimeOut: {
@@ -3468,6 +3566,65 @@ export interface components {
             /** Url */
             url?: string | null;
         };
+        /**
+         * StaffCreatedOut
+         * @description The new account and its temporary password (shown once).
+         */
+        StaffCreatedOut: {
+            /** Password */
+            password: string;
+            user: components["schemas"]["StaffOut"];
+        };
+        /** StaffIn */
+        StaffIn: {
+            /**
+             * Role
+             * @default instructor
+             * @enum {string}
+             */
+            role: "admin" | "instructor";
+            /** Username */
+            username: string;
+        };
+        /** StaffListOut */
+        StaffListOut: {
+            /** Staff */
+            staff: components["schemas"]["StaffOut"][];
+        };
+        /**
+         * StaffOut
+         * @description An admin or instructor, with their class's size and their own work.
+         */
+        StaffOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Env Managed */
+            env_managed: boolean;
+            /** Id */
+            id: string;
+            /** Labs */
+            labs: components["schemas"]["StudentLabOut"][];
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /** Must Change Password */
+            must_change_password: boolean;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "instructor";
+            /** Signup Open */
+            signup_open: boolean;
+            /** Student Count */
+            student_count: number;
+            /** Topology Count */
+            topology_count: number;
+            /** Username */
+            username: string;
+        };
         /** StaleOut */
         StaleOut: {
             /** Lab Hash */
@@ -3495,6 +3652,7 @@ export interface components {
             created_at: string;
             /** Id */
             id: string;
+            instructor?: components["schemas"]["PersonOut"] | null;
             /** Labs */
             labs: components["schemas"]["StudentLabOut"][];
             /** Last Seen At */
@@ -3784,13 +3942,23 @@ export interface components {
         };
         /** UserOut */
         UserOut: {
+            /**
+             * Env Managed
+             * @default false
+             */
+            env_managed: boolean;
             /** Id */
             id?: string | null;
+            /**
+             * Must Change Password
+             * @default false
+             */
+            must_change_password: boolean;
             /**
              * Role
              * @enum {string}
              */
-            role: "instructor" | "student";
+            role: "admin" | "instructor" | "student";
             /** Username */
             username: string;
         };
@@ -6769,6 +6937,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrafficSamplesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_staff_api_v1_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_staff_api_v1_users_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_staff_api_v1_users__user_id__delete: {
+        parameters: {
+            query?: {
+                transfer_to?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_role_api_v1_users__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_v1_users__user_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemporaryPasswordOut"];
                 };
             };
             /** @description Validation Error */

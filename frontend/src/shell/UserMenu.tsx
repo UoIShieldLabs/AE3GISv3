@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { KeyRound, LogOut, UserRound } from 'lucide-react';
-import * as api from '@/api/client';
 import { useAppStore } from '@/store';
 import { signOut } from '@/features/auth/actions';
+import { PasswordForm } from '@/features/auth/PasswordForm';
+import { ROLE_TONE } from '@/lib/roles';
 import {
   Badge, Button, Dialog, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger, Field, IconButton, Input, toast,
+  DropdownMenuSeparator, DropdownMenuTrigger, IconButton, toast,
 } from '@/ui';
 
 /** Who is signed in, change password, sign out (top bar, library). Hidden
- *  while accounts are off: everyone is the instructor then. */
+ *  while accounts are off: everyone is an admin then. */
 export function UserMenu() {
   const user = useAppStore((s) => s.user);
   const authRequired = useAppStore((s) => s.authRequired);
@@ -38,10 +39,11 @@ export function UserMenu() {
         <DropdownMenuContent align="end" className="min-w-52">
           <DropdownMenuLabel className="flex items-center justify-between gap-2">
             <span className="truncate">{user.username}</span>
-            <Badge tone={user.role === 'instructor' ? 'accent' : 'neutral'}>{user.role}</Badge>
+            <Badge tone={ROLE_TONE[user.role]}>{user.role}</Badge>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {user.role === 'student' ? (
+          {/* The environment's admin's password is the environment's. */}
+          {!user.env_managed ? (
             <DropdownMenuItem onSelect={() => setPasswordOpen(true)}><KeyRound /> Change password…</DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onSelect={requestSignOut}><LogOut /> Sign out</DropdownMenuItem>
@@ -68,44 +70,17 @@ export function UserMenu() {
 }
 
 function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const close = (o: boolean) => {
-    if (!o) { setCurrent(''); setNext(''); setError(null); }
-    onOpenChange(o);
-  };
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (next.length < 8) { setError('The new password needs at least 8 characters'); return; }
-    setBusy(true);
-    setError(null);
-    try {
-      await api.changePassword(current, next);
-      toast.success('Password changed', { description: 'Your other sign-ins have ended.' });
-      close(false);
-    } catch (err) {
-      setError(api.errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
-    <Dialog open={open} onOpenChange={close} title="Change password" size="sm">
-      <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
-        <Field label="Current password">
-          {(ctl) => <Input {...ctl} type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus />}
-        </Field>
-        <Field label="New password" hint="At least 8 characters">
-          {(ctl) => <Input {...ctl} type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />}
-        </Field>
-        {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={() => close(false)}>Cancel</Button>
-          <Button type="submit" variant="primary" loading={busy}>Change password</Button>
-        </div>
-      </form>
+    <Dialog open={open} onOpenChange={onOpenChange} title="Change password" size="sm">
+      {open ? (
+        <PasswordForm
+          onCancel={() => onOpenChange(false)}
+          onDone={() => {
+            toast.success('Password changed', { description: 'Your other sign-ins have ended.' });
+            onOpenChange(false);
+          }}
+        />
+      ) : null}
     </Dialog>
   );
 }

@@ -9,7 +9,7 @@ vi.mock('@/features/deployment/statusPolling', () => ({ stopPolling: vi.fn() }))
 
 const health = (auth_required: boolean, signup_open = false) =>
   ({ status: 'ok', version: 't', engine: 'fake', engine_ok: true, engine_detail: '', auth_required, signup_open, topologies: 0 }) as api.Health;
-const student = { id: 's1', username: 'alice', role: 'student' as const };
+const student = { id: 's1', username: 'alice', role: 'student' as const, must_change_password: false, env_managed: false };
 
 const S = () => useAppStore.getState();
 
@@ -23,12 +23,12 @@ beforeEach(() => {
 });
 
 describe('restoreSession', () => {
-  it('with accounts off, the tab is the instructor without signing in', async () => {
+  it('with accounts off, the tab is an admin without signing in', async () => {
     vi.spyOn(api, 'getHealth').mockResolvedValue(health(false));
-    vi.spyOn(api, 'getMe').mockResolvedValue({ user: { id: null, username: 'instructor', role: 'instructor' }, auth_required: false });
+    vi.spyOn(api, 'getMe').mockResolvedValue({ user: { id: null, username: 'admin', role: 'admin', must_change_password: false, env_managed: false }, auth_required: false });
     await restoreSession();
     expect(S().authStatus).toBe('signedIn');
-    expect(S().user?.role).toBe('instructor');
+    expect(S().user?.role).toBe('admin');
     expect(S().authRequired).toBe(false);
   });
 

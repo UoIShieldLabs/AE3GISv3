@@ -29,11 +29,13 @@ function StudentActions({ row, cls }: { row: StudentRow; cls: ClassState }) {
 
 /** One row per student: what they have, what runs, when they were last seen.
  *  Following a lesson adds the state of each student's copy of it. */
-export function StudentsTable({ rows, lesson, onOpen, cls }: {
+export function StudentsTable({ rows, lesson, onOpen, cls, showInstructor = false }: {
   rows: StudentRow[];
   lesson: TopologySummary | null;
   onOpen: (studentId: string) => void;
   cls: ClassState;
+  /** An admin sees every class: whose each student is. */
+  showInstructor?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -41,6 +43,7 @@ export function StudentsTable({ rows, lesson, onOpen, cls }: {
         <thead>
           <tr className="border-b border-border text-left text-2xs uppercase tracking-wide text-fg-subtle">
             <th className="px-3 py-2 font-medium">Student</th>
+            {showInstructor ? <th className="px-3 py-2 font-medium">Instructor</th> : null}
             {lesson ? <th className="px-3 py-2 font-medium">This lesson</th> : null}
             <th className="px-3 py-2 font-medium">Topologies</th>
             <th className="px-3 py-2 font-medium">Running</th>
@@ -58,6 +61,7 @@ export function StudentsTable({ rows, lesson, onOpen, cls }: {
                     {row.username}
                   </button>
                 </td>
+                {showInstructor ? <td className="px-3 py-1.5 text-fg-muted">{row.instructor?.username ?? '—'}</td> : null}
                 {lesson ? (
                   <td className="px-3 py-1.5">{copy ? <StatusBadge status={copy.status} /> : <span className="text-fg-subtle">not started</span>}</td>
                 ) : null}
@@ -75,13 +79,19 @@ export function StudentsTable({ rows, lesson, onOpen, cls }: {
 }
 
 /** Over one student's topologies: who, when, and their account actions. */
-export function StudentHeader({ row, cls, onBack }: { row: StudentRow; cls: ClassState; onBack: () => void }) {
+export function StudentHeader({ row, cls, onBack, showInstructor = false }: {
+  row: StudentRow;
+  cls: ClassState;
+  onBack: () => void;
+  showInstructor?: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Button size="sm" variant="ghost" onClick={onBack} className="-ml-2"><ChevronLeft /> Students</Button>
       <div className="min-w-0">
         <h1 className="truncate text-base font-semibold">{row.username}</h1>
         <p className="text-xs text-fg-muted">
+          {showInstructor && row.instructor ? `${row.instructor.username}’s class · ` : ''}
           Seen {ago(row.lastSeen)} · {row.topologies.length} topolog{row.topologies.length === 1 ? 'y' : 'ies'}
           {row.running.length ? ` · ${row.running.length} running` : ''}
         </p>

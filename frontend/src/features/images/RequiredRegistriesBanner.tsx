@@ -13,7 +13,7 @@ export function RequiredRegistriesBanner() {
   const report = useAppStore((s) => s.images);
   const [dismissed, setDismissed] = useState('');
   const [adding, setAdding] = useState(false);
-  const manage = useCan('manageImages');
+  const manage = useCan('manageRegistries');
 
   const missing = useMemo(
     () => requiredRegistries(topology, (report?.registries ?? []).map((r) => r.namespace)),

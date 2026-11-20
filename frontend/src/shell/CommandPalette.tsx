@@ -1,6 +1,6 @@
 import { Dialog as RDialog } from 'radix-ui';
 import { useNavigate } from 'react-router';
-import { Activity, BookOpen, Gauge, Boxes, Building2, Download, GraduationCap, Layers3, LayoutTemplate, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, RotateCcw, Save, Sparkles, Square, Users } from 'lucide-react';
+import { Activity, BookOpen, Gauge, Boxes, Building2, Download, GraduationCap, Layers3, LayoutTemplate, Library, ListChecks, Monitor, Network, PanelLeft, PanelRight, Play, Plus, Radio, RotateCcw, Save, ShieldCheck, Sparkles, Square, Users } from 'lucide-react';
 import { openTrafficPanel } from '@/features/traffic/actions';
 import { openMonitorPanel } from '@/features/monitor/actions';
 import { openScenarioPanel } from '@/features/scenario/actions';
@@ -33,6 +33,7 @@ export interface CommandPaletteProps {
 export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProps) {
   const manageImages = useCan('manageImages');
   const manageClass = useCan('manageClass');
+  const manageUsers = useCan('manageUsers');
   const isStudent = useIsStudent();
   const accounts = useAppStore((s) => !!s.authRequired);
   const { open, topology, deployStatus, backendId, savedState, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
@@ -131,6 +132,7 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
                 {!isStudent ? <CommandItem value="library running labs" onSelect={run(() => void navigate('/?s=running'))}><Activity /> Running labs</CommandItem> : null}
                 {accounts ? <CommandItem value="library lessons" onSelect={run(() => void navigate(isStudent ? '/' : '/?s=lessons'))}><GraduationCap /> Lessons</CommandItem> : null}
                 {accounts && manageClass ? <CommandItem value="library students class" onSelect={run(() => void navigate('/?s=students'))}><Users /> Students</CommandItem> : null}
+                {accounts && manageUsers ? <CommandItem value="library staff admins instructors accounts" onSelect={run(() => void navigate('/?s=staff'))}><ShieldCheck /> Staff</CommandItem> : null}
                 <CommandItem value="library presets templates" onSelect={run(() => void navigate('/?s=presets'))}><LayoutTemplate /> Presets</CommandItem>
                 <CommandItem onSelect={run(() => { createNewTopology(); void navigate('/t/draft'); })}><Plus /> New topology</CommandItem>
               </CommandGroup>

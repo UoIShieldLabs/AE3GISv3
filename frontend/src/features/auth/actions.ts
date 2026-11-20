@@ -1,6 +1,6 @@
-// Sign-in flows (classroom mode). Plain functions over the store, like the
-// deployment actions. With accounts off the backend answers /auth/me with the
-// instructor and nobody ever sees the login page.
+// Sign-in flows (accounts on). Plain functions over the store, like the
+// deployment actions. With accounts off the backend answers /auth/me with an
+// admin and nobody ever sees the login page.
 import * as api from '@/api/client';
 import { clearToken, getToken, setToken, setUnauthorizedHandler } from '@/api/session';
 import { useAppStore } from '@/store';
@@ -9,6 +9,12 @@ import { disposeAllSessions } from '@/features/terminal/sessions';
 import { stopPolling } from '@/features/deployment/statusPolling';
 
 let restoring: Promise<void> | null = null;
+
+/** Ask the backend who this tab is again (e.g. after a temporary password was replaced). */
+export async function refreshMe(): Promise<void> {
+  const me = await api.getMe();
+  useAppStore.getState().setAuth({ user: me.user });
+}
 
 /** Find out whether accounts are on and who this tab is signed in as. */
 export function restoreSession(): Promise<void> {

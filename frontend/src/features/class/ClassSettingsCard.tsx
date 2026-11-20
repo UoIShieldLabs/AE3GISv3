@@ -2,7 +2,7 @@ import { Copy, RotateCcw } from 'lucide-react';
 import { Button, IconButton, Spinner, Switch } from '@/ui';
 import type { ClassState } from './useClass';
 
-/** Sign-up and the join code, over the students table. */
+/** Sign-up to the caller's class and its join code, over the students table. */
 export function ClassSettingsCard({ cls }: { cls: ClassState }) {
   const { settings } = cls;
   if (!settings) {
@@ -12,9 +12,9 @@ export function ClassSettingsCard({ cls }: { cls: ClassState }) {
   return (
     <section aria-label="Sign-up" className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 text-xs sm:flex-row sm:items-center sm:gap-6">
       <label className="flex shrink-0 cursor-pointer items-center gap-3">
-        <Switch checked={settings.signup_open} disabled={cls.busy === 'signup'} onCheckedChange={cls.setSignup} aria-label="Students can sign up" />
+        <Switch checked={settings.signup_open} disabled={cls.busy === 'signup'} onCheckedChange={cls.setSignup} aria-label="Students can join your class" />
         <span>
-          <span className="block text-[13px] font-medium">Students can sign up</span>
+          <span className="block text-[13px] font-medium">Students can join your class</span>
           <span className="text-fg-muted">Accounts stay when you turn it off.</span>
         </span>
       </label>

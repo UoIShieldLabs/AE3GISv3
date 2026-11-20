@@ -41,23 +41,25 @@ export function SourceBanner() {
   );
 }
 
-/** Next to the topology's name, for the instructor in classroom mode: whose
- *  topology this is (a student's) and whether students see it. Quiet chips
- *  with the detail in a tooltip, rather than a banner. */
+/** Next to the topology's name, for staff with accounts on: whose topology
+ *  this is (when it is someone else's: a student's, or another staff
+ *  member's for an admin) and whether students see it. Quiet chips with the
+ *  detail in a tooltip, rather than a banner. */
 export function RecordChips() {
   const { owner, published } = useAppShallow((s) => ({ owner: s.owner, published: s.published }));
   const accounts = useAppStore((s) => !!s.authRequired);
+  const me = useAppStore((s) => s.user?.id);
   const isStudent = useIsStudent();
   if (!accounts || isStudent) return null;
   return (
     <>
-      {owner ? (
+      {owner && owner.id !== me ? (
         <Tooltip content={`${owner.username}'s topology: saving changes theirs`}>
           <Badge tone="outline" className="max-w-32 shrink-0"><UserRound className="size-3 shrink-0" /><span className="truncate">{owner.username}</span></Badge>
         </Tooltip>
       ) : null}
       {published ? (
-        <Tooltip content="Published: students open their own copy and are offered what you save">
+        <Tooltip content="Published: its owner's students open their own copy and are offered what is saved">
           <Badge tone="accent" className="shrink-0">Published</Badge>
         </Tooltip>
       ) : null}
