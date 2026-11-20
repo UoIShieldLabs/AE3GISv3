@@ -79,33 +79,46 @@ development outside Docker.
 ```
 
 Open http://localhost:3000. By default there is no sign-in: the API is open
-and everyone is the instructor, which suits a lab on your own machine. Tear
-down with `docker compose down`.
+and everyone is an admin, which suits a lab on your own machine. Tear down with
+`docker compose down`.
 
-### Accounts (classroom mode)
+### Accounts (classes, several instructors)
 
-To run a class from your machine, set an instructor password:
+To run classes from your machine, set the first admin's password:
 
 ```bash
-AE3GIS_INSTRUCTOR_PASSWORD='choose-one' ./start.sh
+AE3GIS_ADMIN_PASSWORD='choose-one' ./start.sh
 ```
 
-- You sign in as `instructor` (`AE3GIS_INSTRUCTOR_USERNAME` to change it) with
-  full access. In the library's **Class** sheet, turn sign-up on and share the
-  join code; students open `http://<your-ip>:3000/login` → **Join class**.
+- You sign in as `admin` (`AE3GIS_ADMIN_USERNAME` to change it) with full
+  access. In the library's **Staff** section, add the other **admins** (full
+  access too) and **instructors**: each gets a temporary password, shown once,
+  and chooses their own at their first sign-in.
+- Every admin and instructor has their own **class**: in the library's
+  **Students** section, turn sign-up on and share its join code; students open
+  `http://<your-ip>:3000/login` → **Join class**, and the code puts them in
+  that class. Instructors see their own topologies and their students';
+  admins see every class and topology.
 - **Publish** a topology from the library: its tutorials and scenarios go with
-  it. Students see it under *Lessons*; opening it gives each student their own
-  copy to deploy and edit (and to reset when you update it). Unpublishing or
-  deleting it removes those copies (running labs are destroyed); republishing
-  starts students afresh. Students keep what they *Duplicate to My topologies*.
+  it. Your students see it under *Lessons*; opening it gives each student their
+  own copy to deploy and edit (and to reset when you update it). Unpublishing
+  or deleting it removes those copies (running labs are destroyed);
+  republishing starts students afresh. Students keep what they *Duplicate to
+  My topologies*.
 - Students also create, import and export their own topologies. They run
   tutorials and scenarios but don't author them, and can't manage images, the
-  host's labs or the class.
+  host's labs or a class. Instructors build images; registries, the host's
+  labs, benchmarks and the staff are the admins'.
+- Removing an instructor hands their topologies (running labs keep running)
+  and their students to another admin or instructor; nothing is destroyed.
 - Every lab runs on **your** Docker. `AE3GIS_STUDENT_MAX_LABS` (default 1)
-  caps how many each student can run at once; the Class sheet lists and
-  destroys them.
-- `AE3GIS_INSTRUCTOR_TOKEN` is an optional static bearer for scripts
-  (`./bench.sh --token`).
+  caps how many each student can run at once; Students and Running list and
+  destroy them.
+- `AE3GIS_ADMIN_TOKEN` is an optional static admin bearer for scripts
+  (`./bench.sh --token`). The older `AE3GIS_INSTRUCTOR_PASSWORD`,
+  `_USERNAME` and `_TOKEN` still work when the `AE3GIS_ADMIN_*` ones are
+  unset; upgrading such an instance makes its instructor the admin, with the
+  same username, students and join code.
 
 Plain HTTP on a LAN carries passwords in the clear: fine for a classroom
 network, not for the internet.
