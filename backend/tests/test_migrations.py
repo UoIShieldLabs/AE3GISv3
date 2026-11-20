@@ -167,3 +167,72 @@ def test_0008_adds_retired_at(tmp_path):
     command.upgrade(cfg, "head")  # idempotent
     with engine.begin() as c:
         assert _rows(c, "SELECT id, retired_at FROM topologies") == [("t1", None)]
+
+
+def test_0009_makes_the_instructor_the_admin_with_its_class(tmp_path):
+    url = f"sqlite:///{tmp_path / 'm.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0008_topology_retired")
+    engine = sa.create_engine(url)
+    with engine.begin() as c:
+        c.execute(
+            sa.text(
+                "INSERT INTO users (id, username, password_hash, role, created_at) VALUES "
+                "('i1', 'instructor', 'h', 'instructor', CURRENT_TIMESTAMP), "
+                "('s1', 'alice', 'h', 'student', CURRENT_TIMESTAMP), "
+                "('s2', 'bob', 'h', 'student', CURRENT_TIMESTAMP)"
+            )
+        )
+        c.execute(
+            sa.text(
+                "INSERT INTO app_settings (key, value) VALUES "
+                "('class.join_code', '\"kq7m-x3fa\"'), ('class.signup_open', 'true'), "
+                "('other', '1')"
+            )
+        )
+        c.execute(
+            sa.text(
+                "INSERT INTO topologies (id, name, data, status, version, owner_id) VALUES "
+                "('t1', 'Mine', '{}', 'idle', 1, NULL), ('t2', 'Hers', '{}', 'idle', 1, 's1')"
+            )
+        )
+
+    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "head")  # idempotent
+
+    with engine.begin() as c:
+        assert _rows(c, "SELECT id, role, env_managed FROM users ORDER BY id") == [
+            ("i1", "admin", 1),
+            ("s1", "student", 0),
+            ("s2", "student", 0),
+        ]
+        ((class_id, join_code, signup_open),) = _rows(
+            c, "SELECT id, join_code, signup_open FROM classes WHERE instructor_id = 'i1'"
+        )
+        assert (join_code, signup_open) == ("kq7m-x3fa", 1)
+        assert _rows(c, "SELECT DISTINCT class_id FROM users WHERE role = 'student'") == [
+            (class_id,)
+        ]
+        assert _rows(c, "SELECT id, owner_id FROM topologies ORDER BY id") == [
+            ("t1", "i1"),
+            ("t2", "s1"),
+        ]
+        assert _rows(c, "SELECT key FROM app_settings") == [("other",)]
+
+
+def test_0009_without_accounts_changes_no_data(tmp_path):
+    url = f"sqlite:///{tmp_path / 'm.db'}"
+    cfg = alembic_config(url)
+    command.upgrade(cfg, "0008_topology_retired")
+    engine = sa.create_engine(url)
+    with engine.begin() as c:
+        c.execute(
+            sa.text(
+                "INSERT INTO topologies (id, name, data, status, version) "
+                "VALUES ('t1', 'T', '{}', 'idle', 1)"
+            )
+        )
+    command.upgrade(cfg, "head")
+    with engine.begin() as c:
+        assert _rows(c, "SELECT id, owner_id FROM topologies") == [("t1", None)]
+        assert _rows(c, "SELECT count(*) FROM classes") == [(0,)]

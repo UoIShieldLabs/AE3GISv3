@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db, get_engine, get_settings
 from api.schemas import HealthOut, LabsReport, PurgeResult, ReconcileResult
-from auth import current_identity, require_instructor
+from auth import current_identity, require_admin
 from config import Settings
 from db.models import Topology
 from engine.base import DeploymentEngine
@@ -35,7 +35,7 @@ async def health(
         engine_ok=ok,
         engine_detail=detail,
         auth_required=settings.auth_required,
-        signup_open=settings.auth_required and accounts.class_settings(db)["signup_open"],
+        signup_open=settings.auth_required and accounts.any_signup_open(db),
         topologies=db.scalar(select(func.count(Topology.id))) or 0,
     )
 
@@ -54,7 +54,7 @@ async def get_environment(
 async def labs(
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Every lab the engine is running, matched against saved topologies."""
     return await reconcile.report(db, engine)
@@ -64,7 +64,7 @@ async def labs(
 async def run_reconcile(
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Reset topologies whose lab is gone; report orphans (purge is explicit)."""
     return await reconcile.apply(db, engine)
@@ -75,7 +75,7 @@ async def purge_lab(
     lab_hash: str,
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Remove a lab's containers and networks whatever user prefix they carry."""
     return await reconcile.purge(db, engine, lab_hash)

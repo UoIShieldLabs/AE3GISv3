@@ -1,7 +1,7 @@
 """Every /api/v1 route asks who is calling, unless it is meant to be public.
 
 A new route without ``current_identity`` (directly or through
-``require_instructor`` / ``api.access``) fails here, so classroom mode cannot
+``require_staff`` / ``require_admin`` / ``api.access``) fails here, so classroom mode cannot
 grow an unauthenticated hole by accident.
 """
 

@@ -109,8 +109,11 @@ def topology(client) -> dict:
 
 # ── classroom mode (accounts on) ────────────────────────────────────
 
-INSTRUCTOR_PASSWORD = "teach-me-please"
+ADMIN_PASSWORD = "teach-me-please"
+STAFF_PASSWORD = "staff-pass-12"
 STUDENT_PASSWORD = "student-pass-1"
+# The environment's admin was "the instructor" before there were staff accounts.
+INSTRUCTOR_PASSWORD = ADMIN_PASSWORD
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -118,36 +121,67 @@ def bearer(token: str) -> dict[str, str]:
 
 
 class Classroom:
-    """A TestClient on an accounts-on app, signed in as the instructor, that
-    signs students up on demand (``student("alice")`` → their auth headers)."""
+    """A TestClient on an accounts-on app, signed in as the environment's admin
+    (``admin``), that makes instructors (``teacher("tess")``) and signs students
+    up into a class (``student("alice")``: the admin's; ``student("bob",
+    teacher="tess")``) on demand, each call returning their auth headers."""
 
     def __init__(self, client: TestClient, app) -> None:
         self.client = client
         self.app = app
         r = client.post(
             "/api/v1/auth/login",
-            json={"username": "instructor", "password": INSTRUCTOR_PASSWORD},
+            json={"username": "admin", "password": ADMIN_PASSWORD},
         )
         assert r.status_code == 200, r.text
-        self.instructor = bearer(r.json()["token"])
+        self.admin = bearer(r.json()["token"])
+        self.ids: dict[str, str] = {"admin": r.json()["user"]["id"]}
+        self._staff: dict[str, dict[str, str]] = {"admin": self.admin}
         self._students: dict[str, dict[str, str]] = {}
 
-    def open_signup(self) -> str:
-        r = self.client.put("/api/v1/class", json={"signup_open": True}, headers=self.instructor)
+    def _signed_in(self, name: str, password: str) -> dict[str, str]:
+        r = self.client.post("/api/v1/auth/login", json={"username": name, "password": password})
+        assert r.status_code == 200, r.text
+        return bearer(r.json()["token"])
+
+    def teacher(self, name: str, role: str = "instructor") -> dict[str, str]:
+        """A staff account made by the admin, its temporary password replaced."""
+        if name not in self._staff:
+            r = self.client.post(
+                "/api/v1/users", json={"username": name, "role": role}, headers=self.admin
+            )
+            assert r.status_code == 201, r.text
+            self.ids[name] = r.json()["user"]["id"]
+            temporary = r.json()["password"]
+            headers = self._signed_in(name, temporary)
+            r = self.client.post(
+                "/api/v1/auth/password",
+                json={"current": temporary, "new": STAFF_PASSWORD},
+                headers=headers,
+            )
+            assert r.status_code == 204, r.text
+            self._staff[name] = headers
+        return self._staff[name]
+
+    def open_signup(self, teacher: str = "admin") -> str:
+        r = self.client.put(
+            "/api/v1/class", json={"signup_open": True}, headers=self.teacher(teacher)
+        )
         assert r.status_code == 200, r.text
         return r.json()["join_code"]
 
-    def student(self, name: str) -> dict[str, str]:
+    def student(self, name: str, teacher: str = "admin") -> dict[str, str]:
         if name not in self._students:
             r = self.client.post(
                 "/api/v1/auth/signup",
                 json={
                     "username": name,
                     "password": STUDENT_PASSWORD,
-                    "join_code": self.open_signup(),
+                    "join_code": self.open_signup(teacher),
                 },
             )
             assert r.status_code == 201, r.text
+            self.ids[name] = r.json()["user"]["id"]
             self._students[name] = bearer(r.json()["token"])
         return self._students[name]
 
@@ -164,7 +198,7 @@ class Classroom:
 
 @pytest.fixture
 def classroom_app(tmp_path: Path, fake_engine: FakeEngine):
-    return create_app(make_settings(tmp_path, instructor_password=INSTRUCTOR_PASSWORD), fake_engine)
+    return create_app(make_settings(tmp_path, admin_password=ADMIN_PASSWORD), fake_engine)
 
 
 @pytest.fixture

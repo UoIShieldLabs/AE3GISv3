@@ -46,9 +46,19 @@ class ValidateBody(BaseModel):
     data: dict[str, Any]
 
 
-class OwnerOut(BaseModel):
-    """The student who owns a topology (None on a topology: the instructor's)."""
+Role = Literal["admin", "instructor", "student"]
+StaffRole = Literal["admin", "instructor"]
 
+
+class OwnerOut(BaseModel):
+    """The user who owns a topology (None on a topology only with accounts off)."""
+
+    id: str
+    username: str
+    role: Role = "student"
+
+
+class PersonOut(BaseModel):
     id: str
     username: str
 
@@ -60,9 +70,9 @@ class TopologySummary(BaseModel):
     version: int
     created_at: datetime
     updated_at: datetime
-    # Accounts (classroom mode): the owning student (None: the instructor's),
-    # whether students can see it, and for a student's copy of a published
-    # topology the source and whether it changed since the copy was taken.
+    # Accounts: the owner (None only with accounts off), whether the owner's
+    # students can see it, and for a student's copy of a published topology
+    # the source and whether it changed since the copy was taken.
     owner: OwnerOut | None = None
     published: bool = False
     source_id: str | None = None
@@ -341,7 +351,7 @@ class LabOut(BaseModel):
     classification: Literal["tracked", "orphan"]
     topology_id: str | None = None
     topology_name: str | None = None
-    # The student whose topology it is (None: the instructor's, or an orphan).
+    # Whose topology it is (None: an orphan, or accounts off).
     owner: OwnerOut | None = None
 
 
@@ -1152,10 +1162,14 @@ class BenchmarkOut(BaseModel):
 
 
 class UserOut(BaseModel):
-    # None for the instructor while accounts are off.
+    # None while accounts are off (every caller is an admin).
     id: str | None = None
     username: str
-    role: Literal["instructor", "student"]
+    role: Role
+    # A temporary password: change it (POST /auth/password) before anything else.
+    must_change_password: bool = False
+    # The environment's admin, whose password only the environment changes.
+    env_managed: bool = False
 
 
 class MeOut(BaseModel):
@@ -1210,6 +1224,8 @@ class StudentOut(BaseModel):
     username: str
     created_at: datetime
     last_seen_at: datetime | None = None
+    # The staff member whose class they are in.
+    instructor: PersonOut | None = None
     topology_count: int
     # Their topologies that hold (or may hold) containers on this host.
     labs: list[StudentLabOut]
@@ -1223,6 +1239,43 @@ class StudentsOut(BaseModel):
 
 class TemporaryPasswordOut(BaseModel):
     password: str
+
+
+class StaffOut(BaseModel):
+    """An admin or instructor, with their class's size and their own work."""
+
+    id: str
+    username: str
+    role: StaffRole
+    env_managed: bool
+    # They have not replaced their temporary password yet.
+    must_change_password: bool
+    created_at: datetime
+    last_seen_at: datetime | None = None
+    student_count: int
+    signup_open: bool
+    topology_count: int
+    labs: list[StudentLabOut]
+
+
+class StaffListOut(BaseModel):
+    staff: list[StaffOut]
+
+
+class StaffIn(BaseModel):
+    username: str
+    role: StaffRole = "instructor"
+
+
+class StaffCreatedOut(BaseModel):
+    """The new account and its temporary password (shown once)."""
+
+    user: StaffOut
+    password: str
+
+
+class RoleIn(BaseModel):
+    role: StaffRole
 
 
 class PublishIn(BaseModel):

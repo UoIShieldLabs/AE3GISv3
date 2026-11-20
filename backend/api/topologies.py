@@ -29,7 +29,7 @@ from api.schemas import (
     ValidateBody,
     ValidationResult,
 )
-from auth import current_identity, require_instructor
+from auth import current_identity, require_staff
 from db.models import Topology
 from domain import saved_state, validation
 from domain.export import containerlab, kathara, labspec
@@ -91,7 +91,9 @@ def create_topology(
 
 @router.post("/generate", response_model=TopologyRecord, status_code=201)
 def generate_topology(
-    body: GenerateRequest, db: Session = Depends(get_db), _=Depends(require_instructor)
+    body: GenerateRequest,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(require_staff),
 ):
     """Create a topology from a few numbers (the benchmarks' generator): a
     servers subnet behind a core router, client subnets behind their own
@@ -102,7 +104,7 @@ def generate_topology(
         data = generate(params)
     except GeneratorError as exc:
         raise Invalid(str(exc), code="bad_generator") from exc
-    topo, diags = topologies.create(db, name=data["name"], data=data)
+    topo, diags = topologies.create(db, name=data["name"], data=data, owner_id=identity.owner_id)
     return record_out(db, topo, diags)
 
 
@@ -269,8 +271,8 @@ def copy_topology(
 ):
     """A copy for the caller. A student opening a published topology (a
     lesson) gets their lesson copy (200 with the one they started, 201 when
-    new), which goes when the lesson is unpublished. ``duplicate``, or copying
-    your own topology (the instructor: any), makes an unlinked duplicate (201)."""
+    new), which goes when the lesson is unpublished. ``duplicate``, or anyone
+    else copying, makes an unlinked duplicate the caller owns (201)."""
     topo, created = topologies.copy_for(db, identity, source, duplicate=duplicate)
     response.status_code = 201 if created else 200
     return record_out(db, topo, topologies.diagnostics_for(topo.data))
@@ -288,7 +290,7 @@ async def reset_topology(
     state is discarded. 409 ``no_source`` when it is not a copy or its source
     is gone or no longer published."""
     source = db.get(Topology, topo.source_id) if topo.source_id else None
-    if source is None or not can_view(identity, source):
+    if source is None or not can_view(db, identity, source):
         raise Conflict(
             "This topology is not a copy of a topology published to you", code="no_source"
         )
@@ -303,14 +305,17 @@ async def publish_topology(
     db: Session = Depends(get_db),
     engine: DeploymentEngine = Depends(get_engine),
     runner: JobRunner = Depends(get_runner),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_staff),
     topo: Topology = Depends(owned_topology),
 ):
-    """Publish a topology to students as a lesson (or stop): they see it in
-    their library and open it as their own copy. Unpublishing removes those
-    copies (their labs are destroyed in the background); a republished lesson
-    starts students afresh, and what they duplicated stays. Does not change the
-    topology's version."""
+    """Publish a topology to its owner's students as a lesson (or stop): they
+    see it in their library and open it as their own copy. Unpublishing
+    removes those copies (their labs are destroyed in the background); a
+    republished lesson starts students afresh, and what they duplicated stays.
+    Does not change the topology's version. 409 ``not_publishable`` for a
+    student's topology."""
+    if body.published:
+        topologies.check_publishable(db, topo)
     retired = topologies.set_published(db, topo, body.published)
     lessons.schedule(runner, engine, retired)
     return record_out(db, topo, topologies.diagnostics_for(topo.data))

@@ -31,6 +31,7 @@ from api import (
     system,
     topologies,
     traffic,
+    users,
     webui,
 )
 from api import pulse as pulse_api
@@ -81,7 +82,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     run_migrations(settings.database_url)
     session_factory = make_session_factory(make_engine(settings.database_url))
     with session_factory() as db:
-        accounts.bootstrap_instructor(db, settings)
+        accounts.bootstrap_admin(db, settings)
         accounts.purge_expired_sessions(db)
     engine = engine or make_deployment_engine(
         settings.engine, docker_timeout_s=settings.docker_timeout_s
@@ -174,6 +175,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     for r in (
         accounts_api.router,
         classroom.router,
+        users.router,
         topologies.router,
         deployment.router,
         jobs.router,

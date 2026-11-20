@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from api.deps import get_artifacts, get_db, get_runner
 from api.errors import NotFound
 from api.schemas import BenchmarkOut, BenchmarkRequest
-from auth import require_instructor
+from auth import require_admin
 from db.models import Job
 from domain import benchmark as bm
 from services import benchmark, jobs
@@ -58,27 +58,27 @@ def start_benchmark(
     body: BenchmarkRequest,
     db: Session = Depends(get_db),
     runner: JobRunner = Depends(get_runner),
-    _: Identity = Depends(require_instructor),
+    identity: Identity = Depends(require_admin),
 ):
     """Start a sweep. One benchmark at a time (409 ``benchmark_active``); it
     fails at its first step if other labs or jobs load the host, unless
     ``allow_busy_host``."""
-    return benchmark_out(benchmark.start_benchmark(db, runner, body.model_dump()))
+    return benchmark_out(
+        benchmark.start_benchmark(db, runner, body.model_dump(), owner_id=identity.owner_id)
+    )
 
 
 @router.get("", response_model=list[BenchmarkOut])
 def list_benchmarks(
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     return [benchmark_out(j) for j in benchmark.list_benchmarks(db, limit)]
 
 
 @router.get("/{job_id}", response_model=BenchmarkOut)
-def get_benchmark(
-    job_id: str, db: Session = Depends(get_db), _: Identity = Depends(require_instructor)
-):
+def get_benchmark(job_id: str, db: Session = Depends(get_db), _: Identity = Depends(require_admin)):
     return benchmark_out(_get(db, job_id))
 
 
@@ -87,7 +87,7 @@ def get_report(
     job_id: str,
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """The results as Markdown (so far, while it runs)."""
     job = _get(db, job_id)
@@ -113,7 +113,7 @@ def export_benchmark(
     db: Session = Depends(get_db),
     store: ArtifactStore = Depends(get_artifacts),
     runner: JobRunner = Depends(get_runner),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Everything: benchmark.json, results.csv, report.md, the monitor's CSVs,
     each step's topology, and the job log."""
