@@ -135,6 +135,29 @@ def test_classify_and_process():
     assert r.groups["other_lab"]["count"] == 1 and r.groups["other"]["mem_used"] == 5_000_000
 
 
+def test_another_labs_sidecars_are_not_listed():
+    """Someone else's capture sidecar counts with the other labs, unnamed; this
+    lab's sidecars and the shared helpers (no lab) are still tools."""
+    scope = m.Scope(lab_hash="L", node_for_machine={}, selected=set())
+    refs = [
+        ContainerRef(
+            f"s{i}" + "0" * 62,
+            name,
+            "running",
+            {"ae3gis.sidecar": "1", "ae3gis.purpose": "capture", **labels},
+        )
+        for i, (name, labels) in enumerate(
+            [
+                ("mine", {"ae3gis.lab_hash": "L"}),
+                ("theirs", {"ae3gis.lab_hash": "OTHER"}),
+                ("shared", {}),
+            ]
+        )
+    ]
+    kinds = {t.name: t.kind for t in m.classify(refs, scope).values()}
+    assert kinds == {"mine": "tool", "theirs": "other_lab", "shared": "tool"}
+
+
 def test_selection_summary_and_percentiles():
     rows = [
         {
