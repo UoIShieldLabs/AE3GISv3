@@ -22,7 +22,7 @@ import { isTutorialUnsaved, nextCell, progressOf } from './model';
 
 /** One tutorial: notes and commands, stepped through on the deployed lab. */
 export function TutorialNotebook({ tutorial, onSave }: { tutorial: Tutorial; onSave: () => void }) {
-  // Students step through tutorials; writing them is the instructor's.
+  // Students step through tutorials; writing them is staff's.
   const author = useCan('authorTutorials');
   const { editing: editToggle, runs, statuses, blocked, unsaved, topology } = useAppShallow((s) => ({
     editing: !!s.editingTutorials[tutorial.id],

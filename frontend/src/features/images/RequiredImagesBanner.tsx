@@ -18,7 +18,7 @@ export function RequiredImagesBanner() {
   const catalog = useAppStore((s) => s.catalog);
   const openImages = useAppStore((s) => s.openImages);
   const [dismissed, setDismissed] = useState<string | null>(null);
-  // Students see what will happen; building is the instructor's (a deploy
+  // Students see what will happen; building is staff's (a deploy
   // still builds what it is missing).
   const manage = useCan('manageImages');
 

@@ -73,7 +73,8 @@ def _validation_result(diags: list[validation.Diagnostic]) -> ValidationResult:
 
 @router.get("", response_model=list[TopologySummary])
 def list_topologies(db: Session = Depends(get_db), identity: Identity = Depends(current_identity)):
-    """The instructor sees every topology; a student their own and the published."""
+    """What the caller may see: an admin every topology, an instructor theirs and their
+    students', a student theirs and what their instructor published."""
     topos = topologies.list_visible(db, identity)
     meta = topologies.summary_meta(db, topos)
     return [TopologySummary.model_validate({**_columns(t), **meta[t.id]}) for t in topos]

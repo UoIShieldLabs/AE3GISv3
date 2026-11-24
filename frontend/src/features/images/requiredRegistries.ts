@@ -1,6 +1,6 @@
 // Which Docker Hub registries a topology's images need but aren't added yet.
 // A scenario is portable as plain topology JSON (images are in each container's
-// `image`); on import we infer the namespaces so the instructor can add them in
+// `image`); on import we infer the namespaces so an admin can add them in
 // one click instead of knowing to add `tollan` by hand.
 import type { TopologyData } from '@/types/topology';
 

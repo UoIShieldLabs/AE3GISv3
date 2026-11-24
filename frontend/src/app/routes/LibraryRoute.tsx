@@ -168,7 +168,7 @@ export function LibraryRoute() {
       await refresh();
     }, 'Could not duplicate');
 
-  /** Students who started a lesson (the instructor sees their copies). */
+  /** Students who started a lesson (their instructor sees their copies). */
   const startedBy = (lessonId: string) => lib.lessonStats.get(lessonId)?.started ?? 0;
 
   const setPublished = (t: api.TopologySummary, published: boolean) =>
@@ -253,7 +253,7 @@ export function LibraryRoute() {
     </>
   );
 
-  /** For the instructor: which lesson a student's topology was copied from. */
+  /** For staff: which lesson a student's topology was copied from. */
   const copyMarker = (t: api.TopologySummary) => {
     if (!t.source_id) return undefined;
     const from = lib.names.get(t.source_id);

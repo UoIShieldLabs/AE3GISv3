@@ -128,7 +128,7 @@ export interface DocumentSlice {
   deployedAt: string | null;
   /** The destroy dialog (keep running / save & destroy / destroy) is open. */
   destroyDialogOpen: boolean;
-  /** Classroom mode: the student who owns the loaded topology (null: the instructor's). */
+  /** Who owns the loaded topology (null with accounts off). */
   owner: Owner | null;
   /** Students can see it (and open their own copy). */
   published: boolean;
@@ -170,7 +170,7 @@ export interface AuthSlice {
   authRequired: boolean | null;
   /** Students can sign themselves up right now. */
   signupOpen: boolean;
-  /** The signed-in caller (the instructor while accounts are off). */
+  /** The signed-in caller (an admin while accounts are off). */
   user: SessionUser | null;
   authStatus: AuthStatus;
   setAuth: (patch: Partial<Pick<AuthSlice, 'authRequired' | 'signupOpen' | 'user' | 'authStatus'>>) => void;

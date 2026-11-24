@@ -914,7 +914,8 @@ export interface paths {
         };
         /**
          * List Topologies
-         * @description The instructor sees every topology; a student their own and the published.
+         * @description What the caller may see: an admin every topology, an instructor theirs and their
+         *     students', a student theirs and what their instructor published.
          */
         get: operations["list_topologies_api_v1_topologies_get"];
         put?: never;
