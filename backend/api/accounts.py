@@ -16,14 +16,20 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 def _user_out(identity: Identity) -> UserOut:
-    return UserOut(id=identity.user_id, username=identity.username, role=identity.role)
+    return UserOut(
+        id=identity.user_id,
+        username=identity.username,
+        role=identity.role,
+        must_change_password=identity.must_change_password,
+        env_managed=identity.env_managed,
+    )
 
 
-def _session_out(sign_in: SignIn) -> SessionOut:
+def _session_out(db: Session, sign_in: SignIn) -> SessionOut:
     return SessionOut(
         token=sign_in.token,
         expires_at=sign_in.expires_at,
-        user=_user_out(accounts.identity_of(sign_in.user)),
+        user=_user_out(accounts.identity_of(db, sign_in.user)),
     )
 
 
@@ -45,20 +51,31 @@ def login(
         password=body.password,
         client=client,
     )
-    return _session_out(sign_in)
+    return _session_out(db, sign_in)
 
 
 @router.post("/signup", response_model=SessionOut, status_code=201)
 def signup(
-    body: SignupIn, db: Session = Depends(get_db), settings: Settings = Depends(get_settings)
+    body: SignupIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
-    """Create a student account with the class join code, and sign in.
-    403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;
-    422 ``invalid_username`` / ``weak_password``."""
+    """Create a student account in the class whose join code this is, and sign
+    in. 403 ``signup_closed`` / ``bad_join_code``; 409 ``username_taken``;
+    422 ``invalid_username`` / ``weak_password``; 429 ``too_many_attempts``
+    after repeated wrong codes."""
+    client = request.client.host if request.client else ""
     sign_in = accounts.signup(
-        db, settings, username=body.username, password=body.password, join_code=body.join_code
+        db,
+        settings,
+        request.app.state.login_limiter,
+        username=body.username,
+        password=body.password,
+        join_code=body.join_code,
+        client=client,
     )
-    return _session_out(sign_in)
+    return _session_out(db, sign_in)
 
 
 @router.post("/logout", status_code=204)
@@ -86,8 +103,9 @@ def change_password(
     db: Session = Depends(get_db),
     identity: Identity = Depends(current_identity),
 ):
-    """Change your own password; your other sign-ins end. The instructor's is
-    set by the environment (409 ``managed_by_env``)."""
+    """Change your own password (a temporary one included); your other
+    sign-ins end. The environment's admin's is set by the environment (409
+    ``managed_by_env``)."""
     accounts.change_password(
         db, identity, current=body.current, new=body.new, keep_token=parse_bearer(authorization)
     )

@@ -1,10 +1,10 @@
 """Topology CRUD, versioning, diagnostics, plan access; copies and publishing.
 
-Classroom mode: a topology's ``owner_id`` is its student (None: the
-instructor's). The instructor publishes topologies; a student works on a copy
-(``copy_for``), one per published topology, which remembers the source and the
-source version it was taken from so ``reset_from_source`` can bring it up to
-date. Who may call what is ``api.access``.
+Accounts: a topology's ``owner_id`` is the user who owns it (None only with
+accounts off). Staff publish their topologies to their students; a student
+works on a copy (``copy_for``), one per published topology, which remembers the
+source and the source version it was taken from so ``reset_from_source`` can
+bring it up to date. Who may call what is ``api.access``.
 """
 
 from __future__ import annotations
@@ -18,13 +18,13 @@ from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session
 
 from api.errors import Conflict, Invalid, NotFound
-from db.models import Topology, utcnow
+from db.models import STAFF_ROLES, Topology, User, utcnow
 from domain import saved_state, validation
 from domain.plan import LabPlan, build_lab_plan
 from domain.validation import Diagnostic
 from engine.kathara.naming import lab_name
 from services import events, jobs
-from services.accounts import Identity, holds_lab, owner_names
+from services.accounts import Identity, holds_lab, owner_out, owners, student_ids_of
 
 
 def get_or_404(db: Session, topology_id: str) -> Topology:
@@ -39,20 +39,33 @@ def list_all(db: Session) -> list[Topology]:
 
 
 def list_visible(db: Session, identity: Identity) -> list[Topology]:
-    """Everything for the instructor; a student's own plus the published.
-    Retired lesson copies (on their way out) are nobody's."""
+    """Everything for an admin; an instructor's own and their students'; a
+    student's own plus what their instructor published. Retired lesson copies
+    (on their way out) are nobody's."""
     stmt = (
         select(Topology).where(Topology.retired_at.is_(None)).order_by(Topology.updated_at.desc())
     )
-    if not identity.is_instructor:
-        stmt = stmt.where(or_(Topology.owner_id == identity.user_id, Topology.published.is_(True)))
+    if identity.is_admin:
+        pass
+    elif identity.is_staff:
+        stmt = stmt.where(
+            or_(
+                Topology.owner_id == identity.user_id,
+                Topology.owner_id.in_(student_ids_of(identity.user_id)),
+            )
+        )
+    elif identity.instructor_id:
+        lessons = Topology.published.is_(True) & (Topology.owner_id == identity.instructor_id)
+        stmt = stmt.where(or_(Topology.owner_id == identity.user_id, lessons))
+    else:
+        stmt = stmt.where(Topology.owner_id == identity.user_id)
     return list(db.scalars(stmt))
 
 
 def summary_meta(db: Session, topos: list[Topology]) -> dict[str, dict[str, Any]]:
     """The account fields of each topology's summary (owner, published, source,
     update_available), in two queries for any number of topologies."""
-    names = owner_names(db, {t.owner_id for t in topos if t.owner_id})
+    known = owners(db, {t.owner_id for t in topos if t.owner_id})
     source_ids = {t.source_id for t in topos if t.source_id}
     versions: dict[str, int] = {}
     if source_ids:
@@ -60,9 +73,7 @@ def summary_meta(db: Session, topos: list[Topology]) -> dict[str, dict[str, Any]
         versions = dict(rows.all())
     meta: dict[str, dict[str, Any]] = {}
     for t in topos:
-        owner = (
-            {"id": t.owner_id, "username": names.get(t.owner_id, "unknown")} if t.owner_id else None
-        )
+        owner = owner_out(known, t.owner_id)
         source_version = versions.get(t.source_id) if t.source_id else None
         meta[t.id] = {
             "owner": owner,
@@ -193,10 +204,10 @@ def copy_for(
     A student opening a published topology (a lesson) that is not theirs gets
     their lesson copy: the one they started, else a new one linked to the
     lesson. It lives as long as the lesson stays published (``retire_copies``).
-    ``duplicate``, or copying your own topology (the instructor: any topology),
-    makes a plain, unlinked duplicate that you own.
+    ``duplicate``, or anyone else copying (staff, a student their own), makes a
+    plain, unlinked duplicate that the caller owns.
     """
-    personal = not duplicate and not identity.is_instructor and source.owner_id != identity.user_id
+    personal = not duplicate and identity.is_student and source.owner_id != identity.user_id
     if personal:
         existing = db.scalar(
             select(Topology)
@@ -269,7 +280,6 @@ def retire_copies(db: Session, source: Topology) -> list[str]:
         db.scalars(
             select(Topology.id).where(
                 Topology.source_id == source.id,
-                Topology.owner_id.is_not(None),
                 Topology.retired_at.is_(None),
             )
         )
@@ -288,6 +298,18 @@ def retire_copies(db: Session, source: Topology) -> list[str]:
 
 def retired_ids(db: Session) -> list[str]:
     return list(db.scalars(select(Topology.id).where(Topology.retired_at.is_not(None))))
+
+
+def check_publishable(db: Session, topo: Topology) -> None:
+    """Only a staff member's topology is a lesson (a student's is not)."""
+    if topo.owner_id is None:
+        return
+    owner = db.get(User, topo.owner_id)
+    if owner is None or owner.role not in STAFF_ROLES:
+        raise Conflict(
+            "Only an instructor's own topology can be published; duplicate it first",
+            code="not_publishable",
+        )
 
 
 def set_published(db: Session, topo: Topology, published: bool) -> list[str]:

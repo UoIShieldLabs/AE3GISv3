@@ -72,11 +72,13 @@ class Topology(Base):
     # one committed image per node, used instead of the catalog image on the next
     # deploy. None: deploys start fresh.
     saved_state = Column(JSON, nullable=True)
-    # Accounts (see ``services.accounts``): the student who owns the topology,
-    # None for the instructor. Published instructor topologies are visible to
-    # students, who work on a copy: ``source_id`` / ``source_version`` name the
-    # published topology and the version the copy was taken from. No foreign
-    # keys (migration 0007): the services keep these consistent.
+    # Accounts (see ``services.accounts``): the user who owns the topology
+    # (None only with accounts off; the environment's admin adopts those rows
+    # when accounts are turned on). A staff member's published topologies are
+    # visible to their students, who work on a copy: ``source_id`` /
+    # ``source_version`` name the published topology and the version the copy
+    # was taken from. No foreign keys (migration 0007): the services keep these
+    # consistent.
     owner_id = Column(String, nullable=True, index=True)
     published = Column(Boolean, default=False, server_default=false(), nullable=False)
     source_id = Column(String, nullable=True)
@@ -153,12 +155,18 @@ class Registry(Base):
     snapshot = Column(JSON, nullable=True)
 
 
-USER_ROLES = ("instructor", "student")
+USER_ROLES = ("admin", "instructor", "student")
+STAFF_ROLES = ("admin", "instructor")
 
 
 class User(Base):
-    """An account. One ``instructor`` row (from the environment, see
-    ``services.accounts.bootstrap_instructor``) and any number of students."""
+    """An account: an admin or instructor (staff) or a student.
+
+    One admin comes from the environment (``env_managed``, see
+    ``services.accounts.bootstrap_admin``); admins create the other staff.
+    Students sign themselves up into a class with its join code (``class_id``;
+    no foreign key, migration 0009: the services keep it consistent).
+    """
 
     __tablename__ = "users"
 
@@ -166,8 +174,30 @@ class User(Base):
     username = Column(String, nullable=False, unique=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)  # one of USER_ROLES
+    # A student's class (None for staff).
+    class_id = Column(String, nullable=True, index=True)
+    # The admin whose password is the environment's (exactly one row, with accounts on).
+    env_managed = Column(Boolean, default=False, server_default=false(), nullable=False)
+    # A temporary password (new account, reset) is to be replaced at the next sign-in.
+    must_change_password = Column(Boolean, default=False, server_default=false(), nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)
     last_seen_at = Column(DateTime, nullable=True)
+
+
+class Class(Base):
+    """A staff member's class: the join code students sign up with, and whether
+    sign-up is open. One per staff member for now (``instructor_id`` unique);
+    students point at it with ``User.class_id``."""
+
+    __tablename__ = "classes"
+
+    id = Column(String, primary_key=True, default=new_id)
+    instructor_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    join_code = Column(String, nullable=True, unique=True)
+    signup_open = Column(Boolean, default=False, server_default=false(), nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class UserSession(Base):
@@ -183,7 +213,7 @@ class UserSession(Base):
 
 
 class AppSetting(Base):
-    """Instance settings changed from the UI (e.g. class sign-up), by key."""
+    """Instance settings changed from the UI, by key."""
 
     __tablename__ = "app_settings"
 

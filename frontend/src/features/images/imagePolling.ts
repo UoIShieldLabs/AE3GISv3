@@ -33,7 +33,7 @@ function announce(prev: api.ImagesReport | null, next: api.ImagesReport) {
     const was = before.get(img.ref);
     if (!was?.active_job || img.active_job) continue;
     const openImages = () => useAppStore.getState().openImages(img.ref);
-    // The Images sheet is the instructor's (students' deploys still build).
+    // The Images sheet is staff's (students' deploys still build).
     const action = can(useAppStore.getState().user, 'manageImages') ? { label: 'View log', onClick: openImages } : undefined;
     if (img.last_job?.status === 'succeeded') toast.success(`${img.display_name} image ready`, { description: img.ref });
     else if (img.last_job?.status === 'failed') {

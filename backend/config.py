@@ -27,18 +27,23 @@ class Settings(BaseSettings):
     db_path: Path | None = None
 
     # Accounts are OPT-IN. With neither a password nor a token (the default)
-    # the API is open and every request acts as the instructor: fine for a
-    # local single-user lab, NOT for a shared or network-reachable host, since
-    # the API creates and destroys containers.
+    # the API is open and every request acts as an admin: fine for a local
+    # single-user lab, NOT for a shared or network-reachable host, since the
+    # API creates and destroys containers.
     #
-    # Classroom mode: set the instructor's password. The instructor signs in as
-    # ``instructor_username``; students sign themselves up with the class join
-    # code the instructor opens in the UI (services.accounts). The password is
-    # re-read at every start.
-    instructor_username: str = "instructor"
+    # Accounts on: set the first admin's password. That admin signs in as
+    # ``admin_username`` and creates the other admins and instructors in the
+    # UI; students sign themselves up with their instructor's join code
+    # (services.accounts). The password is re-read at every start.
+    admin_username: str = ""
+    admin_password: str = ""
+    # A static admin bearer for headless clients (bench.sh --token). Set on its
+    # own it also turns accounts on and is the admin's password.
+    admin_token: str = ""
+    # The names before there were several staff accounts; still honoured when
+    # the admin_* ones are unset.
+    instructor_username: str = ""
     instructor_password: str = ""
-    # A static instructor bearer for headless clients (bench.sh --token). Set
-    # on its own it also turns accounts on and is the instructor's password.
     instructor_token: str = ""
     # How long a sign-in lasts.
     session_ttl_hours: float = 168
@@ -142,12 +147,25 @@ class Settings(BaseSettings):
 
     @property
     def auth_required(self) -> bool:
-        return bool(self.instructor_password.strip() or self.instructor_token.strip())
+        return bool(self.bootstrap_password)
 
     @property
-    def instructor_login_password(self) -> str:
-        """The password the instructor signs in with ('' = accounts off)."""
-        return self.instructor_password.strip() or self.instructor_token.strip()
+    def bootstrap_token(self) -> str:
+        """The static admin bearer ('' = none)."""
+        return self.admin_token.strip() or self.instructor_token.strip()
+
+    @property
+    def bootstrap_password(self) -> str:
+        """The password the environment's admin signs in with ('' = accounts off)."""
+        return (
+            self.admin_password.strip() or self.instructor_password.strip() or self.bootstrap_token
+        )
+
+    @property
+    def bootstrap_username(self) -> str:
+        """The environment admin's username as configured ('' = keep the
+        existing row's, else ``admin``)."""
+        return self.admin_username.strip() or self.instructor_username.strip()
 
     @property
     def job_logs_dir(self) -> Path:

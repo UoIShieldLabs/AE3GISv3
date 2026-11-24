@@ -3,6 +3,7 @@ import { AlertTriangle, Boxes, GitBranch, Globe, Hammer, Layers, MoreHorizontal,
 import type { ImageSource, ImagesReport, ImageStatus } from '@/api/client';
 import { getCatalog } from '@/catalog/catalog';
 import { cn } from '@/lib/cn';
+import { useCan } from '@/lib/permissions';
 import { useAppStore } from '@/store';
 import {
   Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -89,12 +90,13 @@ function Browser({ report, focus, chosen, onChoose, picked, onPick }: {
   const focusImage = focus ? report.images.find((i) => i.ref === focus) : undefined;
   const wanted: SourceKey = chosen ?? (focusImage ? sourceKeyOf(focusImage, report) : 'all');
   // A source that went away (a removed registry) falls back to every image.
-  const selected: SourceKey = wanted === 'add-registry' || entries.some((e) => e.key === wanted) ? wanted : 'all';
+  const manageRegistries = useCan('manageRegistries');
+  const selected: SourceKey = (wanted === 'add-registry' && manageRegistries) || entries.some((e) => e.key === wanted) ? wanted : 'all';
   const selectedRef = picked !== undefined ? picked : chosen ? null : focus;
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[220px_minmax(0,1fr)]">
-      <SourceNav entries={entries} selected={selected} onSelect={onChoose} />
+      <SourceNav entries={entries} selected={selected} onSelect={onChoose} canAdd={manageRegistries} />
       {selected === 'add-registry' ? (
         <div className="flex flex-col gap-3 overflow-auto p-4">
           <h3 className="text-sm font-semibold">Add a Docker Hub registry</h3>
@@ -109,7 +111,13 @@ function Browser({ report, focus, chosen, onChoose, picked, onPick }: {
 
 // ── Left: the sources ─────────────────────────────────────────────────
 
-function SourceNav({ entries, selected, onSelect }: { entries: SourceEntry[]; selected: SourceKey; onSelect: (key: SourceKey) => void }) {
+function SourceNav({ entries, selected, onSelect, canAdd }: {
+  entries: SourceEntry[];
+  selected: SourceKey;
+  onSelect: (key: SourceKey) => void;
+  /** Registries change everyone's catalog: admins add them. */
+  canAdd: boolean;
+}) {
   const all = entries.find((e) => e.group === 'all');
   const registries = entries.filter((e) => e.group === 'registry');
   const builds = entries.filter((e) => e.group === 'build');
@@ -119,10 +127,11 @@ function SourceNav({ entries, selected, onSelect }: { entries: SourceEntry[]; se
       {all ? <SourceItem entry={all} icon={<Layers />} selected={selected === all.key} onSelect={onSelect} /> : null}
       <NavGroup
         title="Docker Hub"
-        action={<IconButton label="Add registry" size="icon-xs" onClick={() => onSelect('add-registry')}><Plus /></IconButton>}
+        action={canAdd ? <IconButton label="Add registry" size="icon-xs" onClick={() => onSelect('add-registry')}><Plus /></IconButton> : undefined}
       >
         {registries.map((e) => <SourceItem key={e.key} entry={e} icon={<Boxes />} selected={selected === e.key} onSelect={onSelect} />)}
-        {registries.length === 0 ? (
+        {registries.length === 0 && !canAdd ? <p className="px-2 py-1.5 text-fg-subtle">None added. An admin adds registries.</p> : null}
+        {registries.length === 0 && canAdd ? (
           <button type="button" onClick={() => onSelect('add-registry')} className={cn('flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-fg-muted hover:bg-hover', selected === 'add-registry' && 'bg-active text-fg')}>
             <Plus className="size-3.5" /> Add a registry
           </button>

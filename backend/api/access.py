@@ -1,22 +1,25 @@
-"""What a caller may do with a topology or a job (classroom mode).
+"""What a caller may do with a topology or a job (accounts on).
 
 Two levels on a topology:
 
-- **view** (the record, its export, copying it): its owner, the instructor,
-  or any student when the topology is published.
-- **own** (everything else: edit, delete, deploy, destroy, runtime, events,
-  jobs, captures, traffic, monitors, scenarios, web UIs, terminals): its owner
-  or the instructor.
+- **own** (edit, delete, deploy, destroy, runtime, events, jobs, captures,
+  traffic, monitors, scenarios, web UIs, terminals): its owner; the staff
+  member whose class its owner (a student) is in; any admin.
+- **view** (the record, its export, copying it): whoever owns it, and the
+  students of its owner when it is published (a lesson).
 
-``Topology.owner_id`` is the owning student, None for the instructor. A student
-gets 404 for a topology they cannot see, so its existence is not leaked, and
-403 ``not_owner`` for an own-level call on a published one (they work on a copy).
+``Topology.owner_id`` is the user who owns it (None only with accounts off:
+an admin's). Staff topologies are private to their owner and the admins. A
+caller gets 404 for a topology they cannot see, so its existence is not
+leaked, and 403 ``not_owner`` for an own-level call on a lesson (a student
+works on a copy).
 
 A job follows its topology (own level). Jobs without one: image builds and
-source / registry syncs are readable by anyone signed in; everything else
-(benchmarks, purges) and cancelling or stopping them is the instructor's.
+source / registry syncs are readable by anyone signed in; cancelling or
+stopping a build or source sync is for staff, everything else (registry
+syncs, benchmarks, purges) for admins.
 
-With accounts off every caller is the instructor, so all of this allows.
+With accounts off every caller is an admin, so all of this allows.
 """
 
 from __future__ import annotations
@@ -30,36 +33,47 @@ from api.deps import get_db
 from api.errors import Forbidden, NotFound
 from auth import current_identity, ws_identity
 from db.models import Job, Topology
-from services.accounts import Identity
+from services.accounts import Identity, teacher_of
 
 # Topology-less job kinds any signed-in caller may read (a deploy's images step
 # joins builds; the UI follows their logs).
 SHARED_JOB_KINDS = ("build", "sync_source", "sync_registry")
+# Of those, the ones staff (not only admins) may cancel or stop.
+STAFF_JOB_KINDS = ("build", "sync_source")
 
 
-def can_view(identity: Identity, topo: Topology) -> bool:
-    return can_own(identity, topo) or (bool(topo.published) and topo.retired_at is None)
-
-
-def can_own(identity: Identity, topo: Topology) -> bool:
-    if identity.is_instructor:
+def can_own(db: Session, identity: Identity, topo: Topology) -> bool:
+    if identity.is_admin:
         return True
-    # A retired lesson copy (its lesson was unpublished) is gone for its student.
+    if topo.owner_id is None:
+        return False
+    if topo.owner_id == identity.user_id:
+        # A retired lesson copy (its lesson was unpublished) is gone for its student.
+        return topo.retired_at is None
+    return identity.is_staff and teacher_of(db, topo.owner_id) == identity.user_id
+
+
+def can_view(db: Session, identity: Identity, topo: Topology) -> bool:
+    if can_own(db, identity, topo):
+        return True
     return (
-        topo.owner_id is not None and topo.owner_id == identity.user_id and topo.retired_at is None
+        bool(topo.published)
+        and topo.retired_at is None
+        and identity.instructor_id is not None
+        and topo.owner_id == identity.instructor_id
     )
 
 
-def check_view(identity: Identity, topo: Topology | None) -> Topology:
-    if topo is None or not can_view(identity, topo):
+def check_view(db: Session, identity: Identity, topo: Topology | None) -> Topology:
+    if topo is None or not can_view(db, identity, topo):
         raise NotFound("Topology")
     return topo
 
 
-def check_own(identity: Identity, topo: Topology | None) -> Topology:
-    if topo is not None and can_own(identity, topo):
+def check_own(db: Session, identity: Identity, topo: Topology | None) -> Topology:
+    if topo is not None and can_own(db, identity, topo):
         return topo
-    if topo is not None and can_view(identity, topo):
+    if topo is not None and can_view(db, identity, topo):
         raise Forbidden(
             "This topology is your instructor's; open it from the library to get your own copy",
             code="not_owner",
@@ -72,7 +86,7 @@ def visible_topology(
     db: Session = Depends(get_db),
     identity: Identity = Depends(current_identity),
 ) -> Topology:
-    return check_view(identity, db.get(Topology, topology_id))
+    return check_view(db, identity, db.get(Topology, topology_id))
 
 
 def owned_topology(
@@ -80,23 +94,25 @@ def owned_topology(
     db: Session = Depends(get_db),
     identity: Identity = Depends(current_identity),
 ) -> Topology:
-    return check_own(identity, db.get(Topology, topology_id))
+    return check_own(db, identity, db.get(Topology, topology_id))
 
 
 def check_job(db: Session, identity: Identity, job: Job | None, *, write: bool) -> Job:
     if job is None:
         raise NotFound("Job")
-    if identity.is_instructor:
+    if identity.is_admin:
         return job
     if job.topology_id:
         topo = db.get(Topology, job.topology_id)
-        if topo is None or not can_own(identity, topo):
+        if topo is None or not can_own(db, identity, topo):
             raise NotFound("Job")
         return job
     if job.kind not in SHARED_JOB_KINDS:
         raise NotFound("Job")
-    if write:
-        raise Forbidden("Only the instructor can do this", code="instructor_only")
+    if write and not (identity.is_staff and job.kind in STAFF_JOB_KINDS):
+        if identity.is_staff:
+            raise Forbidden("Only an admin can do this", code="admin_only")
+        raise Forbidden("Only an instructor can do this", code="staff_only")
     return job
 
 
@@ -133,7 +149,7 @@ async def ws_access(websocket: WebSocket, token: str | None, topology_id: str) -
             if identity is None:
                 return WS_UNAUTHORIZED
             topo = db.get(Topology, topology_id)
-            if topo is not None and not can_own(identity, topo):
+            if topo is not None and not can_own(db, identity, topo):
                 return WS_NOT_FOUND
             return 0
 

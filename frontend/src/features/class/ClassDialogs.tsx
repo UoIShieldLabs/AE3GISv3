@@ -1,4 +1,5 @@
 import { Button, Dialog } from '@/ui';
+import { TemporaryPasswordDialog } from './TemporaryPasswordDialog';
 import type { ClassState } from './useClass';
 
 /** Confirm removing a student; show a reset password once. */
@@ -22,21 +23,12 @@ export function ClassDialogs({ cls }: { cls: ClassState }) {
         <p className="text-xs text-fg-muted">Their account and all their topologies are deleted. Destroy their running labs first.</p>
       </Dialog>
 
-      <Dialog
+      <TemporaryPasswordDialog
         open={pending?.kind === 'password'}
-        onOpenChange={(o) => !o && setPending(null)}
-        title="Temporary password"
-        description={pending?.kind === 'password' ? `For ${pending.student}: they were signed out everywhere.` : undefined}
-        size="sm"
-        footer={<Button variant="primary" onClick={() => setPending(null)}>Done</Button>}
-      >
-        {pending?.kind === 'password' ? (
-          <div className="flex flex-col gap-2">
-            <code className="rounded-md bg-surface-2 px-3 py-2 text-center font-mono text-base tracking-widest">{pending.password}</code>
-            <p className="text-xs text-fg-muted">Shown once. They sign in with it and can change it from their user menu.</p>
-          </div>
-        ) : null}
-      </Dialog>
+        who={pending?.kind === 'password' ? `${pending.student}: they were signed out everywhere` : undefined}
+        password={pending?.kind === 'password' ? pending.password : undefined}
+        onClose={() => setPending(null)}
+      />
     </>
   );
 }

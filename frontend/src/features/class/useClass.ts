@@ -2,17 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '@/api/client';
 import { toast } from '@/ui';
 
-// Students sign in, deploy and leave while the instructor watches.
+// Students sign in, deploy and leave while their instructor watches.
 const POLL_MS = 5000;
 
 export type ClassPending =
   | { kind: 'remove'; student: { id: string; username: string } }
   | { kind: 'password'; student: string; password: string };
 
-/** The instructor's class (sign-up, join code, students) and what can be
- *  done to it. Loads once when enabled, then polls while `polling`. */
+/** The caller's class (sign-up, join code) and their students (an admin:
+ *  every student), and what can be done to them. Loads once when enabled,
+ *  then polls while `polling`. */
 export function useClass({ enabled, polling, onChanged }: {
-  /** Classroom mode, as the instructor. */
+  /** Accounts on, as staff. */
   enabled: boolean;
   /** The class is on screen. */
   polling: boolean;

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from api.access import check_view
 from api.deps import get_db, get_images, get_registries
 from api.schemas import BuildRequest, ImagesReport, JobOut
-from auth import current_identity, require_instructor
+from auth import current_identity, require_staff
 from db.models import Topology
 from domain.topology import images_in
 from services import jobs
@@ -34,7 +34,7 @@ async def list_images(
     Without ``topology_id``: every image the catalog describes.
     """
     if topology_id:
-        topo = check_view(identity, db.get(Topology, topology_id))
+        topo = check_view(db, identity, db.get(Topology, topology_id))
         refs = images_in(topo.data or {})
     else:
         refs = images.catalog_refs()
@@ -48,7 +48,7 @@ def build_images(
     body: BuildRequest,
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_staff),
 ):
     """Start a build job per image (an image already building returns its job)."""
     return [jobs.job_to_dict(j) for j in images.start_builds(db, body.refs, fresh=body.fresh)]
@@ -59,7 +59,7 @@ def sync_source(
     name: str,
     db: Session = Depends(get_db),
     images: ImageManager = Depends(get_images),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_staff),
 ):
     """Fetch a git source's configured ref; the job reports which images changed."""
     return jobs.job_to_dict(images.start_sync(db, name))

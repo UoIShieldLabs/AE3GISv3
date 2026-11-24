@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Activity, Boxes, Copy, EyeOff, FilePlus2, FolderOpen, GraduationCap, LayoutTemplate, Plus, RefreshCw, RotateCcw,
-  SearchX, Server, Square, Trash2, Users,
+  SearchX, Server, ShieldCheck, Square, Trash2, UserPlus, Users,
 } from 'lucide-react';
 import * as api from '@/api/client';
 import { createNewTopology } from '@/features/deployment/actions';
@@ -17,6 +17,9 @@ import { ClassDialogs } from '@/features/class/ClassDialogs';
 import { ClassSettingsCard } from '@/features/class/ClassSettingsCard';
 import { StudentHeader, StudentsTable } from '@/features/class/StudentsTable';
 import { useClass } from '@/features/class/useClass';
+import { StaffDialogs } from '@/features/staff/StaffDialogs';
+import { StaffHeader, StaffTable } from '@/features/staff/StaffTable';
+import { useStaff } from '@/features/staff/useStaff';
 import { LibraryRail } from '@/features/library/LibraryRail';
 import { LibraryToolbar } from '@/features/library/LibraryToolbar';
 import { NewTopologyMenu } from '@/features/library/NewTopologyMenu';
@@ -24,12 +27,12 @@ import { PresetsSection } from '@/features/library/PresetsSection';
 import { Flag, type TopologyItem } from '@/features/library/TopologyCard';
 import { TopologyCollection } from '@/features/library/TopologyCollection';
 import {
-  buildLibrary, holdsLab, lessonCopy, presetMatches, sectionCounts, sectionsFor, studentMatches, viewTopologies,
-  type LibraryMode, type SectionId,
+  buildLibrary, holdsLab, isStaffMode, lessonCopy, presetMatches, sectionCounts, sectionsFor, staffMatches, studentMatches,
+  studentsOf, viewTopologies, type LibraryMode, type SectionId,
 } from '@/features/library/model';
 import { SECTION_ICON, sectionDescription, sectionLabel } from '@/features/library/sections';
 import { useLibraryParams } from '@/features/library/useLibraryParams';
-import { useCan, useIsStudent } from '@/lib/permissions';
+import { useCan } from '@/lib/permissions';
 import { useAppStore } from '@/store';
 
 // Running labs and the class change while they are on screen.
@@ -57,14 +60,14 @@ export function LibraryRoute() {
   const navigate = useNavigate();
   const user = useAppStore((s) => s.user);
   const accounts = useAppStore((s) => !!s.authRequired);
-  const isStudent = useIsStudent();
   const canPublish = useCan('publish') && accounts;
   const canManageClass = useCan('manageClass') && accounts;
+  const canManageUsers = useCan('manageUsers') && accounts;
   const canManageImages = useCan('manageImages');
   const canManageHost = useCan('manageHost');
   const layout = useAppStore((s) => s.libraryLayout);
   const sort = useAppStore((s) => s.librarySort);
-  const mode: LibraryMode = !accounts ? 'open' : isStudent ? 'student' : 'instructor';
+  const mode: LibraryMode = !accounts ? 'open' : user?.role ?? 'student';
   const loc = useLibraryParams(mode);
 
   const [topologies, setTopologies] = useState<api.TopologySummary[] | null>(null);
@@ -94,7 +97,7 @@ export function LibraryRoute() {
 
   useEffect(() => { void refresh(); void loadPresets(); }, [refresh, loadPresets]);
 
-  const live = loc.section === 'running' || loc.section === 'students';
+  const live = loc.section === 'running' || loc.section === 'students' || loc.section === 'staff';
   useEffect(() => {
     if (!live) return;
     const timer = setInterval(() => void refresh(true), POLL_MS);
@@ -110,9 +113,19 @@ export function LibraryRoute() {
     },
   });
 
+  const staff = useStaff({
+    enabled: canManageUsers,
+    polling: loc.section === 'staff',
+    onChanged: () => {
+      void refresh();
+      void cls.refresh(); // their students moved
+      if (loc.section === 'staff' && loc.student) loc.go('staff');
+    },
+  });
+
   const lib = useMemo(
-    () => buildLibrary({ topologies: topologies ?? [], students: cls.students?.students ?? null, userId: user?.id, mode }),
-    [topologies, cls.students, user?.id, mode],
+    () => buildLibrary({ topologies: topologies ?? [], students: cls.students?.students ?? null, staff: staff.staff, userId: user?.id, mode }),
+    [topologies, cls.students, staff.staff, user?.id, mode],
   );
   const counts = useMemo(() => sectionCounts(lib, presets, loc.q), [lib, presets, loc.q]);
 
@@ -155,7 +168,7 @@ export function LibraryRoute() {
       await refresh();
     }, 'Could not duplicate');
 
-  /** Students who started a lesson (the instructor sees their copies). */
+  /** Students who started a lesson (their instructor sees their copies). */
   const startedBy = (lessonId: string) => lib.lessonStats.get(lessonId)?.started ?? 0;
 
   const setPublished = (t: api.TopologySummary, published: boolean) =>
@@ -240,7 +253,7 @@ export function LibraryRoute() {
     </>
   );
 
-  /** For the instructor: which lesson a student's topology was copied from. */
+  /** For staff: which lesson a student's topology was copied from. */
   const copyMarker = (t: api.TopologySummary) => {
     if (!t.source_id) return undefined;
     const from = lib.names.get(t.source_id);
@@ -267,7 +280,7 @@ export function LibraryRoute() {
     ),
   });
 
-  /** The instructor's view of a student's topology. */
+  /** Staff's view of someone else's topology: a student's, or (an admin) another staff member's. */
   const studentItem = (t: api.TopologySummary): TopologyItem => ({
     t,
     onOpen: () => open(t.id),
@@ -282,9 +295,9 @@ export function LibraryRoute() {
   });
 
   const runningItem = (t: api.TopologySummary): TopologyItem =>
-    t.owner ? { ...studentItem(t), owner: t.owner.username } : ownItem(t, { publish: false });
+    t.owner && t.owner.id !== user?.id ? { ...studentItem(t), owner: t.owner.username } : ownItem(t, { publish: false });
 
-  /** The instructor's published topology: who started it, stop publishing. */
+  /** A staff member's published topology: who started it, stop publishing. */
   const lessonItem = (t: api.TopologySummary): TopologyItem => {
     const stats = lib.lessonStats.get(t.id) ?? { started: 0, running: 0 };
     return {
@@ -370,6 +383,8 @@ export function LibraryRoute() {
 
   const newTopologyAction = <Button variant="primary" size="sm" onClick={startNew}><Plus /> New topology</Button>;
 
+  const allClasses = mode === 'admin';
+
   function studentsSection() {
     if (loc.student) {
       const row = lib.students.find((s) => s.id === loc.student);
@@ -380,7 +395,7 @@ export function LibraryRoute() {
       }
       return (
         <>
-          <StudentHeader row={row} cls={cls} onBack={() => loc.go('students')} />
+          <StudentHeader row={row} cls={cls} showInstructor={allClasses} onBack={() => loc.go('students', { instructor: loc.instructor })} />
           {toolbar()}
           {collection(row.topologies, studentItem, {
             empty: <EmptyState icon={<FolderOpen />} title="No topologies yet" description={`${row.username} has not started a lesson or made a topology.`} className={EMPTY} />,
@@ -389,20 +404,36 @@ export function LibraryRoute() {
       );
     }
     const lesson = loc.lesson ? lib.lessons.find((t) => t.id === loc.lesson) ?? null : null;
-    const rows = lib.students.filter((s) => studentMatches(s, loc.q));
-    const runningStudents = lib.students.filter((s) => s.running.length > 0).length;
+    // An admin sees every class; one at a time when they pick an instructor.
+    const inScope = allClasses && loc.instructor ? studentsOf(lib.students, loc.instructor) : lib.students;
+    const rows = inScope.filter((s) => studentMatches(s, loc.q));
+    const runningStudents = inScope.filter((s) => s.running.length > 0).length;
     const maxLabs = cls.students?.max_labs ?? 0;
-    const started = lesson ? lib.students.filter((s) => lessonCopy(s, lesson.id)).length : 0;
+    const started = lesson ? inScope.filter((s) => lessonCopy(s, lesson.id)).length : 0;
     const lessonRunning = lesson ? lib.lessonStats.get(lesson.id)?.running ?? 0 : 0;
+    const teachers = lib.staff.filter((m) => m.studentCount > 0 || m.id === loc.instructor);
     return (
       <>
         <SectionHeader
           section="students"
           mode={mode}
-          aside={`${lib.students.length} student${lib.students.length === 1 ? '' : 's'} · ${runningStudents} running · ${maxLabs > 0 ? `max ${maxLabs} lab${maxLabs === 1 ? '' : 's'} each` : 'no lab limit'}`}
+          aside={`${inScope.length} student${inScope.length === 1 ? '' : 's'} · ${runningStudents} running · ${maxLabs > 0 ? `max ${maxLabs} lab${maxLabs === 1 ? '' : 's'} each` : 'no lab limit'}`}
         />
         <ClassSettingsCard cls={cls} />
         <LibraryToolbar q={loc.q} onQuery={loc.setQuery} placeholder="Search students">
+          {allClasses && teachers.length > 0 ? (
+            <Select
+              size="sm"
+              aria-label="Class"
+              value={loc.instructor ?? 'all'}
+              onValueChange={(v) => loc.setInstructor(v === 'all' ? null : v)}
+              options={[
+                { value: 'all', label: 'Every class' },
+                ...teachers.map((m) => ({ value: m.id, label: m.id === user?.id ? `${m.username} (you)` : m.username, group: 'Class of' })),
+              ]}
+              className="w-auto max-w-60 min-w-36"
+            />
+          ) : null}
           {lib.lessons.length > 0 ? (
             <Select
               size="sm"
@@ -413,15 +444,61 @@ export function LibraryRoute() {
               className="w-auto max-w-80 min-w-44"
             />
           ) : null}
-          {lesson ? <span className="text-xs text-fg-muted">{started} of {lib.students.length} started · {lessonRunning} running</span> : null}
+          {lesson ? <span className="text-xs text-fg-muted">{started} of {inScope.length} started · {lessonRunning} running</span> : null}
         </LibraryToolbar>
-        {lib.students.length === 0 ? (
+        {inScope.length === 0 ? (
           cls.students === null
             ? <div className="flex justify-center py-10"><Spinner /></div>
             : <EmptyState icon={<Users />} title="No students yet" description="Turn on sign-up and share the join code." className={EMPTY} />
         ) : rows.length === 0 ? noMatches : (
-          <StudentsTable rows={rows} lesson={lesson} onOpen={(id) => loc.go('students', { student: id })} cls={cls} />
+          <StudentsTable
+            rows={rows}
+            lesson={lesson}
+            showInstructor={allClasses && !loc.instructor}
+            onOpen={(id) => loc.go('students', { student: id, instructor: loc.instructor })}
+            cls={cls}
+          />
         )}
+      </>
+    );
+  }
+
+  function staffSection() {
+    if (loc.student) {
+      const row = lib.staff.find((m) => m.id === loc.student);
+      if (!row) {
+        return staff.staff === null
+          ? <div className="flex justify-center py-10"><Spinner /></div>
+          : <EmptyState icon={<ShieldCheck />} title="Not on the staff" description="This account was removed." action={<Button size="sm" onClick={() => loc.go('staff')}>All staff</Button>} className={EMPTY} />;
+      }
+      const theirs = row.id === user?.id;
+      return (
+        <>
+          <StaffHeader row={row} staff={staff} meId={user?.id} onBack={() => loc.go('staff')} onStudents={() => loc.go('students', { instructor: row.id })} />
+          {toolbar()}
+          {collection(row.topologies, theirs ? (t) => ownItem(t) : studentItem, {
+            empty: <EmptyState icon={<FolderOpen />} title="No topologies yet" description={`${row.username} has not made a topology.`} className={EMPTY} />,
+          })}
+        </>
+      );
+    }
+    const rows = lib.staff.filter((m) => staffMatches(m, loc.q));
+    const admins = lib.staff.filter((m) => m.role === 'admin').length;
+    return (
+      <>
+        <SectionHeader
+          section="staff"
+          mode={mode}
+          aside={`${admins} admin${admins === 1 ? '' : 's'} · ${lib.staff.length - admins} instructor${lib.staff.length - admins === 1 ? '' : 's'}`}
+        />
+        <LibraryToolbar q={loc.q} onQuery={loc.setQuery} placeholder="Search staff">
+          <Button size="sm" variant="primary" onClick={() => staff.setPending({ kind: 'add' })}><UserPlus /> Add staff</Button>
+        </LibraryToolbar>
+        {staff.staff === null
+          ? <div className="flex justify-center py-10"><Spinner /></div>
+          : rows.length === 0 ? noMatches : (
+            <StaffTable rows={rows} onOpen={(id) => loc.go('staff', { student: id })} staff={staff} meId={user?.id} />
+          )}
       </>
     );
   }
@@ -434,7 +511,7 @@ export function LibraryRoute() {
             <SectionHeader section="running" mode={mode} />
             {toolbar({ runningFilter: false })}
             {collection(lib.running, runningItem, {
-              showOwner: mode === 'instructor',
+              showOwner: isStaffMode(mode),
               runningFilter: false,
               empty: <EmptyState icon={<Activity />} title="Nothing running" description="Deployed labs show up here." className={EMPTY} />,
             })}
@@ -484,6 +561,8 @@ export function LibraryRoute() {
         );
       case 'students':
         return studentsSection();
+      case 'staff':
+        return staffSection();
       case 'presets': {
         const shown = presets.filter((p) => presetMatches(p, loc.q));
         return (
@@ -513,7 +592,13 @@ export function LibraryRoute() {
           <IconButton
             label="Refresh"
             size="icon-sm"
-            onClick={() => { setTopologies(null); void refresh(); void loadPresets(); if (canManageClass) void cls.refresh(); }}
+            onClick={() => {
+              setTopologies(null);
+              void refresh();
+              void loadPresets();
+              if (canManageClass) void cls.refresh();
+              if (canManageUsers) void staff.refresh();
+            }}
           >
             <RefreshCw />
           </IconButton>
@@ -538,7 +623,8 @@ export function LibraryRoute() {
             counts={topologies === null ? null : counts}
             current={loc.section}
             student={loc.student}
-            students={lib.students}
+            students={allClasses && loc.instructor ? studentsOf(lib.students, loc.instructor) : lib.students}
+            staff={lib.staff}
             q={loc.q}
             onGo={loc.go}
           />
@@ -555,6 +641,7 @@ export function LibraryRoute() {
 
       {canManageHost ? <LabsDialog open={labsOpen} onOpenChange={setLabsOpen} onChanged={() => void refresh()} /> : null}
       {canManageClass ? <ClassDialogs cls={cls} /> : null}
+      {canManageUsers ? <StaffDialogs staff={staff} rows={lib.staff} meId={user?.id} /> : null}
       <ImagesSheet />
 
       <Dialog
@@ -612,7 +699,7 @@ export function LibraryRoute() {
         open={!!destroyTarget}
         onOpenChange={(o) => !o && setDestroyTarget(null)}
         title="Destroy this lab?"
-        description={destroyTarget ? (destroyTarget.owner ? `${destroyTarget.owner.username}’s “${destroyTarget.name}”` : `“${destroyTarget.name}”`) : undefined}
+        description={destroyTarget ? (destroyTarget.owner && destroyTarget.owner.id !== user?.id ? `${destroyTarget.owner.username}’s “${destroyTarget.name}”` : `“${destroyTarget.name}”`) : undefined}
         size="sm"
         footer={
           <>

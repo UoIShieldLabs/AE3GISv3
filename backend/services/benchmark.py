@@ -159,7 +159,10 @@ def _check_matrix(
                 )
 
 
-def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job:
+def start_benchmark(
+    db: Session, runner: JobRunner, spec: dict[str, Any], *, owner_id: str | None = None
+) -> Job:
+    """Start a benchmark job; a generated topology is ``owner_id``'s (the caller)."""
     with runner.admission:
         existing = jobs.active_for_subject(db, SUBJECT)
         if existing is not None:
@@ -195,7 +198,9 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 raise Invalid(str(exc), code="bad_census") from exc
             extra["census"] = census
             scale = [int(census.get("per_image") or 5)]
-            topo, _ = topologies.create(db, name=f"bench: {label}", data=generate(first_case))
+            topo, _ = topologies.create(
+                db, name=f"bench: {label}", data=generate(first_case), owner_id=owner_id
+            )
             generated = True
         else:
             adaptive = spec.get("adaptive")
@@ -215,7 +220,10 @@ def start_benchmark(db: Session, runner: JobRunner, spec: dict[str, Any]) -> Job
                 # The largest topology the generator makes with these params.
                 extra["max_scale"] = max_hosts(_gen_params(spec, first))
             topo, _ = topologies.create(
-                db, name=f"bench: {label}", data=generate(_gen_params(spec, first))
+                db,
+                name=f"bench: {label}",
+                data=generate(_gen_params(spec, first)),
+                owner_id=owner_id,
             )
             generated = True
         if spec.get("matrix"):

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_db, get_registries
 from api.schemas import JobOut, RegistryCreate, RegistryOut
-from auth import current_identity, require_instructor
+from auth import current_identity, require_admin
 from services import jobs
 from services.accounts import Identity
 from services.registries import RegistryManager
@@ -29,7 +29,7 @@ def add_registry(
     body: RegistryCreate,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Add a Docker Hub namespace (by URL or name) and start its first sync."""
     reg = registries.add(db, body.url)
@@ -41,7 +41,7 @@ def sync_registry(
     registry_id: str,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Re-read the namespace (a sync already running returns its job)."""
     return jobs.job_to_dict(registries.start_sync(db, registry_id))
@@ -52,7 +52,7 @@ def remove_registry(
     registry_id: str,
     db: Session = Depends(get_db),
     registries: RegistryManager = Depends(get_registries),
-    _: Identity = Depends(require_instructor),
+    _: Identity = Depends(require_admin),
 ):
     """Remove a registry: its images and types leave the catalog."""
     registries.remove(db, registry_id)

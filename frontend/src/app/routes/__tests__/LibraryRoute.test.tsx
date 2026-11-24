@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router';
-import type { PresetSummary, Student, TopologySummary } from '@/api/client';
+import type { PresetSummary, StaffMember, Student, TopologySummary } from '@/api/client';
 import { useAppStore } from '@/store';
 import { TooltipProvider } from '@/ui';
 import { LibraryRoute } from '../LibraryRoute';
@@ -14,6 +14,7 @@ vi.mock('@/api/client', async (importOriginal) => {
     listPresets: vi.fn(),
     getClassSettings: vi.fn(),
     listStudents: vi.fn(),
+    listStaff: vi.fn(),
   };
 });
 const api = await import('@/api/client');
@@ -22,13 +23,19 @@ const topo = (id: string, name: string, extra: Partial<TopologySummary> = {}): T
   id, name, status: 'idle', version: 1, published: false, update_available: false, holds_lab: false,
   created_at: '2026-11-01T00:00:00Z', updated_at: '2026-11-01T00:00:00Z', ...extra,
 });
-const student = (id: string): Student => ({
-  id, username: id, created_at: '2026-11-01T00:00:00Z', labs: [], topology_count: 0, last_seen_at: null,
+const TESS = { id: 'tess', username: 'tess' };
+const student = (id: string, instructor = TESS): Student => ({
+  id, username: id, created_at: '2026-11-01T00:00:00Z', labs: [], topology_count: 0, last_seen_at: null, instructor,
+});
+const member = (id: string, extra: Partial<StaffMember> = {}): StaffMember => ({
+  id, username: id, role: 'instructor', env_managed: false, must_change_password: false, created_at: '2026-11-01T00:00:00Z',
+  last_seen_at: null, student_count: 0, signup_open: false, topology_count: 0, labs: [], ...extra,
 });
 
-const LESSON = topo('l1', 'ICS lesson', { published: true });
-const DRAFT = topo('d1', 'Draft', { status: 'deployed', holds_lab: true, updated_at: '2026-11-02T00:00:00Z' });
-const ALICE = topo('a1', 'Firewall test', { owner: { id: 'alice', username: 'alice' } });
+const byTess = { owner: { id: 'tess', username: 'tess', role: 'instructor' as const } };
+const LESSON = topo('l1', 'ICS lesson', { published: true, ...byTess });
+const DRAFT = topo('d1', 'Draft', { status: 'deployed', holds_lab: true, updated_at: '2026-11-02T00:00:00Z', ...byTess });
+const ALICE = topo('a1', 'Firewall test', { owner: { id: 'alice', username: 'alice', role: 'student' } });
 const PRESETS: PresetSummary[] = [{ id: 'two-subnet-demo', name: 'Two-Subnet Demo', description: 'Two LANs', scenario_count: 0, site_count: 1 }];
 
 function Where() {
@@ -50,10 +57,11 @@ const railItems = () => within(rail()).getAllByRole('button').map((b) => b.textC
 const search = () => screen.getByTestId('search').textContent;
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
 
-function signIn(role: 'instructor' | 'student' | null) {
+function signIn(role: 'admin' | 'instructor' | 'student' | null) {
+  const id = role === 'student' ? 'alice' : role === 'instructor' ? 'tess' : 'root';
   useAppStore.setState({
     authRequired: role !== null,
-    user: role === 'student' ? { id: 'alice', username: 'alice', role: 'student' } : role ? { id: null, username: 'instructor', role: 'instructor' } : null,
+    user: role ? { id, username: id, role, must_change_password: false, env_managed: role === 'admin' } : null,
     libraryLayout: 'grid',
     librarySort: 'recent',
   });
@@ -64,10 +72,37 @@ beforeEach(() => {
   vi.mocked(api.listPresets).mockResolvedValue({ presets: PRESETS });
   vi.mocked(api.getClassSettings).mockResolvedValue({ signup_open: true, join_code: 'ABC123' } as Awaited<ReturnType<typeof api.getClassSettings>>);
   vi.mocked(api.listStudents).mockResolvedValue({ max_labs: 1, students: [student('alice'), student('bob')] });
+  vi.mocked(api.listStaff).mockResolvedValue([member('root', { role: 'admin', env_managed: true }), member('tess', { student_count: 2 })]);
 });
 
 describe('LibraryRoute', () => {
-  it('gives the instructor every section, opening on their own topologies', async () => {
+  it('gives an admin a Staff section, each member with their own topologies', async () => {
+    signIn('admin');
+    await renderLibrary('/?s=staff');
+    // The staff are listed under Staff in the rail while it is open.
+    expect(railItems()).toEqual(['Running1', 'My topologies0', 'Lessons0', 'Students2', 'Staff2', 'root0', 'tess2', 'Presets1']);
+    const table = screen.getByRole('table');
+    const names = within(table).getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0].textContent);
+    expect(names).toEqual(['root(you)Adminenvironment', 'tessInstructor']);
+    fireEvent.click(within(table).getByRole('button', { name: 'tess' }));
+    expect(search()).toBe('?s=staff&u=tess');
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+    // Her students are one click away, filtered to her class.
+    fireEvent.click(screen.getByRole('button', { name: /2 students/ }));
+    expect(search()).toBe('?s=students&i=tess');
+    expect(screen.queryByRole('columnheader', { name: 'Instructor' })).not.toBeInTheDocument();
+  });
+
+  it('shows an admin every class, with an Instructor column', async () => {
+    signIn('admin');
+    vi.mocked(api.listStudents).mockResolvedValue({ max_labs: 1, students: [student('alice'), student('dana', { id: 'root', username: 'root' })] });
+    await renderLibrary('/?s=students');
+    expect(screen.getByRole('columnheader', { name: 'Instructor' })).toBeInTheDocument();
+    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell').slice(0, 2).map((c) => c.textContent));
+    expect(rows).toEqual([['alice', 'tess'], ['dana', 'root']]);
+  });
+
+  it('gives an instructor every section but Staff, opening on their own topologies', async () => {
     signIn('instructor');
     await renderLibrary();
     expect(railItems()).toEqual(['Running1', 'My topologies2', 'Lessons1', 'Students2', 'Presets1']);

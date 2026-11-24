@@ -151,7 +151,7 @@ describe('TutorialsSection', () => {
 });
 
 describe('TutorialsSection for a student', () => {
-  beforeEach(() => { useAppStore.setState({ user: { id: 's1', username: 'alice', role: 'student' } }); });
+  beforeEach(() => { useAppStore.setState({ user: { id: 's1', username: 'alice', role: 'student', must_change_password: false, env_managed: false } }); });
   afterEach(() => { useAppStore.setState({ user: null }); });
 
   it('steps through a tutorial without any authoring controls', () => {

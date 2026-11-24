@@ -65,6 +65,10 @@ export type Owner = S['OwnerOut'];
 export type ClassSettings = S['ClassSettingsOut'];
 export type Student = S['StudentOut'];
 export type Students = S['StudentsOut'];
+export type Role = SessionUser['role'];
+export type StaffRole = S['StaffOut']['role'];
+export type StaffMember = S['StaffOut'];
+export type StaffCreated = S['StaffCreatedOut'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -144,7 +148,7 @@ function json(body: unknown, method = 'POST'): RequestInit {
   return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
 
-// ── Accounts (classroom mode) ──────────────────────────────────────
+// ── Accounts ──────────────────────────────────────
 export function login(username: string, password: string): Promise<SignIn> {
   return request(`${V1}/auth/login`, json({ username, password }));
 }
@@ -179,6 +183,24 @@ export function resetStudentPassword(userId: string): Promise<{ password: string
 }
 export function removeStudent(userId: string): Promise<void> {
   return request(`${V1}/class/students/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+/** Staff accounts (admins only). */
+export function listStaff(): Promise<StaffMember[]> {
+  return request<{ staff: StaffMember[] }>(`${V1}/users`).then((r) => r.staff);
+}
+export function createStaff(username: string, role: StaffRole): Promise<StaffCreated> {
+  return request(`${V1}/users`, json({ username, role }));
+}
+export function setStaffRole(userId: string, role: StaffRole): Promise<StaffMember> {
+  return request(`${V1}/users/${encodeURIComponent(userId)}`, json({ role }, 'PATCH'));
+}
+export function resetStaffPassword(userId: string): Promise<{ password: string }> {
+  return request(`${V1}/users/${encodeURIComponent(userId)}/reset-password`, { method: 'POST' });
+}
+/** Remove a staff member; their topologies and students go to `transferTo` (default: you). */
+export function deleteStaff(userId: string, transferTo?: string): Promise<void> {
+  const q = transferTo ? `?transfer_to=${encodeURIComponent(transferTo)}` : '';
+  return request(`${V1}/users/${encodeURIComponent(userId)}${q}`, { method: 'DELETE' });
 }
 
 // ── Catalog ────────────────────────────────────────────────────────

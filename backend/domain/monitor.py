@@ -32,6 +32,7 @@ from engine.base import ContainerRef, IfaceCounters, RawStats
 _SIDECAR = "ae3gis.sidecar"
 _PURPOSE = "ae3gis.purpose"
 _JOB = "ae3gis.job"
+_SIDECAR_LAB = "ae3gis.lab_hash"
 
 HOST_FIELDS = (
     "vm_cpu_pct",
@@ -229,6 +230,13 @@ def classify(refs: list[ContainerRef], scope: Scope) -> dict[str, Target]:
         labels = ref.labels or {}
         sid = ref.id[:12]
         if labels.get(_SIDECAR) == "1":
+            # Another lab's sidecar (someone else's capture or traffic run) is
+            # only counted with that lab, never listed by name: a monitor
+            # shows its own lab and the shared helpers (no lab), nothing else.
+            lab = labels.get(_SIDECAR_LAB)
+            if lab and scope.lab_hash and lab != scope.lab_hash:
+                out[sid] = Target("other_lab", ref.name)
+                continue
             out[sid] = Target(
                 "tool", ref.name, purpose=labels.get(_PURPOSE), job_id=labels.get(_JOB)
             )
