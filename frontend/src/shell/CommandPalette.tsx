@@ -22,6 +22,7 @@ import { useAddEntity } from '@/features/topology/AddEntityContext';
 import { targetSiteFor, targetSubnetFor } from '@/features/topology/addTargets';
 import { cn } from '@/lib/cn';
 import { LAYER } from '@/ui/layers';
+import { useAgentStore } from '@/features/agent/agentStore';
 
 export interface CommandPaletteProps {
   scope: Scope;
@@ -36,6 +37,7 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
   const manageUsers = useCan('manageUsers');
   const isStudent = useIsStudent();
   const accounts = useAppStore((s) => !!s.authRequired);
+  const agentMode = useAgentStore((s) => s.status?.mode ?? null);
   const { open, topology, deployStatus, backendId, savedState, sidebarOpen, inspectorOpen, layoutMode, selection } = useAppShallow((s) => ({
     open: s.commandPaletteOpen, topology: s.topology, deployStatus: s.deployStatus, backendId: s.backendId, savedState: s.savedState,
     sidebarOpen: s.sidebarOpen, inspectorOpen: s.inspectorOpen, layoutMode: s.layoutMode, selection: s.selection,
@@ -62,6 +64,11 @@ export function CommandPalette({ scope, onNavigate, onSave }: CommandPaletteProp
               <CommandEmpty>Nothing matches.</CommandEmpty>
 
               <CommandGroup heading="Actions">
+                {agentMode ? (
+                  <CommandItem onSelect={run(() => st().setAgentOpen(true))} shortcut={`${MOD}J`} keywords={['agent', 'assistant', 'ai', 'chat', 'help', 'tutor', 'claude']}>
+                    <Sparkles /> {agentMode === 'tutor' ? 'Ask the tutor' : 'Ask the agent'}
+                  </CommandItem>
+                ) : null}
                 <CommandItem onSelect={run(onSave)} shortcut={`${MOD}S`}><Save /> Save topology</CommandItem>
                 {deployStatus === 'deployed' ? (
                   <CommandItem onSelect={run(requestDestroy)} keywords={['save', 'stop', 'suspend', 'log off']}><Square /> Destroy deployment…</CommandItem>

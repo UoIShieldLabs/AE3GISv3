@@ -10,6 +10,7 @@ import {
   Button, Dialog, DropdownMenuItem, DropdownMenuSeparator, EmptyState, IconButton, Select, Spinner, Switch, Tooltip, toast,
 } from '@/ui';
 import { AppearanceMenu } from '@/shell/AppearanceMenu';
+import { AgentButton } from '@/features/agent/AgentButton';
 import { UserMenu } from '@/shell/UserMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
@@ -602,6 +603,7 @@ export function LibraryRoute() {
           >
             <RefreshCw />
           </IconButton>
+          <AgentButton />
           <AppearanceMenu />
           <UserMenu />
         </div>

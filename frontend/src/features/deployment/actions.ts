@@ -66,6 +66,50 @@ export async function saveTopology(name?: string): Promise<string | null> {
   });
 }
 
+/** Take the server's copy of the open topology (the agent, or another tab,
+ *  changed it) as one undoable step, keeping the view where it is. */
+export function applyRemoteRecord(rec: api.TopologyRecord) {
+  const st = useAppStore.getState();
+  if (st.backendId !== rec.id) return;
+  st.applyRemoteTopology(rec.data);
+  applyRecord(rec);
+}
+
+let refreshing: string | null = null;
+
+/** Fetch the open topology and take it (`applyRemoteRecord`) unless the editor
+ *  has unsaved changes, which are never overwritten: then say so instead. */
+export async function refreshFromServer(id: string, { notifyIfDirty = true } = {}): Promise<boolean> {
+  const st = useAppStore.getState();
+  if (st.backendId !== id || refreshing === id) return false;
+  if (st.dirty) {
+    if (notifyIfDirty) notifyChangedElsewhere(id);
+    return false;
+  }
+  refreshing = id;
+  try {
+    const rec = await api.getTopology(id);
+    const now = useAppStore.getState();
+    if (now.backendId !== id || now.dirty || rec.version === now.version) return false;
+    applyRemoteRecord(rec);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    refreshing = null;
+  }
+}
+
+/** The saved topology changed under unsaved edits: offer to reload (discards them). */
+export function notifyChangedElsewhere(id: string) {
+  toast.warning('Changed elsewhere', {
+    id: `changed-elsewhere:${id}`,
+    description: 'This topology was saved elsewhere since you loaded it. Reloading discards your unsaved changes.',
+    duration: 15000,
+    action: { label: 'Reload', onClick: () => void loadTopology(id) },
+  });
+}
+
 /** Load a topology into the editor; returns the id actually loaded (a student
  *  opening a published topology gets their copy's), or null on failure. */
 export async function loadTopology(id: string): Promise<string | null> {

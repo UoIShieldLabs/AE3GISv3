@@ -14,6 +14,7 @@ import { openScenarioPanel } from '@/features/scenario/actions';
 import { openTutorialsPanel } from '@/features/tutorials/actions';
 import { useCan } from '@/lib/permissions';
 import { RecordChips } from '@/features/topology/SourceBanner';
+import { AgentButton } from '@/features/agent/AgentButton';
 import { AppearanceMenu } from './AppearanceMenu';
 import { UserMenu } from './UserMenu';
 
@@ -149,6 +150,7 @@ export function TopBar({ onSave, onExport, onExportLab, onDeploy, onDestroy, onD
           </div>
         )}
         <Separator orientation="vertical" className="mx-1 h-5" />
+        <AgentButton />
         <AppearanceMenu />
         <UserMenu />
       </div>

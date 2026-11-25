@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useAppStore } from '@/store';
+import { editorLocked, useAppStore } from '@/store';
 import { ROOT_SCOPE, defaultScopeFor, resolveScope, scopeEquals, scopePath, type Scope } from '@/lib/topology';
 import { createNewTopology, deployFresh, deployTopology, exportLab, exportTopologyJson, loadTopology, requestDestroy, saveTopology } from '@/features/deployment/actions';
 import { DestroyDialog } from '@/features/deployment/DestroyDialog';
@@ -15,6 +15,7 @@ import { RunsSheet } from '@/features/runs/RunsSheet';
 import { RequiredImagesBanner } from '@/features/images/RequiredImagesBanner';
 import { RequiredRegistriesBanner } from '@/features/images/RequiredRegistriesBanner';
 import { SourceBanner } from '@/features/topology/SourceBanner';
+import { AgentWorkingBanner } from '@/features/agent/AgentWorkingBanner';
 import { TopologyCanvas } from '@/canvas/TopologyCanvas';
 import { EditorShell } from '@/shell/EditorShell';
 import { TopBar } from '@/shell/TopBar';
@@ -33,6 +34,8 @@ export function EditorRoute() {
   const navigate = useNavigate();
   const backendId = useAppStore((s) => s.backendId);
   const topology = useAppStore((s) => s.topology);
+  // An agent run is editing this topology: the editor is read-only meanwhile.
+  const locked = useAppStore((s) => editorLocked(s));
   const inflight = useRef<string | null>(null);
   useServerValidation();
 
@@ -108,12 +111,13 @@ export function EditorRoute() {
             onDestroy={requestDestroy}
             onDeployFresh={() => void deployFresh()}
             onLibrary={() => void navigate('/')}
+            readOnly={locked}
           />
         }
         breadcrumb={<Breadcrumb scope={scope} onNavigate={onNavigate} />}
-        notice={<><SourceBanner /><RequiredRegistriesBanner /><RequiredImagesBanner /></>}
+        notice={<><AgentWorkingBanner /><SourceBanner /><RequiredRegistriesBanner /><RequiredImagesBanner /></>}
         sidebar={<Sidebar scope={scope} onNavigate={onNavigate} />}
-        canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} />}
+        canvas={<TopologyCanvas scope={scope} onNavigate={onNavigate} onSave={() => void save()} readOnly={locked} />}
         inspector={<Inspector scope={scope} onNavigate={onNavigate} />}
         tutorials={
           <Suspense fallback={<div className="flex h-full items-center justify-center bg-surface"><Spinner /></div>}>

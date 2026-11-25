@@ -4,6 +4,7 @@
 import * as api from '@/api/client';
 import { useAppStore, type RuntimeStatus } from '@/store';
 import { toast } from '@/ui';
+import { refreshFromServer } from './actions';
 
 const FAST_MS = 1500;
 const SLOW_MS = 5000;
@@ -38,7 +39,10 @@ async function tick(topologyId: string) {
     if ((rt.deployed_at ?? null) !== st.deployedAt) st.setDeployedAt(rt.deployed_at ?? null);
     // Captures and traffic runs: poll briskly so their badges come and go on time.
     if (rt.activity?.length) delay = FAST_MS;
-    if (rt.version !== st.version) st.setVersion(rt.version);
+    // Saved elsewhere (the agent, another tab): take it when the editor is clean;
+    // with unsaved edits keep our version, so the next save reports the conflict
+    // instead of silently overwriting the other change.
+    if (rt.version !== st.version) void refreshFromServer(topologyId);
 
     const job = rt.active_job;
     if (job) {

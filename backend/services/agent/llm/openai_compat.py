@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from typing import Any
 
 import openai
@@ -171,12 +172,19 @@ class OpenAICompatProvider:
                 f"Could not reach the model endpoint ({self.client.base_url})"
             ) from exc
         tool_calls = []
-        for i, slot in sorted(calls.items()):
+        seen: set[str] = set()
+        for _, slot in sorted(calls.items()):
             try:
                 args: Any = json.loads(slot["arguments"] or "{}")
             except json.JSONDecodeError:
                 args = {"INVALID_JSON": slot["arguments"]}
-            tool_calls.append(ToolCall(id=slot["id"] or f"call_{i}", name=slot["name"], input=args))
+            # Some servers send no id, or the same one every turn ("call_0"):
+            # ids must be unique across the chat (results pair up by them).
+            call_id = slot["id"]
+            if not call_id or call_id in seen or len(call_id) < 8:
+                call_id = f"call_{uuid.uuid4().hex[:16]}"
+            seen.add(call_id)
+            tool_calls.append(ToolCall(id=call_id, name=slot["name"], input=args))
         stop = {"length": "max_tokens", "content_filter": "refusal"}.get(
             finish, "tool_use" if tool_calls else "end_turn"
         )

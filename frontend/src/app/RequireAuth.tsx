@@ -4,6 +4,7 @@ import { useAppStore } from '@/store';
 import { restoreSession } from '@/features/auth/actions';
 import { ChoosePasswordScreen } from '@/features/auth/ChoosePasswordScreen';
 import { installImageRefresh } from '@/features/images/imagePolling';
+import { AgentFrame } from '@/features/agent/AgentFrame';
 import { Spinner } from '@/ui';
 
 /** Every route but /login: finds out who this tab is signed in as, sends a
@@ -39,5 +40,9 @@ export function RequireAuth() {
   }
   // A temporary password: the backend refuses everything until it is replaced.
   if (mustChangePassword) return <ChoosePasswordScreen />;
-  return <Outlet />;
+  return (
+    <AgentFrame>
+      <Outlet />
+    </AgentFrame>
+  );
 }
