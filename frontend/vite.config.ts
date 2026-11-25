@@ -20,6 +20,11 @@ export default defineConfig({
         target: 'ws://localhost:8000',
         ws: true,
       },
+      // An agent run's live stream (it can sit quiet while a tool waits).
+      '/api/v1/agent/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
+      },
       // Live pcap streams can sit idle for a long time: no proxy timeout.
       '^/api/v1/captures/[^/]+/pcap': {
         target: 'http://localhost:8000',

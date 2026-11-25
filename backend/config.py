@@ -129,6 +129,43 @@ class Settings(BaseSettings):
     # "dev" (compose: source mounted, uvicorn --reload) or "prod"; recorded too.
     mode: str = ""
 
+    # ── the agent (services.agent) ──
+    # Who answers: "off" (default: no agent sidebar), "anthropic" (Claude, the
+    # official SDK), "openai" (any OpenAI-compatible endpoint: Ollama, vLLM, LM
+    # Studio, OpenAI) or "fake" (scripted, for tests and UI work without a model).
+    agent_provider: str = "off"
+    # The model id; empty = claude-opus-5-5 for anthropic (required for openai).
+    agent_model: str = ""
+    # The student tutor's model; empty = agent_model.
+    agent_tutor_model: str = ""
+    # OpenAI-compatible base URL, e.g. http://host.docker.internal:11434/v1 for
+    # Ollama on the Docker host. Ignored by anthropic unless set (a proxy).
+    agent_base_url: str = ""
+    # The provider key; empty = ANTHROPIC_API_KEY / OPENAI_API_KEY from the
+    # environment (Ollama needs none).
+    agent_api_key: str = ""
+    # Claude's effort for staff runs (low | medium | high | xhigh | max); the
+    # tutor runs at agent_tutor_effort.
+    agent_effort: str = "high"
+    agent_tutor_effort: str = "medium"
+    # Claude: when a model declines a request, let the API retry it on a
+    # fallback model (server-side refusal fallbacks). Security-lab work can trip
+    # the cyber classifier; turn off for a model that rejects the parameter.
+    agent_refusal_fallbacks: bool = True
+    # Tool calls one run may make, and how long it may take, before it stops.
+    agent_max_steps: int = 60
+    agent_tutor_max_steps: int = 12
+    agent_max_run_seconds: int = 1800
+    # Context budget (tokens, estimated) for OpenAI-compatible models: older tool
+    # output is trimmed to fit. Claude models keep the whole conversation.
+    agent_context_tokens: int = 32000
+    # A risky tool call waits this long for the user's approval, then is declined.
+    agent_approval_timeout_s: int = 900
+
+    @property
+    def agent_enabled(self) -> bool:
+        return self.agent_provider.strip().lower() not in ("", "off", "none", "false")
+
     @property
     def database_url(self) -> str:
         path = self.db_path or (self.data_dir / "ae3gis.db")

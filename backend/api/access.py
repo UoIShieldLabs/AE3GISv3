@@ -14,7 +14,8 @@ caller gets 404 for a topology they cannot see, so its existence is not
 leaked, and 403 ``not_owner`` for an own-level call on a lesson (a student
 works on a copy).
 
-A job follows its topology (own level). Jobs without one: image builds and
+A job follows its topology (own level); an agent run follows its chat. Jobs
+without either: image builds and
 source / registry syncs are readable by anyone signed in; cancelling or
 stopping a build or source sync is for staff, everything else (registry
 syncs, benchmarks, purges) for admins.
@@ -32,8 +33,9 @@ from sqlalchemy.orm import Session
 from api.deps import get_db
 from api.errors import Forbidden, NotFound
 from auth import current_identity, ws_identity
-from db.models import Job, Topology
+from db.models import AgentChat, Job, Topology
 from services.accounts import Identity, teacher_of
+from services.agent import access as agent_access
 
 # Topology-less job kinds any signed-in caller may read (a deploy's images step
 # joins builds; the UI follows their logs).
@@ -102,6 +104,15 @@ def check_job(db: Session, identity: Identity, job: Job | None, *, write: bool) 
         raise NotFound("Job")
     if identity.is_admin:
         return job
+    if job.kind == "agent":
+        # An agent run follows its chat: readable by whoever may read the chat,
+        # stopped only by its owner (services.agent.access).
+        chat = db.get(AgentChat, (job.params or {}).get("chat_id"))
+        if chat is None or not agent_access.can_read_chat(db, identity, chat):
+            raise NotFound("Job")
+        if write and not agent_access.can_drive_chat(identity, chat):
+            raise Forbidden("Only the chat's owner can do this", code="not_owner")
+        return job
     if job.topology_id:
         topo = db.get(Topology, job.topology_id)
         if topo is None or not can_own(db, identity, topo):
@@ -154,6 +165,29 @@ async def ws_access(websocket: WebSocket, token: str | None, topology_id: str) -
             return 0
 
     return await asyncio.to_thread(check)
+
+
+async def ws_chat_guard(websocket: WebSocket, token: str | None, chat_id: str) -> bool:
+    """Close the upgrade (before accepting) unless the caller may read the agent
+    chat (``services.agent.access.can_read_chat``): 4003 bad token, 4004 not theirs."""
+
+    def check() -> int:
+        with websocket.app.state.session_factory() as db:
+            identity = ws_identity(websocket, token, db)
+            if identity is None:
+                return WS_UNAUTHORIZED
+            chat = db.get(AgentChat, chat_id)
+            if chat is None or not agent_access.can_read_chat(db, identity, chat):
+                return WS_NOT_FOUND
+            return 0
+
+    code = await asyncio.to_thread(check)
+    if code:
+        await websocket.close(
+            code=code, reason="Forbidden" if code == WS_UNAUTHORIZED else "Not found"
+        )
+        return False
+    return True
 
 
 async def ws_guard(websocket: WebSocket, token: str | None, topology_id: str) -> bool:

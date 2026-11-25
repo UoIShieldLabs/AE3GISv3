@@ -85,7 +85,11 @@ def test_open_mode_has_no_accounts(client):
         "auth_required": False,
     }
     assert _login(client, "admin", "x").json()["code"] == "accounts_off"
-    assert client.get("/api/v1/class").json() == {"signup_open": False, "join_code": None}
+    assert client.get("/api/v1/class").json() == {
+        "signup_open": False,
+        "join_code": None,
+        "tutor_enabled": False,
+    }
     r = client.put("/api/v1/class", json={"signup_open": True})
     assert r.status_code == 409 and r.json()["code"] == "accounts_off"
     assert client.get("/api/v1/users").json() == {"staff": []}  # everyone is an admin

@@ -4,6 +4,118 @@
  */
 
 export interface paths {
+    "/api/v1/agent/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Chats
+         * @description Your chats, newest first (``topology_id`` narrows them). Staff pass
+         *     ``owner`` to read one of their students' chats.
+         */
+        get: operations["list_chats_api_v1_agent_chats_get"];
+        put?: never;
+        /**
+         * Create Chat
+         * @description A new chat, optionally on a topology the caller can see.
+         */
+        post: operations["create_chat_api_v1_agent_chats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/chats/{chat_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Chat */
+        get: operations["get_chat_api_v1_agent_chats__chat_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Chat
+         * @description Delete a chat and its messages (its run, if any, is stopped first).
+         */
+        delete: operations["delete_chat_api_v1_agent_chats__chat_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Chat
+         * @description Rename a chat, or let its risky tool calls run without asking
+         *     (``auto_approve``; deletes always ask). Applies to a run in progress too.
+         */
+        patch: operations["update_chat_api_v1_agent_chats__chat_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/agent/chats/{chat_id}/approvals/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve or decline a tool call the agent is waiting on.
+         */
+        post: operations["decide_api_v1_agent_chats__chat_id__approvals__call_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/chats/{chat_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Message
+         * @description Send a message: starts a run (202 + its job), or, while one is running,
+         *     hands the message to it (``queued``: the agent reads it at its next turn).
+         */
+        post: operations["send_message_api_v1_agent_chats__chat_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status
+         * @description Whether the agent is configured, and what the caller gets.
+         */
+        get: operations["status_api_v1_agent_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -102,6 +214,48 @@ export interface paths {
          */
         post: operations["signup_api_v1_auth_signup_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tokens
+         * @description Your API tokens (staff). The tokens themselves are never shown again.
+         */
+        get: operations["list_tokens_api_v1_auth_tokens_get"];
+        put?: never;
+        /**
+         * Create Token
+         * @description A bearer token (shown once) that acts as you, e.g. for an external agent
+         *     on ``/api/v1/mcp``. It lasts 90 days; a password change ends it.
+         */
+        post: operations["create_token_api_v1_auth_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Token */
+        delete: operations["revoke_token_api_v1_auth_tokens__token_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -320,8 +474,8 @@ export interface paths {
         /**
          * Update Class
          * @description Open or close sign-up to your class (opening it the first time makes a
-         *     join code), or rotate its join code (students already signed up are
-         *     unaffected).
+         *     join code), rotate its join code (students already signed up are
+         *     unaffected), or switch the agent's tutor on or off for your students.
          */
         put: operations["update_class_api_v1_class_put"];
         post?: never;
@@ -1667,6 +1821,210 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** AgentApprovalOut */
+        AgentApprovalOut: {
+            /** Call Id */
+            call_id: string;
+            /** Input */
+            input?: unknown;
+            /** Name */
+            name: string;
+        };
+        /** AgentChatDetail */
+        AgentChatDetail: {
+            /** Active Job Id */
+            active_job_id?: string | null;
+            /** Auto Approve */
+            auto_approve: boolean;
+            /** Can Send */
+            can_send: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Messages */
+            messages: components["schemas"]["AgentMessageOut"][];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "full" | "tutor";
+            owner?: components["schemas"]["OwnerOut"] | null;
+            /** Pending Approvals */
+            pending_approvals?: components["schemas"]["AgentApprovalOut"][];
+            /** Title */
+            title: string;
+            /** Topology Id */
+            topology_id?: string | null;
+            /** Topology Name */
+            topology_name?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AgentChatIn */
+        AgentChatIn: {
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /** Topology Id */
+            topology_id?: string | null;
+        };
+        /** AgentChatOut */
+        AgentChatOut: {
+            /** Active Job Id */
+            active_job_id?: string | null;
+            /** Auto Approve */
+            auto_approve: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "full" | "tutor";
+            owner?: components["schemas"]["OwnerOut"] | null;
+            /** Title */
+            title: string;
+            /** Topology Id */
+            topology_id?: string | null;
+            /** Topology Name */
+            topology_name?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AgentChatPatch */
+        AgentChatPatch: {
+            /** Auto Approve */
+            auto_approve?: boolean | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * AgentContext
+         * @description What the user is looking at when they send a message.
+         */
+        AgentContext: {
+            /** Page */
+            page?: string | null;
+            /** Scope */
+            scope?: {
+                [key: string]: string;
+            } | null;
+            /** Selection */
+            selection?: string[];
+            /** Topology Id */
+            topology_id?: string | null;
+            /** Topology Name */
+            topology_name?: string | null;
+        };
+        /** AgentDecisionIn */
+        AgentDecisionIn: {
+            /** Approve */
+            approve: boolean;
+        };
+        /** AgentMessageOut */
+        AgentMessageOut: {
+            /** Content */
+            content: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant" | "tool" | "note";
+            /** Seq */
+            seq: number;
+        };
+        /** AgentSendIn */
+        AgentSendIn: {
+            context?: components["schemas"]["AgentContext"] | null;
+            /** Text */
+            text: string;
+        };
+        /** AgentSendOut */
+        AgentSendOut: {
+            /** Job Id */
+            job_id: string;
+            message: components["schemas"]["AgentMessageOut"];
+            /** Queued */
+            queued: boolean;
+        };
+        /** AgentStatusOut */
+        AgentStatusOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Mcp Path */
+            mcp_path: string;
+            /** Mode */
+            mode?: ("full" | "tutor") | null;
+            /** Model */
+            model?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ApiTokenCreated */
+        ApiTokenCreated: {
+            info: components["schemas"]["ApiTokenOut"];
+            /** Mcp Path */
+            mcp_path: string;
+            /** Token */
+            token: string;
+        };
+        /** ApiTokenIn */
+        ApiTokenIn: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+        };
+        /** ApiTokenOut */
+        ApiTokenOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+        };
         /** ArtifactOut */
         ArtifactOut: {
             /** Content Type */
@@ -2265,6 +2623,8 @@ export interface components {
             rotate_join_code: boolean;
             /** Signup Open */
             signup_open?: boolean | null;
+            /** Tutor Enabled */
+            tutor_enabled?: boolean | null;
         };
         /** ClassSettingsOut */
         ClassSettingsOut: {
@@ -2272,6 +2632,11 @@ export interface components {
             join_code?: string | null;
             /** Signup Open */
             signup_open: boolean;
+            /**
+             * Tutor Enabled
+             * @default false
+             */
+            tutor_enabled: boolean;
         };
         /** ContextOut */
         ContextOut: {
@@ -3998,6 +4363,285 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_chats_api_v1_agent_chats_get: {
+        parameters: {
+            query?: {
+                topology_id?: string | null;
+                /** @description Staff: a student's chats */
+                owner?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChatOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_chat_api_v1_agent_chats_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_chat_api_v1_agent_chats__chat_id__get: {
+        parameters: {
+            query?: {
+                /** @description Only messages after this seq */
+                after?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChatDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_chat_api_v1_agent_chats__chat_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_chat_api_v1_agent_chats__chat_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentChatPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_v1_agent_chats__chat_id__approvals__call_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                chat_id: string;
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_agent_chats__chat_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                chat_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSendIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSendOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_agent_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
@@ -4145,6 +4789,103 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SessionOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tokens_api_v1_auth_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_token_api_v1_auth_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_token_api_v1_auth_tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

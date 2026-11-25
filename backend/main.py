@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import catalog as node_catalog
 from api import accounts as accounts_api
+from api import agent as agent_api
 from api import (
     background,
     benchmarks,
@@ -50,6 +51,7 @@ from services import pulse as pulse_service
 from services import scenario as scenario_service
 from services import traffic as traffic_service
 from services.agent import mcp as agent_mcp
+from services.agent import runner as agent_runner
 from services.artifacts import ArtifactStore
 from services.deployment import register_handlers
 from services.images import ImageManager
@@ -70,6 +72,7 @@ SHUTDOWN_STOP_KINDS: tuple[str, ...] = (
     "scenario",
     "background",
     "pulse",
+    "agent",
 )
 
 log = logging.getLogger(__name__)
@@ -102,6 +105,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     benchmark_service.register(runner)
     scenario_service.register(runner)
     background_service.register(runner)
+    agent_runner.register(runner)
     pulse = pulse_service.register(runner)
     image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
     image_manager.register()
@@ -206,6 +210,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         system.router,
         catalog.router,
         presets.router,
+        agent_api.router,
     ):
         app.include_router(r)
     app.add_route(

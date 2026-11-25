@@ -442,8 +442,12 @@ def any_signup_open(db: Session) -> bool:
 
 def _class_out(cls: Class | None) -> dict[str, Any]:
     if cls is None:
-        return {"signup_open": False, "join_code": None}
-    return {"signup_open": bool(cls.signup_open), "join_code": cls.join_code or None}
+        return {"signup_open": False, "join_code": None, "tutor_enabled": False}
+    return {
+        "signup_open": bool(cls.signup_open),
+        "join_code": cls.join_code or None,
+        "tutor_enabled": bool(cls.tutor_enabled),
+    }
 
 
 def _new_join_code(db: Session) -> str:
@@ -472,9 +476,11 @@ def update_class_settings(
     *,
     signup_open: bool | None = None,
     rotate_join_code: bool = False,
+    tutor_enabled: bool | None = None,
 ) -> dict[str, Any]:
     """Open or close sign-up to the caller's class (opening it the first time
-    makes a join code), or give it a new code."""
+    makes a join code), give it a new code, or switch the agent's tutor on or
+    off for its students."""
     if not identity.user_id:
         raise Conflict("Accounts are off on this instance; there is no class", code="accounts_off")
     cls = class_of(db, identity.user_id)
@@ -482,6 +488,8 @@ def update_class_settings(
         cls.join_code = _new_join_code(db)
     if signup_open is not None:
         cls.signup_open = bool(signup_open)
+    if tutor_enabled is not None:
+        cls.tutor_enabled = bool(tutor_enabled)
     db.commit()
     return _class_out(cls)
 
