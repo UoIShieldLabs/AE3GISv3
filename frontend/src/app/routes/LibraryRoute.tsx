@@ -11,6 +11,7 @@ import {
 } from '@/ui';
 import { AppearanceMenu } from '@/shell/AppearanceMenu';
 import { AgentButton } from '@/features/agent/AgentButton';
+import { StudentChats } from '@/features/agent/StudentChats';
 import { UserMenu } from '@/shell/UserMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
@@ -397,6 +398,7 @@ export function LibraryRoute() {
       return (
         <>
           <StudentHeader row={row} cls={cls} showInstructor={allClasses} onBack={() => loc.go('students', { instructor: loc.instructor })} />
+          <StudentChats studentId={row.id} username={row.username} />
           {toolbar()}
           {collection(row.topologies, studentItem, {
             empty: <EmptyState icon={<FolderOpen />} title="No topologies yet" description={`${row.username} has not started a lesson or made a topology.`} className={EMPTY} />,

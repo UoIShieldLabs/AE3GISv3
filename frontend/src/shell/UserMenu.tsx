@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { KeyRound, LogOut, UserRound } from 'lucide-react';
+import { KeyRound, LogOut, Plug, UserRound } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { signOut } from '@/features/auth/actions';
 import { PasswordForm } from '@/features/auth/PasswordForm';
 import { ROLE_TONE } from '@/lib/roles';
+import { ConnectAgentDialog } from '@/features/agent/ConnectAgentDialog';
 import {
   Badge, Button, Dialog, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger, IconButton, toast,
@@ -18,7 +19,9 @@ export function UserMenu() {
   const navigate = useNavigate();
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   if (!authRequired || !user) return null;
+  const staff = user.role !== 'student';
 
   const doSignOut = async () => {
     setConfirmOut(false);
@@ -46,10 +49,12 @@ export function UserMenu() {
           {!user.env_managed ? (
             <DropdownMenuItem onSelect={() => setPasswordOpen(true)}><KeyRound /> Change password…</DropdownMenuItem>
           ) : null}
+          {staff ? <DropdownMenuItem onSelect={() => setConnectOpen(true)}><Plug /> Connect an external agent…</DropdownMenuItem> : null}
           <DropdownMenuItem onSelect={requestSignOut}><LogOut /> Sign out</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+      {staff ? <ConnectAgentDialog open={connectOpen} onOpenChange={setConnectOpen} /> : null}
       <Dialog
         open={confirmOut}
         onOpenChange={setConfirmOut}

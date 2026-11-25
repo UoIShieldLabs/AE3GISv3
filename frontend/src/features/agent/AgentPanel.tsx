@@ -9,6 +9,7 @@ import { ChatList } from './ChatList';
 import { ChatView } from './ChatView';
 import { Composer } from './Composer';
 import { AgentMark } from './AgentMark';
+import { ConnectAgentDialog } from './ConnectAgentDialog';
 
 const STAFF_STARTERS = [
   'Build a lab with an IT and an OT subnet, a web server, a PLC and an attacker',
@@ -143,6 +144,7 @@ function ChatBar({ chatId }: { chatId: string }) {
 
 function Welcome({ tutor, model }: { tutor: boolean; model: string | null }) {
   const starters = tutor ? TUTOR_STARTERS : STAFF_STARTERS;
+  const [connectOpen, setConnectOpen] = useState(false);
   return (
     <div className="flex min-h-0 flex-1 flex-col justify-end gap-3 overflow-y-auto px-3 py-4">
       <div>
@@ -166,6 +168,14 @@ function Welcome({ tutor, model }: { tutor: boolean; model: string | null }) {
           </button>
         ))}
       </div>
+      {!tutor ? (
+        <>
+          <button type="button" onClick={() => setConnectOpen(true)} className="self-start text-2xs text-fg-subtle underline-offset-2 hover:text-fg hover:underline">
+            Use these tools from Claude Code or OpenCode…
+          </button>
+          <ConnectAgentDialog open={connectOpen} onOpenChange={setConnectOpen} />
+        </>
+      ) : null}
     </div>
   );
 }

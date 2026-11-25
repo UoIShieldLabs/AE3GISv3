@@ -70,6 +70,8 @@ export function useClass({ enabled, polling, onChanged }: {
     refresh,
     setSignup: (signup_open: boolean) =>
       void run('signup', async () => setSettings(await api.updateClassSettings({ signup_open })), 'Could not change sign-up'),
+    setTutor: (tutor_enabled: boolean) =>
+      void run('tutor', async () => setSettings(await api.updateClassSettings({ tutor_enabled })), 'Could not change the tutor'),
     rotate: () =>
       void run('rotate', async () => setSettings(await api.updateClassSettings({ rotate_join_code: true })), 'Could not make a new code'),
     copyCode: async () => {
