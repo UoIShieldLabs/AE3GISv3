@@ -55,6 +55,8 @@ JOB_KINDS = (
     "monitor",
     "benchmark",
     "scenario",
+    "background",
+    "agent",
 )
 JOB_STATUSES = ("queued", "running", "succeeded", "failed", "cancelled")
 
@@ -197,19 +199,66 @@ class Class(Base):
     )
     join_code = Column(String, nullable=True, unique=True)
     signup_open = Column(Boolean, default=False, server_default=false(), nullable=False)
+    # The agent's read-only tutor for this class's students (off until switched on).
+    tutor_enabled = Column(Boolean, default=False, server_default=false(), nullable=False)
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
+SESSION_PURPOSES = ("browser", "api")
+
+
 class UserSession(Base):
-    """A signed-in browser. The bearer token is only ever stored hashed."""
+    """A signed-in browser, or an API token a user made for an external agent
+    (``purpose`` ``api``, with a ``label``). The token is only ever stored hashed."""
 
     __tablename__ = "sessions"
 
     token_hash = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    purpose = Column(String, default="browser", server_default="browser", nullable=False)
+    label = Column(String, nullable=True)
     created_at = Column(DateTime, default=utcnow, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     last_seen_at = Column(DateTime, nullable=True)
+
+
+class AgentChat(Base):
+    """A conversation with the agent. ``mode`` is ``full`` (staff) or ``tutor``
+    (a student); ``topology_id`` is the topology it was started on, if any.
+    Read access follows the topology rule (``services.agent.access``)."""
+
+    __tablename__ = "agent_chats"
+
+    id = Column(String, primary_key=True, default=new_id)
+    owner_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    topology_id = Column(
+        String, ForeignKey("topologies.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    title = Column(String, nullable=False, default="New chat")
+    mode = Column(String, nullable=False, default="full")
+    # Risky tool calls run without asking (deletes always ask).
+    auto_approve = Column(Boolean, default=False, server_default=false(), nullable=False)
+    last_job_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class AgentMessage(Base):
+    """One turn of a chat, append-only. ``content`` is provider-neutral (what the
+    UI renders and any provider can replay); ``provider_raw`` is the provider's
+    own record of an assistant turn (replayed unchanged to that provider)."""
+
+    __tablename__ = "agent_messages"
+    __table_args__ = (Index("ix_agent_messages_chat_seq", "chat_id", "seq", unique=True),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    chat_id = Column(String, ForeignKey("agent_chats.id", ondelete="CASCADE"), nullable=False)
+    seq = Column(Integer, nullable=False)
+    role = Column(String, nullable=False)  # user | assistant | tool | note
+    content = Column(JSON, nullable=False)
+    provider_raw = Column(JSON, nullable=True)
+    job_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
 
 class AppSetting(Base):

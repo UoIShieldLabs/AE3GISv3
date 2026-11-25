@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +49,7 @@ from services import monitor as monitor_service
 from services import pulse as pulse_service
 from services import scenario as scenario_service
 from services import traffic as traffic_service
+from services.agent import mcp as agent_mcp
 from services.artifacts import ArtifactStore
 from services.deployment import register_handlers
 from services.images import ImageManager
@@ -110,8 +112,20 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     # (from the DB only; syncing is always explicit).
     registry_manager.apply_overlay()
 
+    # The agent's tools over MCP; it reads the same pieces as app.state.
+    mcp_endpoint = agent_mcp.McpEndpoint(
+        SimpleNamespace(
+            settings=settings, session_factory=session_factory, engine=engine, runner=runner
+        )
+    )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        async with mcp_endpoint.running(), _lifespan(app):
+            yield
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI):
         runner.bind_loop(asyncio.get_running_loop())
         ok, detail = await engine.is_available()
         (log.info if ok else log.warning)("Deployment engine '%s': %s", engine.name, detail)
@@ -194,4 +208,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         presets.router,
     ):
         app.include_router(r)
+    app.add_route(
+        agent_mcp.PATH, mcp_endpoint, methods=["GET", "POST", "DELETE"], include_in_schema=False
+    )
     return app
