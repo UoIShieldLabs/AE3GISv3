@@ -48,12 +48,26 @@ services:
       - AE3GIS_GIT_COMMIT=${AE3GIS_GIT_COMMIT:-}
       - AE3GIS_GIT_DIRTY=${AE3GIS_GIT_DIRTY:-false}
       - AE3GIS_HOST_LABEL=${AE3GIS_HOST_LABEL:-}
+      # The agent sidebar (off unless set): "anthropic" (Claude; set
+      # ANTHROPIC_API_KEY), "openai" (any OpenAI-compatible endpoint, e.g.
+      # Ollama on this machine: AE3GIS_AGENT_BASE_URL=http://host.docker.internal:11434/v1
+      # and AE3GIS_AGENT_MODEL=<a tool-calling model>) or "fake" (UI work).
+      - AE3GIS_AGENT_PROVIDER=${AE3GIS_AGENT_PROVIDER:-off}
+      - AE3GIS_AGENT_MODEL=${AE3GIS_AGENT_MODEL:-}
+      - AE3GIS_AGENT_TUTOR_MODEL=${AE3GIS_AGENT_TUTOR_MODEL:-}
+      - AE3GIS_AGENT_BASE_URL=${AE3GIS_AGENT_BASE_URL:-}
+      - AE3GIS_AGENT_API_KEY=${AE3GIS_AGENT_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       # Docker Hub namespaces added (and synced once) at startup when missing,
       # comma-separated. Set it empty to start without any registry.
       - AE3GIS_DEFAULT_REGISTRIES=${AE3GIS_DEFAULT_REGISTRIES-tollan}
       # To build node images from a local checkout instead of the git source
       # in the catalog, mount it and add (JSON):
       #   - AE3GIS_SOURCE_OVERRIDES={"ae3gis-containers": "/sources/ae3gis-containers"}
+    # Lets the agent reach a model server on the Docker host (Ollama, LM Studio)
+    # at host.docker.internal on Linux too (Docker Desktop has it built in).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Reload on code changes, but not on cloned image sources and build contexts.
     # --timeout-graceful-shutdown: a live pcap stream (?follow=true) lasts as
     # long as its capture, which only stops during shutdown; don't wait on it.

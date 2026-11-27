@@ -39,10 +39,14 @@ def update_class(
     identity: Identity = Depends(require_staff),
 ):
     """Open or close sign-up to your class (opening it the first time makes a
-    join code), or rotate its join code (students already signed up are
-    unaffected)."""
+    join code), rotate its join code (students already signed up are
+    unaffected), or switch the agent's tutor on or off for your students."""
     return accounts.update_class_settings(
-        db, identity, signup_open=body.signup_open, rotate_join_code=body.rotate_join_code
+        db,
+        identity,
+        signup_open=body.signup_open,
+        rotate_join_code=body.rotate_join_code,
+        tutor_enabled=body.tutor_enabled,
     )
 
 

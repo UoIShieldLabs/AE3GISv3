@@ -9,12 +9,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import catalog as node_catalog
 from api import accounts as accounts_api
+from api import agent as agent_api
 from api import (
     background,
     benchmarks,
@@ -48,6 +50,8 @@ from services import monitor as monitor_service
 from services import pulse as pulse_service
 from services import scenario as scenario_service
 from services import traffic as traffic_service
+from services.agent import mcp as agent_mcp
+from services.agent import runner as agent_runner
 from services.artifacts import ArtifactStore
 from services.deployment import register_handlers
 from services.images import ImageManager
@@ -68,6 +72,7 @@ SHUTDOWN_STOP_KINDS: tuple[str, ...] = (
     "scenario",
     "background",
     "pulse",
+    "agent",
 )
 
 log = logging.getLogger(__name__)
@@ -100,6 +105,7 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     benchmark_service.register(runner)
     scenario_service.register(runner)
     background_service.register(runner)
+    agent_runner.register(runner)
     pulse = pulse_service.register(runner)
     image_manager = ImageManager(settings, runner, Sources(settings, node_catalog.sources()))
     image_manager.register()
@@ -110,8 +116,20 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
     # (from the DB only; syncing is always explicit).
     registry_manager.apply_overlay()
 
+    # The agent's tools over MCP; it reads the same pieces as app.state.
+    mcp_endpoint = agent_mcp.McpEndpoint(
+        SimpleNamespace(
+            settings=settings, session_factory=session_factory, engine=engine, runner=runner
+        )
+    )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        async with mcp_endpoint.running(), _lifespan(app):
+            yield
+
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI):
         runner.bind_loop(asyncio.get_running_loop())
         ok, detail = await engine.is_available()
         (log.info if ok else log.warning)("Deployment engine '%s': %s", engine.name, detail)
@@ -192,6 +210,10 @@ def create_app(settings: Settings | None = None, engine: DeploymentEngine | None
         system.router,
         catalog.router,
         presets.router,
+        agent_api.router,
     ):
         app.include_router(r)
+    app.add_route(
+        agent_mcp.PATH, mcp_endpoint, methods=["GET", "POST", "DELETE"], include_in_schema=False
+    )
     return app

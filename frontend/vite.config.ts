@@ -20,6 +20,17 @@ export default defineConfig({
         target: 'ws://localhost:8000',
         ws: true,
       },
+      // An agent run's live stream (it can sit quiet while a tool waits).
+      '/api/v1/agent/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
+      },
+      // MCP (external agents): a tool call can wait on a deploy for minutes.
+      '/api/v1/mcp': {
+        target: 'http://localhost:8000',
+        timeout: 900000,
+        proxyTimeout: 900000,
+      },
       // Live pcap streams can sit idle for a long time: no proxy timeout.
       '^/api/v1/captures/[^/]+/pcap': {
         target: 'http://localhost:8000',

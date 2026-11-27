@@ -69,6 +69,15 @@ export type Role = SessionUser['role'];
 export type StaffRole = S['StaffOut']['role'];
 export type StaffMember = S['StaffOut'];
 export type StaffCreated = S['StaffCreatedOut'];
+export type AgentStatus = S['AgentStatusOut'];
+export type AgentChat = S['AgentChatOut'];
+export type AgentChatDetail = S['AgentChatDetail'];
+export type AgentMessage = S['AgentMessageOut'];
+export type AgentContext = S['AgentContext'];
+export type AgentSendResult = S['AgentSendOut'];
+export type AgentApproval = S['AgentApprovalOut'];
+export type ApiToken = S['ApiTokenOut'];
+export type ApiTokenCreated = S['ApiTokenCreated'];
 
 export type ExportFormat = 'labspec' | 'kathara' | 'containerlab';
 
@@ -172,7 +181,7 @@ export function issueWebUiCookie(): Promise<void> {
 export function getClassSettings(): Promise<ClassSettings> {
   return request(`${V1}/class`);
 }
-export function updateClassSettings(patch: { signup_open?: boolean; rotate_join_code?: boolean }): Promise<ClassSettings> {
+export function updateClassSettings(patch: { signup_open?: boolean; rotate_join_code?: boolean; tutor_enabled?: boolean }): Promise<ClassSettings> {
   return request(`${V1}/class`, json(patch, 'PUT'));
 }
 export function listStudents(): Promise<Students> {
@@ -507,4 +516,49 @@ export function pulseWsPath(topologyId: string): string {
 }
 export function scenarioWsPath(topologyId: string, jobId: string): string {
   return `${V1}/topologies/ws/${encodeURIComponent(topologyId)}/scenario/${encodeURIComponent(jobId)}`;
+}
+
+// ── The agent ─────────────────────────────────────
+export function getAgentStatus(): Promise<AgentStatus> {
+  return request(`${V1}/agent/status`);
+}
+export function listAgentChats(params: { topologyId?: string; owner?: string } = {}): Promise<AgentChat[]> {
+  const q = new URLSearchParams();
+  if (params.topologyId) q.set('topology_id', params.topologyId);
+  if (params.owner) q.set('owner', params.owner);
+  const qs = q.toString();
+  return request(`${V1}/agent/chats${qs ? `?${qs}` : ''}`);
+}
+export function createAgentChat(body: { topology_id?: string | null; title?: string } = {}): Promise<AgentChat> {
+  return request(`${V1}/agent/chats`, json(body));
+}
+export function getAgentChat(chatId: string, after = 0): Promise<AgentChatDetail> {
+  return request(`${V1}/agent/chats/${encodeURIComponent(chatId)}${after ? `?after=${after}` : ''}`);
+}
+export function updateAgentChat(chatId: string, patch: { title?: string; auto_approve?: boolean }): Promise<AgentChat> {
+  return request(`${V1}/agent/chats/${encodeURIComponent(chatId)}`, json(patch, 'PATCH'));
+}
+export function deleteAgentChat(chatId: string): Promise<void> {
+  return request(`${V1}/agent/chats/${encodeURIComponent(chatId)}`, { method: 'DELETE' });
+}
+export function sendAgentMessage(chatId: string, text: string, context?: AgentContext): Promise<AgentSendResult> {
+  return request(`${V1}/agent/chats/${encodeURIComponent(chatId)}/messages`, json({ text, context }));
+}
+export function decideAgentApproval(chatId: string, callId: string, approve: boolean): Promise<void> {
+  return request(
+    `${V1}/agent/chats/${encodeURIComponent(chatId)}/approvals/${encodeURIComponent(callId)}`,
+    json({ approve }),
+  );
+}
+export function agentWsPath(chatId: string, jobId: string): string {
+  return `${V1}/agent/ws/${encodeURIComponent(chatId)}/${encodeURIComponent(jobId)}`;
+}
+export function listApiTokens(): Promise<ApiToken[]> {
+  return request(`${V1}/auth/tokens`);
+}
+export function createApiToken(label: string): Promise<ApiTokenCreated> {
+  return request(`${V1}/auth/tokens`, json({ label }));
+}
+export function revokeApiToken(tokenId: string): Promise<void> {
+  return request(`${V1}/auth/tokens/${encodeURIComponent(tokenId)}`, { method: 'DELETE' });
 }

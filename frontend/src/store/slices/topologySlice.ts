@@ -205,6 +205,16 @@ export const createTopologySlice: SliceCreator<TopologySlice> = (set, get) => ({
 
   markClean: () => set({ savedTopology: get().topology, dirty: false }, false, 'markClean'),
 
+  applyRemoteTopology: (data) =>
+    set((s) => {
+      // Not `loadTopology`: this is an undo step (undoing it leaves the editor
+      // dirty, and saving then reverts the remote change).
+      const t = normalizeTopology(cloneTopology(data as TopologyData));
+      s.topology = t;
+      s.savedTopology = t;
+      s.dirty = false;
+    }, false, 'applyRemoteTopology'),
+
   // ── Sites ──
   addSite: (input) => {
     const id = generateId('site');

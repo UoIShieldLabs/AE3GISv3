@@ -61,7 +61,8 @@ def test_public_routes_are_still_there(app):
 
 def test_every_websocket_checks_access(app):
     sockets = [r for _, r in _routes(app) if isinstance(r, APIWebSocketRoute)]
-    assert len(sockets) == 6
+    assert len(sockets) == 7
     for route in sockets:
         source = inspect.getsource(route.endpoint)
-        assert "ws_guard(" in source or "ws_access(" in source, route.path
+        guards = ("ws_guard(", "ws_access(", "ws_chat_guard(")
+        assert any(g in source for g in guards), route.path

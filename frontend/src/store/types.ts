@@ -51,6 +51,9 @@ export interface TopologySlice {
   newTopology: (name?: string) => void;
   setTopologyMeta: (meta: { name?: string; description?: string }) => void;
   markClean: () => void;
+  /** Take the server's copy of the open topology (e.g. the agent edited it) as
+   *  one undoable step; the editor is clean afterwards. */
+  applyRemoteTopology: (data: unknown) => void;
 
   addSite: (input: AddSiteInput) => string;
   updateSite: (siteId: string, updates: Partial<Omit<Site, 'id' | 'subnets' | 'subnetConnections'>>) => void;
@@ -349,7 +352,29 @@ export interface ImagesSlice {
   setImagesReport: (report: ImagesReport | null, error?: string | null) => void;
 }
 
-export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & PulseSlice & ActivitySlice & CatalogSlice & ImagesSlice & AuthSlice;
+/** A running agent run that is working in a topology: while it is the open
+ *  one, the editor is read-only (the agent's edits arrive live). */
+export interface AgentLock {
+  topologyId: string;
+  chatId: string;
+  jobId: string;
+}
+
+/** The agent sidebar's frame: open or not, which chat, the editor lock. The
+ *  chats themselves (messages, live run state) live in features/agent's own
+ *  store: they change with every streamed token. */
+export interface AgentSlice {
+  agentOpen: boolean;
+  agentChatId: string | null;
+  agentLock: AgentLock | null;
+  setAgentOpen: (open: boolean) => void;
+  toggleAgent: () => void;
+  /** Show a chat (null: the chat list), opening the panel. */
+  openAgentChat: (chatId: string | null) => void;
+  setAgentLock: (lock: AgentLock | null) => void;
+}
+
+export type AppState = TopologySlice & DocumentSlice & ViewSlice & DockSlice & TutorialSlice & PulseSlice & ActivitySlice & CatalogSlice & ImagesSlice & AuthSlice & AgentSlice;
 
 export type Mutators = [['zustand/devtools', never], ['zustand/persist', unknown], ['temporal', unknown], ['zustand/immer', never]];
 

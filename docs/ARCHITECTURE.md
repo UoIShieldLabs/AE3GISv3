@@ -323,9 +323,14 @@ rather than matching message text.
 | `WS /topologies/ws/{id}/exec/{container_id}` | Interactive shell |
 | `WS /topologies/ws/{id}/captures/{job}`, `…/traffic/{job}`, `…/monitors/{job}`, `…/scenario/{job}` | Live packets / flow samples / monitor sweeps / scenario step output |
 | `GET\|POST /topologies/{id}/webui/{node}/{path}` | Relay a node's own web UI to the browser (§5.9) |
+| `GET /agent/status`, `GET/POST /agent/chats`, `GET/PATCH/DELETE /agent/chats/{id}` | The agent: what the caller gets, their chats (§5.11) |
+| `POST /agent/chats/{id}/messages`, `…/approvals/{call}` | 202 + a run (or steer the running one); answer a risky tool call |
+| `WS /agent/ws/{chat}/{job}` | A run's live stream |
+| `GET/POST /auth/tokens`, `DELETE /auth/tokens/{id}` | API tokens for external agents (staff) |
+| `POST /mcp` (outside the OpenAPI document) | The agent's tools over MCP, as the bearer's user (§5.11) |
 
 `context` exists for clients that need the whole picture at once — a support
-view, or the planned agent.
+view, or a script; the agent reads the same pieces through its tools.
 
 ### 5.3 Jobs: how long operations work
 
@@ -422,8 +427,9 @@ SQLite via Alembic (`db/migrations/`). The main tables:
 - **`jobs`** — kind, `subject`, `params`, status, ordered `steps`, error,
   `result` (`topology_id` for jobs that belong to a topology; logs and
   artifacts are files, see §5.3).
-- **`events`** — append-only log per topology; the UI reads it, and it is the
-  audit trail a future agent will consume.
+- **`events`** — append-only log per topology; the UI reads it, and so can the
+  agent (`get_lab_status`).
+- **`agent_chats`**, **`agent_messages`** — the agent's conversations (§5.11).
 - **`users`**, **`sessions`**, **`classes`** — accounts (role, a student's
   `class_id`, `env_managed`, `must_change_password`), sign-ins (token hashes),
   and each staff member's class: join code and sign-up switch (§5.10). Also
@@ -857,6 +863,80 @@ browsers. **Accounts are off by default**: every caller is an admin
   scenarios without authoring them — a UI limit (it only affects their own
   copy), not a security boundary.
 
+### 5.11 The agent: one tool layer, MCP, and in-app runs
+
+An agent can do what its user can do, through **one curated tool layer**
+(`services/agent/tools/`) that two transports share:
+
+```
+external agent ──MCP (streamable HTTP, Bearer)──▶ services/agent/mcp.py ─┐
+browser sidebar ──REST + WS /api/v1/agent──▶ services/agent/runner.py ───┴─▶ tools ─▶ services + api/access.py
+                                                  │ provider.complete()
+                                                  └─▶ services/agent/llm/{anthropic, openai_compat, fake}
+```
+
+- **Tools** (`tools/base.py`): an async handler over a pydantic input (its JSON
+  schema is what the model sees, `$ref`s inlined), calling the existing services
+  and the plain access functions in `api/access.py` (`check_view`, `check_own`,
+  `check_job`) — a tool never re-implements permissions, so it can do exactly
+  what the same user could do through the API. Each has a **tier** (`tutor`:
+  read-only, also offered to students; `full`: staff; `admin`), a **risk**
+  (`read` / `write` / `risky`) and a **surface** (`app` tools drive the browser
+  and are not served over MCP). `tools_for(identity, mode)` is the caller's list,
+  sorted (a stable list keeps prompt caches warm). About 30 tools, task-sized
+  rather than one per endpoint: models choose poorly among ~100 near-duplicates,
+  and raw endpoint payloads (pcaps, samples) are too big to read. Results go
+  through `domain/agent_views.py` (an outline with every id in `[brackets]`,
+  digests of jobs, runtime, packets; ~8 KB per result).
+- **Editing** is `domain/topology_edit.py`: typed operations (`add_subnet`,
+  `add_device`, `connect`, `update`, `remove`, tutorial and scenario ops) applied
+  to the opaque dict, all or nothing, mirroring the editor's store actions
+  (`add_subnet` brings its router and switch, `add_device` takes the next free
+  address, `connect` across subnets goes router to router, `remove` cascades like
+  `deleteItems`). A later op names what an earlier one made as `$N` / `$N.router`.
+  New entities get no position: the editor's `normalizeTopology` places them.
+- **MCP** (`mcp.py`, the official `mcp` SDK, stateless JSON mode) at
+  `/api/v1/mcp`: each request is resolved from its `Authorization: Bearer` like
+  any API call (open admin with accounts off), `tools/list` is that caller's
+  tools, annotations mark read-only and destructive ones (approvals are the
+  external client's). Staff mint **API tokens** for it (`/auth/tokens`,
+  `services/api_tokens.py`: a `sessions` row with `purpose` `api`, 90 days, ended
+  by a password change).
+- **A run** (`runner.py`) is a stoppable job (kind `agent`, subject
+  `agent:<chat>`): model → tools → model until the model is done, the user stops
+  it, or `agent_max_steps` / `agent_max_run_seconds` is hit. It re-resolves its
+  user at start and never holds a token. A **risky** call publishes an
+  `approval` and waits for the owner (`POST …/approvals/{call}`), a stop or
+  `agent_approval_timeout_s`; a chat can auto-approve (deletes always ask). A
+  message sent during a run is appended to the chat and read at the next turn
+  (steering). Every call in an assistant turn gets a result row (run, declined
+  or skipped), so a stopped chat continues. The live channel carries text and
+  thinking deltas, tool start/output/end, approvals, persisted rows (`message`)
+  and `ui` actions (open a topology, select, open a dock view, arrange, reload a
+  topology the agent changed); `/api/v1/agent/ws/{chat}/{job}` serves it.
+- **Chats** (`agent_chats`, `agent_messages`, append-only) store a
+  provider-neutral transcript (`content`) plus the provider's own record of an
+  assistant turn (`provider_raw`), replayed unchanged to that provider: Claude's
+  thinking blocks must come back exactly as they were. A user message carries
+  the context line (open topology, scope, selection) in the message, never the
+  system prompt, which stays byte-stable for caching. Access follows the topology
+  rule: the owner, the owner's instructor and admins read a chat; only the owner
+  drives it.
+- **Providers** (`llm/`): Claude through the Anthropic SDK (streaming, adaptive
+  thinking, effort per mode, a cache breakpoint on the system block plus
+  automatic caching, `eager_input_streaming` tool input validated before any
+  tool runs, server-side refusal fallbacks — security-lab work can trip the
+  cyber classifier); any OpenAI-compatible endpoint (Ollama, vLLM, LM Studio:
+  streamed tool calls assembled, the oldest tool output trimmed to fit
+  `agent_context_tokens`, tool-call ids made unique); a scripted fake for tests
+  and UI work. `AE3GIS_AGENT_PROVIDER` picks one (`off` by default).
+- **Modes**: `full` for staff (and accounts off); `tutor` for a student whose
+  class has `tutor_enabled` (off by default): read-only tools, a hints-first
+  prompt, smaller step cap, and the panel says their instructor can read it.
+- **Tool output is data.** Lab nodes are often hostile by design; the prompts say
+  so, and the approval gate plus per-user permissions are what actually bound an
+  injected instruction.
+
 ## 6. Frontend
 
 ### 6.1 One canvas, projected
@@ -1054,6 +1134,38 @@ when a step fails); the author edits it in the notebook's Edit mode.
 - **Progress** (which steps ran, when, and each cell's status) is per browser
   session in the `tutorial` slice: terminals don't survive a reload either. It
   resets when another topology is opened.
+
+### 6.7 The agent sidebar
+
+`features/agent/`. `AgentFrame` (in `app/RequireAuth.tsx`) puts the panel to the
+right of every signed-in page, in one structure whether it's open or not so
+opening it never remounts the page; ⌘J, the top bars and ⌘K toggle it.
+
+- **State**: the frame (open, which chat, the editor lock) is the app store's
+  `agent` slice; chats, messages and the live run (streamed text, tool calls,
+  approvals) live in `agentStore.ts`, a small store of their own — they change
+  with every token and nothing there is persisted or undoable.
+- **Streams** (`stream.ts`): one WebSocket per chat with a run, outside React like
+  terminal sessions, so a run survives closing the panel or a reload (the chat
+  list re-follows running chats). `ui` events go to `uiActions.ts`, only in the
+  chat owner's browser.
+- **The editor lock**: while a run works in the open topology (`agentLock`), the
+  editor is read-only. `store/index.ts` wraps every topology mutation and
+  undo/redo in one guard (the agent's own browser actions pass through
+  `asAgent`), the canvas and top bar get `readOnly`, and `AgentWorkingBanner`
+  offers the chat and Stop. Sending a message saves the editor first.
+- **Live sync**: the agent's edits arrive as `topology_changed`;
+  `refreshFromServer` takes the server copy as **one undoable step**
+  (`applyRemoteTopology`), never over unsaved edits. Status polling does the same
+  when `/runtime` reports a newer version (before, it adopted the number without
+  the data, so the next save silently overwrote the other change).
+- **Rendering**: Markdown replies (`features/tutorials/Markdown`, no raw HTML), a
+  `ToolCard` per call (label and one-line summary from `toolText.ts`, live
+  output, result, inline Allow/Decline), results paired with their own assistant
+  turn (some model servers repeat call ids).
+- Staff read a student's chats from the student's page (`StudentChats`, opened
+  read-only); `ConnectAgentDialog` (user menu, the panel) gives the MCP endpoint,
+  API tokens and Claude Code / OpenCode setup.
 
 ## 7. From topology to running containers
 
@@ -1314,8 +1426,9 @@ Deferred features, with the seams already in place — see
   a shared-LAN deploy mode (one collision domain per subnet instead of a link
   per host) as a benchmark variable.
 - **Live runtime stream** replacing `/runtime` polling, built on `events`.
-- **Agent orchestration** — `GET /topologies/{id}/context` already returns
-  everything an agent needs, and `version`/409 makes concurrent edits safe.
+- **The agent** (§5.11, §6.7) is in: next, conversation compaction for very
+  long chats, per-user token budgets, and pushing a tutor's hint into a
+  student's terminal.
 - More accounts: several classes per instructor (the `classes` table allows
   it), moving a student to another class, sharing lessons between staff, lab
   caps per class.

@@ -18,6 +18,7 @@ Developer onboarding and the full architecture rationale live in
 ```bash
 ./start.sh                                   # docker compose up (frontend :3000, backend :8000)
 AE3GIS_ADMIN_PASSWORD=pw ./start.sh          # accounts on: admins, instructors, students (see Auth)
+AE3GIS_AGENT_PROVIDER=anthropic ANTHROPIC_API_KEY=… ./start.sh   # the agent sidebar (see The agent)
 cd frontend && npm run dev                   # :5173
 cd frontend && npm run build && npm run test # typecheck + vitest
 cd frontend && npm run lint                  # eslint (CI gate)
@@ -69,7 +70,10 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   node draws a type with equal odds, then an image),
   `benchmark.py` (step metrics, stop criteria, adaptive next scale and
   retries, census table, matrix cells, report per kind),
-  `environment.py` (run environment + fingerprint).
+  `environment.py` (run environment + fingerprint), `topology_edit.py` (the
+  agent's typed edit operations, mirroring the editor's store actions; all or
+  nothing; `$N` names what op N made), `agent_views.py` (bounded text views a
+  tool hands a model: an outline with ids in `[brackets]`, job/runtime digests).
 - `services/` — orchestration: `accounts` (the admin from the environment,
   staff accounts, classes and student sign-up with a class's join code,
   sessions, temporary passwords, the per-student lab cap), `topologies` (CRUD, `version` bump, optimistic
@@ -110,9 +114,11 @@ with `--factory`; tests build their own app with a temp SQLite file and a
   fan-out), `activity` (running captures/runs/monitors/scenario and background runs; destroy stops them
   first), `environment` (run
   metadata), `reconcile` (labs on the engine vs DB: tracked / orphan / stale;
-  purge by lab hash), `events` (append-only log per topology).
+  purge by lab hash), `events` (append-only log per topology),
+  `agent/` (see The agent below), `api_tokens` (staff tokens for external agents:
+  a `sessions` row with `purpose` `api`).
 - `db/` — SQLAlchemy models (`Topology`, `Job`, `Event`, `Registry`, `User`,
-  `UserSession`, `AppSetting`) and **Alembic**
+  `UserSession`, `AppSetting`, `AgentChat`, `AgentMessage`) and **Alembic**
   migrations run at startup (`db/migrations`). Add a migration for any schema
   change; `0001` is a baseline that tolerates pre-migration databases.
 - `engine/` — the seam. `DeploymentEngine` takes a `LabPlan` and returns an
@@ -135,6 +141,28 @@ BusyBox ash rejects) through bash, or the image's catalog `shell`. The engine
 makes Kathara check images locally only (`_local_image_checks`): its
 per-deploy registry lookup costs ~15 s per `ae3gis.local/…` image on Docker's
 containerd image store, and the deploy's `images` step has already ensured them.
+
+### The agent (`services/agent/`, ARCHITECTURE §5.11)
+One curated tool layer, two transports. `tools/` (~30 tools: an async handler
+over a pydantic input, a `tier` tutor|full|admin, a `risk` read|write|risky, a
+`surface` all|app) calls the services and the plain checks in `api/access.py`,
+never its own permission logic; `tools_for(identity, mode)` is the caller's
+sorted list. `mcp.py` serves them at `/api/v1/mcp` (official `mcp` SDK,
+stateless JSON; Bearer = the caller; mounted in `main.create_app`, its session
+manager in the lifespan). `runner.py` is the in-app run: a stoppable job (kind
+`agent`, subject `agent:<chat>`) looping model → tools; risky calls wait for the
+owner's approval (`decide`), deletes always ask; a message during a run steers it;
+every call gets a result row. `llm/` providers behind a neutral transcript:
+`anthropic` (official SDK; default `claude-opus-5-5`, adaptive thinking, caching,
+eager tool input, refusal fallbacks; turns replayed from `provider_raw`
+unchanged), `openai_compat` (Ollama/vLLM/LM Studio; trims old tool output),
+`fake` (scripted for tests; plays add/deploy/destroy demos for UI work).
+`prompts.py` keeps the system prompt byte-stable; context goes in the user's
+message. `access.py`: mode `full` for staff, `tutor` for a student whose class has
+`tutor_enabled`; a chat is read by its owner, their instructor and admins, driven
+by its owner. Settings `AE3GIS_AGENT_*` (`provider` off by default, `model`,
+`tutor_model`, `base_url`, `api_key`, `effort`, step/time caps). Tests drive it with
+`FakeProvider.script` (`tests/test_agent_*.py`, `tests/agent_helpers.py`).
 
 ### Deployment engine (the key seam)
 `backend/engine/base.py` defines `DeploymentEngine` (deploy/destroy/status/
@@ -297,7 +325,9 @@ tables record every long operation.
   toggles, steps run this session and each cell's status, which terminals are
   busy; not saved, not undoable), `pulse` (the live lab view: `linkTraffic`,
   `nodeProcesses`, fed by `features/pulse/pulse.ts` while the Tutorials panel is
-  open on a deployed lab), `activity` (running
+  open on a deployed lab), `agent` (the agent panel open, its chat, the editor
+  lock `agentLock`; chats and live runs are `features/agent/agentStore.ts`'s own
+  store), `activity` (running
   captures/traffic runs/monitors from `/runtime`), `catalog`,
   `images` (GET /images report, kept fresh by the
   `features/images/imagePolling` singleton).
@@ -394,6 +424,14 @@ tables record every long operation.
   state is read back from tagged runs + `/runtime` (`deployed_at`, activity),
   never kept in the browser). Benchmarks
   have no UI on main: run and read them headless (`./bench.sh`).
+  Agent: `features/agent` (ARCHITECTURE §6.7): `AgentFrame` (in `RequireAuth`)
+  puts the panel right of every page (⌘J, top bars, ⌘K); `stream.ts` follows a
+  run's WebSocket outside React; `uiActions.ts` carries out its browser actions.
+  While a run works in the open topology the editor is read-only: `store/index.ts`
+  wraps every topology mutation and undo/redo in one guard (`editorLocked`,
+  `asAgent` for the agent's own actions). The agent's edits arrive as one undo
+  step each (`applyRemoteTopology` via `refreshFromServer`, never over unsaved
+  edits; status polling does the same on a newer version).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
   Library (`app/routes/LibraryRoute`, `features/library`): a rail of sections
@@ -465,6 +503,12 @@ tables record every long operation.
 - `system` — `health`, `labs` (reconcile report), `environment`, `reconcile`,
   `labs/{hash}/purge`.
 - `catalog`, `presets` as before.
+- `agent` — `status`, `chats` (`?topology_id=`, staff `?owner=<student>`),
+  `chats/{id}` (GET/PATCH title, auto_approve/DELETE), `chats/{id}/messages`
+  (202 + a run, or `queued` into the running one), `chats/{id}/approvals/{call}`;
+  WebSocket `agent/ws/{chat}/{job}` (own nginx/vite proxy rules); stop via
+  `jobs/{id}/stop`. `auth/tokens` (staff API tokens). `/api/v1/mcp` (MCP, outside
+  the OpenAPI document).
 
 ## Auth
 **Accounts are opt-in, and off by default.** With no `AE3GIS_ADMIN_PASSWORD` /
@@ -509,12 +553,15 @@ admission lock; staff have no cap). The UI asks `lib/permissions.ts` for a
 capability (staff: author, publish, class, images; admins add
 `manageRegistries`, `manageHost`, `manageUsers`). Tests: `classroom` fixture in
 `tests/conftest.py` (`.admin`, `.teacher(name)`, `.student(name, teacher=)`).
-New routes must resolve the caller (`tests/test_route_auth.py`).
+New routes must resolve the caller (`tests/test_route_auth.py`). The agent acts
+as its user: a run re-resolves them at start, MCP resolves every request's
+bearer; a class's `tutor_enabled` (off by default) gives its students the
+read-only tutor.
 
 ## Deferred (rebuild on the engine abstraction later)
 Firewall editor, live classroom sessions (pushing steps to every student's terminal),
 several classes per instructor / moving students between classes / lessons shared between staff, a full web-UI proxy (node web UIs are
 viewable via an exec relay, see ARCHITECTURE §5.9; a port-publishing proxy for
-complex apps is still deferred), AI assistant,
+complex apps is still deferred),
 more traffic generators (Locust, Modbus, pcap replay), comparison views over
 benchmark exports, a shared-LAN deploy mode and per-node resource limits. Keep the `DeploymentEngine` seam and the catalog when adding them back.

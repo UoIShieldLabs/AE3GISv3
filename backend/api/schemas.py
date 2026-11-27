@@ -1206,11 +1206,14 @@ class ClassSettingsOut(BaseModel):
     signup_open: bool
     # Students type this to sign up; None until sign-up is first opened.
     join_code: str | None = None
+    # The agent's read-only tutor for this class's students.
+    tutor_enabled: bool = False
 
 
 class ClassSettingsIn(BaseModel):
     signup_open: bool | None = None
     rotate_join_code: bool = False
+    tutor_enabled: bool | None = None
 
 
 class StudentLabOut(BaseModel):
@@ -1280,3 +1283,115 @@ class RoleIn(BaseModel):
 
 class PublishIn(BaseModel):
     published: bool
+
+
+# ── API tokens (for external agents over MCP) ─────────────────────────
+
+
+class ApiTokenIn(BaseModel):
+    label: str = Field(default="", max_length=80)
+
+
+class ApiTokenOut(BaseModel):
+    id: str
+    label: str
+    created_at: datetime
+    expires_at: datetime
+    last_used_at: datetime | None = None
+
+
+class ApiTokenCreated(BaseModel):
+    # Shown once: only its hash is kept.
+    token: str
+    info: ApiTokenOut
+    mcp_path: str
+
+
+# ── the agent ─────────────────────────────────────────────────────────
+
+
+AgentMode = Literal["full", "tutor"]
+
+
+class AgentStatusOut(BaseModel):
+    # Configured on this instance (AE3GIS_AGENT_PROVIDER).
+    enabled: bool
+    provider: str | None = None
+    model: str | None = None
+    # What the caller gets: the full agent, the student tutor, or none.
+    mode: AgentMode | None = None
+    # Why the caller has none (e.g. ``tutor_off``), when they don't.
+    reason: str | None = None
+    mcp_path: str
+
+
+class AgentContext(BaseModel):
+    """What the user is looking at when they send a message."""
+
+    topology_id: str | None = Field(default=None, max_length=64)
+    topology_name: str | None = Field(default=None, max_length=200)
+    scope: dict[str, str] | None = None
+    selection: list[str] = Field(default_factory=list, max_length=200)
+    page: str | None = Field(default=None, max_length=40)
+
+
+class AgentChatIn(BaseModel):
+    topology_id: str | None = Field(default=None, max_length=64)
+    title: str = Field(default="", max_length=120)
+
+
+class AgentChatPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    auto_approve: bool | None = None
+
+
+class AgentChatOut(BaseModel):
+    id: str
+    title: str
+    mode: AgentMode
+    topology_id: str | None = None
+    topology_name: str | None = None
+    auto_approve: bool
+    owner: OwnerOut | None = None
+    created_at: datetime
+    updated_at: datetime
+    # The run in progress, if any (connect to its WebSocket).
+    active_job_id: str | None = None
+
+
+class AgentMessageOut(BaseModel):
+    id: int
+    seq: int
+    role: Literal["user", "assistant", "tool", "note"]
+    content: dict[str, Any]
+    job_id: str | None = None
+    created_at: datetime
+
+
+class AgentApprovalOut(BaseModel):
+    call_id: str
+    name: str
+    input: Any = None
+
+
+class AgentChatDetail(AgentChatOut):
+    messages: list[AgentMessageOut]
+    pending_approvals: list[AgentApprovalOut] = Field(default_factory=list)
+    # Whether the caller may send to it (only its owner).
+    can_send: bool
+
+
+class AgentSendIn(BaseModel):
+    text: str = Field(min_length=1, max_length=20_000)
+    context: AgentContext | None = None
+
+
+class AgentSendOut(BaseModel):
+    job_id: str
+    # True: the message went to the run already in progress (it reads it next turn).
+    queued: bool
+    message: AgentMessageOut
+
+
+class AgentDecisionIn(BaseModel):
+    approve: bool

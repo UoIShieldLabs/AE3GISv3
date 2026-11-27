@@ -6,11 +6,22 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from sqlalchemy.orm import Session
 
 from api.deps import get_db, get_settings
-from api.schemas import LoginIn, MeOut, PasswordChangeIn, SessionOut, SignupIn, UserOut
+from api.schemas import (
+    ApiTokenCreated,
+    ApiTokenIn,
+    ApiTokenOut,
+    LoginIn,
+    MeOut,
+    PasswordChangeIn,
+    SessionOut,
+    SignupIn,
+    UserOut,
+)
 from auth import WEBUI_COOKIE, WEBUI_COOKIE_PATH, current_identity, parse_bearer
 from config import Settings
-from services import accounts
+from services import accounts, api_tokens
 from services.accounts import Identity, SignIn
+from services.agent import mcp as agent_mcp
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -134,3 +145,30 @@ def webui_cookie(
         )
     response.status_code = 204
     return response
+
+
+# ── API tokens (for external agents over MCP, and scripts) ──
+
+
+@router.get("/tokens", response_model=list[ApiTokenOut])
+def list_tokens(db: Session = Depends(get_db), identity: Identity = Depends(current_identity)):
+    """Your API tokens (staff). The tokens themselves are never shown again."""
+    return api_tokens.list_tokens(db, identity)
+
+
+@router.post("/tokens", response_model=ApiTokenCreated, status_code=201)
+def create_token(
+    body: ApiTokenIn, db: Session = Depends(get_db), identity: Identity = Depends(current_identity)
+):
+    """A bearer token (shown once) that acts as you, e.g. for an external agent
+    on ``/api/v1/mcp``. It lasts 90 days; a password change ends it."""
+    token, info = api_tokens.create_token(db, identity, body.label)
+    return ApiTokenCreated(token=token, info=ApiTokenOut(**info), mcp_path=agent_mcp.PATH)
+
+
+@router.delete("/tokens/{token_id}", status_code=204)
+def revoke_token(
+    token_id: str, db: Session = Depends(get_db), identity: Identity = Depends(current_identity)
+):
+    api_tokens.revoke_token(db, identity, token_id)
+    return Response(status_code=204)
