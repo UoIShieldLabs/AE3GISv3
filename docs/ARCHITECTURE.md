@@ -1162,10 +1162,20 @@ opening it never remounts the page; ⌘J, the top bars and ⌘K toggle it.
 - **Rendering**: Markdown replies (`features/tutorials/Markdown`, no raw HTML), a
   `ToolCard` per call (label and one-line summary from `toolText.ts`, live
   output, result, inline Allow/Decline), results paired with their own assistant
-  turn (some model servers repeat call ids).
-- Staff read a student's chats from the student's page (`StudentChats`, opened
-  read-only); `ConnectAgentDialog` (user menu, the panel) gives the MCP endpoint,
-  API tokens and Claude Code / OpenCode setup.
+  turn (some model servers repeat call ids). `chatRows.ts` folds consecutive
+  steps that finished fine into one "✓ N steps" row; a running, failed or
+  waiting step, text or a note breaks the run.
+- **A quiet panel**: a new chat shows a line and a few chips that fill the
+  message box (never send); the chat's settings (Full auto, rename), the external
+  agent and the model sit in the header's ⋯ menu, the topology in a subtitle.
+- Staff read a student's chats **in the student's topology**: on a topology owned
+  by someone else, `useOwnerChats` loads its owner's chats there (`GET
+  /agent/chats?owner=&topology_id=`, the same read rule) and the panel's History
+  gets an "alice's" tab (a dot on the button, a line on the welcome); they open
+  read-only. A student's topology card on their page shows the count and opens
+  the topology on that tab (`openOwnerChats`). `ConnectAgentDialog` (user menu,
+  the panel's ⋯) gives the MCP endpoint, API tokens and Claude Code / OpenCode
+  setup.
 
 ## 7. From topology to running containers
 

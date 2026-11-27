@@ -360,17 +360,28 @@ export interface AgentLock {
   jobId: string;
 }
 
+export type AgentListScope = 'all' | 'here' | 'owner';
+
 /** The agent sidebar's frame: open or not, which chat, the editor lock. The
  *  chats themselves (messages, live run state) live in features/agent's own
  *  store: they change with every streamed token. */
 export interface AgentSlice {
   agentOpen: boolean;
   agentChatId: string | null;
+  /** The panel shows the chat list instead of a chat. */
+  agentListing: boolean;
+  /** Which chats the list shows: yours, yours on the open topology, or (staff,
+   *  on someone else's topology) its owner's there. */
+  agentListScope: AgentListScope;
   agentLock: AgentLock | null;
   setAgentOpen: (open: boolean) => void;
   toggleAgent: () => void;
-  /** Show a chat (null: the chat list), opening the panel. */
+  /** Show a chat (null: a new one), opening the panel and leaving the chat list. */
   openAgentChat: (chatId: string | null) => void;
+  setAgentListing: (listing: boolean) => void;
+  setAgentListScope: (scope: AgentListScope) => void;
+  /** Open the panel on the open topology's owner's chats (a student's, for staff). */
+  openOwnerChats: () => void;
   setAgentLock: (lock: AgentLock | null) => void;
 }
 

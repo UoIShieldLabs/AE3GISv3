@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Activity, Boxes, Copy, EyeOff, FilePlus2, FolderOpen, GraduationCap, LayoutTemplate, Plus, RefreshCw, RotateCcw,
+  Activity, Boxes, Copy, EyeOff, FilePlus2, FolderOpen, GraduationCap, LayoutTemplate, MessageSquare, Plus, RefreshCw, RotateCcw,
   SearchX, Server, ShieldCheck, Square, Trash2, UserPlus, Users,
 } from 'lucide-react';
 import * as api from '@/api/client';
@@ -11,12 +11,12 @@ import {
 } from '@/ui';
 import { AppearanceMenu } from '@/shell/AppearanceMenu';
 import { AgentButton } from '@/features/agent/AgentButton';
-import { StudentChats } from '@/features/agent/StudentChats';
 import { UserMenu } from '@/shell/UserMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
 import { ClassDialogs } from '@/features/class/ClassDialogs';
 import { ClassBar } from '@/features/class/ClassBar';
+import { useChatCounts } from '@/features/agent/useOwnerChats';
 import { StudentHeader, StudentsTable } from '@/features/class/StudentsTable';
 import { useClass } from '@/features/class/useClass';
 import { StaffDialogs } from '@/features/staff/StaffDialogs';
@@ -76,6 +76,8 @@ export function LibraryRoute() {
   const sort = useAppStore((s) => s.librarySort);
   const mode: LibraryMode = !accounts ? 'open' : user?.role ?? 'student';
   const loc = useLibraryParams(mode);
+  const chatCounts = useChatCounts(loc.student ?? null);
+  const openOwnerChats = useAppStore((s) => s.openOwnerChats);
 
   const [topologies, setTopologies] = useState<api.TopologySummary[] | null>(null);
   const [presets, setPresets] = useState<api.PresetSummary[]>([]);
@@ -242,6 +244,27 @@ export function LibraryRoute() {
 
   const openButton = (onClick: () => void) => <Button size="sm" variant="secondary" onClick={onClick}>Open</Button>;
 
+  /** Their chats with the agent on this topology: open it, with the panel listing them. */
+  const chatsButton = (t: api.TopologySummary) => {
+    const n = chatCounts.get(t.id) ?? 0;
+    if (!n) return undefined;
+    return (
+      <Tooltip content={`${n} chat${n === 1 ? '' : 's'} with the agent: open the topology to read them`}>
+        <Button
+          size="xs"
+          variant="ghost"
+          aria-label={`${n} chat${n === 1 ? '' : 's'} with the agent`}
+          onClick={() => {
+            openOwnerChats();
+            open(t.id);
+          }}
+        >
+          <MessageSquare /> {n}
+        </Button>
+      </Tooltip>
+    );
+  };
+
   const destroyMenuItem = (t: api.TopologySummary) =>
     canDestroy(t) ? <DropdownMenuItem onSelect={() => setDestroyTarget(t)}><Square /> Destroy lab…</DropdownMenuItem> : null;
 
@@ -293,6 +316,7 @@ export function LibraryRoute() {
     onOpen: () => open(t.id),
     marker: copyMarker(t),
     primary: openButton(() => open(t.id)),
+    trailing: chatsButton(t),
     menu: (
       <>
         {canDestroy(t) ? <>{destroyMenuItem(t)}<DropdownMenuSeparator /></> : null}
@@ -403,7 +427,6 @@ export function LibraryRoute() {
       return (
         <>
           <StudentHeader row={row} cls={cls} showInstructor={allClasses} onBack={() => loc.go('students', { instructor: loc.instructor })} />
-          <StudentChats studentId={row.id} username={row.username} />
           {toolbar()}
           {collection(row.topologies, studentItem, {
             empty: <EmptyState icon={<FolderOpen />} title="No topologies yet" description={`${row.username} has not started a lesson or made a topology.`} className={EMPTY} />,

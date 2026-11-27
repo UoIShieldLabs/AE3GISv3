@@ -431,7 +431,10 @@ tables record every long operation.
   wraps every topology mutation and undo/redo in one guard (`editorLocked`,
   `asAgent` for the agent's own actions). The agent's edits arrive as one undo
   step each (`applyRemoteTopology` via `refreshFromServer`, never over unsaved
-  edits; status polling does the same on a newer version).
+  edits; status polling does the same on a newer version). On someone else's
+  topology (staff on a student's) the panel also lists its owner's chats there,
+  read-only (`useOwnerChats`, the History "alice's" tab; a student's topology card
+  shows the count). Finished tool steps fold into one row (`chatRows.ts`).
   `ui/MultiSelect` picks node sets. `features/runs/RunsSheet` lists monitors,
   captures and runs.
   Library (`app/routes/LibraryRoute`, `features/library`): a rail of sections

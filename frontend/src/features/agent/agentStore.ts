@@ -50,10 +50,22 @@ export interface ChatState {
   error: string | null;
 }
 
+/** Someone else's chats on the open topology (a student's, for staff). */
+export interface OwnerChats {
+  /** `${ownerId}:${topologyId}`: which topology they belong to. */
+  key: string;
+  chats: api.AgentChat[];
+}
+
 interface AgentStore {
   status: api.AgentStatus | null;
   chats: api.AgentChat[] | null;
   byId: Record<string, ChatState>;
+  /** The composer's text (a starter chip fills it). */
+  draft: string;
+  ownerChats: OwnerChats | null;
+  setDraft: (draft: string) => void;
+  setOwnerChats: (ownerChats: OwnerChats | null) => void;
   setStatus: (status: api.AgentStatus | null) => void;
   setChats: (chats: api.AgentChat[]) => void;
   upsertChat: (chat: api.AgentChat) => void;
@@ -67,6 +79,10 @@ export const useAgentStore = create<AgentStore>()((set) => ({
   status: null,
   chats: null,
   byId: {},
+  draft: '',
+  ownerChats: null,
+  setDraft: (draft) => set({ draft }),
+  setOwnerChats: (ownerChats) => set({ ownerChats }),
   setStatus: (status) => set({ status }),
   setChats: (chats) => set({ chats }),
   upsertChat: (chat) =>
