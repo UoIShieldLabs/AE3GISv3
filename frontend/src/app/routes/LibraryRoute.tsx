@@ -16,7 +16,7 @@ import { UserMenu } from '@/shell/UserMenu';
 import { LabsDialog } from '@/features/system/LabsDialog';
 import { ImagesSheet } from '@/features/images/ImagesSheet';
 import { ClassDialogs } from '@/features/class/ClassDialogs';
-import { ClassSettingsCard } from '@/features/class/ClassSettingsCard';
+import { ClassBar } from '@/features/class/ClassBar';
 import { StudentHeader, StudentsTable } from '@/features/class/StudentsTable';
 import { useClass } from '@/features/class/useClass';
 import { StaffDialogs } from '@/features/staff/StaffDialogs';
@@ -44,7 +44,7 @@ const EMPTY = 'rounded-xl border border-dashed border-border-strong';
 /** Destroy from the library: a lab that is up, or a failed deploy that still holds one. */
 const canDestroy = (t: api.TopologySummary) => t.status === 'deployed' || (t.status === 'error' && holdsLab(t));
 
-function SectionHeader({ section, mode, aside }: { section: SectionId; mode: LibraryMode; aside?: React.ReactNode }) {
+function SectionHeader({ section, mode, aside, actions }: { section: SectionId; mode: LibraryMode; aside?: React.ReactNode; actions?: React.ReactNode }) {
   const Icon = SECTION_ICON[section];
   const description = sectionDescription(section, mode);
   return (
@@ -53,7 +53,12 @@ function SectionHeader({ section, mode, aside }: { section: SectionId; mode: Lib
         <h1 className="flex items-center gap-2 text-base font-semibold [&>svg]:size-4 [&>svg]:text-fg-subtle"><Icon /> {sectionLabel(section, mode)}</h1>
         {description ? <p className="mt-0.5 text-xs text-fg-muted">{description}</p> : null}
       </div>
-      {aside ? <div className="ml-auto text-xs text-fg-subtle">{aside}</div> : null}
+      {aside || actions ? (
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          {aside ? <span className="text-xs text-fg-subtle">{aside}</span> : null}
+          {actions}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -421,8 +426,8 @@ export function LibraryRoute() {
           section="students"
           mode={mode}
           aside={`${inScope.length} student${inScope.length === 1 ? '' : 's'} · ${runningStudents} running · ${maxLabs > 0 ? `max ${maxLabs} lab${maxLabs === 1 ? '' : 's'} each` : 'no lab limit'}`}
+          actions={<ClassBar cls={cls} />}
         />
-        <ClassSettingsCard cls={cls} />
         <LibraryToolbar q={loc.q} onQuery={loc.setQuery} placeholder="Search students">
           {allClasses && teachers.length > 0 ? (
             <Select
@@ -452,7 +457,7 @@ export function LibraryRoute() {
         {inScope.length === 0 ? (
           cls.students === null
             ? <div className="flex justify-center py-10"><Spinner /></div>
-            : <EmptyState icon={<Users />} title="No students yet" description="Turn on sign-up and share the join code." className={EMPTY} />
+            : <EmptyState icon={<Users />} title="No students yet" description="Open Class settings to let students join, then share the join code." className={EMPTY} />
         ) : rows.length === 0 ? noMatches : (
           <StudentsTable
             rows={rows}

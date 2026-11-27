@@ -442,7 +442,8 @@ tables record every long operation.
   topology" also starts from a preset or an import.
   Accounts: `app/routes/LoginRoute` (sign in / join class), `shell/UserMenu`
   (who, role, change password, sign out), `features/class` (the library's
-  Students section, staff: their class's sign-up and join code, a table of
+  Students section, staff: `ClassBar` in its header (the join code, and a
+  popover for sign-up, a new code and the tutor), a table of
   students (an admin: every class, an Instructor column, a class filter), each
   student's page with their topologies and labs; `useClass` polls while it is
   open), `features/staff` (admin: the Staff section, add with a temporary
