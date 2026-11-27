@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { CircleAlert, CircleSlash, Hourglass, OctagonX } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronRight, CircleAlert, CircleSlash, Hourglass, OctagonX } from 'lucide-react';
 import { Markdown } from '@/features/tutorials/Markdown';
 import { Spinner } from '@/ui';
 import { cn } from '@/lib/cn';
-import type * as api from '@/api/client';
 import { resultsByTurn, useAgentStore, type ChatState } from './agentStore';
 import { ToolCard } from './ToolCard';
 import { toolLabel } from './toolText';
-
-type Call = { id: string; name: string; input: unknown };
+import { buildRows, type Result, type Row, type Step } from './chatRows';
 
 /** A chat's messages, then what the run is doing right now. Scrolls with new
  *  content unless the reader scrolled up. */
@@ -17,6 +15,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const results = useMemo(() => resultsByTurn(state?.messages ?? []), [state?.messages]);
+  const rows = useMemo(() => buildRows(state?.messages ?? [], results), [state?.messages, results]);
 
   const tail = `${state?.messages.length ?? 0}:${state?.run?.text.length ?? 0}:${Object.keys(state?.tools ?? {}).length}:${state?.sending ?? ''}`;
   useEffect(() => {
@@ -42,8 +41,8 @@ export function ChatView({ chatId }: { chatId: string }) {
       }}
     >
       <div className="flex flex-col gap-3">
-        {state.messages.map((m) => (
-          <MessageRow key={m.seq} message={m} state={state} results={results} chatId={chatId} />
+        {rows.map((row) => (
+          <RowView key={row.key} row={row} state={state} results={results} chatId={chatId} />
         ))}
         {state.sending ? <UserBubble text={state.sending} pending /> : null}
         <LiveTail state={state} />
@@ -57,56 +56,68 @@ export function ChatView({ chatId }: { chatId: string }) {
   );
 }
 
-function MessageRow({
-  message,
-  state,
-  results,
-  chatId,
-}: {
-  message: api.AgentMessage;
-  state: ChatState;
-  results: Map<number, Map<string, { text: string; is_error: boolean }>>;
-  chatId: string;
-}) {
-  const c = message.content as Record<string, unknown>;
-  if (message.role === 'user') {
-    const ctx = (c.context ?? null) as { topology_name?: string } | null;
-    return <UserBubble text={String(c.text ?? '')} topology={ctx?.topology_name} />;
+function RowView({ row, state, results, chatId }: { row: Row; state: ChatState; results: Map<number, Map<string, Result>>; chatId: string }) {
+  switch (row.kind) {
+    case 'user':
+      return <UserBubble text={row.text} />;
+    case 'text':
+      return <Markdown source={row.text} className="ae-agent-reply" />;
+    case 'note':
+      return <Note kind={row.note} text={row.text} />;
+    case 'tool':
+      return <StepCard step={row.step} state={state} results={results} chatId={chatId} />;
+    case 'steps':
+      return <StepGroup steps={row.steps} state={state} results={results} chatId={chatId} />;
   }
-  if (message.role === 'assistant') {
-    const calls = (Array.isArray(c.tool_calls) ? c.tool_calls : []) as Call[];
-    const text = String(c.text ?? '');
-    if (!text && !calls.length) return null;
-    return (
-      <div className="flex flex-col gap-1.5">
-        {text ? <Markdown source={text} className="ae-agent-reply" /> : null}
-        {calls.map((call) => {
-          const result = results.get(message.seq)?.get(call.id);
-          return (
-            <ToolCard
-              key={call.id}
-              chatId={chatId}
-              call={call}
-              // Live state is the run's in progress; once saved, the result speaks.
-              live={result ? undefined : state.tools[call.id]}
-              result={result}
-              approval={result ? undefined : state.approvals[call.id]}
-              canSend={state.canSend}
-            />
-          );
-        })}
-      </div>
-    );
-  }
-  if (message.role === 'note') return <Note kind={String(c.kind ?? '')} text={String(c.text ?? '')} />;
-  return null; // tool rows show inside their cards
 }
 
-function UserBubble({ text, topology, pending }: { text: string; topology?: string; pending?: boolean }) {
+function StepCard({ step, state, results, chatId }: { step: Step; state: ChatState; results: Map<number, Map<string, Result>>; chatId: string }) {
+  const result = results.get(step.seq)?.get(step.call.id);
   return (
-    <div className={cn('ml-8 flex flex-col items-end gap-0.5', pending && 'opacity-60')}>
+    <ToolCard
+      chatId={chatId}
+      call={step.call}
+      // Live state is the run's in progress; once saved, the result speaks.
+      live={result ? undefined : state.tools[step.call.id]}
+      result={result}
+      approval={result ? undefined : state.approvals[step.call.id]}
+      canSend={state.canSend}
+    />
+  );
+}
+
+/** Finished steps folded into one line; open to see each. */
+function StepGroup({ steps, state, results, chatId }: { steps: Step[]; state: ChatState; results: Map<number, Map<string, Result>>; chatId: string }) {
+  const [open, setOpen] = useState(false);
+  const names = [...new Set(steps.map((s) => toolLabel(s.call.name)))];
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-fg-muted hover:bg-hover"
+      >
+        <ChevronRight className={cn('size-3 shrink-0 text-fg-subtle transition-transform', open && 'rotate-90')} />
+        <Check className="size-3.5 shrink-0 text-success" />
+        <span className="shrink-0 font-medium text-fg">{steps.length} steps</span>
+        <span className="min-w-0 truncate text-fg-subtle">{names.join(', ')}</span>
+      </button>
+      {open ? (
+        <div className="flex flex-col gap-1.5 border-l-2 border-border pl-2">
+          {steps.map((s) => (
+            <StepCard key={s.call.id} step={s} state={state} results={results} chatId={chatId} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function UserBubble({ text, pending }: { text: string; pending?: boolean }) {
+  return (
+    <div className={cn('ml-8 flex flex-col items-end', pending && 'opacity-60')}>
       <div className="max-w-full whitespace-pre-wrap break-words rounded-lg rounded-br-sm bg-accent-soft px-3 py-2 text-[13px] text-fg">{text}</div>
-      {topology ? <span className="text-2xs text-fg-subtle">on {topology}</span> : null}
     </div>
   );
 }
@@ -136,7 +147,7 @@ function LiveTail({ state }: { state: ChatState }) {
         <Spinner className="size-3.5" /> {label}
       </div>
       {run.thinking ? (
-        <p className="line-clamp-3 border-l-2 border-border pl-2 text-2xs italic text-fg-subtle">{run.thinking.slice(-400)}</p>
+        <p className="truncate pl-5 text-2xs italic text-fg-subtle">{run.thinking.slice(-200)}</p>
       ) : null}
     </div>
   );

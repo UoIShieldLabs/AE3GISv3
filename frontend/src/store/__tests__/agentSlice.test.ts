@@ -28,6 +28,20 @@ describe('agent slice', () => {
     S().openAgentChat(null);
     expect(S().agentChatId).toBeNull();
   });
+
+  it('opening a chat (e.g. from a student page) leaves the chat list', () => {
+    S().openAgentChat('chat-1');
+    S().setAgentListing(true);
+    S().setAgentOpen(false);
+    S().openAgentChat('chat-1');
+    expect(S()).toMatchObject({ agentOpen: true, agentListing: false, agentChatId: 'chat-1' });
+  });
+
+  it('opens the list on the open topology owner’s chats', () => {
+    S().setAgentOpen(false);
+    S().openOwnerChats();
+    expect(S()).toMatchObject({ agentOpen: true, agentListing: true, agentListScope: 'owner' });
+  });
 });
 
 describe('the editor lock', () => {
